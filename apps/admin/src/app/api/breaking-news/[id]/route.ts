@@ -1,15 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
+import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const body = await req.json();
-  const item = await prisma.breakingNews.update({ where: { id }, data: body });
-  return NextResponse.json(item);
+  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR"]);
+  if (isAuthError(session)) return session;
+  try {
+    const { id } = await params;
+    const b = await req.json();
+    const data: any = {};
+    for (const key of ["headline", "headlineEn", "url", "priority", "active"] as const) {
+      if (b[key] !== undefined) data[key] = b[key];
+    }
+    const item = await prisma.breakingNews.update({ where: { id }, data });
+    return NextResponse.json(item);
+  } catch (error) {
+    return apiError(error);
+  }
 }
 
 export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  await prisma.breakingNews.delete({ where: { id } });
-  return NextResponse.json({ success: true });
+  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR"]);
+  if (isAuthError(session)) return session;
+  try {
+    const { id } = await params;
+    await prisma.breakingNews.delete({ where: { id } });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return apiError(error);
+  }
 }

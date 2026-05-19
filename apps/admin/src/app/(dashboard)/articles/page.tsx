@@ -12,6 +12,7 @@ interface Article {
   featured: boolean;
   viewCount: number;
   publishedAt: string | null;
+  scheduledAt: string | null;
   createdAt: string;
   category: { name: string; nameEn: string; color: string };
   author: { name: string };
@@ -150,8 +151,13 @@ export default function ArticlesPage() {
             style={{ padding: "8px 12px", border: "1px solid #eee", borderRadius: 8, fontSize: 13, outline: "none" }}>
             <option value="">All Status</option>
             <option value="PUBLISHED">Published</option>
+            <option value="SCHEDULED">Scheduled</option>
             <option value="DRAFT">Draft</option>
+            <option value="SUBMITTED">Submitted</option>
             <option value="IN_REVIEW">In Review</option>
+            <option value="APPROVED">Approved</option>
+            <option value="REJECTED">Rejected</option>
+            <option value="ARCHIVED">Archived</option>
           </select>
           <select value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}
             style={{ padding: "8px 12px", border: "1px solid #eee", borderRadius: 8, fontSize: 13, outline: "none", maxWidth: 200 }}>
@@ -229,15 +235,17 @@ export default function ArticlesPage() {
                   <td style={{ padding: "10px 16px" }}>
                     <span style={{
                       fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 4,
-                      background: a.status === "PUBLISHED" ? "#dcfce7" : a.status === "DRAFT" ? "#fef3c7" : "#dbeafe",
-                      color: a.status === "PUBLISHED" ? "#166534" : a.status === "DRAFT" ? "#92400e" : "#1e40af",
+                      background: a.status === "PUBLISHED" ? "#dcfce7" : a.status === "DRAFT" ? "#fef3c7" : a.status === "SCHEDULED" ? "#ede9fe" : "#dbeafe",
+                      color: a.status === "PUBLISHED" ? "#166534" : a.status === "DRAFT" ? "#92400e" : a.status === "SCHEDULED" ? "#5b21b6" : "#1e40af",
                     }}>
                       {a.status}
                     </span>
                   </td>
                   <td style={{ padding: "10px 16px", fontSize: 12, color: "#888" }}>{a.viewCount.toLocaleString()}</td>
                   <td style={{ padding: "10px 16px", fontSize: 12, color: "#888" }}>
-                    {a.publishedAt ? new Date(a.publishedAt).toLocaleDateString() : "-"}
+                    {a.status === "SCHEDULED" && a.scheduledAt
+                      ? <span title="Scheduled for auto-publish">⏰ {new Date(a.scheduledAt).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}</span>
+                      : a.publishedAt ? new Date(a.publishedAt).toLocaleDateString() : "-"}
                   </td>
                   <td style={{ padding: "10px 16px", textAlign: "right" }}>
                     <Link href={`/articles/${a.id}`} style={{ padding: "4px 10px", background: "#eff6ff", color: "#2563eb", borderRadius: 4, fontSize: 12, fontWeight: 600, textDecoration: "none", marginRight: 4 }}>Edit</Link>

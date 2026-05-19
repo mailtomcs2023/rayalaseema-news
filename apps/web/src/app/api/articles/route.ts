@@ -27,5 +27,7 @@ export async function GET(req: NextRequest) {
     prisma.article.count({ where }),
   ]);
 
-  return NextResponse.json({ articles, total, limit, offset });
+  return NextResponse.json({ articles, total, limit, offset }, {
+    headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=30" },
+  });
 }

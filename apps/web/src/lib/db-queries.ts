@@ -73,7 +73,7 @@ export async function getHomepageData() {
         author: { select: { name: true } },
       },
       orderBy: { publishedAt: "desc" },
-      take: 500,
+      take: 150,
     }),
   ]);
 
@@ -209,37 +209,61 @@ export async function getDistrictArticles(myDistrictSlug?: string | null) {
     orderBy: { sortOrder: "asc" },
   });
 
-  const districtArticles: Record<string, { district: typeof districts[0]; articles: any[] }> = {};
+  // Single query for all constituencies
+  const allConstituencies = await prisma.constituency.findMany({
+    where: { districtId: { in: districts.map((d) => d.id) } },
+    select: { id: true, districtId: true },
+  });
 
-  await Promise.all(
-    districts.map(async (d) => {
-      const constituencies = await prisma.constituency.findMany({
-        where: { districtId: d.id },
-        select: { id: true },
-      });
-      const constIds = constituencies.map((c) => c.id);
+  // Group constituency IDs by district
+  const constByDistrict: Record<string, string[]> = {};
+  for (const c of allConstituencies) {
+    if (!constByDistrict[c.districtId]) constByDistrict[c.districtId] = [];
+    constByDistrict[c.districtId].push(c.id);
+  }
 
-      const articles = await prisma.article.findMany({
-        where: {
-          status: "PUBLISHED",
-          OR: [
-            { constituencyId: { in: constIds } },
-            { title: { contains: d.name } },
-            { title: { contains: d.nameEn, mode: "insensitive" } },
-          ],
-        },
-        select: {
-          id: true, title: true, slug: true, summary: true,
-          featuredImage: true, publishedAt: true,
-          category: { select: { name: true, color: true } },
-        },
-        orderBy: { publishedAt: "desc" },
-        take: d.slug === myDistrictSlug ? 8 : 3,
-      });
+  // Build OR conditions for all districts
+  const allConstIds = allConstituencies.map((c) => c.id);
 
-      districtArticles[d.slug] = { district: d, articles };
-    })
-  );
+  // Single query for all district articles
+  const allArticles = await prisma.article.findMany({
+    where: {
+      status: "PUBLISHED",
+      OR: [
+        { constituencyId: { in: allConstIds } },
+        ...districts.flatMap((d) => [
+          { title: { contains: d.name } },
+          { title: { contains: d.nameEn, mode: "insensitive" as const } },
+        ]),
+      ],
+    },
+    select: {
+      id: true, title: true, slug: true, summary: true,
+      featuredImage: true, publishedAt: true, constituencyId: true,
+      category: { select: { name: true, color: true } },
+    },
+    orderBy: { publishedAt: "desc" },
+    take: 150,
+  });
+
+  // Group articles by district in memory
+  const districtArticles: Record<string, { district: typeof districts[0]; articles: typeof allArticles }> = {};
+
+  for (const d of districts) {
+    const constIds = new Set(constByDistrict[d.id] || []);
+    const nameL = d.name;
+    const nameEnL = d.nameEn.toLowerCase();
+
+    const articles = allArticles
+      .filter((a) =>
+        (a.constituencyId && constIds.has(a.constituencyId)) ||
+        a.title.includes(nameL) ||
+        a.title.toLowerCase().includes(nameEnL)
+      )
+      .slice(0, d.slug === myDistrictSlug ? 8 : 3);
+
+    districtArticles[d.slug] = { district: d, articles };
+  }
 
   return districtArticles;
 }

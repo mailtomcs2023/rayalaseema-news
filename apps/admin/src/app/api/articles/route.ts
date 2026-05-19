@@ -1,93 +1,133 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
-import { auth } from "@/lib/auth";
+import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
+import { logAudit } from "@/lib/audit";
+import { sanitizeSlug } from "@/lib/slug";
 
 // GET /api/articles - list with search, pagination, filters
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const page = parseInt(searchParams.get("page") || "1");
-  const limit = parseInt(searchParams.get("limit") || "15");
-  const search = searchParams.get("search") || "";
-  const status = searchParams.get("status") || "";
-  const category = searchParams.get("category") || "";
-  const offset = (page - 1) * limit;
+  const session = await requireAuth();
+  if (isAuthError(session)) return session;
+  try {
+    const { searchParams } = new URL(req.url);
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "15");
+    const search = searchParams.get("search") || "";
+    const status = searchParams.get("status") || "";
+    const category = searchParams.get("category") || "";
+    const offset = (page - 1) * limit;
 
-  const where: any = {};
-  if (search) {
-    where.OR = [
-      { title: { contains: search, mode: "insensitive" } },
-      { slug: { contains: search, mode: "insensitive" } },
-      { summary: { contains: search, mode: "insensitive" } },
-    ];
+    const where: any = {};
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: "insensitive" } },
+        { slug: { contains: search, mode: "insensitive" } },
+        { summary: { contains: search, mode: "insensitive" } },
+      ];
+    }
+    if (status) where.status = status;
+    if (category) where.categoryId = category;
+
+    const [articles, total] = await Promise.all([
+      prisma.article.findMany({
+        where,
+        include: {
+          category: { select: { name: true, nameEn: true, slug: true, color: true } },
+          author: { select: { name: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: offset,
+      }),
+      prisma.article.count({ where }),
+    ]);
+
+    return NextResponse.json({ articles, total, page, limit });
+  } catch (error) {
+    return apiError(error);
   }
-  if (status) where.status = status;
-  if (category) where.categoryId = category;
-
-  const [articles, total] = await Promise.all([
-    prisma.article.findMany({
-      where,
-      include: {
-        category: { select: { name: true, nameEn: true, slug: true, color: true } },
-        author: { select: { name: true } },
-      },
-      orderBy: { createdAt: "desc" },
-      take: limit,
-      skip: offset,
-    }),
-    prisma.article.count({ where }),
-  ]);
-
-  return NextResponse.json({ articles, total, page, limit });
 }
 
 // POST /api/articles - create new article
 export async function POST(req: NextRequest) {
+  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR", "SUB_EDITOR", "REPORTER"]);
+  if (isAuthError(session)) return session;
   try {
-    let authorId: string | undefined;
-    try {
-      const session = await auth();
-      authorId = (session?.user as any)?.id;
-    } catch {}
-
-    // Fallback to first admin user if session not available
-    if (!authorId) {
-      const admin = await prisma.user.findFirst({ where: { role: "ADMIN" } });
-      authorId = admin?.id;
-    }
-    if (!authorId) {
-      return NextResponse.json({ error: "No admin user found" }, { status: 401 });
-    }
+    const authorId = session.user.id;
 
     const body = await req.json();
-    const { title, slug, summary, body: articleBody, categoryId, featuredImage, status, featured, breaking, constituencyId } = body;
+    const { title, slug, summary, body: articleBody, categoryId, featuredImage, status, featured, breaking, constituencyId, scheduledAt, tagNames, metaTitle, metaDescription, ogImage } = body;
 
     if (!title || !title.trim()) return NextResponse.json({ error: "Title is required" }, { status: 400 });
     if (!slug || !slug.trim()) return NextResponse.json({ error: "Slug is required" }, { status: 400 });
     if (!categoryId) return NextResponse.json({ error: "Category is required" }, { status: 400 });
 
-    const existing = await prisma.article.findUnique({ where: { slug: slug.trim() } });
+    const cleanSlug = sanitizeSlug(slug);
+    if (!cleanSlug) return NextResponse.json({ error: "Slug must contain at least one alphanumeric character" }, { status: 400 });
+
+    const existing = await prisma.article.findUnique({ where: { slug: cleanSlug } });
     if (existing) return NextResponse.json({ error: "Slug already exists" }, { status: 400 });
+
+    // Scheduling logic: future scheduledAt + status SCHEDULED keeps article hidden until cron flips it.
+    const scheduledDate = scheduledAt ? new Date(scheduledAt) : null;
+    if (scheduledDate && isNaN(scheduledDate.getTime())) {
+      return NextResponse.json({ error: "Invalid scheduledAt date" }, { status: 400 });
+    }
+    let finalStatus = status || "DRAFT";
+    if (scheduledDate && scheduledDate.getTime() > Date.now()) {
+      finalStatus = "SCHEDULED";
+    } else if (finalStatus === "SCHEDULED" && (!scheduledDate || scheduledDate.getTime() <= Date.now())) {
+      return NextResponse.json({ error: "SCHEDULED status requires a future scheduledAt date" }, { status: 400 });
+    }
 
     const article = await prisma.article.create({
       data: {
         title: title.trim(),
-        slug: slug.trim().toLowerCase(),
+        slug: cleanSlug,
         summary: summary?.trim() || null,
         body: articleBody || "",
         categoryId,
         featuredImage: featuredImage?.trim() || null,
-        status: status || "DRAFT",
+        status: finalStatus,
         featured: featured || false,
         breaking: breaking || false,
         constituencyId: constituencyId || null,
         language: "TELUGU",
         authorId,
-        publishedAt: status === "PUBLISHED" ? new Date() : null,
+        publishedAt: finalStatus === "PUBLISHED" ? new Date() : null,
+        scheduledAt: scheduledDate,
+        metaTitle: metaTitle?.trim() || null,
+        metaDescription: metaDescription?.trim() || null,
+        ogImage: ogImage?.trim() || null,
       },
     });
 
+    // Attach tags (auto-create missing). tagNames = string[] of human-readable names.
+    if (Array.isArray(tagNames) && tagNames.length > 0) {
+      const slugify = (s: string) => s.toLowerCase().trim().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-").substring(0, 80);
+      const seen = new Set<string>();
+      for (const raw of tagNames) {
+        const name = String(raw || "").trim();
+        if (!name) continue;
+        const tagSlug = slugify(name);
+        if (!tagSlug || seen.has(tagSlug)) continue;
+        seen.add(tagSlug);
+        const tag = await prisma.tag.upsert({ where: { slug: tagSlug }, update: {}, create: { name, slug: tagSlug } });
+        await prisma.articleTag.create({ data: { articleId: article.id, tagId: tag.id } }).catch(() => {});
+      }
+    }
+
+    await logAudit({
+      action: "article.create",
+      resource: "article",
+      resourceId: article.id,
+      meta: { title: article.title, slug: article.slug, status: article.status, scheduledAt: article.scheduledAt },
+      actor: { id: session.user.id, email: session.user.email, role: (session.user as any).role },
+      req,
+    });
+
     return NextResponse.json(article, { status: 201 });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    return apiError(error);
   }
 }

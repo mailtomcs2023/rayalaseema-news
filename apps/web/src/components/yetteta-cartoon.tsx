@@ -14,7 +14,7 @@ export function YettetaCartoon({ items }: { items: { id: string; title: string; 
   const prev = () => setCurrent((p) => (p - 1 + allCartoons.length) % allCartoons.length);
 
   return (
-    <div className="sticky top-[100px]">
+    <div>
       {/* Header tab */}
       <div className="section-tab" style={{ display: "flex", width: "100%", justifyContent: "center" }}>
         <span className="section-label">ఎట్టెట 😄</span>

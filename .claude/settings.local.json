@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(git -C \"D:\\\\Rayalaseema express\" log --all --full-history --source --oneline -S \"AZURE_OPENAI_KEY\\\\|AZURE_SPEECH_KEY\\\\|NEWSDATA\")",
+      "Bash(dir:*)",
+      "Bash(test:*)",
+      "PowerShell(node -e \"const c = require\\('C:/Users/reddygs/.claude/hooks/caveman-config.js'\\); console.log\\('default:', c.getDefaultMode\\(\\)\\); console.log\\('flag:', c.readFlag\\('C:/Users/reddygs/.claude/.caveman-active'\\)\\);\")",
+      "Bash(curl -s http://localhost:4001 -o /tmp/page.html)"
+    ]
+  }
+}

@@ -6,28 +6,34 @@ interface NewsItem {
   slug: string;
 }
 
+const IconClock = () => (
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="9"/>
+    <path d="M12 7v5l3 2"/>
+  </svg>
+);
+
 export function LatestNewsSidebar({ items }: { items: NewsItem[] }) {
   return (
     <div className="bg-white">
-      {/* Header */}
-      <div style={{ textAlign: "center", padding: "10px 0", borderBottom: "2px solid var(--color-brand)" }}>
-        <h3 style={{ fontSize: "var(--fs-headline-lg)", fontWeight: "var(--fw-black)" as any, color: "var(--color-brand)" }}>
-          — తాజా వార్తలు —
-        </h3>
+      {/* Left-aligned section head — was: centered title with em-dashes */}
+      <div className="section-head">
+        <span className="section-head__icon"><IconClock /></span>
+        <span className="section-head__label">తాజా వార్తలు</span>
+        <span className="section-head__tail">latest</span>
       </div>
 
-      {/* News List */}
-      <div style={{ padding: 12 }}>
+      <div style={{ padding: "var(--sp-2) var(--sp-3)" }}>
         <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
           {items.map((item) => (
-            <li key={item.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
+            <li key={item.id} style={{ borderBottom: "1px solid var(--paper-edge)" }}>
               <Link
                 href={`/article/${item.slug}`}
                 className="group hover-brand"
-                style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 0" }}
+                style={{ display: "flex", alignItems: "flex-start", gap: "var(--sp-2)", padding: "var(--sp-2) 0" }}
               >
-                <span className="news-bullet-dot" style={{ marginTop: 8 }} />
-                <span className="news-headline-bullet group-hover:text-[var(--color-brand)]" style={{ transition: "color 0.15s" }}>
+                <span className="news-bullet-dot" style={{ marginTop: 9 }} />
+                <span className="news-headline-bullet group-hover:text-[var(--color-brand)]" style={{ transition: "color var(--dur-fast) var(--ease)" }}>
                   {item.title}
                 </span>
               </Link>

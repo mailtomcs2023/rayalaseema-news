@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
+import { requireAuth, isAuthError } from "@/lib/api-utils";
+import { buildSlugFromTitle, uniqueSlug } from "@/lib/slug";
 
-const NEWSDATA_KEY = process.env.NEWSDATA_API_KEY || "pub_599d50a2b3024142bf3f31aef9b6b89b";
+const NEWSDATA_KEY = process.env.NEWSDATA_API_KEY;
 const AZURE_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT || "https://rayalaseema-ai.openai.azure.com/";
 const AZURE_KEY = process.env.AZURE_OPENAI_KEY || "";
 const AZURE_DEPLOYMENT = process.env.AZURE_OPENAI_DEPLOYMENT || "gpt51";
@@ -92,34 +94,23 @@ RULES:
       summary: summaryMatch?.[1]?.trim() || content.substring(0, 200),
       body: bodyMatch?.[1]?.trim() || `<p>${content}</p>`,
     };
-  } catch {
+  } catch (e) {
+    console.error("[auto-fetch] Translation error:", e);
     return { title, summary: content.substring(0, 200), body: `<p>${content}</p>` };
   }
 }
 
-// Generate URL slug from title
+// Generate URL slug from title — delegates to shared sanitizer + uniqueness helper.
 function generateSlug(title: string, existingSlugs: Set<string>): string {
-  // Try to extract English words for slug
-  const english = title.replace(/[^\x00-\x7F]/g, "").trim();
-  let base = (english || `news-${Date.now()}`)
-    .toLowerCase()
-    .replace(/[^\w\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .substring(0, 60);
-
-  if (!base || base.length < 3) base = `news-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-
-  let slug = base;
-  let i = 1;
-  while (existingSlugs.has(slug)) {
-    slug = `${base}-${i++}`;
-  }
-  existingSlugs.add(slug);
-  return slug;
+  const base = buildSlugFromTitle(title);
+  const final = uniqueSlug(base, existingSlugs);
+  existingSlugs.add(final);
+  return final;
 }
 
 export async function POST(req: NextRequest) {
+  const session = await requireAuth(["ADMIN"]); if (isAuthError(session)) return session;
+  if (!NEWSDATA_KEY) return NextResponse.json({ error: "NEWSDATA_API_KEY not configured" }, { status: 503 });
   const { categories: requestedCategories } = await req.json().catch(() => ({ categories: null }));
 
   // Which categories to fetch

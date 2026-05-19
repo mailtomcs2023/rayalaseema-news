@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
+import { requireAuth, isAuthError } from "@/lib/api-utils";
+import { buildSlugFromTitle, sanitizeSlug } from "@/lib/slug";
 
-const NEWSDATA_API_KEY = "pub_599d50a2b3024142bf3f31aef9b6b89b";
+const NEWSDATA_API_KEY = process.env.NEWSDATA_API_KEY;
 
 // GET /api/fetch-news - fetch latest news from NewsData.io
 export async function GET(req: NextRequest) {
+  const session = await requireAuth(["ADMIN"]); if (isAuthError(session)) return session;
+  if (!NEWSDATA_API_KEY) return NextResponse.json({ error: "NEWSDATA_API_KEY not configured" }, { status: 503 });
   const { searchParams } = new URL(req.url);
   const query = searchParams.get("q") || "Rayalaseema OR Kurnool OR Anantapur OR Kadapa OR Tirupati OR Chittoor";
   const category = searchParams.get("category") || "";
@@ -49,6 +53,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/fetch-news - import a news article as draft
 export async function POST(req: NextRequest) {
+  const session2 = await requireAuth(["ADMIN"]); if (isAuthError(session2)) return session2;
   try {
     const body = await req.json();
     const { title, description, imageUrl, sourceUrl, categorySlug } = body;
@@ -61,7 +66,7 @@ export async function POST(req: NextRequest) {
       const cat = await prisma.category.findUnique({ where: { slug: categorySlug } });
       categoryId = cat?.id || "";
     }
-    if (!categoryId!) {
+    if (!categoryId) {
       const defaultCat = await prisma.category.findFirst({ orderBy: { sortOrder: "asc" } });
       categoryId = defaultCat?.id || "";
     }
@@ -69,12 +74,8 @@ export async function POST(req: NextRequest) {
     // Find admin user as author
     const admin = await prisma.user.findFirst({ where: { role: "ADMIN" } });
 
-    // Create slug from title
-    const slug = title
-      .toLowerCase()
-      .replace(/[^\w\s-]/g, "")
-      .replace(/\s+/g, "-")
-      .substring(0, 60) + "-" + Date.now();
+    // Create slug from title — sanitized + timestamp for uniqueness
+    const slug = sanitizeSlug(`${buildSlugFromTitle(title)}-${Date.now()}`);
 
     const article = await prisma.article.create({
       data: {

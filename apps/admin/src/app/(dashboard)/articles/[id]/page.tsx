@@ -33,6 +33,19 @@ export default function EditArticlePage() {
   const [featuredImage, setFeaturedImage] = useState("");
   const [status, setStatus] = useState("DRAFT");
   const [featured, setFeatured] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState(""); // datetime-local value, empty = no schedule
+  const [tagsInput, setTagsInput] = useState(""); // comma-separated tag names
+  const [metaTitle, setMetaTitle] = useState("");
+  const [metaDescription, setMetaDescription] = useState("");
+  const [ogImage, setOgImage] = useState("");
+
+  // Revisions
+  const [revisions, setRevisions] = useState<any[]>([]);
+  const [showRevisions, setShowRevisions] = useState(false);
+  const [previewRev, setPreviewRev] = useState<any | null>(null);
+  const [revLoading, setRevLoading] = useState(false);
+  const [restoreLoading, setRestoreLoading] = useState(false);
+
   const [districts, setDistricts] = useState<any[]>([]);
   const [selectedDistrict, setSelectedDistrict] = useState("");
   const [selectedConstituency, setSelectedConstituency] = useState("");
@@ -69,6 +82,19 @@ export default function EditArticlePage() {
       setFeatured(article.featured || false);
       setSelectedConstituency(article.constituencyId || "");
       setBreaking(article.breaking || false);
+      // Convert ISO date to datetime-local format (YYYY-MM-DDTHH:mm) in local TZ
+      if (article.scheduledAt) {
+        const d = new Date(article.scheduledAt);
+        const off = d.getTimezoneOffset() * 60000;
+        setScheduledAt(new Date(d.getTime() - off).toISOString().slice(0, 16));
+      }
+      // Tags + SEO
+      if (Array.isArray(article.tags)) {
+        setTagsInput(article.tags.map((at: any) => at.tag?.name).filter(Boolean).join(", "));
+      }
+      setMetaTitle(article.metaTitle || "");
+      setMetaDescription(article.metaDescription || "");
+      setOgImage(article.ogImage || "");
       setCategories(cats);
       setLoading(false);
     });
@@ -79,6 +105,12 @@ export default function EditArticlePage() {
     setError("");
     setSuccess("");
 
+    // Validate schedule if scheduling
+    if (newStatus === "SCHEDULED") {
+      if (!scheduledAt) { setError("Pick a date/time to schedule"); setSaving(false); return; }
+      if (new Date(scheduledAt).getTime() <= Date.now()) { setError("Schedule time must be in the future"); setSaving(false); return; }
+    }
+
     const res = await fetch(`/api/articles/${articleId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -88,6 +120,11 @@ export default function EditArticlePage() {
         status: newStatus || status,
         featured, breaking,
         constituencyId: selectedConstituency || null,
+        scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
+        tagNames: tagsInput.split(",").map((s) => s.trim()).filter(Boolean),
+        metaTitle: metaTitle.trim() || null,
+        metaDescription: metaDescription.trim() || null,
+        ogImage: ogImage.trim() || null,
       }),
     });
 
@@ -162,6 +199,49 @@ export default function EditArticlePage() {
     router.refresh();
   };
 
+  const loadRevisions = async () => {
+    setRevLoading(true);
+    try {
+      const res = await fetch(`/api/articles/${articleId}/revisions`);
+      const data = await res.json();
+      setRevisions(data.revisions || []);
+    } finally {
+      setRevLoading(false);
+    }
+  };
+
+  const openRevision = async (revId: string) => {
+    const res = await fetch(`/api/articles/${articleId}/revisions/${revId}`);
+    const data = await res.json();
+    setPreviewRev(data);
+  };
+
+  const restoreRevision = async (revId: string) => {
+    if (!confirm("Restore this version? Current content will be saved as a new revision first (reversible).")) return;
+    setRestoreLoading(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/articles/${articleId}/revisions/${revId}/restore`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Restore failed"); return; }
+      // Reload article from server
+      const fresh = await fetch(`/api/articles/${articleId}`).then(r => r.json());
+      setTitle(fresh.title);
+      setSlug(fresh.slug);
+      setSummary(fresh.summary || "");
+      setBody(fresh.body || "");
+      setFeaturedImage(fresh.featuredImage || "");
+      setCategoryId(fresh.categoryId || "");
+      editorRef.current?.setContent(fresh.body || "");
+      setPreviewRev(null);
+      setSuccess("Version restored");
+      await loadRevisions();
+      setTimeout(() => setSuccess(""), 3000);
+    } finally {
+      setRestoreLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
@@ -187,10 +267,12 @@ export default function EditArticlePage() {
             {/* Status badge */}
             <span style={{
               padding: "4px 12px", borderRadius: 6, fontSize: 12, fontWeight: 700,
-              background: status === "PUBLISHED" ? "#dcfce7" : status === "DRAFT" ? "#fef3c7" : "#dbeafe",
-              color: status === "PUBLISHED" ? "#166534" : status === "DRAFT" ? "#92400e" : "#1e40af",
+              background: status === "PUBLISHED" ? "#dcfce7" : status === "DRAFT" ? "#fef3c7" : status === "SCHEDULED" ? "#ede9fe" : "#dbeafe",
+              color: status === "PUBLISHED" ? "#166534" : status === "DRAFT" ? "#92400e" : status === "SCHEDULED" ? "#5b21b6" : "#1e40af",
             }}>
-              {status}
+              {status === "SCHEDULED" && scheduledAt
+                ? `SCHEDULED · ${new Date(scheduledAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}`
+                : status}
             </span>
 
             <button onClick={() => handleSave()} disabled={saving}
@@ -214,6 +296,15 @@ export default function EditArticlePage() {
               </button>
             )}
 
+            {/* Schedule (any non-published state can be scheduled) */}
+            {status !== "PUBLISHED" && (
+              <button onClick={() => handleSave("SCHEDULED")} disabled={saving || !scheduledAt}
+                title={!scheduledAt ? "Pick a date/time in the sidebar first" : "Schedule auto-publish"}
+                style={{ padding: "8px 16px", background: scheduledAt ? "#7c3aed" : "#e5e7eb", color: scheduledAt ? "#fff" : "#999", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: scheduledAt ? "pointer" : "not-allowed" }}>
+                Schedule
+              </button>
+            )}
+
             {/* Publish (Chief/Admin) */}
             {status !== "PUBLISHED" && (
               <button onClick={() => handleSave("PUBLISHED")} disabled={saving}
@@ -229,6 +320,11 @@ export default function EditArticlePage() {
                 Unpublish
               </button>
             )}
+
+            <button onClick={() => { setShowRevisions(true); loadRevisions(); }}
+              style={{ padding: "8px 16px", background: "#f3f4f6", color: "#374151", border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+              Revisions
+            </button>
 
             <button onClick={handleDelete}
               style={{ padding: "8px 16px", background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
@@ -372,6 +468,74 @@ export default function EditArticlePage() {
               </label>
             </div>
 
+            {/* Tags */}
+            <div style={{ background: "#fff", borderRadius: 10, padding: 16, marginBottom: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#555", marginBottom: 6 }}>Tags</label>
+              <input
+                type="text"
+                value={tagsInput}
+                onChange={(e) => setTagsInput(e.target.value)}
+                placeholder="comma, separated, tag, names"
+                style={{ width: "100%", border: "1px solid #eee", borderRadius: 8, padding: "8px 10px", fontSize: 13, boxSizing: "border-box" }}
+              />
+              <p style={{ fontSize: 11, color: "#aaa", marginTop: 4 }}>
+                New tags auto-created on save. Public page: /tag/&lt;slug&gt;
+              </p>
+            </div>
+
+            {/* SEO Meta Overrides */}
+            <div style={{ background: "#fff", borderRadius: 10, padding: 16, marginBottom: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#111", marginBottom: 10 }}>SEO overrides (optional)</label>
+              <label style={{ display: "block", fontSize: 11, color: "#888", marginBottom: 4 }}>Meta title <span style={{ color: "#bbb" }}>(falls back to article title)</span></label>
+              <input
+                type="text"
+                value={metaTitle}
+                onChange={(e) => setMetaTitle(e.target.value)}
+                placeholder="60-70 chars"
+                maxLength={120}
+                style={{ width: "100%", border: "1px solid #eee", borderRadius: 8, padding: "8px 10px", fontSize: 13, boxSizing: "border-box", marginBottom: 10 }}
+              />
+              <label style={{ display: "block", fontSize: 11, color: "#888", marginBottom: 4 }}>Meta description <span style={{ color: "#bbb" }}>(falls back to summary)</span></label>
+              <textarea
+                value={metaDescription}
+                onChange={(e) => setMetaDescription(e.target.value)}
+                placeholder="155-160 chars"
+                maxLength={220}
+                rows={2}
+                style={{ width: "100%", border: "1px solid #eee", borderRadius: 8, padding: "8px 10px", fontSize: 13, boxSizing: "border-box", marginBottom: 10, resize: "vertical" }}
+              />
+              <label style={{ display: "block", fontSize: 11, color: "#888", marginBottom: 4 }}>OG image URL <span style={{ color: "#bbb" }}>(falls back to featured image)</span></label>
+              <input
+                type="text"
+                value={ogImage}
+                onChange={(e) => setOgImage(e.target.value)}
+                placeholder="https://..."
+                style={{ width: "100%", border: "1px solid #eee", borderRadius: 8, padding: "8px 10px", fontSize: 13, boxSizing: "border-box" }}
+              />
+            </div>
+
+            {/* Schedule */}
+            <div style={{ background: "#fff", borderRadius: 10, padding: 16, marginBottom: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#555", marginBottom: 8 }}>Schedule publish</label>
+              <input
+                type="datetime-local"
+                value={scheduledAt}
+                onChange={(e) => setScheduledAt(e.target.value)}
+                style={{ width: "100%", border: "1px solid #eee", borderRadius: 8, padding: "8px 10px", fontSize: 13, boxSizing: "border-box" }}
+              />
+              <p style={{ fontSize: 11, color: "#aaa", marginTop: 4 }}>
+                Set future date/time then click <strong>Schedule</strong>. Hidden until then.
+              </p>
+              {status === "SCHEDULED" && (
+                <button
+                  onClick={() => { setScheduledAt(""); handleSave("DRAFT"); }}
+                  style={{ marginTop: 8, padding: "6px 12px", background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: "pointer" }}
+                >
+                  Cancel schedule
+                </button>
+              )}
+            </div>
+
             {/* Social Media Sharing */}
             <div style={{ background: "#fff", borderRadius: 10, padding: 16, marginBottom: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
               <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#555", marginBottom: 10 }}>Share to Social Media</label>
@@ -445,6 +609,95 @@ export default function EditArticlePage() {
             </a>
           </div>
         </div>
+
+        {/* ===== Revisions Drawer ===== */}
+        {showRevisions && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 1000, display: "flex", justifyContent: "flex-end" }} onClick={() => { setShowRevisions(false); setPreviewRev(null); }}>
+            <div onClick={(e) => e.stopPropagation()} style={{ width: "min(900px, 95vw)", height: "100vh", background: "#fff", overflow: "auto", display: "flex" }}>
+              {/* Revision list */}
+              <div style={{ width: 320, borderRight: "1px solid #eee", overflowY: "auto" }}>
+                <div style={{ padding: 16, borderBottom: "1px solid #eee", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <h2 style={{ fontSize: 16, fontWeight: 800, color: "#111" }}>Version History</h2>
+                  <button onClick={() => { setShowRevisions(false); setPreviewRev(null); }}
+                    style={{ background: "none", border: "none", fontSize: 22, color: "#888", cursor: "pointer", lineHeight: 1 }}>×</button>
+                </div>
+                {revLoading && <p style={{ padding: 16, fontSize: 13, color: "#888" }}>Loading...</p>}
+                {!revLoading && revisions.length === 0 && (
+                  <p style={{ padding: 16, fontSize: 13, color: "#888" }}>No prior versions yet. Edits will appear here.</p>
+                )}
+                {revisions.map((r) => (
+                  <button
+                    key={r.id}
+                    onClick={() => openRevision(r.id)}
+                    style={{
+                      display: "block", width: "100%", textAlign: "left", padding: "12px 16px",
+                      borderBottom: "1px solid #f3f4f6", background: previewRev?.id === r.id ? "#eff6ff" : "transparent",
+                      border: "none", cursor: "pointer",
+                    }}
+                  >
+                    <div style={{ fontSize: 12, color: "#888", marginBottom: 2 }}>
+                      {new Date(r.createdAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#111", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden" }}>
+                      {r.title}
+                    </div>
+                    <div style={{ fontSize: 11, color: "#888", marginTop: 4 }}>
+                      by {r.editedBy?.name || "?"} · {r.bodyLength} chars · {r.status}
+                    </div>
+                    {r.editNote && (
+                      <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4, fontStyle: "italic" }}>"{r.editNote}"</div>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {/* Preview pane */}
+              <div style={{ flex: 1, padding: 20, overflowY: "auto" }}>
+                {!previewRev && (
+                  <p style={{ fontSize: 13, color: "#888" }}>Pick a version on the left to preview.</p>
+                )}
+                {previewRev && (
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                      <div>
+                        <p style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: "0.06em" }}>Version from</p>
+                        <p style={{ fontSize: 14, fontWeight: 700, color: "#111" }}>
+                          {new Date(previewRev.createdAt).toLocaleString("en-IN", { dateStyle: "full", timeStyle: "short" })}
+                        </p>
+                        <p style={{ fontSize: 12, color: "#888" }}>by {previewRev.editedBy?.name}</p>
+                      </div>
+                      <button
+                        onClick={() => restoreRevision(previewRev.id)}
+                        disabled={restoreLoading}
+                        style={{ padding: "8px 16px", background: "#FF2C2C", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: restoreLoading ? "not-allowed" : "pointer" }}
+                      >
+                        {restoreLoading ? "Restoring..." : "Restore this version"}
+                      </button>
+                    </div>
+
+                    <div style={{ marginBottom: 12, padding: 12, background: "#f9fafb", borderRadius: 8, border: "1px solid #eee" }}>
+                      <p style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Title</p>
+                      <p style={{ fontSize: 18, fontWeight: 800, color: "#111", lineHeight: 1.3 }}>{previewRev.title}</p>
+                      <p style={{ fontSize: 12, color: "#666", marginTop: 4, fontFamily: "monospace" }}>{previewRev.slug}</p>
+                    </div>
+
+                    {previewRev.summary && (
+                      <div style={{ marginBottom: 12, padding: 12, background: "#f9fafb", borderRadius: 8, border: "1px solid #eee" }}>
+                        <p style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Summary</p>
+                        <p style={{ fontSize: 14, color: "#333", lineHeight: 1.6 }}>{previewRev.summary}</p>
+                      </div>
+                    )}
+
+                    <div style={{ padding: 12, background: "#f9fafb", borderRadius: 8, border: "1px solid #eee" }}>
+                      <p style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Body</p>
+                      <div style={{ fontSize: 14, color: "#333", lineHeight: 1.7 }} dangerouslySetInnerHTML={{ __html: previewRev.body || "" }} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

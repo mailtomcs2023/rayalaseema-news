@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rayalaseema Express — Design Direction Comparison</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=Suranna&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:#1a1a1a;
+    color:#f5f5f5;
+    font-family:'Spectral',serif;
+    line-height:1.6;
+    padding:40px 24px 80px;
+  }
+  .wrap{max-width:1100px;margin:0 auto}
+  h1{
+    font-family:'Suranna',serif;
+    font-size:54px;
+    color:#f5f5f5;
+    line-height:1.1;
+    margin-bottom:12px;
+  }
+  .sub{
+    font-style:italic;
+    color:#aaa;
+    font-size:18px;
+    max-width:680px;
+    margin-bottom:48px;
+  }
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:24px;
+  }
+  .card{
+    background:#252525;
+    border:1px solid #333;
+    padding:28px;
+    text-decoration:none;
+    color:inherit;
+    display:flex;flex-direction:column;
+    transition:transform 0.2s,border-color 0.2s,background 0.2s;
+  }
+  .card:hover{
+    transform:translateY(-4px);
+    border-color:#777;
+    background:#2c2c2c;
+  }
+  .label{
+    font-style:italic;
+    color:#888;
+    font-size:13px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    margin-bottom:8px;
+  }
+  .name{
+    font-family:'Suranna',serif;
+    font-size:32px;
+    color:#fff;
+    line-height:1.1;
+    margin-bottom:6px;
+  }
+  .te{
+    font-family:'Suranna',serif;
+    color:#999;
+    font-size:18px;
+    margin-bottom:14px;
+  }
+  .swatch{display:flex;gap:6px;margin-bottom:14px}
+  .swatch i{
+    width:30px;height:30px;
+    border:1px solid #555;
+    display:block;
+  }
+  .desc{
+    color:#ccc;
+    font-size:14px;
+    line-height:1.7;
+    margin-bottom:14px;
+    flex:1;
+  }
+  .specs{
+    border-top:1px solid #333;
+    padding-top:14px;
+    margin-top:auto;
+    font-size:12px;
+    color:#888;
+    line-height:1.7;
+  }
+  .specs strong{color:#ddd}
+  .open{
+    margin-top:14px;
+    color:#D4A017;
+    font-size:13px;
+    letter-spacing:1.5px;
+    font-weight:600;
+  }
+  .card:hover .open{text-decoration:underline;text-underline-offset:4px}
+
+  .legend{
+    margin-top:48px;
+    background:#252525;
+    border:1px solid #333;
+    padding:24px;
+    font-size:14px;
+    color:#bbb;
+    line-height:1.7;
+  }
+  .legend h3{
+    font-family:'Suranna',serif;
+    color:#fff;
+    font-size:20px;
+    margin-bottom:10px;
+  }
+  .legend code{
+    background:#1a1a1a;
+    padding:2px 6px;
+    border:1px solid #444;
+    color:#D4A017;
+    font-family:monospace;
+  }
+  @media (max-width:900px){
+    h1{font-size:36px}
+    .grid{grid-template-columns:1fr !important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="label">Design Mockups · 15 May 2026</div>
+  <h1>Rayalaseema Express<br>Design Direction Comparison</h1>
+  <p class="sub">Three distinctive directions for the Telugu news portal, each rooted in Rayalaseema regional identity. Click any card to view the full homepage mockup in your browser.</p>
+
+  <div class="grid" style="grid-template-columns:repeat(2,1fr)">
+
+    <a class="card" href="direction-d-hybrid.html" style="border:2px solid #D4A017;background:#2a2520">
+      <div class="label" style="color:#D4A017">Direction D · NEW · Recommended</div>
+      <div class="name">Hybrid — Current Layout + Lepakshi Soul</div>
+      <div class="te">మీ ప్రస్తుత నిర్మాణం · శుద్ధి చేసిన శైలి</div>
+      <div class="swatch">
+        <i style="background:#E01B1B"></i>
+        <i style="background:#D4A017"></i>
+        <i style="background:#1B2845"></i>
+        <i style="background:#FAF6EC"></i>
+      </div>
+      <p class="desc"><strong style="color:#fff">Keeps your existing layout</strong> (63/37 hero, 3×3 category grid, district mini-cards, ad bands) — but swaps in Lepakshi typography, warm paper background, turmeric yellow accents, and ornamental hover details. <strong style="color:#fff">Red brand color preserved</strong>, just slightly warmed for paper feel. Minimum disruption, maximum refinement.</p>
+      <div class="specs">
+        <strong>Display:</strong> NTR / Suranna<br>
+        <strong>Body:</strong> Noto Serif Telugu<br>
+        <strong>Latin:</strong> Cormorant Garamond italic<br>
+        <strong>Best for:</strong> Refining without disrupting reader habits
+      </div>
+      <div class="open">VIEW MOCKUP →</div>
+    </a>
+
+    <a class="card" href="direction-a-lepakshi.html">
+      <div class="label">Direction A · Original</div>
+      <div class="name">Lepakshi</div>
+      <div class="te">లేపాక్షి శైలి</div>
+      <div class="swatch">
+        <i style="background:#A0322D"></i>
+        <i style="background:#D4A017"></i>
+        <i style="background:#1B2845"></i>
+        <i style="background:#F5E6CA"></i>
+      </div>
+      <p class="desc">Inspired by the Vijayanagara-era frescoes at Lepakshi temple in your own Anantapur district. Terracotta + turmeric + indigo on ivory. Newspaper density preserved with ornamental fresco-style dividers and asymmetric pull-quotes. Feels like a regional cultural institution — modernized but rooted.</p>
+      <div class="specs">
+        <strong>Display:</strong> NTR / Suranna<br>
+        <strong>Body:</strong> Noto Serif Telugu<br>
+        <strong>Vibe:</strong> Regional gravitas. Modern but timeless.<br>
+        <strong>Best for:</strong> Differentiation from Eenadu while staying serious
+      </div>
+      <div class="open">VIEW MOCKUP →</div>
+    </a>
+
+    <a class="card" href="direction-b-editorial.html">
+      <div class="label">Direction B</div>
+      <div class="name">Editorial Restraint</div>
+      <div class="te">సంపాదకీయ నైతికత</div>
+      <div class="swatch">
+        <i style="background:#0B0B0B"></i>
+        <i style="background:#FAF7F0"></i>
+        <i style="background:#6B1F1F"></i>
+        <i style="background:#717171"></i>
+      </div>
+      <p class="desc">The Hindu × NYT for Telugu. Ink black on cream paper, one deep-maroon accent, hairline rules, generous white space. Asymmetric layouts, serif numerals, single-column long-form. Massive differentiation from any existing Telugu paper — positions you as the thinking person's regional newspaper.</p>
+      <div class="specs">
+        <strong>Display:</strong> Suranna + Spectral<br>
+        <strong>Body:</strong> Noto Serif Telugu<br>
+        <strong>Vibe:</strong> Premium, considered, aspirational.<br>
+        <strong>Best for:</strong> Urban diaspora, subscriber paywall
+      </div>
+      <div class="open">VIEW MOCKUP →</div>
+    </a>
+
+    <a class="card" href="direction-c-folk.html">
+      <div class="label">Direction C</div>
+      <div class="name">Folk Maximalist</div>
+      <div class="te">జానపద శైలి</div>
+      <div class="swatch">
+        <i style="background:#C8102E"></i>
+        <i style="background:#1A237E"></i>
+        <i style="background:#FFB300"></i>
+        <i style="background:#1A1A1A"></i>
+      </div>
+      <p class="desc">Kalamkari + Cheriyal scrolls + Tholu Bommalata (Anantapur leather puppet art). Vermilion + indigo + turmeric on cream. Hand-stamped breaking-news badges, patterned dividers, hard offset shadows on cards. Dense like Eenadu but ornamented with regional craft motifs. Loud, proud, unmistakable.</p>
+      <div class="specs">
+        <strong>Display:</strong> Ramabhadra + Yatra One<br>
+        <strong>Body:</strong> Mandali<br>
+        <strong>Vibe:</strong> Cultural pride, folk-art warmth.<br>
+        <strong>Best for:</strong> Younger regional readers, emotional pull
+      </div>
+      <div class="open">VIEW MOCKUP →</div>
+    </a>
+
+  </div>
+
+  <div class="legend">
+    <h3>How to compare them</h3>
+    <p>Open each mockup full-screen. Look at: (1) how the masthead feels, (2) typography hierarchy, (3) breaking-news treatment, (4) how district cards differentiate from category cards, (5) the editorial pull-quote / opinion treatment, (6) the footer.</p>
+    <p style="margin-top:10px">Each mockup uses the same content (real Telugu headlines from the categories already in your DB) so the differences you feel are <strong>purely design</strong>, not content.</p>
+    <p style="margin-top:10px"><strong>Once you pick a direction</strong>, I'll port it into the Next.js app — global CSS variables, Tailwind config, and updates to <code>apps/web/src/components/*</code> — replacing the current Eenadu-clone aesthetic.</p>
+  </div>
+</div>
+</body>
+</html>

@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
+import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
+import { buildSlugFromTitle, sanitizeSlug } from "@/lib/slug";
 
-const NEWSDATA_KEY = "pub_599d50a2b3024142bf3f31aef9b6b89b";
+const NEWSDATA_KEY = process.env.NEWSDATA_API_KEY;
 const AI_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT!;
 const AI_KEY = process.env.AZURE_OPENAI_KEY!;
 const AI_DEPLOYMENT = process.env.AZURE_OPENAI_DEPLOYMENT || "gpt51";
@@ -96,7 +98,8 @@ Rules: Pure Telugu except proper nouns. 300-400 words body. Professional newspap
   const text = data.choices?.[0]?.message?.content || "";
   try {
     return JSON.parse(text);
-  } catch {
+  } catch (e) {
+    console.error("[auto-publish] JSON parse error:", e);
     // Fallback: extract from text
     return { title: title, summary: content.substring(0, 200), body: `<p>${content}</p>` };
   }
@@ -104,13 +107,15 @@ Rules: Pure Telugu except proper nouns. 300-400 words body. Professional newspap
 
 // POST /api/auto-publish - fetch, translate, and publish articles for all categories
 export async function POST(req: NextRequest) {
+  const session = await requireAuth(["ADMIN"]); if (isAuthError(session)) return session;
+  if (!NEWSDATA_KEY) return NextResponse.json({ error: "NEWSDATA_API_KEY not configured" }, { status: 503 });
   const { searchParams } = new URL(req.url);
   const dryRun = searchParams.get("dry") === "true";
   const maxPerCategory = parseInt(searchParams.get("max") || "3");
   const articleStatus = searchParams.get("status") === "PUBLISHED" ? "PUBLISHED" : "DRAFT";
   const force = searchParams.get("force") === "true";
 
-  const results: any[] = [];
+  const results: Record<string, unknown>[] = [];
   const admin = await prisma.user.findFirst({ where: { role: "ADMIN" } });
   if (!admin) return NextResponse.json({ error: "No admin user" }, { status: 400 });
 
@@ -122,9 +127,15 @@ export async function POST(req: NextRequest) {
   });
 
   // Count existing articles per category
+  const categoryCounts = await prisma.article.groupBy({
+    by: ["categoryId"],
+    where: { status: "PUBLISHED" },
+    _count: { id: true },
+  });
   const existingCounts: Record<string, number> = {};
   for (const cat of categories) {
-    existingCounts[cat.slug] = await prisma.article.count({ where: { categoryId: cat.id, status: "PUBLISHED" } });
+    const found = categoryCounts.find((c) => c.categoryId === cat.id);
+    existingCounts[cat.slug] = found?._count.id || 0;
   }
 
   // Search queries per category for NewsData
@@ -175,13 +186,20 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
+    // Batch check for existing articles
+    const titlePrefixes = newsArticles.slice(0, needed).filter((n: any) => n.title).map((n: any) => n.title.substring(0, 30));
+    const existingArticles = titlePrefixes.length > 0 ? await prisma.article.findMany({
+      where: { OR: titlePrefixes.map((t: string) => ({ title: { contains: t } })) },
+      select: { title: true },
+    }) : [];
+    const existingTitleSet = new Set(existingArticles.map((a) => a.title.substring(0, 30)));
+
     let created = 0;
     for (const news of newsArticles.slice(0, needed)) {
       if (!news.title || !news.description) continue;
 
       // Check if already imported (by similar title)
-      const exists = await prisma.article.findFirst({ where: { title: { contains: news.title.substring(0, 30) } } });
-      if (exists) continue;
+      if (existingTitleSet.has(news.title.substring(0, 30))) continue;
 
       try {
         // Scrape full content from source
@@ -200,12 +218,8 @@ export async function POST(req: NextRequest) {
         // Translate to Telugu
         const translated = await translateToTelugu(news.title, fullContent);
 
-        // Create slug
-        const slug = news.title
-          .toLowerCase()
-          .replace(/[^\w\s-]/g, "")
-          .replace(/\s+/g, "-")
-          .substring(0, 60) + "-" + Date.now();
+        // Create slug — sanitized + timestamp for uniqueness
+        const slug = sanitizeSlug(`${buildSlugFromTitle(news.title)}-${Date.now()}`);
 
         // Create article
         await prisma.article.create({
@@ -241,6 +255,7 @@ export async function POST(req: NextRequest) {
 
 // GET - show status
 export async function GET() {
+  const session = await requireAuth(["ADMIN"]); if (isAuthError(session)) return session;
   const categories = await prisma.category.findMany({
     where: { active: true },
     orderBy: { sortOrder: "asc" },

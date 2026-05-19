@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
+import { rateLimit } from "@/lib/rate-limit";
 
 // GET active poll
 export async function GET() {
@@ -24,13 +25,15 @@ export async function GET() {
       percentage: totalVotes > 0 ? Math.round((o.votes / totalVotes) * 100) : 0,
     })),
   });
-  } catch {
+  } catch (e) {
+    console.error("[polls] Error:", e);
     return NextResponse.json(null);
   }
 }
 
 // POST vote
 export async function POST(req: NextRequest) {
+  const limited = rateLimit(req, { maxRequests: 1, windowMs: 60_000, prefix: "poll-vote" }); if (limited) return limited;
   const { optionId } = await req.json();
   if (!optionId) return NextResponse.json({ error: "Option required" }, { status: 400 });
 

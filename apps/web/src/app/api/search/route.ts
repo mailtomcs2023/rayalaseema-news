@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function GET(req: NextRequest) {
+  const limited = rateLimit(req, { maxRequests: 10, windowMs: 60_000, prefix: "search" }); if (limited) return limited;
   const q = req.nextUrl.searchParams.get("q")?.trim();
   if (!q || q.length < 2) return NextResponse.json({ articles: [], total: 0 });
 
@@ -32,5 +34,7 @@ export async function GET(req: NextRequest) {
     prisma.article.count({ where }),
   ]);
 
-  return NextResponse.json({ articles, total, page });
+  return NextResponse.json({ articles, total, page }, {
+    headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=30" },
+  });
 }

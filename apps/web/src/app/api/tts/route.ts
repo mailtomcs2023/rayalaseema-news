@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { rateLimit } from "@/lib/rate-limit";
 
-const SPEECH_KEY = process.env.AZURE_SPEECH_KEY || "44704b838e0c427eb2f01ef2d46e10bd";
+const SPEECH_KEY = process.env.AZURE_SPEECH_KEY;
 const SPEECH_REGION = process.env.AZURE_SPEECH_REGION || "centralindia";
 const VOICE = process.env.AZURE_SPEECH_VOICE || "te-IN-MohanNeural"; // Male Telugu voice
 
 export async function POST(req: NextRequest) {
+  const limited = rateLimit(req, { maxRequests: 5, windowMs: 60_000, prefix: "tts" }); if (limited) return limited;
+  if (!SPEECH_KEY) return NextResponse.json({ error: "TTS service not configured" }, { status: 503 });
   try {
     const { text } = await req.json();
     if (!text || text.length < 5) {
@@ -62,7 +65,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (e: any) {
     console.error("TTS error:", e.message);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: "TTS generation failed" }, { status: 500 });
   }
 }
 

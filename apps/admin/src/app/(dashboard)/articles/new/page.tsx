@@ -30,6 +30,8 @@ export default function NewArticlePage() {
   const [status, setStatus] = useState("DRAFT");
   const [featured, setFeatured] = useState(false);
   const [breaking, setBreaking] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState(""); // ISO local string from <input type="datetime-local">
+
   const [aiLoading, setAiLoading] = useState(false);
   const [aiAction, setAiAction] = useState("");
   const [success, setSuccess] = useState("");
@@ -72,6 +74,13 @@ export default function NewArticlePage() {
     if (!slug.trim()) { setError("Slug is required"); setSaving(false); return; }
     if (!categoryId) { setError("Category is required"); setSaving(false); return; }
 
+    // Schedule = APPROVED status + future scheduledAt. API converts to SCHEDULED.
+    const isSchedule = publishStatus === "SCHEDULED";
+    if (isSchedule) {
+      if (!scheduledAt) { setError("Pick a date/time to schedule"); setSaving(false); return; }
+      if (new Date(scheduledAt).getTime() <= Date.now()) { setError("Schedule time must be in the future"); setSaving(false); return; }
+    }
+
     const res = await fetch("/api/articles", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -85,6 +94,7 @@ export default function NewArticlePage() {
         status: publishStatus,
         featured,
         breaking,
+        scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
       }),
     });
 
@@ -170,6 +180,14 @@ export default function NewArticlePage() {
               style={{ padding: "10px 20px", background: "#3b82f6", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer" }}
             >
               Submit for Review
+            </button>
+            <button
+              onClick={() => handleSubmit("SCHEDULED")}
+              disabled={saving || !scheduledAt}
+              title={!scheduledAt ? "Pick a date/time in the sidebar first" : "Schedule for auto-publish"}
+              style={{ padding: "10px 20px", background: scheduledAt ? "#7c3aed" : "#e5e7eb", color: scheduledAt ? "#fff" : "#999", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: scheduledAt ? "pointer" : "not-allowed" }}
+            >
+              Schedule
             </button>
             <button
               onClick={() => handleSubmit("PUBLISHED")}
@@ -316,6 +334,22 @@ export default function NewArticlePage() {
                 />
                 <span style={{ fontSize: 13, color: "#555" }}>Breaking News</span>
               </label>
+            </div>
+
+            {/* Schedule */}
+            <div style={{ background: "#fff", borderRadius: 10, padding: 20, marginBottom: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#555", marginBottom: 8 }}>
+                Schedule publish (optional)
+              </label>
+              <input
+                type="datetime-local"
+                value={scheduledAt}
+                onChange={(e) => setScheduledAt(e.target.value)}
+                style={{ width: "100%", border: "1px solid #eee", borderRadius: 8, padding: "8px 10px", fontSize: 13, boxSizing: "border-box" }}
+              />
+              <p style={{ fontSize: 11, color: "#aaa", marginTop: 4 }}>
+                Pick a future date/time then click <strong>Schedule</strong>. Article stays hidden until then.
+              </p>
             </div>
 
             {/* SEO Preview */}

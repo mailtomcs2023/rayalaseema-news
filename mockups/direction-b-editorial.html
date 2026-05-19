@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="te">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>రాయలసీమ ఎక్స్‌ప్రెస్ — Direction B: Editorial Restraint</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Suranna&family=Noto+Serif+Telugu:wght@400;500;600;700;800&family=Spectral:ital,wght@0,300;0,400;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0B0B0B;
+    --ink-soft:#3A3A3A;
+    --ink-muted:#717171;
+    --cream:#FAF7F0;
+    --cream-soft:#F2EDDF;
+    --maroon:#6B1F1F;
+    --maroon-deep:#4A1414;
+    --hairline:rgba(11,11,11,0.12);
+    --hairline-strong:rgba(11,11,11,0.22);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{font-size:16px}
+  body{
+    background:var(--cream);
+    color:var(--ink);
+    font-family:'Noto Serif Telugu',serif;
+    font-weight:400;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:0 32px}
+
+  /* ===== TOP META BAR ===== */
+  .meta-bar{
+    border-bottom:1px solid var(--hairline);
+    padding:10px 0;
+    background:var(--cream);
+  }
+  .meta-bar .inner{
+    max-width:1180px;margin:0 auto;padding:0 32px;
+    display:flex;justify-content:space-between;align-items:center;
+    font-family:'Spectral',serif;
+    font-size:12px;
+    color:var(--ink-muted);
+    letter-spacing:0.3px;
+  }
+  .meta-bar a{color:var(--ink-soft);text-decoration:none;margin-left:18px}
+  .meta-bar a:hover{color:var(--maroon)}
+
+  /* ===== MASTHEAD ===== */
+  .masthead{
+    text-align:center;
+    padding:48px 0 24px;
+    border-bottom:1px solid var(--ink);
+  }
+  .logo{
+    font-family:'Suranna',serif;
+    font-size:72px;
+    font-weight:400;
+    color:var(--ink);
+    letter-spacing:-2px;
+    line-height:1;
+  }
+  .masthead .lockup{
+    display:flex;justify-content:center;align-items:center;gap:24px;
+    font-family:'Spectral',serif;
+    font-style:italic;
+    font-size:13px;
+    color:var(--ink-muted);
+    margin-top:14px;
+    letter-spacing:0.5px;
+  }
+  .masthead .lockup .rule{
+    flex:1;max-width:80px;
+    height:1px;
+    background:var(--hairline-strong);
+  }
+
+  /* ===== NAV ===== */
+  .nav{
+    border-bottom:1px solid var(--ink);
+    padding:14px 0;
+  }
+  .nav-inner{
+    display:flex;justify-content:center;gap:36px;
+    font-family:'Suranna',serif;
+    font-size:15px;
+  }
+  .nav-inner a{
+    color:var(--ink);
+    text-decoration:none;
+    padding-bottom:2px;
+    border-bottom:1px solid transparent;
+    transition:border-color 0.2s;
+  }
+  .nav-inner a:hover,.nav-inner a.active{border-bottom-color:var(--maroon)}
+  .nav-inner a.active{color:var(--maroon)}
+
+  /* ===== BREAKING STRAP ===== */
+  .strap{
+    background:var(--ink);
+    color:var(--cream);
+    padding:14px 0;
+  }
+  .strap .inner{
+    max-width:1180px;margin:0 auto;padding:0 32px;
+    display:flex;align-items:baseline;gap:24px;
+  }
+  .strap .label{
+    font-family:'Spectral',serif;
+    font-style:italic;
+    font-size:13px;
+    color:var(--cream);
+    opacity:0.7;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    flex-shrink:0;
+  }
+  .strap .text{
+    font-family:'Noto Serif Telugu',serif;
+    font-size:15px;
+    line-height:1.5;
+  }
+
+  /* ===== HERO ===== */
+  .hero{padding:60px 0 40px}
+  .hero-cap{
+    font-family:'Spectral',serif;
+    font-style:italic;
+    font-size:13px;
+    color:var(--maroon);
+    letter-spacing:2px;
+    text-transform:uppercase;
+    margin-bottom:16px;
+    display:flex;align-items:center;gap:10px;
+  }
+  .hero-cap::after{
+    content:"";flex:1;height:1px;background:var(--hairline);
+  }
+  .hero-title{
+    font-family:'Suranna',serif;
+    font-size:64px;
+    line-height:1.05;
+    color:var(--ink);
+    font-weight:400;
+    max-width:920px;
+    letter-spacing:-1px;
+    margin-bottom:24px;
+  }
+  .hero-deck{
+    font-family:'Noto Serif Telugu',serif;
+    font-size:22px;
+    line-height:1.55;
+    color:var(--ink-soft);
+    max-width:780px;
+    font-weight:400;
+    margin-bottom:28px;
+  }
+  .hero-byline{
+    font-family:'Spectral',serif;
+    font-size:13px;
+    color:var(--ink-muted);
+    letter-spacing:0.4px;
+  }
+  .hero-byline strong{color:var(--ink);font-weight:600}
+
+  .hero-img-wrap{margin:36px 0 14px;position:relative}
+  .hero-img-wrap img{width:100%;height:auto;display:block;aspect-ratio:21/9;object-fit:cover}
+  .hero-caption{
+    font-family:'Spectral',serif;
+    font-style:italic;
+    font-size:13px;
+    color:var(--ink-muted);
+    margin-top:8px;
+    max-width:780px;
+  }
+
+  /* ===== DIVIDER ===== */
+  .hr-thick{
+    border-top:1px solid var(--ink);
+    margin:60px 0 36px;
+    position:relative;
+  }
+  .hr-thick::after{
+    content:"";position:absolute;
+    left:0;right:0;top:3px;
+    border-top:1px solid var(--ink);
+  }
+
+  /* ===== SECTION LABEL ===== */
+  .sect-label{
+    display:flex;align-items:baseline;gap:14px;
+    margin-bottom:36px;
+    border-bottom:1px solid var(--hairline);
+    padding-bottom:10px;
+  }
+  .sect-label h2{
+    font-family:'Suranna',serif;
+    font-size:30px;
+    color:var(--ink);
+    font-weight:400;
+  }
+  .sect-label .latin{
+    font-family:'Spectral',serif;
+    font-style:italic;
+    font-size:14px;
+    color:var(--ink-muted);
+    letter-spacing:1px;
+  }
+  .sect-label .all{
+    margin-left:auto;
+    font-family:'Spectral',serif;
+    font-style:italic;
+    font-size:13px;
+    color:var(--maroon);
+    text-decoration:none;
+    letter-spacing:0.5px;
+  }
+  .sect-label .all:hover{text-decoration:underline;text-underline-offset:4px}
+
+  /* ===== TWO-COL STORY GRID ===== */
+  .two-col{display:grid;grid-template-columns:1.4fr 1fr;gap:54px;align-items:start}
+  .lead-story img{width:100%;aspect-ratio:4/3;object-fit:cover;margin-bottom:18px}
+  .lead-story .kicker{
+    font-family:'Spectral',serif;font-style:italic;
+    color:var(--maroon);font-size:13px;
+    letter-spacing:2px;text-transform:uppercase;
+    margin-bottom:8px;
+  }
+  .lead-story h3{
+    font-family:'Suranna',serif;
+    font-size:36px;
+    line-height:1.15;
+    font-weight:400;
+    color:var(--ink);
+    margin-bottom:14px;
+  }
+  .lead-story p{
+    font-family:'Noto Serif Telugu',serif;
+    font-size:17px;
+    line-height:1.7;
+    color:var(--ink-soft);
+    margin-bottom:14px;
+  }
+  .lead-story .byline{
+    font-family:'Spectral',serif;
+    font-style:italic;
+    font-size:13px;
+    color:var(--ink-muted);
+    border-top:1px solid var(--hairline);
+    padding-top:10px;
+  }
+
+  .col-stories article{
+    border-bottom:1px solid var(--hairline);
+    padding-bottom:22px;margin-bottom:22px;
+  }
+  .col-stories article:last-child{border-bottom:none}
+  .col-stories .kicker{
+    font-family:'Spectral',serif;font-style:italic;
+    color:var(--maroon);font-size:12px;
+    letter-spacing:1.5px;text-transform:uppercase;
+    margin-bottom:6px;
+  }
+  .col-stories h4{
+    font-family:'Suranna',serif;
+    font-size:22px;
+    line-height:1.25;
+    font-weight:400;
+    color:var(--ink);
+    margin-bottom:10px;
+  }
+  .col-stories h4:hover{color:var(--maroon);cursor:pointer}
+  .col-stories p{
+    font-family:'Noto Serif Telugu',serif;
+    font-size:15px;
+    line-height:1.65;
+    color:var(--ink-soft);
+  }
+  .col-stories .timestamp{
+    font-family:'Spectral',serif;
+    font-style:italic;
+    font-size:12px;
+    color:var(--ink-muted);
+    margin-top:8px;
+  }
+
+  /* ===== OPINION / EDITORIAL CARD ===== */
+  .opinion{
+    margin:64px 0;
+    padding:48px 60px;
+    background:var(--cream-soft);
+    border-top:3px double var(--ink);
+    border-bottom:3px double var(--ink);
+  }
+  .opinion .label{
+    font-family:'Spectral',serif;font-style:italic;
+    color:var(--maroon);
+    letter-spacing:2px;
+    text-transform:uppercase;
+    font-size:13px;
+    margin-bottom:18px;
+  }
+  .opinion h3{
+    font-family:'Suranna',serif;
+    font-size:42px;
+    line-height:1.15;
+    font-weight:400;
+    color:var(--ink);
+    max-width:880px;
+    margin-bottom:18px;
+  }
+  .opinion p{
+    font-family:'Noto Serif Telugu',serif;
+    font-size:18px;
+    line-height:1.75;
+    color:var(--ink-soft);
+    max-width:780px;
+  }
+  .opinion .author{
+    margin-top:24px;
+    font-family:'Spectral',serif;
+    font-style:italic;
+    font-size:14px;
+    color:var(--ink);
+  }
+  .opinion .author strong{font-style:normal;font-weight:600}
+
+  /* ===== FOUR-COL DISTRICT ===== */
+  .dist{display:grid;grid-template-columns:repeat(4,1fr);gap:36px}
+  .dist article .num{
+    font-family:'Spectral',serif;font-style:italic;
+    color:var(--maroon);font-size:12px;
+    letter-spacing:2px;text-transform:uppercase;
+    margin-bottom:8px;
+    border-top:1px solid var(--ink);padding-top:10px;
+  }
+  .dist article h5{
+    font-family:'Suranna',serif;
+    font-size:19px;line-height:1.3;
+    font-weight:400;color:var(--ink);
+  }
+  .dist article h5:hover{color:var(--maroon);cursor:pointer}
+  .dist article .time{
+    font-family:'Spectral',serif;font-style:italic;
+    font-size:11px;color:var(--ink-muted);
+    margin-top:10px;
+  }
+
+  /* ===== FOOTER ===== */
+  footer{
+    margin-top:80px;
+    border-top:1px solid var(--ink);
+    padding:48px 0 28px;
+    background:var(--cream);
+  }
+  footer .top{
+    text-align:center;
+    margin-bottom:36px;
+  }
+  footer .logo-sm{
+    font-family:'Suranna',serif;
+    font-size:36px;
+    color:var(--ink);
+  }
+  footer .mission{
+    font-family:'Spectral',serif;font-style:italic;
+    color:var(--ink-muted);font-size:14px;
+    margin-top:8px;
+    max-width:560px;margin-left:auto;margin-right:auto;
+    line-height:1.6;
+  }
+  footer .cols{
+    display:grid;grid-template-columns:repeat(4,1fr);
+    gap:36px;
+    padding-top:36px;
+    border-top:1px solid var(--hairline);
+  }
+  footer h6{
+    font-family:'Spectral',serif;font-style:italic;
+    font-size:12px;letter-spacing:2px;
+    text-transform:uppercase;color:var(--maroon);
+    margin-bottom:12px;
+  }
+  footer a{
+    display:block;
+    font-family:'Suranna',serif;
+    color:var(--ink);text-decoration:none;
+    font-size:15px;
+    padding:3px 0;
+  }
+  footer a:hover{color:var(--maroon)}
+  footer .colophon{
+    text-align:center;
+    margin-top:42px;padding-top:18px;
+    border-top:1px solid var(--hairline);
+    font-family:'Spectral',serif;font-style:italic;
+    font-size:12px;color:var(--ink-muted);
+    letter-spacing:0.5px;
+  }
+
+  @media (max-width:900px){
+    .logo{font-size:48px}
+    .hero-title{font-size:38px}
+    .hero-deck{font-size:18px}
+    .two-col{grid-template-columns:1fr;gap:36px}
+    .dist{grid-template-columns:repeat(2,1fr)}
+    .opinion{padding:32px 24px}
+    .opinion h3{font-size:28px}
+    footer .cols{grid-template-columns:1fr 1fr}
+    .nav-inner{flex-wrap:wrap;gap:18px}
+  }
+</style>
+</head>
+<body>
+
+<!-- META BAR -->
+<div class="meta-bar">
+  <div class="inner">
+    <div>Saturday, 15 May 2026 — Tirupati 32°C, light rain</div>
+    <div><a href="#">E-Paper</a><a href="#">Subscribe</a><a href="#">Sign In</a></div>
+  </div>
+</div>
+
+<!-- MASTHEAD -->
+<header class="masthead">
+  <div class="logo">రాయలసీమ ఎక్స్‌ప్రెస్</div>
+  <div class="lockup">
+    <span class="rule"></span>
+    <span>The Newspaper of the Stones · Volume III · No. 142</span>
+    <span class="rule"></span>
+  </div>
+</header>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="#" class="active">హోమ్</a>
+    <a href="#">రాజకీయం</a>
+    <a href="#">జిల్లాలు</a>
+    <a href="#">వ్యవసాయం</a>
+    <a href="#">వ్యాపారం</a>
+    <a href="#">క్రీడలు</a>
+    <a href="#">సినిమా</a>
+    <a href="#">సంపాదకీయం</a>
+    <a href="#">Opinion</a>
+  </div>
+</nav>
+
+<!-- BREAKING -->
+<div class="strap">
+  <div class="inner">
+    <div class="label">Latest</div>
+    <div class="text">కడప జిల్లాలో మైనర్ హత్య కేసులో నిందితుడిని పోలీసులు హతమార్చారు · తిరుపతి విమానాశ్రయానికి అంతర్జాతీయ విమానాలు · AP EAMCET 2026 దరఖాస్తు సవరణకు ఆన్‌లైన్ విండో ప్రారంభం</div>
+  </div>
+</div>
+
+<!-- HERO -->
+<main class="wrap">
+  <section class="hero">
+    <div class="hero-cap">Lead Story · ముఖ్య కథనం</div>
+    <h1 class="hero-title">అమరావతి అప్పులు ప్రజల పన్నులతో కాదు, భూముల అమ్మకాలతో తీర్చుతాం</h1>
+    <p class="hero-deck">రాజధాని అమరావతి నిర్మాణం కోసం తీసుకున్న అప్పులను సాధారణ ప్రజలపై భారం వేయకుండా, ప్రభుత్వ భూముల వేలం ద్వారా తీర్చనున్నట్లు పురపాలక శాఖ మంత్రి పి. నారాయణ ప్రకటించారు.</p>
+    <div class="hero-byline">By <strong>K. Venkateswar Reddy</strong> · Amaravati · 14 May 2026, 9:14 PM IST</div>
+
+    <div class="hero-img-wrap">
+      <img src="https://images.unsplash.com/photo-1577083552431-6e5fd75a9160?w=1200&h=520&fit=crop" alt="">
+    </div>
+    <p class="hero-caption">పురపాలక శాఖ మంత్రి నారాయణ గురువారం సచివాలయంలో మీడియాతో మాట్లాడుతున్న దృశ్యం — Photo: M. Sridhar</p>
+  </section>
+
+  <div class="hr-thick"></div>
+
+  <!-- TOP NEWS GRID -->
+  <section>
+    <div class="sect-label">
+      <h2>జాతీయ &amp; రాష్ట్రీయ</h2>
+      <span class="latin">National · State</span>
+      <a href="#" class="all">See all →</a>
+    </div>
+    <div class="two-col">
+      <article class="lead-story">
+        <img src="https://images.unsplash.com/photo-1582510003544-4d00b7f74220?w=800&h=600&fit=crop" alt="">
+        <div class="kicker">Tirupati · Aviation</div>
+        <h3>తిరుపతి విమానాశ్రయానికి అంతర్జాతీయ విమానాలు త్వరలో ప్రారంభం</h3>
+        <p>తిరుపతి అంతర్జాతీయ విమానాశ్రయంలో దుబాయ్, సింగపూర్, కోలంబో మార్గాలకు సర్వీసులు త్వరలో ప్రారంభం కానున్నాయని కేంద్ర పౌర విమానయాన శాఖ ప్రకటించింది. తిరుమల యాత్రికులకు ఇది గొప్ప ఊరట.</p>
+        <p>రాయలసీమ ప్రాంతానికి అంతర్జాతీయ స్థాయి కనెక్టివిటీ లభించడంతో, పర్యాటకం, వాణిజ్యానికి కొత్త అవకాశాలు తెరుచుకోనున్నాయని పరిశ్రమ వర్గాలు చెబుతున్నాయి.</p>
+        <div class="byline">— P. Lakshmi Narayana · 14 May 2026</div>
+      </article>
+
+      <div class="col-stories">
+        <article>
+          <div class="kicker">Education</div>
+          <h4>ఏపీ ఇంటర్ ఫలితాలు 2026 వచ్చే వారం విడుదలకు అవకాశం</h4>
+          <p>ఆంధ్రప్రదేశ్ ఇంటర్మీడియట్ ఫలితాలు మే 22 లేదా 23న విడుదల కావచ్చని విద్యా శాఖ వర్గాలు సూచించాయి.</p>
+          <div class="timestamp">— 3 hours ago</div>
+        </article>
+        <article>
+          <div class="kicker">Crime · Kadapa</div>
+          <h4>కడప జిల్లాలో మైనర్ హత్య కేసు: నిందితుడిని పోలీసులు హతమార్చారు</h4>
+          <p>ఎదురుకాల్పుల ఘటనలో నిందితుడు మృతి చెందినట్లు ఎస్‌పీ ధృవీకరించారు. తీవ్రమైన దాడిలో ఆయుధం స్వాధీనం.</p>
+          <div class="timestamp">— 5 hours ago</div>
+        </article>
+        <article>
+          <div class="kicker">Education · Rayalaseema University</div>
+          <h4>రాయలసీమ విశ్వవిద్యాలయం ఫలితాలు: యూజీ, పీజీ మార్క్‌షీట్ డౌన్‌లోడ్</h4>
+          <p>విశ్వవిద్యాలయ అధికారిక వెబ్‌సైట్‌లో ఫలితాలను చూసుకోవచ్చు. ప్రత్యక్ష లింక్ ఈ కథనంలో.</p>
+          <div class="timestamp">— 7 hours ago</div>
+        </article>
+        <article>
+          <div class="kicker">Agriculture</div>
+          <h4>డీజిల్ నుంచి దినకాంతికి: సౌర పథకాలతో శక్తి పొందుతున్న భారత రైతులు</h4>
+          <p>కేంద్ర, రాష్ట్ర ప్రభుత్వాల PM-KUSUM కింద 1.4 లక్షల పంపుసెట్లు సోలార్‌గా మారాయి.</p>
+          <div class="timestamp">— 9 hours ago</div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- OPINION -->
+  <section class="opinion">
+    <div class="label">Editorial · సంపాదకీయం</div>
+    <h3>రాయలసీమ నీళ్ళ కోసం పోరాడే భూమి. ఇది మా అస్తిత్వం; ఇది మా రేపటి ప్రశ్న.</h3>
+    <p>సీడబ్ల్యూసీ నుండి హంద్రీ-నీవా దాకా, దశాబ్దాలుగా రాయలసీమ తాగు నీటి కోసం, సాగు నీటి కోసం ఎదురుచూస్తోంది. మేము ఈ ప్రశ్నను రాజకీయాలకు మించి చూడాలనుకుంటున్నాము — ఇది భౌతిక శాస్త్రం, భౌగోళికం, మానవ గౌరవం యొక్క ప్రశ్న.</p>
+    <div class="author">— <strong>సంపాదకుల బోర్డు</strong> · 14 May 2026</div>
+  </section>
+
+  <!-- DISTRICTS -->
+  <section>
+    <div class="sect-label">
+      <h2>జిల్లాల నుండి</h2>
+      <span class="latin">From the Districts</span>
+      <a href="#" class="all">All districts →</a>
+    </div>
+    <div class="dist">
+      <article>
+        <div class="num">01 · Kurnool</div>
+        <h5>కర్నూలు రైతు సంఘం రేపు హైదరాబాద్‌లో మహాధర్నా</h5>
+        <div class="time">3h ago</div>
+      </article>
+      <article>
+        <div class="num">02 · Anantapur</div>
+        <h5>కియా మోటార్స్ ప్లాంట్‌లో కొత్తగా 1200 ఉద్యోగాలు</h5>
+        <div class="time">5h ago</div>
+      </article>
+      <article>
+        <div class="num">03 · Kadapa</div>
+        <h5>పులివెందుల-రాజంపేట జాతీయ రహదారి విస్తరణకు ఆమోదం</h5>
+        <div class="time">7h ago</div>
+      </article>
+      <article>
+        <div class="num">04 · Tirupati</div>
+        <h5>తిరుమల బ్రహ్మోత్సవాలకు రికార్డు సంఖ్యలో భక్తులు</h5>
+        <div class="time">9h ago</div>
+      </article>
+    </div>
+  </section>
+</main>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrap">
+    <div class="top">
+      <div class="logo-sm">రాయలసీమ ఎక్స్‌ప్రెస్</div>
+      <p class="mission">A newspaper of record for the seven districts of Rayalaseema — independent, regional, and reader-supported. Published in Telugu and English since 2024.</p>
+    </div>
+    <div class="cols">
+      <div>
+        <h6>Sections</h6>
+        <a href="#">రాజకీయం</a>
+        <a href="#">వ్యవసాయం</a>
+        <a href="#">క్రీడలు</a>
+        <a href="#">సినిమా</a>
+      </div>
+      <div>
+        <h6>Districts</h6>
+        <a href="#">కర్నూలు</a>
+        <a href="#">అనంతపురం</a>
+        <a href="#">కడప</a>
+        <a href="#">తిరుపతి</a>
+      </div>
+      <div>
+        <h6>The Paper</h6>
+        <a href="#">About us</a>
+        <a href="#">Editorial board</a>
+        <a href="#">Careers</a>
+        <a href="#">Corrections</a>
+      </div>
+      <div>
+        <h6>Legal</h6>
+        <a href="#">Privacy</a>
+        <a href="#">Terms</a>
+        <a href="#">Ethics</a>
+        <a href="#">Subscribe</a>
+      </div>
+    </div>
+    <div class="colophon">Set in Suranna, Noto Serif Telugu, Spectral · © 2026 Rayalaseema Express</div>
+  </div>
+</footer>
+
+</body>
+</html>

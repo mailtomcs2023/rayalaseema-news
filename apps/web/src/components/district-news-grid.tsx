@@ -247,11 +247,12 @@ export function DistrictNewsGrid({ districts }: { districts: DistrictNews[] }) {
 
         /* === OTHER DISTRICTS GRID === */
         .district-news-grid {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
+          display: flex;
+          flex-wrap: wrap;
           gap: 8px;
         }
         .district-news-card {
+          flex: 0 0 calc((100% - 24px) / 4);
           background: #fff;
           border-radius: 8px;
           overflow: hidden;
@@ -312,10 +313,10 @@ export function DistrictNewsGrid({ districts }: { districts: DistrictNews[] }) {
         @media (max-width: 768px) {
           .my-district-body { flex-direction: column; gap: 10px; }
           .my-district-main { flex: none; }
-          .district-news-grid { grid-template-columns: repeat(2, 1fr); }
+          .district-news-card { flex: 0 0 calc((100% - 8px) / 2); }
         }
         @media (max-width: 480px) {
-          .district-news-grid { grid-template-columns: 1fr; }
+          .district-news-card { flex: 0 0 100%; }
         }
       `}</style>
     </div>

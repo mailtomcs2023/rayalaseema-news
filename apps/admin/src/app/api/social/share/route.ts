@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
+import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 
 // Load config from DB + env (DB takes priority)
 async function getConfig(): Promise<Record<string, string>> {
@@ -214,32 +215,38 @@ async function postPinterest(article: any) {
 
 // Main handler
 export async function POST(req: NextRequest) {
-  _config = await getConfig();
-  const { platforms, article } = await req.json();
-  const results: Record<string, { success: boolean; error?: string; data?: any }> = {};
+  const session = await requireAuth(["ADMIN"]);
+  if (isAuthError(session)) return session;
+  try {
+    _config = await getConfig();
+    const { platforms, article } = await req.json();
+    const results: Record<string, { success: boolean; error?: string; data?: any }> = {};
 
-  const handlers: Record<string, (a: any) => Promise<any>> = {
-    telegram: postTelegram,
-    twitter: postTwitter,
-    facebook: postFacebook,
-    linkedin: postLinkedIn,
-    instagram: postInstagram,
-    whatsapp: postWhatsApp,
-    pinterest: postPinterest,
-  };
+    const handlers: Record<string, (a: any) => Promise<any>> = {
+      telegram: postTelegram,
+      twitter: postTwitter,
+      facebook: postFacebook,
+      linkedin: postLinkedIn,
+      instagram: postInstagram,
+      whatsapp: postWhatsApp,
+      pinterest: postPinterest,
+    };
 
-  await Promise.allSettled(
-    platforms.map(async (platform: string) => {
-      try {
-        const data = await handlers[platform](article);
-        results[platform] = { success: true, data };
-      } catch (err: any) {
-        results[platform] = { success: false, error: err.message };
-      }
-    })
-  );
+    await Promise.allSettled(
+      platforms.map(async (platform: string) => {
+        try {
+          const data = await handlers[platform](article);
+          results[platform] = { success: true, data };
+        } catch (err: any) {
+          results[platform] = { success: false, error: err.message };
+        }
+      })
+    );
 
-  return NextResponse.json(results);
+    return NextResponse.json(results);
+  } catch (error) {
+    return apiError(error);
+  }
 }
 
 // Helpers

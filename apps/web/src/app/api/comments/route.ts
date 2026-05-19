@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
+import { rateLimit } from "@/lib/rate-limit";
 
 // GET comments for an article
 export async function GET(req: NextRequest) {
@@ -12,11 +13,14 @@ export async function GET(req: NextRequest) {
     take: 50,
   });
 
-  return NextResponse.json(comments);
+  return NextResponse.json(comments, {
+    headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=15" },
+  });
 }
 
 // POST a new comment
 export async function POST(req: NextRequest) {
+  const limited = rateLimit(req, { maxRequests: 5, windowMs: 60_000, prefix: "comment" }); if (limited) return limited;
   const { articleId, name, email, content } = await req.json();
 
   if (!articleId || !name?.trim() || !content?.trim()) {

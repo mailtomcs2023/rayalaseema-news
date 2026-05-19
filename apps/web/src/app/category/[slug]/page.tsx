@@ -5,6 +5,20 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { prisma } from "@rayalaseema/db";
 import { getTrendingArticles } from "@/lib/db-queries";
+import type { Metadata } from "next";
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const cat = await prisma.category.findUnique({ where: { slug } });
+  if (!cat) return { title: "Category not found" };
+  const siteUrl = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+  return {
+    title: `${cat.name} - ${cat.nameEn} | రాయలసీమ ఎక్స్‌ప్రెస్`,
+    description: cat.description || `${cat.name} - తాజా వార్తలు`,
+    alternates: { canonical: `${siteUrl}/category/${slug}` },
+    openGraph: { title: cat.name, url: `${siteUrl}/category/${slug}`, type: "website", locale: "te_IN" },
+  };
+}
 
 export default async function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;

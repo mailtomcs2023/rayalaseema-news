@@ -39,6 +39,12 @@ model User {
   // Articles reviewed/edited by this user
   reviewedArticles ArticleReview[]
 
+  // Article revisions authored by this user
+  articleRevisions ArticleRevision[]
+
+  // Audit log entries (actions performed by this user)
+  auditLogs        AuditLog[]
+
   // Journalist profile (for REPORTER role)
   journalistProfile JournalistProfile?
   payments          ArticlePayment[]
@@ -77,6 +83,67 @@ model ArticleReview {
   @@map("article_reviews")
 }
 
+// ============ AUDIT LOG (immutable, append-only — compliance + accountability) ============
+
+model AuditLog {
+  id          String   @id @default(cuid())
+
+  // Actor — null if system / cron / unauthenticated action
+  actorId     String?
+  actor       User?    @relation(fields: [actorId], references: [id])
+  actorEmail  String?  // denormalized (kept even if user deleted)
+  actorRole   String?  // "ADMIN", "CHIEF_SUB_EDITOR", etc. at time of action
+
+  // What happened
+  action      String   // "article.create", "article.update", "article.delete", "article.publish",
+                       // "article.restore", "user.create", "user.update", "user.role.change",
+                       // "comment.approve", "settings.update", "auth.login", "auth.logout", "cron.publish-scheduled"
+  resource    String?  // "article" | "user" | "category" | "comment" | "settings" | ...
+  resourceId  String?  // ID of affected resource (nullable for global actions)
+
+  // Optional structured payload — changes summary, IP, etc.
+  meta        Json?
+  ipAddress   String?
+  userAgent   String?
+
+  createdAt   DateTime @default(now())
+
+  @@index([actorId, createdAt])
+  @@index([resource, resourceId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ============ ARTICLE REVISIONS (version history) ============
+
+model ArticleRevision {
+  id            String        @id @default(cuid())
+  articleId     String
+  article       Article       @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  // Snapshot of mutable fields at the moment a save happened
+  title         String
+  slug          String
+  summary       String?       @db.Text
+  body          String        @db.Text
+  featuredImage String?
+  categoryId    String?
+  status        ArticleStatus
+
+  // Metadata
+  editedById    String
+  editedBy      User          @relation(fields: [editedById], references: [id])
+  editNote      String?       // optional comment from editor
+  bodyLength    Int           @default(0) // for lightweight diff stats in list view
+
+  createdAt     DateTime      @default(now())
+
+  @@index([articleId, createdAt])
+  @@index([editedById])
+  @@map("article_revisions")
+}
+
 // ============ CONTENT ============
 
 enum ArticleStatus {
@@ -84,6 +151,7 @@ enum ArticleStatus {
   SUBMITTED    // Reporter submitted for review
   IN_REVIEW    // Sub-editor is reviewing
   APPROVED     // Chief sub-editor approved, ready to publish
+  SCHEDULED    // Approved + queued for auto-publish at scheduledAt
   PUBLISHED    // Live on website
   REJECTED     // Sent back to reporter with notes
   ARCHIVED     // Removed from site
@@ -141,6 +209,7 @@ model Article {
   approvedById    String?                 // Who approved for publish
   approvedAt      DateTime?               // When approved
   reviews         ArticleReview[]
+  revisions       ArticleRevision[]
   payment         ArticlePayment?
 
   createdAt       DateTime      @default(now())
@@ -151,6 +220,9 @@ model Article {
   @@index([authorId])
   @@index([constituencyId])
   @@index([slug])
+  @@index([status, featured, publishedAt])
+  @@index([categoryId, status, publishedAt])
+  @@index([breaking])
   @@map("articles")
 }
 
@@ -494,6 +566,7 @@ model Comment {
   createdAt DateTime @default(now())
 
   @@index([articleId, approved])
+  @@index([approved, createdAt])
   @@map("comments")
 }
 

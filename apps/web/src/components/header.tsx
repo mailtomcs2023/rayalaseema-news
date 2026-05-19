@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 
 // Rayalaseema districts ARE the main nav - this is a Rayalaseema newspaper
@@ -59,9 +59,13 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
   const [searchOpen, setSearchOpen] = useState(false);
   const [config, setConfig] = useState(initialConfig);
   const [breakingNews, setBreakingNews] = useState(initialBreaking);
+  const [tickerPaused, setTickerPaused] = useState(false);
+  const fetchedRef = useRef(false);
 
-  // Self-fetch if no data was passed (for pages that don't pass props)
   useEffect(() => {
+    // Guard against StrictMode double-invocation + accidental re-fetch from prop change
+    if (fetchedRef.current) return;
+    fetchedRef.current = true;
     if (breakingNews.length === 0) {
       fetch("/api/breaking-news").then((r) => r.json()).then((data) => {
         if (Array.isArray(data)) setBreakingNews(data.map((b: any) => ({ id: b.id, text: b.headline || b.text })));
@@ -77,11 +81,20 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
       {/* Breaking News Ticker */}
       <div style={{ background: "#000", overflow: "hidden", whiteSpace: "nowrap" as const }}>
         <div style={{ display: "flex", alignItems: "center" }}>
-          <span style={{ background: "var(--color-brand)", color: "#fff", padding: "6px 14px", fontSize: 13, fontWeight: 900, flexShrink: 0 }}>
+          <span style={{ background: "var(--color-brand)", color: "#fff", padding: "6px 14px", fontSize: 13, fontWeight: 900, flexShrink: 0, display: "flex", alignItems: "center", gap: 6 }}>
+            <span className="animate-pulse" style={{ width: 6, height: 6, borderRadius: "50%", background: "#fff", display: "inline-block" }} aria-hidden="true" />
             BREAKING
           </span>
           <div style={{ overflow: "hidden", flex: 1, padding: "6px 0" }}>
-            <div className="animate-marquee" style={{ display: "inline-block", whiteSpace: "nowrap" as const, animationDuration: `${(config.ticker_speed || 30)}s` }}>
+            <div
+              className="animate-marquee"
+              style={{
+                display: "inline-block",
+                whiteSpace: "nowrap" as const,
+                animationDuration: `${(config.ticker_speed || 30)}s`,
+                animationPlayState: tickerPaused ? "paused" : "running",
+              }}
+            >
               {breakingNews.map((item, i) => (
                 <span key={item.id || i}>
                   <a href="#" style={{ color: "#fff", fontSize: 13, fontWeight: 700, textDecoration: "none", marginLeft: 24, marginRight: 24 }}>
@@ -93,7 +106,19 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
             </div>
           </div>
           <button
+            onClick={() => setTickerPaused((p) => !p)}
+            aria-label={tickerPaused ? "Resume ticker" : "Pause ticker"}
+            style={{ padding: "6px 10px", background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}
+          >
+            {tickerPaused ? (
+              <svg width="14" height="14" fill="#fff" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            ) : (
+              <svg width="14" height="14" fill="#fff" viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+            )}
+          </button>
+          <button
             onClick={() => setSearchOpen(!searchOpen)}
+            aria-label="Toggle search"
             style={{ padding: "6px 12px", background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}
           >
             <svg width="16" height="16" fill="none" stroke="#fff" viewBox="0 0 24 24">
@@ -126,7 +151,7 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
 
       {/* Masthead - Eenadu style: Logo left, ad center, links right */}
       <div className="container-news">
-        <div className="flex items-center py-2 gap-4">
+        <div className="flex items-center py-1.5 gap-4">
           {/* Left: Logo + Date */}
           <div className="shrink-0 flex items-center gap-4">
             <Link href="/" className="block">
@@ -149,33 +174,33 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
           {/* Center: spacer (desktop only) */}
           <div className="hidden lg:block flex-1" />
 
-          {/* Right: Tabs + E-Paper (desktop) */}
-          <div className="hidden lg:flex flex-col items-end gap-2 shrink-0">
-            {/* Top row: Latest & Breaking tabs */}
-            <div className="flex border border-gray-200 rounded-lg overflow-hidden">
-              <Link href="/" className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-gray-700 bg-white hover:bg-gray-50 border-r border-gray-200 transition-colors">
-                <svg width="14" height="14" fill="none" stroke="#f59e0b" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          {/* Right: Tabs + E-Paper (desktop) — monochrome icons, brand-tinted */}
+          <div className="hidden lg:flex flex-col items-end gap-1.5 shrink-0">
+            {/* Top row: Latest & Search tabs */}
+            <div className="flex overflow-hidden" style={{ border: "1px solid var(--paper-edge)", borderRadius: "var(--r-md)" }}>
+              <Link href="/" className="flex items-center gap-1.5 px-3 py-1.5" style={{ fontSize: "var(--t-xs)", fontWeight: "var(--w-emp)" as any, color: "var(--n-700)", background: "var(--n-0)", borderRight: "1px solid var(--paper-edge)", transition: "background var(--dur-fast) var(--ease)" }}>
+                <svg width="14" height="14" fill="none" stroke="var(--brand)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                 తాజా వార్తలు
               </Link>
-              <Link href="/search" className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-gray-700 bg-white hover:bg-gray-50 border-r border-gray-200 transition-colors">
-                <svg width="13" height="13" fill="none" stroke="#888" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              <Link href="/search" className="flex items-center gap-1.5 px-3 py-1.5" style={{ fontSize: "var(--t-xs)", fontWeight: "var(--w-emp)" as any, color: "var(--n-700)", background: "var(--n-0)", borderRight: "1px solid var(--paper-edge)", transition: "background var(--dur-fast) var(--ease)" }}>
+                <svg width="13" height="13" fill="none" stroke="var(--n-500)" strokeWidth="1.8" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
                 వెతకండి
               </Link>
-              <Link href="/" className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-[var(--color-brand)] bg-red-50 hover:bg-red-100 transition-colors">
-                <span className="w-2 h-2 bg-[var(--color-brand)] rounded-full animate-pulse" />
+              <Link href="/" className="flex items-center gap-1.5 px-3 py-1.5" style={{ fontSize: "var(--t-xs)", fontWeight: "var(--w-head)" as any, color: "var(--brand-dark)", background: "var(--brand-soft)" }}>
+                <span className="animate-pulse" style={{ width: 6, height: 6, background: "var(--brand)", borderRadius: "var(--r-pill)", display: "inline-block" }} />
                 బ్రేకింగ్
               </Link>
             </div>
             {/* Bottom row: E-Paper + Google News Follow */}
-            <div className="flex gap-2">
-              <Link href="/epaper" className="group flex items-center gap-2 px-4 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-dark)] text-white rounded-lg transition-all shadow-sm hover:shadow-md">
-                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2"/></svg>
-                <span className="text-xs font-black tracking-wide">E-PAPER</span>
+            <div className="flex" style={{ gap: "var(--sp-2)" }}>
+              <Link href="/epaper" className="group flex items-center gap-2 px-3 py-1.5" style={{ background: "var(--brand)", color: "var(--brand-on)", borderRadius: "var(--r-md)", boxShadow: "var(--shadow-sm)", transition: "background var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease)" }}>
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2"/></svg>
+                <span style={{ fontSize: "var(--t-xs)", fontWeight: "var(--w-head)" as any, letterSpacing: "0.06em" }}>E-PAPER</span>
               </Link>
               <a href="https://news.google.com/publications/CAAqBwgKMIGwlgswrOWEAw?hl=te&gl=IN&ceid=IN:te" target="_blank" rel="noopener noreferrer"
-                className="group flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 hover:border-blue-400 hover:bg-blue-50 rounded-lg transition-all">
-                <svg width="16" height="16" viewBox="0 0 24 24"><path d="M22.077 12c0-5.523-4.477-10-10-10S2.077 6.477 2.077 12s4.477 10 10 10 10-4.477 10-10z" fill="#4285F4"/><path d="M22.077 12c0-5.523-4.477-10-10-10" fill="#EA4335"/><path d="M2.077 12c0 5.523 4.477 10 10 10" fill="#34A853"/><path d="M2.077 12c0-5.523 4.477-10 10-10" fill="#FBBC05"/><path d="M12.077 7v10" stroke="#fff" strokeWidth="2"/><path d="M7.077 12h10" stroke="#fff" strokeWidth="2"/></svg>
-                <span className="text-xs font-bold text-gray-700 group-hover:text-blue-600">Follow</span>
+                className="flex items-center gap-2 px-3 py-1.5" style={{ background: "var(--n-0)", border: "1px solid var(--paper-edge)", borderRadius: "var(--r-md)", transition: "border-color var(--dur-fast) var(--ease)" }}>
+                <svg width="14" height="14" viewBox="0 0 24 24"><path d="M22.077 12c0-5.523-4.477-10-10-10S2.077 6.477 2.077 12s4.477 10 10 10 10-4.477 10-10z" fill="#4285F4"/><path d="M22.077 12c0-5.523-4.477-10-10-10" fill="#EA4335"/><path d="M2.077 12c0 5.523 4.477 10 10 10" fill="#34A853"/><path d="M2.077 12c0-5.523 4.477-10 10-10" fill="#FBBC05"/><path d="M12.077 7v10" stroke="#fff" strokeWidth="2"/><path d="M7.077 12h10" stroke="#fff" strokeWidth="2"/></svg>
+                <span style={{ fontSize: "var(--t-xs)", fontWeight: "var(--w-emp)" as any, color: "var(--n-700)" }}>Follow</span>
               </a>
             </div>
           </div>
@@ -236,14 +261,17 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
           </ul>
         </div>
 
-        {/* Dropdown Menu - 2 column grid */}
+        {/* Dropdown Menu - 2 column grid (responsive width to avoid viewport overflow) */}
         {dropdownOpen && (
           <div style={{
             position: "absolute", right: 8, top: "100%",
             background: "#fff", border: "1px solid #e5e7eb",
             borderRadius: "0 0 10px 10px",
             boxShadow: "0 12px 32px rgba(0,0,0,0.18)",
-            zIndex: 50, width: 420, padding: "8px 0",
+            zIndex: 50,
+            width: "min(420px, calc(100vw - 24px))",
+            maxWidth: 420,
+            padding: "8px 0",
           }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
               {dropdownItems.map((item) => (
@@ -290,23 +318,23 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
               </button>
             </div>
 
-            {/* Quick Actions */}
+            {/* Quick Actions — uniform brand-red tints */}
             <div className="grid grid-cols-4 gap-2 p-3 border-b border-gray-100">
-              <Link href="/" onClick={() => setMobileMenuOpen(false)} className="flex flex-col items-center gap-1 p-2 rounded-lg bg-red-50">
-                <svg className="w-5 h-5 text-[var(--color-brand)]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-                <span className="text-[10px] font-bold text-[var(--color-brand)]">హోమ్</span>
+              <Link href="/" onClick={() => setMobileMenuOpen(false)} className="flex flex-col items-center gap-1 p-2 rounded-lg" style={{ background: "var(--color-brand-bg)" }}>
+                <svg className="w-5 h-5" style={{ color: "var(--color-brand)" }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                <span className="text-[10px] font-bold" style={{ color: "var(--color-brand)" }}>హోమ్</span>
               </Link>
-              <Link href="/search" onClick={() => setMobileMenuOpen(false)} className="flex flex-col items-center gap-1 p-2 rounded-lg bg-blue-50">
-                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-                <span className="text-[10px] font-bold text-blue-600">వెతకండి</span>
+              <Link href="/search" onClick={() => setMobileMenuOpen(false)} className="flex flex-col items-center gap-1 p-2 rounded-lg" style={{ background: "var(--color-brand-bg)" }}>
+                <svg className="w-5 h-5" style={{ color: "var(--color-brand)" }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                <span className="text-[10px] font-bold" style={{ color: "var(--color-brand)" }}>వెతకండి</span>
               </Link>
-              <Link href="/epaper" onClick={() => setMobileMenuOpen(false)} className="flex flex-col items-center gap-1 p-2 rounded-lg bg-green-50">
-                <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2"/></svg>
-                <span className="text-[10px] font-bold text-green-600">ePaper</span>
+              <Link href="/epaper" onClick={() => setMobileMenuOpen(false)} className="flex flex-col items-center gap-1 p-2 rounded-lg" style={{ background: "var(--color-brand-bg)" }}>
+                <svg className="w-5 h-5" style={{ color: "var(--color-brand)" }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2"/></svg>
+                <span className="text-[10px] font-bold" style={{ color: "var(--color-brand)" }}>ePaper</span>
               </Link>
-              <Link href="/horoscope" onClick={() => setMobileMenuOpen(false)} className="flex flex-col items-center gap-1 p-2 rounded-lg bg-purple-50">
+              <Link href="/horoscope" onClick={() => setMobileMenuOpen(false)} className="flex flex-col items-center gap-1 p-2 rounded-lg" style={{ background: "var(--color-brand-bg)" }}>
                 <span className="text-lg">⭐</span>
-                <span className="text-[10px] font-bold text-purple-600">రాశులు</span>
+                <span className="text-[10px] font-bold" style={{ color: "var(--color-brand)" }}>రాశులు</span>
               </Link>
             </div>
 

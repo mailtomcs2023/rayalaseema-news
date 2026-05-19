@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="te">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>రాయలసీమ ఎక్స్‌ప్రెస్ — Direction C: Folk Maximalist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Ramabhadra&family=Mandali&family=Suranna&family=Noto+Sans+Telugu:wght@400;600;700;800;900&family=Yatra+One&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --vermilion:#C8102E;
+    --vermilion-deep:#8B0A1F;
+    --indigo:#1A237E;
+    --indigo-deep:#0D1454;
+    --turmeric:#FFB300;
+    --turmeric-deep:#D48700;
+    --lampblack:#1A1A1A;
+    --cream:#FFF8E7;
+    --cream-deep:#FBEDC9;
+    --leaf:#2E5E1F;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--cream);
+    color:var(--lampblack);
+    font-family:'Mandali','Noto Sans Telugu',sans-serif;
+    font-weight:600;
+    line-height:1.55;
+  }
+  /* Kalamkari-style speckle background */
+  body{
+    background-image:
+      radial-gradient(circle at 20% 30%, rgba(200,16,46,0.04) 0%, transparent 40%),
+      radial-gradient(circle at 80% 70%, rgba(26,35,126,0.05) 0%, transparent 40%),
+      linear-gradient(180deg,var(--cream) 0%,var(--cream-deep) 100%);
+    background-attachment:fixed;
+  }
+  .wrap{max-width:1280px;margin:0 auto;padding:0 18px}
+
+  /* ===== TOP MOTIF STRIP (kalamkari pattern) ===== */
+  .motif-strip{
+    height:18px;
+    background:
+      repeating-linear-gradient(90deg,
+        var(--vermilion) 0,var(--vermilion) 14px,
+        var(--turmeric) 14px,var(--turmeric) 28px,
+        var(--indigo) 28px,var(--indigo) 42px,
+        var(--lampblack) 42px,var(--lampblack) 56px,
+        var(--cream) 56px,var(--cream) 70px);
+  }
+  .motif-strip.dotted{
+    background:
+      repeating-linear-gradient(45deg,
+        var(--lampblack) 0,var(--lampblack) 6px,
+        var(--cream) 6px,var(--cream) 12px,
+        var(--vermilion) 12px,var(--vermilion) 18px,
+        var(--cream) 18px,var(--cream) 24px);
+    height:10px;
+  }
+
+  /* ===== MASTHEAD ===== */
+  .masthead{
+    background:var(--cream);
+    padding:18px 0 14px;
+    position:relative;
+    text-align:center;
+  }
+  .masthead::before,.masthead::after{
+    content:"❀";
+    position:absolute;
+    font-size:38px;
+    color:var(--turmeric-deep);
+    top:50%;transform:translateY(-50%);
+  }
+  .masthead::before{left:8%}
+  .masthead::after{right:8%}
+  .masthead .logo-row{
+    display:inline-flex;align-items:center;gap:18px;
+  }
+  .logo-mark{
+    width:64px;height:64px;
+    background:var(--vermilion);
+    color:var(--turmeric);
+    border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Yatra One',serif;
+    font-size:38px;
+    border:4px double var(--turmeric);
+    box-shadow:0 4px 0 var(--indigo);
+  }
+  .logo-text{
+    font-family:'Ramabhadra','Yatra One',serif;
+    font-size:56px;
+    color:var(--vermilion-deep);
+    line-height:1;
+    text-shadow:3px 3px 0 var(--turmeric);
+    letter-spacing:1px;
+  }
+  .logo-text .x{color:var(--indigo);text-shadow:3px 3px 0 var(--turmeric)}
+  .tagline-folk{
+    font-family:'Mandali',sans-serif;
+    font-weight:700;
+    color:var(--indigo);
+    font-size:14px;
+    margin-top:8px;
+    letter-spacing:1px;
+  }
+  .tagline-folk::before,.tagline-folk::after{content:" ✦ "}
+
+  /* ===== NAV ===== */
+  .nav{
+    background:var(--indigo);
+    padding:0;
+  }
+  .nav-inner{
+    display:flex;justify-content:center;flex-wrap:wrap;
+  }
+  .nav-inner a{
+    color:var(--cream);
+    text-decoration:none;
+    font-family:'Ramabhadra',sans-serif;
+    font-size:16px;
+    padding:14px 22px;
+    border-right:1px solid rgba(255,255,255,0.15);
+    transition:background 0.2s;
+    position:relative;
+  }
+  .nav-inner a:hover{background:var(--vermilion)}
+  .nav-inner a.active{background:var(--vermilion);box-shadow:inset 0 -4px 0 var(--turmeric)}
+
+  /* ===== BREAKING — hand-stamped feel ===== */
+  .breaking{
+    background:var(--turmeric);
+    color:var(--lampblack);
+    padding:10px 0;
+    border-top:3px solid var(--vermilion);
+    border-bottom:3px solid var(--vermilion);
+    position:relative;
+  }
+  .breaking-inner{
+    max-width:1280px;margin:0 auto;padding:0 18px;
+    display:flex;align-items:center;gap:18px;
+  }
+  .breaking-badge{
+    background:var(--vermilion);
+    color:var(--turmeric);
+    font-family:'Ramabhadra',sans-serif;
+    padding:6px 16px;
+    border-radius:20px;
+    border:3px dashed var(--lampblack);
+    transform:rotate(-3deg);
+    flex-shrink:0;
+    font-size:15px;
+    box-shadow:2px 2px 0 var(--indigo);
+  }
+  .breaking-text{
+    font-family:'Mandali',sans-serif;
+    font-weight:700;
+    font-size:16px;
+    white-space:nowrap;
+    overflow:hidden;
+  }
+
+  /* ===== HERO ===== */
+  .hero{
+    padding:32px 0 24px;
+    display:grid;grid-template-columns:2fr 1fr;gap:24px;
+  }
+  .hero-main{
+    background:var(--cream);
+    border:4px solid var(--lampblack);
+    box-shadow:8px 8px 0 var(--vermilion),16px 16px 0 var(--turmeric);
+    padding:18px;
+    position:relative;
+  }
+  .hero-main::before{
+    content:"";
+    position:absolute;
+    top:-12px;left:-12px;
+    width:50px;height:50px;
+    background:var(--vermilion);
+    border:3px solid var(--lampblack);
+    transform:rotate(45deg);
+    z-index:0;
+  }
+  .hero-main img{
+    width:100%;aspect-ratio:16/9;object-fit:cover;
+    border:2px solid var(--lampblack);
+    position:relative;z-index:1;
+  }
+  .hero-cat-stamp{
+    display:inline-block;
+    background:var(--lampblack);
+    color:var(--turmeric);
+    font-family:'Ramabhadra',sans-serif;
+    padding:5px 14px;
+    margin:14px 0 10px;
+    font-size:14px;
+    letter-spacing:1.5px;
+    border:2px solid var(--vermilion);
+    text-transform:uppercase;
+  }
+  .hero-title{
+    font-family:'Ramabhadra','Yatra One',serif;
+    font-size:34px;
+    line-height:1.2;
+    color:var(--vermilion-deep);
+    margin-bottom:10px;
+  }
+  .hero-summary{
+    font-family:'Mandali',sans-serif;
+    font-weight:700;
+    font-size:16px;
+    line-height:1.65;
+    color:var(--lampblack);
+  }
+  .hero-byline{
+    margin-top:14px;
+    font-family:'Mandali',sans-serif;
+    font-size:13px;
+    color:var(--indigo);
+    padding-top:10px;
+    border-top:2px dashed var(--vermilion);
+    font-weight:700;
+  }
+
+  .hero-side{
+    background:var(--indigo);
+    color:var(--cream);
+    padding:18px;
+    border:3px solid var(--lampblack);
+    box-shadow:6px 6px 0 var(--turmeric);
+    position:relative;
+  }
+  .hero-side::before{
+    content:"♔";
+    position:absolute;top:-22px;left:50%;transform:translateX(-50%);
+    background:var(--turmeric);
+    width:40px;height:40px;
+    border-radius:50%;
+    border:3px solid var(--lampblack);
+    display:flex;align-items:center;justify-content:center;
+    color:var(--indigo-deep);font-size:24px;
+  }
+  .hero-side h3{
+    font-family:'Ramabhadra',sans-serif;
+    font-size:20px;
+    color:var(--turmeric);
+    text-align:center;
+    margin:12px 0 14px;
+    border-bottom:3px double var(--turmeric);
+    padding-bottom:8px;
+  }
+  .side-item{
+    display:flex;gap:10px;
+    padding:10px 0;
+    border-bottom:1px dashed rgba(255,255,255,0.2);
+  }
+  .side-item:last-child{border-bottom:none}
+  .side-num{
+    background:var(--vermilion);
+    color:var(--turmeric);
+    width:30px;height:30px;
+    border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Yatra One',serif;
+    font-size:16px;
+    flex-shrink:0;
+    border:2px solid var(--turmeric);
+  }
+  .side-text{
+    font-family:'Mandali',sans-serif;
+    font-size:14px;line-height:1.45;
+    font-weight:700;
+    color:var(--cream);
+  }
+  .side-text:hover{color:var(--turmeric);cursor:pointer}
+
+  /* ===== ORNAMENTAL DIVIDER ===== */
+  .folk-divider{
+    text-align:center;
+    margin:36px 0 24px;
+    font-family:'Yatra One',serif;
+    font-size:28px;
+    color:var(--vermilion);
+    letter-spacing:14px;
+    text-shadow:2px 2px 0 var(--turmeric);
+  }
+  .folk-divider .leaf{color:var(--leaf)}
+  .folk-divider .ind{color:var(--indigo)}
+
+  /* ===== SECTION HEADER ===== */
+  .section-h{
+    background:var(--vermilion);
+    color:var(--cream);
+    display:flex;align-items:center;gap:14px;
+    padding:10px 18px;
+    border:3px solid var(--lampblack);
+    box-shadow:4px 4px 0 var(--turmeric);
+    margin-bottom:20px;
+    transform:rotate(-0.4deg);
+  }
+  .section-h h2{
+    font-family:'Ramabhadra',serif;
+    font-size:26px;
+    color:var(--turmeric);
+  }
+  .section-h .sub{
+    margin-left:auto;
+    font-family:'Mandali',sans-serif;
+    font-size:13px;
+    color:var(--cream);
+    letter-spacing:1px;
+    font-weight:700;
+  }
+  .section-h::before{
+    content:"❋";
+    font-size:24px;
+    color:var(--turmeric);
+  }
+
+  /* ===== DISTRICT GRID (puppet card style) ===== */
+  .districts{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  .dist-card{
+    background:var(--cream);
+    border:3px solid var(--lampblack);
+    padding:10px;
+    box-shadow:5px 5px 0 var(--indigo);
+    transition:transform 0.2s;
+  }
+  .dist-card:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 var(--indigo)}
+  .dist-card:nth-child(2n){box-shadow:5px 5px 0 var(--vermilion)}
+  .dist-card:nth-child(2n):hover{box-shadow:7px 7px 0 var(--vermilion)}
+  .dist-card:nth-child(3n){box-shadow:5px 5px 0 var(--leaf)}
+  .dist-card:nth-child(3n):hover{box-shadow:7px 7px 0 var(--leaf)}
+  .dist-name{
+    background:var(--turmeric);
+    color:var(--indigo-deep);
+    font-family:'Yatra One',serif;
+    text-align:center;
+    padding:4px;
+    font-size:18px;
+    margin-bottom:10px;
+    border:2px solid var(--lampblack);
+  }
+  .dist-card img{width:100%;aspect-ratio:16/10;object-fit:cover;border:2px solid var(--lampblack)}
+  .dist-headline{
+    font-family:'Mandali',sans-serif;
+    font-weight:800;
+    font-size:14px;
+    line-height:1.4;
+    color:var(--lampblack);
+    margin-top:8px;
+  }
+  .dist-headline:hover{color:var(--vermilion-deep)}
+  .dist-time{
+    font-family:'Mandali',sans-serif;
+    font-size:11px;
+    color:var(--indigo);
+    margin-top:6px;
+    font-weight:700;
+  }
+
+  /* ===== CATEGORY ROW ===== */
+  .cats{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:26px}
+  .cat-col{
+    background:var(--cream);
+    border:3px solid var(--lampblack);
+    overflow:hidden;
+  }
+  .cat-col h4{
+    background:repeating-linear-gradient(135deg,
+      var(--vermilion) 0,var(--vermilion) 12px,
+      var(--vermilion-deep) 12px,var(--vermilion-deep) 24px);
+    color:var(--turmeric);
+    font-family:'Ramabhadra',serif;
+    font-size:18px;
+    padding:10px 14px;
+    display:flex;justify-content:space-between;
+    border-bottom:3px solid var(--lampblack);
+  }
+  .cat-col h4 .latin{
+    font-family:'Mandali',sans-serif;
+    font-size:12px;
+    opacity:0.85;
+    letter-spacing:1px;
+  }
+  .cat-body{padding:12px}
+  .cat-body img{width:100%;aspect-ratio:16/10;object-fit:cover;border:2px solid var(--lampblack)}
+  .cat-lead-title{
+    font-family:'Ramabhadra',serif;
+    font-size:18px;
+    line-height:1.3;
+    color:var(--vermilion-deep);
+    margin:10px 0;
+  }
+  .cat-list{list-style:none}
+  .cat-list li{
+    padding:8px 0;
+    border-bottom:1px dashed var(--turmeric);
+    display:flex;gap:10px;
+  }
+  .cat-list li:last-child{border-bottom:none}
+  .cat-list .ico{
+    color:var(--vermilion);
+    font-family:'Yatra One',serif;
+    font-size:14px;
+    flex-shrink:0;
+    line-height:1.4;
+  }
+  .cat-list .txt{
+    font-family:'Mandali',sans-serif;
+    font-weight:700;
+    font-size:14px;
+    line-height:1.45;
+    color:var(--lampblack);
+  }
+  .cat-list .txt:hover{color:var(--vermilion-deep);cursor:pointer}
+
+  /* ===== EDITORIAL BANNER ===== */
+  .editorial{
+    margin:42px 0 28px;
+    background:
+      repeating-linear-gradient(0deg,
+        var(--indigo) 0,var(--indigo) 38px,
+        var(--indigo-deep) 38px,var(--indigo-deep) 40px);
+    color:var(--cream);
+    padding:36px 24px;
+    border:4px solid var(--lampblack);
+    box-shadow:10px 10px 0 var(--vermilion);
+    position:relative;
+    text-align:center;
+  }
+  .editorial::before,.editorial::after{
+    content:"❀";
+    position:absolute;
+    font-size:42px;
+    color:var(--turmeric);
+    top:50%;transform:translateY(-50%);
+  }
+  .editorial::before{left:18px}
+  .editorial::after{right:18px}
+  .editorial .label{
+    font-family:'Ramabhadra',serif;
+    color:var(--turmeric);
+    font-size:14px;
+    letter-spacing:3px;
+    margin-bottom:14px;
+  }
+  .editorial q{
+    font-family:'Yatra One',serif;
+    font-size:26px;
+    line-height:1.4;
+    color:var(--cream);
+    quotes:"" "";
+    display:block;
+    max-width:840px;margin:0 auto;
+  }
+  .editorial .src{
+    margin-top:14px;
+    font-family:'Mandali',sans-serif;
+    color:var(--turmeric);
+    font-size:13px;
+    letter-spacing:1px;
+    font-weight:700;
+  }
+
+  /* ===== FOOTER ===== */
+  footer{
+    margin-top:42px;
+    background:var(--lampblack);
+    color:var(--cream);
+    padding:36px 0 18px;
+    border-top:8px solid var(--vermilion);
+  }
+  footer .cols{
+    display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:30px;
+    max-width:1280px;margin:0 auto;padding:0 18px;
+  }
+  footer h5{
+    font-family:'Ramabhadra',serif;
+    color:var(--turmeric);
+    font-size:16px;
+    margin-bottom:12px;
+    letter-spacing:1.5px;
+  }
+  footer p,footer a{
+    color:var(--cream);
+    font-family:'Mandali',sans-serif;
+    font-weight:600;
+    font-size:13px;
+    line-height:1.7;
+    text-decoration:none;
+  }
+  footer a:hover{color:var(--turmeric)}
+  footer .colophon{
+    text-align:center;
+    margin-top:32px;padding-top:14px;
+    border-top:1px dashed var(--vermilion);
+    font-family:'Mandali',sans-serif;
+    font-size:12px;
+    color:var(--turmeric);
+    letter-spacing:1px;
+  }
+
+  @media (max-width:900px){
+    .hero{grid-template-columns:1fr}
+    .districts{grid-template-columns:repeat(2,1fr)}
+    .cats{grid-template-columns:1fr}
+    .logo-text{font-size:36px}
+    .logo-mark{width:48px;height:48px;font-size:28px}
+    .masthead::before,.masthead::after{display:none}
+    .nav-inner a{font-size:14px;padding:10px 14px}
+    footer .cols{grid-template-columns:1fr 1fr;padding:0 18px}
+  }
+</style>
+</head>
+<body>
+
+<div class="motif-strip"></div>
+
+<!-- MASTHEAD -->
+<header class="masthead">
+  <div class="logo-row">
+    <div class="logo-mark">రా</div>
+    <div>
+      <div class="logo-text">రాయలసీమ <span class="x">ఎక్స్‌ప్రెస్</span></div>
+      <div class="tagline-folk">సీమ గుండె చప్పుడు · The folk-voice of the seven districts</div>
+    </div>
+  </div>
+</header>
+
+<div class="motif-strip dotted"></div>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="#" class="active">హోమ్</a>
+    <a href="#">రాజకీయం</a>
+    <a href="#">జిల్లాలు</a>
+    <a href="#">వ్యవసాయం</a>
+    <a href="#">క్రీడలు</a>
+    <a href="#">సినిమా</a>
+    <a href="#">భక్తి</a>
+    <a href="#">విద్య</a>
+    <a href="#">వ్యాపారం</a>
+    <a href="#">జాతీయం</a>
+  </div>
+</nav>
+
+<!-- BREAKING -->
+<div class="breaking">
+  <div class="breaking-inner">
+    <div class="breaking-badge">⚡ తాజా!</div>
+    <div class="breaking-text">కడప జిల్లాలో మైనర్ హత్య కేసు · తిరుపతి ఎయిర్‌పోర్ట్ అంతర్జాతీయ విమానాలు · అమరావతి భూముల వేలంతో రుణాలు · ఏపీ ఇంటర్ ఫలితాలు త్వరలో</div>
+  </div>
+</div>
+
+<!-- HERO -->
+<section class="wrap hero">
+  <article class="hero-main">
+    <img src="https://images.unsplash.com/photo-1577083552431-6e5fd75a9160?w=900&h=560&fit=crop" alt="">
+    <span class="hero-cat-stamp">ముఖ్య కథనం</span>
+    <h1 class="hero-title">అమరావతి అప్పులు ప్రజల పన్నులతో కాదు, భూముల అమ్మకాలతో తీర్చుతాం: మంత్రి నారాయణ</h1>
+    <p class="hero-summary">రాజధాని అమరావతి నిర్మాణం కోసం తీసుకున్న అప్పులను సాధారణ ప్రజలపై భారం వేయకుండా, ప్రభుత్వ భూముల వేలం ద్వారా తీర్చనున్నట్లు పురపాలక శాఖ మంత్రి పి. నారాయణ ప్రకటించారు.</p>
+    <div class="hero-byline">✎ కె. వెంకటేశ్వర రెడ్డి · అమరావతి · 14 మే 2026</div>
+  </article>
+
+  <aside class="hero-side">
+    <h3>🔥 వేడి వార్తలు</h3>
+    <div class="side-item">
+      <div class="side-num">1</div>
+      <div class="side-text">తిరుపతి విమానాశ్రయానికి అంతర్జాతీయ విమానాలు త్వరలో</div>
+    </div>
+    <div class="side-item">
+      <div class="side-num">2</div>
+      <div class="side-text">ఏపీ ఇంటర్ ఫలితాలు 2026 వచ్చే వారం విడుదల</div>
+    </div>
+    <div class="side-item">
+      <div class="side-num">3</div>
+      <div class="side-text">కడప జిల్లాలో మైనర్ హత్య కేసు: ఎదురుకాల్పులు</div>
+    </div>
+    <div class="side-item">
+      <div class="side-num">4</div>
+      <div class="side-text">రాయలసీమ యూనివర్సిటీ ఫలితాలు: డౌన్‌లోడ్ లింక్</div>
+    </div>
+    <div class="side-item">
+      <div class="side-num">5</div>
+      <div class="side-text">తెలంగాణలో కుంకుమపువ్వు పరిశోధనా ప్రయోగశాల</div>
+    </div>
+  </aside>
+</section>
+
+<!-- DIVIDER -->
+<div class="wrap"><div class="folk-divider"><span>❀</span><span class="leaf">❋</span><span class="ind">✦</span><span class="leaf">❋</span><span>❀</span></div></div>
+
+<!-- DISTRICTS -->
+<section class="wrap">
+  <div class="section-h">
+    <h2>జిల్లా వార్తలు</h2>
+    <span class="sub">All Seven Districts</span>
+  </div>
+  <div class="districts">
+    <div class="dist-card">
+      <div class="dist-name">కర్నూలు</div>
+      <img src="https://images.unsplash.com/photo-1564507592333-c60657eea523?w=400&h=250&fit=crop" alt="">
+      <div class="dist-headline">కర్నూలు రైతు సంఘం రేపు హైదరాబాద్‌లో మహాధర్నా</div>
+      <div class="dist-time">⏱ 3 hours ago</div>
+    </div>
+    <div class="dist-card">
+      <div class="dist-name">అనంతపురం</div>
+      <img src="https://images.unsplash.com/photo-1547036967-23d11aacaee0?w=400&h=250&fit=crop" alt="">
+      <div class="dist-headline">కియా మోటార్స్ ప్లాంట్‌లో కొత్తగా 1200 ఉద్యోగాలు</div>
+      <div class="dist-time">⏱ 5 hours ago</div>
+    </div>
+    <div class="dist-card">
+      <div class="dist-name">కడప</div>
+      <img src="https://images.unsplash.com/photo-1518803194621-27188ba362c9?w=400&h=250&fit=crop" alt="">
+      <div class="dist-headline">పులివెందుల-రాజంపేట జాతీయ రహదారి విస్తరణకు ఆమోదం</div>
+      <div class="dist-time">⏱ 7 hours ago</div>
+    </div>
+    <div class="dist-card">
+      <div class="dist-name">తిరుపతి</div>
+      <img src="https://images.unsplash.com/photo-1582510003544-4d00b7f74220?w=400&h=250&fit=crop" alt="">
+      <div class="dist-headline">తిరుమల బ్రహ్మోత్సవాలకు రికార్డు సంఖ్యలో భక్తులు</div>
+      <div class="dist-time">⏱ 9 hours ago</div>
+    </div>
+  </div>
+</section>
+
+<!-- EDITORIAL -->
+<section class="wrap">
+  <div class="editorial">
+    <div class="label">✦ సంపాదకీయం · EDITORIAL ✦</div>
+    <q>"రాయలసీమ నీళ్ళ కోసం పోరాడే భూమి. ఇది మా అస్తిత్వం; ఇది మా రేపటి ప్రశ్న."</q>
+    <div class="src">— సంపాదకుల బోర్డు · 14 మే 2026</div>
+  </div>
+</section>
+
+<!-- CATEGORIES -->
+<section class="wrap">
+  <div class="section-h">
+    <h2>విభాగాలు</h2>
+    <span class="sub">By Section</span>
+  </div>
+  <div class="cats">
+    <div class="cat-col">
+      <h4>రాజకీయం <span class="latin">POLITICS</span></h4>
+      <div class="cat-body">
+        <img src="https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=400&h=250&fit=crop" alt="">
+        <div class="cat-lead-title">విజయసాయి రెడ్డి మళ్లీ రాజకీయ రంగ ప్రవేశానికి సిద్ధం</div>
+        <ul class="cat-list">
+          <li><span class="ico">❀</span><span class="txt">మహిళా రిజర్వేషన్ బిల్లు సామాజిక విప్లవం: సత్యకుమార్</span></li>
+          <li><span class="ico">❀</span><span class="txt">ఏపీ క్యాబినెట్‌లో కొత్త పునర్వ్యవస్థీకరణ సన్నాహాలు</span></li>
+          <li><span class="ico">❀</span><span class="txt">జగన్ సుదీర్ఘ పర్యటనకు సిద్ధం: సూచనలు</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="cat-col">
+      <h4>వ్యవసాయం <span class="latin">AGRICULTURE</span></h4>
+      <div class="cat-body">
+        <img src="https://images.unsplash.com/photo-1500595046743-cd271d694d30?w=400&h=250&fit=crop" alt="">
+        <div class="cat-lead-title">డీజిల్ నుంచి దినకాంతికి: సౌర పథకాలతో రైతులకు బలం</div>
+        <ul class="cat-list">
+          <li><span class="ico">❀</span><span class="txt">మధ్యప్రదేశ్ వ్యవసాయ రోడ్ మ్యాప్ — చౌహాన్</span></li>
+          <li><span class="ico">❀</span><span class="txt">తెలంగాణలో ఏరోపోనిక్ కుంకుమపువ్వు ప్రయోగశాల</span></li>
+          <li><span class="ico">❀</span><span class="txt">పులివెందుల మామిడి రైతులకు తాజా ధరల ప్రకటన</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="cat-col">
+      <h4>సినిమా <span class="latin">CINEMA</span></h4>
+      <div class="cat-body">
+        <img src="https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=400&h=250&fit=crop" alt="">
+        <div class="cat-lead-title">'ధురంధర్ 2' 24 రోజుల్లో ₹1,700 కోట్లకు చేరువ</div>
+        <ul class="cat-list">
+          <li><span class="ico">❀</span><span class="txt">ఎడ్డి మర్ఫీ సూక్తి: తర్వాతి సినిమాకే దృష్టి</span></li>
+          <li><span class="ico">❀</span><span class="txt">పుష్ప 3 షూటింగ్: రాయలసీమ లొకేషన్లలో నిర్మాణం</span></li>
+          <li><span class="ico">❀</span><span class="txt">తెలుగు OTT రిలీజ్ ట్రెండ్ ఈ వారం</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="motif-strip" style="margin-top:36px"></div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="cols">
+    <div>
+      <h5>రాయలసీమ ఎక్స్‌ప్రెస్</h5>
+      <p>సీమ గుండె చప్పుడు — Seven districts, one voice. Independent Telugu journalism rooted in Kurnool, Nandyal, Anantapur, Sri Sathya Sai, Kadapa, Annamayya, Tirupati, Chittoor.</p>
+    </div>
+    <div>
+      <h5>విభాగాలు</h5>
+      <p><a href="#">రాజకీయం</a><br><a href="#">వ్యవసాయం</a><br><a href="#">క్రీడలు</a><br><a href="#">సినిమా</a></p>
+    </div>
+    <div>
+      <h5>సంస్థ</h5>
+      <p><a href="#">మా గురించి</a><br><a href="#">సంప్రదించండి</a><br><a href="#">కెరీర్</a><br><a href="#">ప్రకటనలు</a></p>
+    </div>
+    <div>
+      <h5>చట్టపరం</h5>
+      <p><a href="#">గోప్యత</a><br><a href="#">నిబంధనలు</a><br><a href="#">ఎథిక్స్</a><br><a href="#">కరెక్షన్స్</a></p>
+    </div>
+  </div>
+  <div class="colophon">✦ Set in Ramabhadra · Mandali · Yatra One · Suranna ✦ © రాయలసీమ ఎక్స్‌ప్రెస్ 2026 ✦</div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="te">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>రాయలసీమ ఎక్స్‌ప్రెస్ — Direction D: Current Layout + Lepakshi Fonts + Red+Turmeric</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=NTR&family=Suranna&family=Noto+Serif+Telugu:wght@400;500;600;700;800;900&family=Noto+Sans+Telugu:wght@600;700;800&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* RED kept as primary brand (was #FF2C2C, slightly warmed for paper feel) */
+    --brand:#E01B1B;
+    --brand-deep:#B91414;
+    --brand-darker:#8B0F0F;
+    --brand-bg:#FFF1F1;
+
+    /* TURMERIC added as accent (from Lepakshi) */
+    --turmeric:#D4A017;
+    --turmeric-soft:#E8C572;
+    --turmeric-bg:#FBF3DB;
+
+    /* Indigo for occasional editorial accent */
+    --indigo:#1B2845;
+
+    /* WARMER paper tones instead of cold greys */
+    --paper:#FAF6EC;
+    --paper-deep:#F2EBD4;
+    --card:#FFFCF5;
+
+    --ink:#1A1310;
+    --ink-soft:#3A2F2A;
+    --ink-muted:#7A6B5F;
+
+    --hairline:rgba(26,19,16,0.12);
+    --hairline-strong:rgba(26,19,16,0.22);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{font-size:16px}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Noto Serif Telugu','Noto Sans Telugu',serif;
+    font-weight:500;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  /* Subtle paper grain — warm, not pure white */
+  body::before{
+    content:"";
+    position:fixed;inset:0;
+    pointer-events:none;
+    z-index:1;
+    opacity:0.18;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.6 0 0 0 0 0.4 0 0 0 0 0.2 0 0 0 0.07 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+  .wrap{max-width:1280px;margin:0 auto;padding:0 12px;position:relative;z-index:2}
+  a{color:inherit;text-decoration:none}
+
+  /* ===== TOP META BAR ===== */
+  .meta-bar{
+    background:var(--paper-deep);
+    border-bottom:1px solid var(--hairline);
+    padding:5px 0;
+    font-family:'Cormorant Garamond',serif;
+    font-size:12px;
+    color:var(--ink-muted);
+  }
+  .meta-bar .inner{
+    max-width:1280px;margin:0 auto;padding:0 12px;
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .meta-bar .right span{margin-left:18px}
+  .meta-bar .right a:hover{color:var(--brand)}
+
+  /* ===== MASTHEAD (lockup similar to Lepakshi but with red brand) ===== */
+  .masthead{
+    background:var(--paper);
+    padding:14px 0 10px;
+    border-bottom:1px double var(--brand);
+    position:relative;
+  }
+  .masthead::after{
+    content:"";position:absolute;
+    left:0;right:0;bottom:-6px;
+    height:1px;background:var(--brand);opacity:0.55;
+  }
+  .masthead-inner{
+    display:flex;align-items:center;justify-content:space-between;gap:18px;
+  }
+  .logo{
+    font-family:'NTR','Suranna',serif;
+    font-size:46px;
+    color:var(--brand-deep);
+    line-height:1;
+    letter-spacing:-0.5px;
+  }
+  .logo .accent{color:var(--turmeric);font-style:italic}
+  .tagline{
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;
+    color:var(--indigo);
+    font-size:13px;
+    letter-spacing:0.4px;
+    margin-top:3px;
+  }
+  .mast-right{text-align:right}
+  .mast-edition{
+    font-family:'Cormorant Garamond',serif;
+    font-size:12px;
+    color:var(--ink-muted);
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+  }
+  .mast-date{
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;
+    font-size:12px;
+    color:var(--indigo);
+    margin-top:3px;
+  }
+
+  /* ===== NAV (kept dense like Eenadu, but with refined typography) ===== */
+  .nav{
+    background:linear-gradient(180deg,var(--brand) 0%,var(--brand-deep) 100%);
+    box-shadow:0 2px 6px rgba(0,0,0,0.12);
+  }
+  .nav-inner{
+    display:flex;justify-content:center;flex-wrap:wrap;gap:0;
+  }
+  .nav-inner a{
+    color:#fff;
+    font-family:'NTR',sans-serif;
+    font-size:16px;
+    padding:11px 18px;
+    border-right:1px solid rgba(255,255,255,0.18);
+    position:relative;
+    transition:background 0.2s;
+  }
+  .nav-inner a:hover{background:rgba(0,0,0,0.18)}
+  .nav-inner a.live{background:var(--turmeric);color:var(--indigo);font-weight:700}
+  .nav-inner a.live::before{
+    content:"";display:inline-block;
+    width:6px;height:6px;border-radius:50%;
+    background:var(--brand);
+    margin-right:6px;vertical-align:middle;
+    animation:pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+  /* ===== BREAKING ===== */
+  .breaking{
+    background:var(--brand-darker);
+    color:#fff;
+    border-bottom:2px solid var(--turmeric);
+    padding:8px 0;
+  }
+  .breaking-inner{
+    max-width:1280px;margin:0 auto;padding:0 12px;
+    display:flex;align-items:center;gap:14px;
+  }
+  .breaking-stamp{
+    background:var(--turmeric);
+    color:var(--indigo);
+    font-family:'NTR',sans-serif;
+    font-weight:700;
+    padding:4px 12px;
+    font-size:13px;
+    letter-spacing:2px;
+    transform:rotate(-2deg);
+    border:1px dashed var(--indigo);
+    flex-shrink:0;
+  }
+  .breaking-text{
+    font-family:'Noto Serif Telugu',serif;
+    font-weight:600;
+    font-size:14.5px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  /* ===== MAIN LAYOUT (same as current: 63/37 + 3x3 grid) ===== */
+  main{padding-top:6px}
+  .home-section-1{display:flex;gap:8px;margin-top:6px}
+  .home-main{flex:0 0 63%;overflow:hidden}
+  .home-sidebar{flex:1 1 auto;overflow:hidden}
+
+  /* PANELS */
+  .panel{
+    background:var(--card);
+    border:1px solid var(--hairline);
+    border-radius:6px;
+    overflow:hidden;
+  }
+
+  /* ===== HERO SLIDER ===== */
+  .slider{
+    background:var(--card);
+    border:1px solid var(--hairline);
+    border-radius:6px;
+    overflow:hidden;
+    position:relative;
+  }
+  .slider-img{
+    width:100%;
+    aspect-ratio:16/9;
+    object-fit:cover;
+    display:block;
+  }
+  .slider-overlay{
+    position:absolute;
+    left:0;right:0;bottom:0;
+    background:linear-gradient(180deg,transparent 0%,rgba(26,19,16,0.92) 100%);
+    padding:34px 22px 18px;
+    color:#fff;
+  }
+  .slider-cat{
+    display:inline-block;
+    background:var(--turmeric);
+    color:var(--indigo);
+    font-family:'NTR',sans-serif;
+    font-weight:700;
+    padding:3px 10px;
+    font-size:11px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    margin-bottom:8px;
+  }
+  .slider-title{
+    font-family:'NTR','Suranna',serif;
+    font-size:26px;
+    line-height:1.25;
+    color:#fff;
+    text-shadow:0 1px 3px rgba(0,0,0,0.5);
+    margin-bottom:6px;
+  }
+  .slider-meta{
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;
+    font-size:12px;
+    color:#ddd;
+  }
+
+  /* ===== DISTRICT GRID UNDER SLIDER ===== */
+  .district-grid{
+    margin-top:8px;
+    background:var(--card);
+    border:1px solid var(--hairline);
+    border-radius:6px;
+    padding:10px 12px 12px;
+  }
+  .panel-tab{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    background:var(--brand-deep);
+    color:#fff;
+    padding:4px 14px;
+    border-radius:3px 3px 0 0;
+    font-family:'NTR',sans-serif;
+    font-size:14px;
+    letter-spacing:1px;
+    box-shadow:0 2px 4px rgba(0,0,0,0.15);
+  }
+  .panel-tab::after{
+    content:"";display:inline-block;
+    width:5px;height:5px;border-radius:50%;
+    background:var(--turmeric);
+  }
+  .district-grid-inner{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px;
+  }
+  .district-mini{
+    border:1px solid var(--hairline);
+    background:var(--paper);
+    border-radius:4px;
+    overflow:hidden;
+    transition:transform 0.2s,box-shadow 0.2s;
+  }
+  .district-mini:hover{
+    transform:translateY(-2px);
+    box-shadow:0 4px 12px rgba(224,27,27,0.12);
+  }
+  .district-mini-label{
+    font-family:'NTR',sans-serif;
+    background:var(--turmeric-bg);
+    color:var(--brand-deep);
+    padding:3px 8px;
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:1px;
+    border-bottom:1px solid var(--turmeric-soft);
+  }
+  .district-mini img{
+    width:100%;
+    aspect-ratio:16/10;
+    object-fit:cover;
+    display:block;
+  }
+  .district-mini h4{
+    padding:6px 8px 8px;
+    font-family:'Noto Serif Telugu',serif;
+    font-size:13.5px;
+    line-height:1.4;
+    font-weight:700;
+    color:var(--ink);
+  }
+  .district-mini:hover h4{color:var(--brand-deep)}
+
+  /* ===== SIDEBAR ===== */
+  .sidebar-card{
+    background:var(--card);
+    border:1px solid var(--hairline);
+    border-radius:6px;
+    padding:8px 10px 10px;
+    margin-bottom:6px;
+  }
+  .sidebar-card .panel-tab{margin-bottom:6px}
+  .sidebar-card h3{
+    display:none; /* tab already shows title */
+  }
+  .sidebar-item{
+    display:flex;gap:9px;
+    padding:7px 0;
+    border-bottom:1px dotted var(--hairline);
+  }
+  .sidebar-item:last-child{border-bottom:none}
+  .sidebar-num{
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;
+    font-size:22px;
+    color:var(--turmeric);
+    line-height:1;
+    font-weight:600;
+    flex-shrink:0;
+    width:22px;
+    text-align:center;
+  }
+  .sidebar-text{
+    font-family:'Noto Serif Telugu',serif;
+    font-weight:700;
+    font-size:13.5px;
+    line-height:1.45;
+    color:var(--ink);
+  }
+  .sidebar-item:hover .sidebar-text{color:var(--brand-deep)}
+
+  /* Weather/Cricket/Bullion mini-widgets */
+  .widget{
+    padding:10px 12px;
+    background:linear-gradient(180deg,var(--card) 0%,var(--paper) 100%);
+    border:1px solid var(--hairline);
+    border-radius:6px;
+    margin-bottom:6px;
+  }
+  .widget-head{
+    display:flex;justify-content:space-between;align-items:center;
+    margin-bottom:6px;
+  }
+  .widget-title{
+    font-family:'NTR',sans-serif;
+    font-size:13px;
+    color:var(--brand-deep);
+    letter-spacing:1px;
+    text-transform:uppercase;
+  }
+  .widget-tag{
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;
+    font-size:11px;
+    color:var(--turmeric);
+  }
+  .widget-body{
+    font-family:'NTR',serif;
+    font-size:14px;
+    color:var(--ink);
+    line-height:1.6;
+  }
+  .widget-body strong{color:var(--brand-deep);font-family:'NTR',serif;font-size:16px}
+
+  /* ===== CATEGORY GRID (3x3) ===== */
+  .cat-row{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+    margin-top:8px;
+  }
+  .cat-card{
+    background:var(--card);
+    border:1px solid var(--hairline);
+    border-radius:6px;
+    overflow:hidden;
+    transition:transform 0.2s,box-shadow 0.2s;
+  }
+  .cat-card:hover{
+    transform:translateY(-2px);
+    box-shadow:0 6px 18px rgba(224,27,27,0.10);
+  }
+  .cat-tab-row{padding:8px 8px 0}
+  .cat-tab{
+    display:inline-flex;align-items:center;gap:6px;
+    background:var(--brand-deep);
+    color:#fff;
+    padding:4px 14px;
+    border-radius:3px 3px 0 0;
+    font-family:'NTR',sans-serif;
+    font-size:14px;
+    letter-spacing:1px;
+    box-shadow:0 2px 4px rgba(0,0,0,0.15);
+  }
+  .cat-tab .latin{
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;
+    font-size:11px;
+    color:var(--turmeric);
+    letter-spacing:0;
+    margin-left:6px;
+  }
+  .cat-tab::before{
+    content:"❀";
+    color:var(--turmeric);
+    font-size:11px;
+  }
+  .cat-image-wrap{padding:8px 8px 0}
+  .cat-image-wrap img{
+    display:block;width:100%;
+    aspect-ratio:16/10;
+    object-fit:cover;
+    border-radius:2px;
+    transition:transform 0.3s;
+  }
+  .cat-card:hover .cat-image-wrap img{transform:scale(1.04)}
+  .cat-lead-title{
+    padding:6px 10px 4px;
+    font-family:'NTR','Suranna',serif;
+    font-size:18px;
+    line-height:1.35;
+    color:var(--brand-deep);
+    font-weight:400;
+  }
+  .cat-card:hover .cat-lead-title{color:var(--brand-darker)}
+  .cat-bullets{padding:4px 10px 14px;list-style:none}
+  .cat-bullet{
+    margin-bottom:8px;
+    display:flex;align-items:flex-start;gap:10px;
+  }
+  .cat-bullet-dot{
+    width:8px;height:8px;
+    background:var(--turmeric);
+    border-radius:50%;
+    margin-top:7px;
+    flex-shrink:0;
+    box-shadow:0 0 0 2px var(--turmeric-bg);
+    transition:transform 0.2s;
+  }
+  .cat-bullet:hover .cat-bullet-dot{transform:scale(1.25)}
+  .cat-bullet-text{
+    font-family:'Noto Serif Telugu',serif;
+    font-weight:700;
+    font-size:14.5px;
+    line-height:1.55;
+    color:var(--ink);
+  }
+  .cat-bullet:hover .cat-bullet-text{color:var(--brand-deep);cursor:pointer}
+
+  /* ===== AD BANNER PLACEHOLDER ===== */
+  .ad-band{
+    margin-top:8px;
+    background:repeating-linear-gradient(135deg,
+      var(--paper-deep) 0,var(--paper-deep) 12px,
+      var(--paper) 12px,var(--paper) 24px);
+    border:1px dashed var(--hairline-strong);
+    text-align:center;
+    padding:18px;
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;
+    color:var(--ink-muted);
+    font-size:13px;
+    letter-spacing:2px;
+  }
+
+  /* ===== ORNAMENT DIVIDER ===== */
+  .ornament{
+    text-align:center;
+    margin:18px 0 12px;
+    color:var(--brand);
+    font-size:18px;
+    letter-spacing:14px;
+  }
+  .ornament .y{color:var(--turmeric)}
+
+  /* ===== FOOTER ===== */
+  footer{
+    margin-top:32px;
+    background:var(--indigo);
+    color:#fff;
+    padding:30px 0 16px;
+    border-top:4px solid var(--brand);
+    position:relative;
+  }
+  footer::before{
+    content:"";
+    position:absolute;
+    top:-4px;left:0;right:0;
+    height:1px;
+    background:var(--turmeric);
+  }
+  footer .cols{
+    display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:30px;
+    max-width:1280px;margin:0 auto;padding:0 12px;
+  }
+  footer h5{
+    font-family:'NTR',sans-serif;
+    color:var(--turmeric);
+    font-size:13px;
+    margin-bottom:10px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+  }
+  footer p,footer a{
+    color:#d8d0c0;
+    font-family:'Noto Serif Telugu',serif;
+    font-size:13px;
+    line-height:1.7;
+    text-decoration:none;
+  }
+  footer a:hover{color:var(--turmeric)}
+  footer .brand-block{
+    font-family:'Cormorant Garamond',serif;font-style:italic;
+    color:#b9aa92;
+  }
+  footer .colophon{
+    border-top:1px solid rgba(255,255,255,0.12);
+    margin-top:24px;padding-top:14px;
+    font-family:'Cormorant Garamond',serif;font-style:italic;
+    font-size:11.5px;color:#998871;
+    text-align:center;
+    max-width:1280px;margin-left:auto;margin-right:auto;
+    padding-left:12px;padding-right:12px;
+  }
+
+  @media (max-width:900px){
+    .home-section-1{flex-direction:column}
+    .home-main,.home-sidebar{flex:none;width:100%}
+    .district-grid-inner{grid-template-columns:repeat(2,1fr)}
+    .cat-row{grid-template-columns:1fr}
+    footer .cols{grid-template-columns:1fr 1fr}
+    .logo{font-size:32px}
+  }
+</style>
+</head>
+<body>
+
+<!-- META BAR (small top strip) -->
+<div class="meta-bar">
+  <div class="inner">
+    <div>శనివారం · 15 May 2026 · తిరుపతి 32°C · తేలికపాటి వర్షం</div>
+    <div class="right">
+      <span><a href="#">ఈ-పేపర్</a></span>
+      <span><a href="#">లాగిన్</a></span>
+      <span><a href="#">సబ్‌స్క్రైబ్</a></span>
+    </div>
+  </div>
+</div>
+
+<!-- MASTHEAD -->
+<header class="masthead">
+  <div class="wrap masthead-inner">
+    <div>
+      <div class="logo">రాయలసీమ <span class="accent">ఎక్స్‌ప్రెస్</span></div>
+      <div class="tagline">— సీమ గుండె నుంచి · The voice from the heart of the stones —</div>
+    </div>
+    <div class="mast-right">
+      <div class="mast-edition">కర్నూలు ఎడిషన్</div>
+      <div class="mast-date">Vol. III · No. 142 · est. 2024</div>
+    </div>
+  </div>
+</header>
+
+<!-- NAV (red gradient like current, but with NTR font) -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="#" class="live">లైవ్</a>
+    <a href="#">హోమ్</a>
+    <a href="#">రాజకీయం</a>
+    <a href="#">జిల్లాలు</a>
+    <a href="#">జాతీయం</a>
+    <a href="#">వ్యవసాయం</a>
+    <a href="#">క్రీడలు</a>
+    <a href="#">సినిమా</a>
+    <a href="#">విద్య</a>
+    <a href="#">వ్యాపారం</a>
+    <a href="#">భక్తి</a>
+  </div>
+</nav>
+
+<!-- BREAKING -->
+<div class="breaking">
+  <div class="breaking-inner">
+    <div class="breaking-stamp">⚡ తాజా</div>
+    <div class="breaking-text">కడప జిల్లాలో మైనర్ హత్య కేసులో నిందితుడిని పోలీసులు హతమార్చారు · తిరుపతి విమానాశ్రయానికి అంతర్జాతీయ విమానాలు త్వరలో · అమరావతి అప్పులు భూముల అమ్మకాలతో తీర్చుతాం: మంత్రి నారాయణ · AP EAMCET 2026 దరఖాస్తు సవరణకు ఆన్‌లైన్ విండో</div>
+  </div>
+</div>
+
+<!-- MAIN: same layout as current -->
+<main class="wrap">
+
+  <!-- SECTION 1: Slider + Latest News Sidebar (63/37 same as current) -->
+  <div class="home-section-1">
+    <div class="home-main">
+
+      <!-- Slider -->
+      <div class="slider">
+        <img class="slider-img" src="https://images.unsplash.com/photo-1577083552431-6e5fd75a9160?w=1200&h=675&fit=crop" alt="">
+        <div class="slider-overlay">
+          <span class="slider-cat">ముఖ్య కథనం</span>
+          <h2 class="slider-title">అమరావతి అప్పులు ప్రజల పన్నులతో కాదు, భూముల అమ్మకాలతో తీర్చుతాం: మంత్రి నారాయణ</h2>
+          <div class="slider-meta">— కె. వెంకటేశ్వర రెడ్డి · అమరావతి · 14 May 2026</div>
+        </div>
+      </div>
+
+      <!-- District Grid (under slider, like current) -->
+      <div class="district-grid">
+        <div class="panel-tab">జిల్లా వార్తలు <span style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:11px;color:var(--turmeric);margin-left:4px">districts</span></div>
+        <div class="district-grid-inner">
+          <a class="district-mini" href="#">
+            <div class="district-mini-label">కర్నూలు</div>
+            <img src="https://images.unsplash.com/photo-1564507592333-c60657eea523?w=400&h=250&fit=crop" alt="">
+            <h4>కర్నూలు రైతు సంఘం రేపు హైదరాబాద్‌లో మహాధర్నా</h4>
+          </a>
+          <a class="district-mini" href="#">
+            <div class="district-mini-label">అనంతపురం</div>
+            <img src="https://images.unsplash.com/photo-1547036967-23d11aacaee0?w=400&h=250&fit=crop" alt="">
+            <h4>కియా మోటార్స్ ప్లాంట్‌లో కొత్తగా 1200 ఉద్యోగాలు</h4>
+          </a>
+          <a class="district-mini" href="#">
+            <div class="district-mini-label">కడప</div>
+            <img src="https://images.unsplash.com/photo-1518803194621-27188ba362c9?w=400&h=250&fit=crop" alt="">
+            <h4>పులివెందుల-రాజంపేట జాతీయ రహదారి విస్తరణకు ఆమోదం</h4>
+          </a>
+          <a class="district-mini" href="#">
+            <div class="district-mini-label">తిరుపతి</div>
+            <img src="https://images.unsplash.com/photo-1582510003544-4d00b7f74220?w=400&h=250&fit=crop" alt="">
+            <h4>తిరుమల బ్రహ్మోత్సవాలకు రికార్డు సంఖ్యలో భక్తులు</h4>
+          </a>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- SIDEBAR (37% like current) -->
+    <aside class="home-sidebar">
+      <div class="sidebar-card">
+        <div class="panel-tab">తాజా వార్తలు <span style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:11px;color:var(--turmeric);margin-left:4px">latest</span></div>
+        <div class="sidebar-item">
+          <div class="sidebar-num">1</div>
+          <div class="sidebar-text">తిరుపతి విమానాశ్రయానికి అంతర్జాతీయ విమానాలు త్వరలో ప్రారంభం</div>
+        </div>
+        <div class="sidebar-item">
+          <div class="sidebar-num">2</div>
+          <div class="sidebar-text">ఏపీ ఇంటర్ ఫలితాలు 2026 వచ్చే వారం విడుదలకు అవకాశం</div>
+        </div>
+        <div class="sidebar-item">
+          <div class="sidebar-num">3</div>
+          <div class="sidebar-text">కడప జిల్లాలో మైనర్ హత్య కేసు: ఎదురుకాల్పుల్లో నిందితుడు మృతి</div>
+        </div>
+        <div class="sidebar-item">
+          <div class="sidebar-num">4</div>
+          <div class="sidebar-text">రాయలసీమ విశ్వవిద్యాలయం UG, PG మార్క్‌షీట్‌లు డౌన్‌లోడ్‌కు సిద్ధం</div>
+        </div>
+        <div class="sidebar-item">
+          <div class="sidebar-num">5</div>
+          <div class="sidebar-text">తెలంగాణలో ఏరోపోనిక్ కుంకుమపువ్వు ప్రయోగశాల ప్రారంభం</div>
+        </div>
+        <div class="sidebar-item">
+          <div class="sidebar-num">6</div>
+          <div class="sidebar-text">డీజిల్ నుంచి సౌర పంపుసెట్లకు భారత రైతుల మార్పు</div>
+        </div>
+      </div>
+
+      <!-- Cricket widget mini -->
+      <div class="widget">
+        <div class="widget-head">
+          <div class="widget-title">క్రికెట్</div>
+          <div class="widget-tag">IPL · Live</div>
+        </div>
+        <div class="widget-body">
+          CSK <strong>178/4</strong> (18.2) <br>
+          RCB <strong>176/9</strong> (20.0)
+        </div>
+      </div>
+
+      <!-- Gold widget mini -->
+      <div class="widget">
+        <div class="widget-head">
+          <div class="widget-title">బంగారం / వెండి</div>
+          <div class="widget-tag">today</div>
+        </div>
+        <div class="widget-body">
+          24K <strong>₹82,150</strong> /10g<br>
+          Silver <strong>₹98,400</strong> /kg
+        </div>
+      </div>
+
+      <!-- Weather widget mini -->
+      <div class="widget">
+        <div class="widget-head">
+          <div class="widget-title">వాతావరణం</div>
+          <div class="widget-tag">Tirupati</div>
+        </div>
+        <div class="widget-body">
+          <strong>32°C</strong> · తేలికపాటి వర్షం<br>
+          ఆర్ద్రత 74% · గాలి 12 km/h
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Ornament divider -->
+  <div class="ornament"><span>❖</span><span class="y">❖</span><span>❖</span></div>
+
+  <!-- AD BANNER -->
+  <div class="ad-band">— ADVERTISEMENT —</div>
+
+  <!-- CATEGORY ROW 1: Politics + Sports + Entertainment (same layout as current) -->
+  <div class="cat-row">
+    <div class="cat-card">
+      <div class="cat-tab-row">
+        <a class="cat-tab" href="#">రాజకీయం <span class="latin">politics ↗</span></a>
+      </div>
+      <div class="cat-image-wrap">
+        <img src="https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=400&h=250&fit=crop" alt="">
+      </div>
+      <h4 class="cat-lead-title">విజయసాయి రెడ్డి మళ్లీ రాజకీయ రంగ ప్రవేశానికి సిద్ధం, ఈసారి మీడియా ఆధారంగా</h4>
+      <ul class="cat-bullets">
+        <li class="cat-bullet"><span class="cat-bullet-dot"></span><span class="cat-bullet-text">మహిళా రిజర్వేషన్ బిల్లు సామాజిక విప్లవం: సత్యకుమార్ యాదవ్</span></li>
+        <li class="cat-bullet"><span class="cat-bullet-dot"></span><span class="cat-bullet-text">ఏపీ క్యాబినెట్‌లో కొత్త పునర్వ్యవస్థీకరణకు సన్నాహాలు</span></li>
+        <li class="cat-bullet"><span class="cat-bullet-dot"></span><span class="cat-bullet-text">జగన్ సుదీర్ఘ పర్యటనకు సిద్ధమవుతున్నారు: సూచనలు</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-tab-row">
+        <a class="cat-tab" href="#">క్రీడలు <span class="latin">sports ↗</span></a>
+      </div>
+      <div class="cat-image-wrap">
+        <img src="https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=400&h=250&fit=crop" alt="">
+      </div>
+      <h4 class="cat-lead-title">IPL ప్లేఆఫ్స్‌లో CSK సాధించిన అద్భుత విజయం</h4>
+      <ul class="cat-bullets">
+        <li class="cat-bullet"><span class="cat-bullet-dot"></span><span class="cat-bullet-text">ధోనీ ఫైనల్ ఓవర్‌లో 28 పరుగుల సునామీ</span></li>
+        <li class="cat-bullet"><span class="cat-bullet-dot"></span><span class="cat-bullet-text">కోహ్లి సెంచరీ చేయడంలో విఫలం</span></li>
+        <li class="cat-bullet"><span class="cat-bullet-dot"></span><span class="cat-bullet-text">అంతర్జాతీయ టీ20 జట్టుకు తాజా అదనం</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-tab-row">
+        <a class="cat-tab" href="#">సినిమా <span class="latin">cinema ↗</span></a>
+      </div>
+      <div class="cat-image-wrap">
+        <img src="https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=400&h=250&fit=crop" alt="">
+      </div>
+      <h4 class="cat-lead-title">24 రోజుల్లో ప్రపంచవ్యాప్తంగా ₹1,700 కోట్లకు చేరువలో 'ధురంధర్ 2'</h4>
+      <ul class="cat-bullets">
+        <li class="cat-bullet"><span class="cat-bullet-dot"></span><span class="cat-bullet-text">ఎడ్డి మర్ఫీ సూక్తి: తర్వాతి సినిమాకే దృష్టి</span></li>
+        <li class="cat-bullet"><span class="cat-bullet-dot"></span><span class="cat-bullet-text">పుష్ప 3 షూటింగ్: రాయలసీమ లొకేషన్లలో</span></li>
+        <li class="cat-bullet"><span class="cat-bullet-dot"></span><span class="cat-bullet-text">తెలుగు OTT రిలీజ్ ట్రెండ్ ఈ వారం</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- CATEGORY ROW 2 -->
+  <div class="cat-row">
+    <div class="cat-card">
+      <div class="cat-tab-row">
+        <a class="cat-tab" href="#">జాతీయం <span class="latin">national ↗</span></a>
+      </div>
+      <div class="cat-image-wrap">
+        <img src="https://images.unsplash.com/photo-1532375810709-75b1da00537c?w=400&h=250&fit=crop" alt="">
+      </div>
+      <h4 class="cat-lead-title">కతిహార్ రోడ్డు ప్రమాదంపై సంతాపం వ్యక్తం చేసిన రాష్ట్రపతి ముర్ము</h4>
+      <ul class="cat-bullets">
+        <li class="cat-bullet"><span class="cat-bullet-dot"></span><span class="cat-bullet-text">కాంగ్రెస్ అధ్యక్ష ఎన్నికలకు తేదీ ఖరారు</span></li>
+        <li class="cat-bullet"><span class="cat-bullet-dot"></span><span class="cat-bullet-text">పార్లమెంట్ వర్షాకాల సమావేశాల ఎజెండా</span></li>
+        <li class="cat-bullet"><span class="cat-bullet-dot"></span><span class="cat-bullet-text">RBI నుండి వడ్డీ రేట్ల తగ్గింపు సంకేతాలు</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-tab-row">
+        <a class="cat-tab" href="#">వ్యాపారం <span class="latin">business ↗</span></a>
+      </div>
+      <div class="cat-image-wrap">
+        <img src="https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&h=250&fit=crop" alt="">
+      </div>
+      <h4 class="cat-lead-title">భారతీయ స్టార్టప్‌ల్లో పెట్టుబడుల కొత్త రికార్డు</h4>
+      <ul class="cat-bullets">
+        <li class="cat-bullet"><span class="cat-bullet-dot"></span><span class="cat-bullet-text">సెన్సెక్స్ ఆల్‌టైమ్ హైకి దగ్గర</span></li>
+        <li class="cat-bullet"><span class="cat-bullet-dot"></span><span class="cat-bullet-text">రుపాయి స్థిరత్వంలో RBI పాత్ర</span></li>
+        <li class="cat-bullet"><span class="cat-bullet-dot"></span><span class="cat-bullet-text">అదానీ గ్రూప్ కొత్త పెట్టుబడులు</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-tab-row">
+        <a class="cat-tab" href="#">వ్యవసాయం <span class="latin">agriculture ↗</span></a>
+      </div>
+      <div class="cat-image-wrap">
+        <img src="https://images.unsplash.com/photo-1500595046743-cd271d694d30?w=400&h=250&fit=crop" alt="">
+      </div>
+      <h4 class="cat-lead-title">డీజిల్ నుంచి దినకాంతికి: సౌర పథకాలతో శక్తి పొందుతున్న భారత రైతులు</h4>
+      <ul class="cat-bullets">
+        <li class="cat-bullet"><span class="cat-bullet-dot"></span><span class="cat-bullet-text">మధ్యప్రదేశ్ వ్యవసాయ రోడ్ మ్యాప్ — చౌహాన్</span></li>
+        <li class="cat-bullet"><span class="cat-bullet-dot"></span><span class="cat-bullet-text">తెలంగాణలో కుంకుమపువ్వు ప్రయోగశాల</span></li>
+        <li class="cat-bullet"><span class="cat-bullet-dot"></span><span class="cat-bullet-text">పులివెందుల మామిడి రైతులకు తాజా ధరల ప్రకటన</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- AD BANNER -->
+  <div class="ad-band">— ADVERTISEMENT —</div>
+
+  <!-- CATEGORY ROW 3 -->
+  <div class="cat-row">
+    <div class="cat-card">
+      <div class="cat-tab-row">
+        <a class="cat-tab" href="#">అంతర్జాతీయం <span class="latin">world ↗</span></a>
+      </div>
+      <div class="cat-image-wrap">
+        <img src="https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?w=400&h=250&fit=crop" alt="">
+      </div>
+      <h4 class="cat-lead-title">అమెరికా-చైనా వాణిజ్య ఒప్పందంలో కీలక మలుపు</h4>
+      <ul class="cat-bullets">
+        <li class="cat-bullet"><span class="cat-bullet-dot"></span><span class="cat-bullet-text">ఉక్రెయిన్ సరిహద్దుల్లో మళ్లీ ఘర్షణలు</span></li>
+        <li class="cat-bullet"><span class="cat-bullet-dot"></span><span class="cat-bullet-text">గల్ఫ్‌లో NRI ఉద్యోగాలకు కొత్త నిబంధనలు</span></li>
+        <li class="cat-bullet"><span class="cat-bullet-dot"></span><span class="cat-bullet-text">జపాన్ తీరంలో భూకంపం: సునామీ హెచ్చరిక</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-tab-row">
+        <a class="cat-tab" href="#">నేరం <span class="latin">crime ↗</span></a>
+      </div>
+      <div class="cat-image-wrap">
+        <img src="https://images.unsplash.com/photo-1453873531674-2151bcd01707?w=400&h=250&fit=crop" alt="">
+      </div>
+      <h4 class="cat-lead-title">మావోయిస్టు ముప్పు తగ్గడంతో గ్రేహౌండ్స్ బలగాల పునర్వినియోగం</h4>
+      <ul class="cat-bullets">
+        <li class="cat-bullet"><span class="cat-bullet-dot"></span><span class="cat-bullet-text">కడప జిల్లాలో మైనర్ హత్య కేసు: ఎదురుకాల్పులు</span></li>
+        <li class="cat-bullet"><span class="cat-bullet-dot"></span><span class="cat-bullet-text">హైదరాబాద్‌లో సైబర్ నేరాల పెరుగుదల</span></li>
+        <li class="cat-bullet"><span class="cat-bullet-dot"></span><span class="cat-bullet-text">డ్రగ్స్ స్మగ్లింగ్ ముఠాపై NCB దాడులు</span></li>
+      </ul>
+    </div>
+
+    <div class="cat-card">
+      <div class="cat-tab-row">
+        <a class="cat-tab" href="#">టెక్నాలజీ <span class="latin">tech ↗</span></a>
+      </div>
+      <div class="cat-image-wrap">
+        <img src="https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=250&fit=crop" alt="">
+      </div>
+      <h4 class="cat-lead-title">భారతీయ AI స్టార్టప్‌లకు కేంద్రం ₹10,000 కోట్ల ప్యాకేజీ</h4>
+      <ul class="cat-bullets">
+        <li class="cat-bullet"><span class="cat-bullet-dot"></span><span class="cat-bullet-text">ఆపిల్ ఇండియా ఉత్పత్తి కేంద్రం విస్తరణ</span></li>
+        <li class="cat-bullet"><span class="cat-bullet-dot"></span><span class="cat-bullet-text">5G కవరేజీ గ్రామీణ ప్రాంతాలకు చేరిక</span></li>
+        <li class="cat-bullet"><span class="cat-bullet-dot"></span><span class="cat-bullet-text">డేటా ప్రైవసీ చట్టం: కొత్త మార్గదర్శకాలు</span></li>
+      </ul>
+    </div>
+  </div>
+
+</main>
+
+<!-- FOOTER -->
+<footer>
+  <div class="cols">
+    <div>
+      <h5>రాయలసీమ ఎక్స్‌ప్రెస్</h5>
+      <p class="brand-block">From the heart of the seven districts — Kurnool, Nandyal, Anantapur, Sri Sathya Sai, Kadapa, Annamayya, Tirupati, Chittoor. Independent journalism since 2024.</p>
+    </div>
+    <div>
+      <h5>విభాగాలు</h5>
+      <p><a href="#">రాజకీయం</a><br><a href="#">వ్యవసాయం</a><br><a href="#">క్రీడలు</a><br><a href="#">సినిమా</a></p>
+    </div>
+    <div>
+      <h5>సంస్థ</h5>
+      <p><a href="#">మా గురించి</a><br><a href="#">సంప్రదించండి</a><br><a href="#">కెరీర్</a><br><a href="#">ప్రకటనలు</a></p>
+    </div>
+    <div>
+      <h5>చట్టపరం</h5>
+      <p><a href="#">గోప్యత</a><br><a href="#">నిబంధనలు</a><br><a href="#">ఎథిక్స్</a><br><a href="#">కరెక్షన్స్</a></p>
+    </div>
+  </div>
+  <div class="colophon">— Same layout as current site, with NTR · Suranna · Noto Serif Telugu · Cormorant Garamond, red brand kept, turmeric accent added · © రాయలసీమ ఎక్స్‌ప్రెస్ 2026 —</div>
+</footer>
+
+</body>
+</html>

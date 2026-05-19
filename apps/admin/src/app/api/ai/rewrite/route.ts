@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 
 const ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT!;
 const KEY = process.env.AZURE_OPENAI_KEY!;
@@ -39,6 +40,12 @@ DIALECT WORDS (use sparingly):
 // Scrape full article from source URL
 async function scrapeSource(url: string): Promise<string> {
   try {
+    const parsed = new URL(url);
+    if (!["http:", "https:"].includes(parsed.protocol)) return "";
+    // Block internal IPs
+    const host = parsed.hostname;
+    if (host === "localhost" || host === "127.0.0.1" || host.startsWith("10.") || host.startsWith("192.168.") || host.startsWith("172.16.") || host.endsWith(".local") || host === "0.0.0.0" || host === "[::1]") return "";
+
     const res = await fetch(url, {
       headers: { "User-Agent": "Mozilla/5.0 (compatible; RayalaseemaExpress/1.0)" },
       signal: AbortSignal.timeout(10000),
@@ -56,10 +63,11 @@ async function scrapeSource(url: string): Promise<string> {
       .replace(/\s+/g, " ")
       .trim()
       .substring(0, 5000);
-  } catch { return ""; }
+  } catch (e) { console.error("[ai/rewrite] Scrape error:", e); return ""; }
 }
 
 export async function POST(req: NextRequest) {
+  const session = await requireAuth(["ADMIN"]); if (isAuthError(session)) return session;
   try {
     const { text, action, sourceUrl } = await req.json();
     if (!text && !sourceUrl) return NextResponse.json({ error: "Text or source URL required" }, { status: 400 });
@@ -112,7 +120,7 @@ export async function POST(req: NextRequest) {
       tokens: data.usage || {},
       model: data.model,
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return apiError(error);
   }
 }

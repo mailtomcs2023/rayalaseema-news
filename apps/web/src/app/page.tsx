@@ -17,12 +17,8 @@ import {
 import { MovieGallery, TrendingReels } from "@/components/movie-gallery";
 import { YettetaCartoon } from "@/components/yetteta-cartoon";
 import { WebStories } from "@/components/web-stories";
-import { WeatherWidget } from "@/components/weather-widget";
-import { PollWidget } from "@/components/poll-widget";
-import { HoroscopeWidget } from "@/components/horoscope-widget";
 import { ReturnVisitBanner } from "@/components/return-visit-banner";
-// MarketTicker removed - using individual widgets instead
-import { BullionWidget, ForexWidget, CricketWidget, MandiWidget } from "@/components/market-widgets";
+import { SidebarWidgetsTabs } from "@/components/sidebar-widgets-tabs";
 import { getFullHomepageData } from "@/lib/db-queries";
 import { cookies } from "next/headers";
 
@@ -89,6 +85,12 @@ export default async function HomePage() {
     return cat?.name || slug;
   };
 
+  // Helper to get category color from DB (falls back to brand red)
+  const catColor = (slug: string) => {
+    const cat = categories.find((c) => c.slug === slug);
+    return cat?.color || "#FF2C2C";
+  };
+
   // Map DB galleries to component format
   const photoGalleryItems = galleries.map((g) => ({
     id: g.id,
@@ -122,16 +124,10 @@ export default async function HomePage() {
               })),
             }))} />
           </div>
-          {/* Right: Latest News sidebar */}
+          {/* Right: Latest News sidebar — widgets grouped into tabs to reduce scroll */}
           <div className="panel home-sidebar">
             <LatestNewsSidebar items={latestNewsItems} />
-            <CricketWidget />
-            <BullionWidget />
-            <ForexWidget />
-            <MandiWidget />
-            <WeatherWidget />
-            <HoroscopeWidget />
-            <PollWidget />
+            <SidebarWidgetsTabs />
             <AdSidebarSquare ads={adItems} />
           </div>
         </div>
@@ -145,50 +141,57 @@ export default async function HomePage() {
           </div>
         )}
 
-        {/* ===== BELOW FOLD: 3-col cards + right strip (like Eenadu) ===== */}
+        {/* ===== BELOW FOLD: 3-col category grid (filtered) + cartoon right sidebar (lg+) ===== */}
         <div className="home-section-content">
-          {/* LEFT: 3-column category grid */}
-          <div className="home-content-left space-y-2">
+          {/* LEFT: cards + media flow */}
+          <div className="home-content-left">
+            {(() => {
+              const allCats = [
+                "politics", "sports", "entertainment",
+                "national", "business", "agriculture",
+                "international", "crime", "technology",
+              ];
+              const populated = allCats
+                .map((slug) => ({ slug, title: catName(slug), color: catColor(slug), articles: catArticles(slug) }))
+                .filter((c) => c.articles.length > 0);
 
-            {/* Row 1 */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-              <CategoryCard title={catName("politics")} slug="politics" articles={catArticles("politics")} />
-              <CategoryCard title={catName("sports")} slug="sports" articles={catArticles("sports")} />
-              <CategoryCard title={catName("entertainment")} slug="entertainment" articles={catArticles("entertainment")} />
-            </div>
+              const half = Math.ceil(populated.length / 2);
+              const top = populated.slice(0, half);
+              const bottom = populated.slice(half);
 
-            {/* Row 2 */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-              <CategoryCard title={catName("national")} slug="national" articles={catArticles("national")} />
-              <CategoryCard title={catName("business")} slug="business" articles={catArticles("business")} />
-              <CategoryCard title={catName("agriculture")} slug="agriculture" articles={catArticles("agriculture")} />
-            </div>
+              return (
+                <>
+                  {top.length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {top.map((c) => <CategoryCard key={c.slug} {...c} />)}
+                    </div>
+                  )}
 
-            {/* Banner Ad */}
-            <AdLeaderboard ads={adItems} />
+                  <AdLeaderboard ads={adItems} />
 
-            {/* Row 3 */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-              <CategoryCard title={catName("international")} slug="international" articles={catArticles("international")} />
-              <CategoryCard title={catName("crime")} slug="crime" articles={catArticles("crime")} />
-              <CategoryCard title={catName("technology")} slug="technology" articles={catArticles("technology")} />
-            </div>
+                  {bottom.length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {bottom.map((c) => <CategoryCard key={c.slug} {...c} />)}
+                    </div>
+                  )}
 
-            {/* Web Stories */}
-            {webStories.length > 0 && <WebStories items={webStories.map((s) => ({ id: s.id, title: s.title, image: s.imageUrl, category: s.category || "" }))} />}
+                  {webStories.length > 0 && <WebStories items={webStories.map((s) => ({ id: s.id, title: s.title, image: s.imageUrl, category: s.category || "" }))} />}
 
-            {/* Photo Gallery */}
-            {galleries.length > 0 && <PhotoGallery photos={photoGalleryItems} />}
+                  {galleries.length > 0 && <PhotoGallery photos={photoGalleryItems} />}
 
-            <AdInFeedBanner ads={adItems} />
-
+                  <AdInFeedBanner ads={adItems} />
+                </>
+              );
+            })()}
           </div>
 
-          {/* RIGHT: ఎట్టెట Cartoon column */}
+          {/* RIGHT: Yetteta cartoon (lg+ only, sticky scroll) */}
           {cartoons.length > 0 && (
-            <div className="home-content-right hidden lg:block">
-              <YettetaCartoon items={cartoons.map((c) => ({ id: c.id, title: c.title, caption: c.caption, image: c.imageUrl, date: c.date.toLocaleDateString("te-IN", { month: "long", day: "numeric" }) }))} />
-            </div>
+            <aside className="home-content-right hidden lg:block">
+              <div className="cartoon-sticky">
+                <YettetaCartoon items={cartoons.map((c) => ({ id: c.id, title: c.title, caption: c.caption, image: c.imageUrl, date: c.date.toLocaleDateString("te-IN", { month: "long", day: "numeric" }) }))} />
+              </div>
+            </aside>
           )}
         </div>
       </main>
@@ -198,77 +201,89 @@ export default async function HomePage() {
   );
 }
 
-/* ---- Category Card (uniform red header like Eenadu's blue) ---- */
+/* ---- Category Card — unified skeleton, design tokens, equal-height grid ---- */
 function CategoryCard({
   title,
   slug,
+  color,
   articles,
 }: {
   title: string;
   slug: string;
+  color?: string;
   articles: any[];
 }) {
   if (!articles || articles.length === 0) return null;
 
+  const tabColor = color || "var(--brand-dark)";
+  const lead = articles[0];
+
   return (
-    <div className="category-card">
-      {/* Header - inline tab (uses CSS var) */}
-      <div style={{ padding: "8px 8px 0" }}>
-        <a href={`/category/${slug}`} className="section-tab" style={{ textDecoration: "none" }}>
-          <span className="section-tab-text">{title}</span>
-          <svg width="12" height="12" fill="none" stroke="#fff" strokeWidth={2} viewBox="0 0 24 24" style={{ opacity: 0.8 }}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-          </svg>
-        </a>
-      </div>
-
-      {/* Image */}
-      <div style={{ padding: "8px 8px 0" }}>
-        <a href={`/article/${articles[0].slug}`} className="block group">
-          <div style={{ overflow: "hidden", borderRadius: 2 }}>
-            {articles[0].featuredImage ? (
-              <img
-                src={articles[0].featuredImage}
-                alt={articles[0].title}
-                className="group-hover:scale-105 transition-transform duration-300"
-                style={{ display: "block", width: "100%", aspectRatio: "16/10", objectFit: "cover" }}
-                loading="lazy"
-              />
-            ) : (
-              <div style={{ aspectRatio: "16/10", background: "#e5e7eb", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ color: "#9ca3af", fontSize: 24 }}>RE</span>
-              </div>
-            )}
+    <article className="category-card" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      {/* Image — full-bleed top */}
+      <a href={`/article/${lead.slug}`} className="block group" style={{ overflow: "hidden", background: "var(--n-100)" }}>
+        {lead.featuredImage ? (
+          <img
+            src={lead.featuredImage}
+            alt={lead.title}
+            width={400}
+            height={250}
+            loading="lazy"
+            decoding="async"
+            style={{ aspectRatio: "16/10", objectFit: "cover", display: "block", width: "100%" }}
+          />
+        ) : (
+          <div className="img-placeholder">
+            <span>RE</span>
           </div>
+        )}
+      </a>
+
+      {/* Category kicker — 3px rule + uppercase label (uniform regardless of text length) */}
+      <div style={{ padding: "var(--sp-3) var(--sp-4) 0", position: "relative" }}>
+        <span
+          aria-hidden="true"
+          style={{ display: "block", width: 32, height: 3, background: tabColor, marginBottom: 6 }}
+        />
+        <a
+          href={`/category/${slug}`}
+          style={{
+            fontSize: "var(--t-xs)",
+            fontWeight: 800,
+            color: "var(--n-900)",
+            textTransform: "uppercase",
+            letterSpacing: "0.08em",
+            textDecoration: "none",
+          }}
+        >
+          {title}
         </a>
       </div>
 
-      {/* Featured title - uses CSS class */}
-      <div style={{ padding: "6px 10px 4px" }}>
-        <a href={`/article/${articles[0].slug}`} className="group">
-          <h4 className="news-headline-featured line-clamp-2 hover-brand" style={{ margin: 0 }}>
-            {articles[0].title}
-          </h4>
+      {/* Lead title — fixed 2 lines for grid alignment */}
+      <div style={{ padding: "var(--sp-2) var(--sp-3) var(--sp-1)" }}>
+        <a href={`/article/${lead.slug}`} className="link-hover" style={{ textDecoration: "none", color: "inherit" }}>
+          <h3 className="h-feature line-clamp-2" style={{ margin: 0, minHeight: "calc(1.3em * 2)" }}>
+            {lead.title}
+          </h3>
         </a>
       </div>
 
-      {/* Bullet Headlines - uses CSS classes */}
-      <div style={{ padding: "4px 10px 14px" }}>
+      {/* Bullet headlines — push to fill remaining height */}
+      <ul style={{ listStyle: "none", margin: 0, padding: "var(--sp-2) var(--sp-3) var(--sp-3)", flex: 1 }}>
         {articles.slice(1, 4).map((article: any) => (
-          <div key={article.id} style={{ marginBottom: 8 }}>
+          <li key={article.id} style={{ marginBottom: "var(--sp-2)" }}>
             <a
               href={`/article/${article.slug}`}
-              className="group"
-              style={{ display: "flex", alignItems: "flex-start", gap: 10 }}
+              className="link-hover"
+              style={{ display: "flex", alignItems: "flex-start", gap: "var(--sp-2)", textDecoration: "none", color: "inherit" }}
             >
               <span className="news-bullet-dot" style={{ marginTop: 8 }} />
-              <span className="news-headline-bullet hover-brand line-clamp-2">
-                {article.title}
-              </span>
+              <span className="h-bullet line-clamp-2">{article.title}</span>
             </a>
-          </div>
+          </li>
         ))}
-      </div>
-    </div>
+      </ul>
+    </article>
   );
 }

@@ -7,13 +7,69 @@ import { TTSButton } from "@/components/tts-button";
 import { CommentsSection } from "@/components/comments-section";
 import { ScrollShareNudge } from "@/components/scroll-share-nudge";
 import { ShareBar } from "@/components/share-bar";
-import { getArticleBySlug, getTrendingArticles, getArticlesByCategory } from "@/lib/db-queries";
+import { getArticleBySlug, getTrendingArticles, getArticlesByCategory, incrementViewCount } from "@/lib/db-queries";
+import type { Metadata } from "next";
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const article = await getArticleBySlug(slug);
+  if (!article) return { title: "Not found" };
+  const siteUrl = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+  // Per-article SEO overrides w/ sensible fallbacks
+  const metaTitle = (article as any).metaTitle || article.title;
+  const metaDescription = (article as any).metaDescription || article.summary || article.title;
+  const ogImage = (article as any).ogImage || article.featuredImage || `${siteUrl}/logo.svg`;
+  const canonical = `${siteUrl}/article/${slug}`;
+  const noindex = article.status !== "PUBLISHED";
+  return {
+    title: `${metaTitle} | రాయలసీమ ఎక్స్‌ప్రెస్`,
+    description: metaDescription,
+    alternates: {
+      canonical,
+      types: { "text/html+amp": `${canonical}/amp` }, // Google AMP discovery
+    },
+    robots: noindex ? { index: false, follow: false } : { index: true, follow: true },
+    openGraph: {
+      title: metaTitle,
+      description: metaDescription,
+      url: canonical,
+      type: "article",
+      locale: "te_IN",
+      images: ogImage ? [{ url: ogImage }] : undefined,
+      publishedTime: article.publishedAt?.toISOString(),
+      modifiedTime: article.updatedAt?.toISOString(),
+      authors: [article.author.name],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: metaTitle,
+      description: metaDescription,
+      images: ogImage ? [ogImage] : undefined,
+    },
+  };
+}
+
+function sanitizeHtml(html: string): string {
+  // Remove script tags, event handlers, and dangerous attributes
+  return html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+    .replace(/\son\w+\s*=\s*"[^"]*"/gi, "")
+    .replace(/\son\w+\s*=\s*'[^']*'/gi, "")
+    .replace(/javascript\s*:/gi, "")
+    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, "")
+    .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, "")
+    .replace(/<embed\b[^>]*>/gi, "")
+    .replace(/<form\b[^<]*(?:(?!<\/form>)<[^<]*)*<\/form>/gi, "");
+}
 
 export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const article = await getArticleBySlug(slug);
 
   if (!article) return notFound();
+
+  // P1 #9 — bump view count on every render (fire-and-forget; uses Prisma increment, race-safe)
+  incrementViewCount(article.id).catch(() => {});
 
   const [trending, related] = await Promise.all([
     getTrendingArticles(8),
@@ -109,7 +165,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
             <div
               className="article-body"
               style={{ marginTop: 24 }}
-              dangerouslySetInnerHTML={{ __html: article.body }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(article.body) }}
             />
 
             {/* Tags */}

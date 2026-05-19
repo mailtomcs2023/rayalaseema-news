@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_URL = __DEV__ ? "http://10.0.2.2:3001" : "https://admin.rayalaseemaexpress.com";
+const API_URL = process.env.EXPO_PUBLIC_API_URL || (__DEV__ ? "http://10.0.2.2:3001" : "https://admin.rayalaseemaexpress.com");
 
 interface ApiOptions {
   method?: string;

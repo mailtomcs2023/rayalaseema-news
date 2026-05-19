@@ -4,6 +4,20 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { prisma } from "@rayalaseema/db";
 import { ConstituencyFilter } from "./filter";
+import type { Metadata } from "next";
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const district = await prisma.district.findUnique({ where: { slug } });
+  if (!district) return { title: "District not found" };
+  const siteUrl = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+  return {
+    title: `${district.name} (${district.nameEn}) | రాయలసీమ ఎక్స్‌ప్రెస్`,
+    description: `${district.name} జిల్లా నుండి తాజా వార్తలు`,
+    alternates: { canonical: `${siteUrl}/district/${slug}` },
+    openGraph: { title: district.name, url: `${siteUrl}/district/${slug}`, type: "website", locale: "te_IN" },
+  };
+}
 
 export default async function DistrictPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;

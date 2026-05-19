@@ -3,6 +3,11 @@ import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@rayalaseema/db";
 import { compare } from "bcryptjs";
 
+interface ExtendedUser {
+  id: string;
+  role: string;
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
@@ -39,15 +44,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.role = (user as any).role;
+        token.role = (user as ExtendedUser).role;
         token.id = user.id;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        (session.user as any).role = token.role;
-        (session.user as any).id = token.id;
+        (session.user as ExtendedUser).role = token.role;
+        (session.user as ExtendedUser).id = token.id;
       }
       return session;
     },
@@ -60,7 +65,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   cookies: {
     sessionToken: {
       name: "authjs.session-token",
-      options: { httpOnly: true, sameSite: "lax", path: "/", secure: false },
+      options: { httpOnly: true, sameSite: "lax", path: "/", secure: process.env.NODE_ENV === "production" },
     },
   },
 });

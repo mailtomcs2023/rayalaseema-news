@@ -14,5 +14,7 @@ export async function GET() {
     orderBy: { priority: "asc" },
   });
 
-  return NextResponse.json(items);
+  return NextResponse.json(items, {
+    headers: { "Cache-Control": "public, s-maxage=15, stale-while-revalidate=10" },
+  });
 }

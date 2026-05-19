@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
+import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 
 export async function GET() {
+  const session = await requireAuth();
+  if (isAuthError(session)) return session;
   try {
     const districts = await prisma.district.findMany({
       where: { active: true },
@@ -28,7 +31,7 @@ export async function GET() {
       },
     });
     return NextResponse.json(districts);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    return apiError(error);
   }
 }
