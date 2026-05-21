@@ -122,9 +122,10 @@ export async function POST(req: NextRequest) {
   const admin = await prisma.user.findFirst({ where: { role: "ADMIN" } });
   if (!admin) return NextResponse.json({ error: "No admin user" }, { status: 500 });
 
-  // Get existing slugs to avoid duplicates
-  const existingArticles = await prisma.article.findMany({ select: { slug: true } });
+  // Existing slugs (slug uniqueness) + source URLs (article dedup)
+  const existingArticles = await prisma.article.findMany({ select: { slug: true, sourceUrl: true } });
   const existingSlugs = new Set(existingArticles.map((a) => a.slug));
+  const existingSourceSet = new Set(existingArticles.map((a) => a.sourceUrl).filter(Boolean));
 
   // Get category IDs
   const dbCategories = await prisma.category.findMany();
@@ -171,6 +172,9 @@ export async function POST(req: NextRequest) {
         // Skip articles without images
         if (!article.image_url) continue;
 
+        // Skip if this source article already imported
+        if (article.link && existingSourceSet.has(article.link)) continue;
+
         // Translate to Telugu
         let translated;
         try {
@@ -191,6 +195,7 @@ export async function POST(req: NextRequest) {
             categoryId,
             authorId: admin.id,
             featuredImage: article.image_url || null,
+            sourceUrl: article.link || null,
             status: "PUBLISHED",
             featured: false,
             breaking: false,
@@ -199,6 +204,7 @@ export async function POST(req: NextRequest) {
             constituencyId: constituencyId || null,
           },
         });
+        if (article.link) existingSourceSet.add(article.link);
 
         published++;
         totalPublished++;

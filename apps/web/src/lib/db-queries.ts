@@ -73,7 +73,9 @@ export async function getHomepageData() {
         author: { select: { name: true } },
       },
       orderBy: { publishedAt: "desc" },
-      take: 150,
+      // Window must exceed total article count so every category is represented
+      // on the homepage. TODO: switch to per-category queries once volume grows.
+      take: 600,
     }),
   ]);
 
@@ -126,12 +128,105 @@ export async function incrementViewCount(articleId: string) {
 
 // ========== MULTIMEDIA QUERIES ==========
 
-// Fetch videos
-export async function getVideos(limit = 3) {
+// Live cricket scores — RapidAPI "Cricket API Free Data" (cricbuzz-format).
+// Live matches first; falls back to upcoming fixtures. Returns [] when unavailable.
+export interface CricketMatch {
+  id: string;
+  name: string;
+  status: string;
+  teams: [string, string];
+  score: { team: string; runs: number; wickets: number; overs: number }[];
+  venue?: string;
+  time?: string;
+  isLive: boolean;
+}
+
+const RAPID_HOST = "cricket-api-free-data.p.rapidapi.com";
+
+async function rapidGet(path: string) {
+  const key = process.env.RAPIDAPI_CRICKET_KEY;
+  if (!key) return null;
+  try {
+    const res = await fetch(`https://${RAPID_HOST}${path}`, {
+      headers: { "x-rapidapi-key": key, "x-rapidapi-host": RAPID_HOST },
+      signal: AbortSignal.timeout(6000),
+      next: { revalidate: 120 },
+    });
+    const data = await res.json();
+    return data?.status === "success" ? data.response : null;
+  } catch {
+    return null;
+  }
+}
+
+// Map a cricbuzz-style innings score object to our flat shape.
+function mapInnings(teamName: string, sc: any): { team: string; runs: number; wickets: number; overs: number } {
+  const i = sc?.inngs1 || sc || {};
+  return { team: teamName, runs: i.runs || 0, wickets: i.wickets || 0, overs: i.overs || 0 };
+}
+
+export async function getCricketScores(): Promise<CricketMatch[]> {
+  // 1. Live matches
+  const live = await rapidGet("/cricket-livescores");
+  if (Array.isArray(live) && live.length > 0) {
+    return live.slice(0, 4).map((m: any) => {
+      const info = m.matchInfo || m;
+      const t1 = info.team1?.teamSName || info.team1?.teamName || "T1";
+      const t2 = info.team2?.teamSName || info.team2?.teamName || "T2";
+      const ms = m.matchScore || {};
+      const score = [
+        ms.team1Score ? mapInnings(t1, ms.team1Score) : null,
+        ms.team2Score ? mapInnings(t2, ms.team2Score) : null,
+      ].filter(Boolean) as CricketMatch["score"];
+      return {
+        id: String(info.matchId || m.matchId || `${t1}-${t2}`),
+        name: `${t1} vs ${t2}`,
+        status: info.status || info.stateTitle || "లైవ్",
+        teams: [t1, t2] as [string, string],
+        score,
+        venue: info.venueInfo ? [info.venueInfo.ground, info.venueInfo.city].filter(Boolean).join(", ") : undefined,
+        isLive: true,
+      };
+    });
+  }
+
+  // 2. Fallback — next upcoming fixtures from schedule
+  const sched = await rapidGet("/cricket-schedule");
+  const out: CricketMatch[] = [];
+  const days = sched?.schedules || [];
+  for (const day of days) {
+    const list = day?.scheduleAdWrapper?.matchScheduleList || [];
+    for (const s of list) {
+      for (const info of s.matchInfo || []) {
+        const t1 = info.team1?.teamSName || info.team1?.teamName || "T1";
+        const t2 = info.team2?.teamSName || info.team2?.teamName || "T2";
+        const when = info.startDate ? new Date(Number(info.startDate)) : null;
+        out.push({
+          id: String(info.matchId),
+          name: `${t1} vs ${t2}`,
+          status: info.matchDesc || info.matchFormat || "షెడ్యూల్",
+          teams: [t1, t2] as [string, string],
+          score: [],
+          venue: info.venueInfo ? [info.venueInfo.ground, info.venueInfo.city].filter(Boolean).join(", ") : undefined,
+          time: when
+            ? when.toLocaleString("te-IN", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+            : undefined,
+          isLive: false,
+        });
+        if (out.length >= 4) return out;
+      }
+    }
+  }
+  return out;
+}
+
+// Fetch videos (with category for the cinematic video section)
+export async function getVideos(limit = 5) {
   return prisma.video.findMany({
     where: { active: true },
     orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
     take: limit,
+    include: { category: { select: { name: true } } },
   });
 }
 

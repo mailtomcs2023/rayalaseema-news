@@ -180,6 +180,13 @@ model Article {
   metaDescription String?
   ogImage         String?
 
+  // Movie review (only set for movie-reviews category articles)
+  rating          Float?        // 0.0 - 5.0 star rating
+  reviewerName    String?       // Critic byline for the review
+
+  // Ingestion dedup — source news URL, unique so the same article can't be imported twice
+  sourceUrl       String?       @unique
+
   // Scheduling
   publishedAt     DateTime?
   scheduledAt     DateTime?

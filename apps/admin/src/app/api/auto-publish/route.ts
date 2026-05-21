@@ -186,20 +186,20 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
-    // Batch check for existing articles
-    const titlePrefixes = newsArticles.slice(0, needed).filter((n: any) => n.title).map((n: any) => n.title.substring(0, 30));
-    const existingArticles = titlePrefixes.length > 0 ? await prisma.article.findMany({
-      where: { OR: titlePrefixes.map((t: string) => ({ title: { contains: t } })) },
-      select: { title: true },
+    // Batch dedup by source URL — the stable, reliable key
+    const sourceUrls = newsArticles.slice(0, needed).map((n: any) => n.link).filter(Boolean);
+    const existing = sourceUrls.length > 0 ? await prisma.article.findMany({
+      where: { sourceUrl: { in: sourceUrls } },
+      select: { sourceUrl: true },
     }) : [];
-    const existingTitleSet = new Set(existingArticles.map((a) => a.title.substring(0, 30)));
+    const existingSourceSet = new Set(existing.map((a) => a.sourceUrl));
 
     let created = 0;
     for (const news of newsArticles.slice(0, needed)) {
       if (!news.title || !news.description) continue;
 
-      // Check if already imported (by similar title)
-      if (existingTitleSet.has(news.title.substring(0, 30))) continue;
+      // Skip if this exact source article already imported
+      if (news.link && existingSourceSet.has(news.link)) continue;
 
       try {
         // Scrape full content from source
@@ -229,6 +229,7 @@ export async function POST(req: NextRequest) {
             summary: translated.summary || news.description?.substring(0, 200),
             body: translated.body || `<p>${news.description}</p>`,
             featuredImage: news.image_url || null,
+            sourceUrl: news.link || null,
             language: "TELUGU",
             status: articleStatus,
             featured: false,
@@ -237,6 +238,7 @@ export async function POST(req: NextRequest) {
             publishedAt: articleStatus === "PUBLISHED" ? new Date() : null,
           },
         });
+        if (news.link) existingSourceSet.add(news.link);
         created++;
         results.push({ category: cat.nameEn, title: translated.title, image: !!news.image_url, status: articleStatus.toLowerCase() });
       } catch (e: any) {

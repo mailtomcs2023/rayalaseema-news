@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { prisma } from "@rayalaseema/db";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
-import { prisma } from "@rayalaseema/db";
 import { ConstituencyFilter } from "./filter";
-import type { Metadata } from "next";
+import { getSiteConfig, getTrendingArticles } from "@/lib/db-queries";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -13,7 +14,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const siteUrl = process.env.SITE_URL || "https://rayalaseemaexpress.com";
   return {
     title: `${district.name} (${district.nameEn}) | రాయలసీమ ఎక్స్‌ప్రెస్`,
-    description: `${district.name} జిల్లా నుండి తాజా వార్తలు`,
+    description: `${district.name} జిల్లా నుండి తాజా వార్తలు, విశ్లేషణలు`,
     alternates: { canonical: `${siteUrl}/district/${slug}` },
     openGraph: { title: district.name, url: `${siteUrl}/district/${slug}`, type: "website", locale: "te_IN" },
   };
@@ -31,167 +32,269 @@ export default async function DistrictPage({ params }: { params: Promise<{ slug:
       },
     },
   });
-
   if (!district) return notFound();
 
-  // Get articles that mention this district name in title or summary
-  const articles = await prisma.article.findMany({
-    where: {
-      status: "PUBLISHED",
-      OR: [
-        { constituencyId: { in: district.constituencies.map((c) => c.id) } },
-        { title: { contains: district.nameEn, mode: "insensitive" } },
-        { title: { contains: district.name } },
-        { summary: { contains: district.nameEn, mode: "insensitive" } },
-      ],
-    },
-    include: {
-      category: { select: { name: true, nameEn: true, slug: true, color: true } },
-      author: { select: { name: true } },
-      constituency: { select: { nameEn: true, name: true } },
-    },
-    orderBy: { publishedAt: "desc" },
-    take: 20,
-  });
-
-  // If still no articles, show latest published articles (but label correctly)
-  let displayArticles = articles;
-  let showingGeneral = false;
-  if (articles.length < 3) {
-    showingGeneral = true;
-    displayArticles = await prisma.article.findMany({
-      where: { status: "PUBLISHED" },
-      include: {
-        category: { select: { name: true, nameEn: true, slug: true, color: true } },
-        author: { select: { name: true } },
-        constituency: { select: { nameEn: true, name: true } },
+  const [config, tagged, trending] = await Promise.all([
+    getSiteConfig(),
+    prisma.article.findMany({
+      where: {
+        status: "PUBLISHED",
+        OR: [
+          { constituencyId: { in: district.constituencies.map((c) => c.id) } },
+          { title: { contains: district.nameEn, mode: "insensitive" } },
+          { title: { contains: district.name } },
+          { summary: { contains: district.nameEn, mode: "insensitive" } },
+        ],
       },
       orderBy: { publishedAt: "desc" },
+      take: 30,
+      select: { id: true, title: true, slug: true, summary: true, featuredImage: true, category: { select: { name: true } } },
+    }),
+    getTrendingArticles(8),
+  ]);
+
+  // Fallback to latest published when this district has thin coverage
+  let articles = tagged;
+  let showingGeneral = false;
+  if (tagged.length < 3) {
+    showingGeneral = true;
+    articles = await prisma.article.findMany({
+      where: { status: "PUBLISHED" },
+      orderBy: { publishedAt: "desc" },
       take: 15,
+      select: { id: true, title: true, slug: true, summary: true, featuredImage: true, category: { select: { name: true } } },
     });
   }
 
+  const lead = articles[0];
+  const grid = articles.slice(1, 5);
+  const rest = articles.slice(5);
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
+    <div className="min-h-screen" style={{ background: "#fff" }}>
+      <Header config={config} breakingNews={[]} />
 
-      {/* District Header */}
-      <div style={{ background: "#fff", borderBottom: "3px solid var(--color-brand)" }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "16px 12px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div>
-              <h1 style={{ fontSize: 32, fontWeight: 900, color: "var(--color-brand)" }}>{district.name}</h1>
-              <p style={{ fontSize: 14, color: "#888", marginTop: 4 }}>
-                {district.nameEn} District | {district.constituencies.length} Constituencies | {district.loksabhaSeats} Lok Sabha
-              </p>
+      {/* Branded header */}
+      <div style={{ background: "var(--brand, #E01B1B)" }}>
+        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <div>
+            <span style={{ fontFamily: "var(--font-telugu-heading), serif", fontSize: 26, fontWeight: 800, color: "#fff" }}>
+              {district.name} జిల్లా
+            </span>
+            <div style={{ fontFamily: "var(--font-telugu-body), sans-serif", fontSize: 12, color: "rgba(255,255,255,0.85)", marginTop: 2 }}>
+              {district.nameEn} · {district.constituencies.length} నియోజకవర్గాలు
             </div>
-            <ConstituencyFilter
-              constituencies={district.constituencies.map((c) => ({
-                id: c.id, name: c.name, nameEn: c.nameEn, slug: c.slug,
-              }))}
-            />
           </div>
-
-          {/* Constituency pills */}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 12 }}>
-            {district.constituencies.map((c) => (
-              <Link key={c.id} href={`/constituency/${c.slug}`}
-                style={{ padding: "5px 14px", borderRadius: 20, fontSize: 13, fontWeight: 700, background: "#f3f4f6", color: "#333", textDecoration: "none", border: "1px solid #e5e7eb" }}>
-                {c.name}
-              </Link>
-            ))}
-          </div>
+          <ConstituencyFilter
+            constituencies={district.constituencies.map((c) => ({ id: c.id, name: c.name, nameEn: c.nameEn, slug: c.slug }))}
+          />
         </div>
       </div>
 
-      <main style={{ maxWidth: 1280, margin: "0 auto", padding: "16px 12px" }}>
+      <main style={{ maxWidth: 1280, margin: "0 auto", padding: "18px 12px 48px" }}>
         {showingGeneral && (
-          <div style={{ background: "#fef3c7", border: "1px solid #fbbf24", borderRadius: 8, padding: "10px 16px", marginBottom: 16, fontSize: 13, color: "#92400e" }}>
-            {district.name} జిల్లా వార్తలు త్వరలో... ప్రస్తుతం తాజా వార్తలు చూపిస్తున్నాము.
+          <div
+            style={{
+              fontFamily: "var(--font-telugu-body), sans-serif",
+              fontSize: 13,
+              color: "#92400e",
+              background: "#fef3c7",
+              border: "1px solid #fbbf24",
+              borderRadius: 6,
+              padding: "8px 14px",
+              marginBottom: 14,
+            }}
+          >
+            {district.name} జిల్లా వార్తలు త్వరలో — ప్రస్తుతం తాజా వార్తలు చూపిస్తున్నాము.
           </div>
         )}
 
-        <div style={{ display: "flex", gap: 20 }}>
-          {/* Articles Grid */}
-          <div style={{ flex: 1 }}>
-            {/* Top 3 featured */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 16 }}>
-              {displayArticles.slice(0, 3).map((article) => (
-                <Link key={article.id} href={`/article/${article.slug}`} style={{ textDecoration: "none", display: "block" }}>
-                  <div style={{ background: "#fff", borderRadius: 8, overflow: "hidden", border: "1px solid #eee" }}>
-                    {article.featuredImage ? (
-                      <img src={article.featuredImage} alt="" style={{ width: "100%", aspectRatio: "16/10", objectFit: "cover" }} />
-                    ) : (
-                      <div className="img-placeholder"><span>RE</span></div>
+        <div style={{ display: "flex", gap: 28 }}>
+          {/* MAIN */}
+          <div style={{ flex: "1 1 auto", minWidth: 0 }}>
+            {!lead && (
+              <p style={{ fontFamily: "var(--font-telugu-body), sans-serif", color: "#6b7280", padding: "40px 0" }}>
+                వార్తలు త్వరలో…
+              </p>
+            )}
+
+            {lead && (
+              <Link href={`/article/${lead.slug}`} style={{ display: "block", textDecoration: "none", marginBottom: 18 }}>
+                {lead.featuredImage && (
+                  <img
+                    src={lead.featuredImage}
+                    alt={lead.title}
+                    style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", borderRadius: 6, display: "block" }}
+                  />
+                )}
+                <h1
+                  style={{
+                    fontFamily: "var(--font-telugu-heading), serif",
+                    fontSize: 28,
+                    fontWeight: 800,
+                    lineHeight: 1.25,
+                    color: "var(--n-900, #111827)",
+                    margin: "12px 0 6px",
+                  }}
+                >
+                  {lead.title}
+                </h1>
+                {lead.summary && (
+                  <p style={{ fontFamily: "var(--font-telugu-body), sans-serif", fontSize: 14, color: "#4b5563", lineHeight: 1.6 }}>
+                    {lead.summary}
+                  </p>
+                )}
+              </Link>
+            )}
+
+            {grid.length > 0 && (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(2, 1fr)",
+                  gap: 18,
+                  paddingTop: 16,
+                  borderTop: "2px solid var(--n-900, #111827)",
+                }}
+              >
+                {grid.map((a) => (
+                  <Link key={a.id} href={`/article/${a.slug}`} style={{ display: "flex", gap: 12, textDecoration: "none" }}>
+                    {a.featuredImage && (
+                      <img
+                        src={a.featuredImage}
+                        alt={a.title}
+                        loading="lazy"
+                        style={{ width: 110, height: 74, objectFit: "cover", borderRadius: 4, flexShrink: 0 }}
+                      />
                     )}
-                    <div style={{ padding: 12 }}>
-                      <span style={{
-                        fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 3,
-                        background: article.category.color || "var(--color-brand)", color: "#fff",
-                      }}>
-                        {article.category.name}
-                      </span>
-                      <h3 style={{ fontSize: 15, fontWeight: 800, color: "#000", lineHeight: 1.5, marginTop: 6 }}>
-                        {article.title}
+                    <h3
+                      style={{
+                        fontFamily: "var(--font-telugu-heading), serif",
+                        fontSize: 15,
+                        fontWeight: 700,
+                        lineHeight: 1.35,
+                        color: "var(--n-900, #111827)",
+                        margin: 0,
+                      }}
+                    >
+                      {a.title}
+                    </h3>
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            {rest.length > 0 && (
+              <div style={{ marginTop: 8 }}>
+                {rest.map((a) => (
+                  <Link
+                    key={a.id}
+                    href={`/article/${a.slug}`}
+                    style={{
+                      display: "flex",
+                      gap: 14,
+                      padding: "14px 0",
+                      borderBottom: "1px solid rgba(0,0,0,0.08)",
+                      textDecoration: "none",
+                    }}
+                  >
+                    {a.featuredImage && (
+                      <img
+                        src={a.featuredImage}
+                        alt=""
+                        loading="lazy"
+                        style={{ width: 150, height: 96, objectFit: "cover", borderRadius: 5, flexShrink: 0 }}
+                      />
+                    )}
+                    <div>
+                      <h3
+                        style={{
+                          fontFamily: "var(--font-telugu-heading), serif",
+                          fontSize: 17,
+                          fontWeight: 700,
+                          lineHeight: 1.35,
+                          color: "var(--n-900, #111827)",
+                          margin: 0,
+                        }}
+                      >
+                        {a.title}
                       </h3>
+                      {a.summary && (
+                        <p style={{ fontFamily: "var(--font-telugu-body), sans-serif", fontSize: 13, color: "#6b7280", lineHeight: 1.55, margin: "5px 0 0" }}>
+                          {a.summary}
+                        </p>
+                      )}
                     </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-
-            {/* Article list */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-              {displayArticles.slice(3).map((article) => (
-                <Link key={article.id} href={`/article/${article.slug}`} style={{ textDecoration: "none", display: "flex", gap: 10, padding: 10, background: "#fff", borderRadius: 8, border: "1px solid #f3f4f6" }}>
-                  <div style={{ width: 90, height: 65, borderRadius: 6, overflow: "hidden", flexShrink: 0, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    {article.featuredImage ? (
-                      <img src={article.featuredImage} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    ) : (
-                      <span style={{ color: "#ccc", fontWeight: 800, fontSize: 16 }}>RE</span>
-                    )}
-                  </div>
-                  <div>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: article.category.color || "var(--color-brand)" }}>
-                      {article.category.name}
-                    </span>
-                    <h4 style={{ fontSize: 13, fontWeight: 700, color: "#111", lineHeight: 1.45 }}>
-                      {article.title.substring(0, 60)}...
-                    </h4>
-                    <span style={{ fontSize: 10, color: "#aaa" }}>
-                      {article.publishedAt ? new Date(article.publishedAt).toLocaleTimeString("te-IN", { hour: "2-digit", minute: "2-digit" }) : ""}
-                    </span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-
-            {displayArticles.length === 0 && (
-              <div style={{ textAlign: "center", padding: 60, background: "#fff", borderRadius: 10, color: "#888" }}>
-                <p style={{ fontSize: 18, fontWeight: 700 }}>{district.name} వార్తలు త్వరలో...</p>
-                <p style={{ fontSize: 14, marginTop: 8 }}>Articles will appear here when tagged to this district.</p>
+                  </Link>
+                ))}
               </div>
             )}
           </div>
 
-          {/* Sidebar */}
-          <aside style={{ width: 300, flexShrink: 0 }}>
-            <div style={{ background: "#fff", borderRadius: 8, border: "1px solid #eee", padding: 16 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: "#000", marginBottom: 12, paddingBottom: 8, borderBottom: "2px solid var(--color-brand)" }}>
-                నియోజకవర్గాలు
-              </h3>
+          {/* RAIL */}
+          <aside style={{ flex: "0 0 290px" }}>
+            {/* Constituencies */}
+            <div className="cat-rail-head">నియోజకవర్గాలు</div>
+            <div style={{ marginBottom: 24 }}>
               {district.constituencies.map((c) => (
-                <Link key={c.id} href={`/constituency/${c.slug}`} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #f5f5f5", textDecoration: "none", fontSize: 14, fontWeight: 700, color: "#333" }}>
-                  <span>{c.name}</span>
-                  <span style={{ fontSize: 12, color: "#aaa" }}>{c._count.mandals} mandals</span>
+                <Link
+                  key={c.id}
+                  href={`/constituency/${c.slug}`}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    padding: "10px 0",
+                    borderBottom: "1px dotted rgba(0,0,0,0.18)",
+                    textDecoration: "none",
+                  }}
+                >
+                  <span style={{ fontFamily: "var(--font-telugu-heading), serif", fontSize: 14, fontWeight: 700, color: "var(--n-900, #111827)" }}>
+                    {c.name}
+                  </span>
+                  <span style={{ fontFamily: "var(--font-telugu-body), sans-serif", fontSize: 11, color: "#9ca3af" }}>
+                    {c._count.mandals} మండలాలు
+                  </span>
                 </Link>
               ))}
             </div>
+
+            {/* Trending */}
+            <div className="cat-rail-head">ట్రెండింగ్</div>
+            {trending.map((t, i) => (
+              <Link
+                key={t.id}
+                href={`/article/${t.slug}`}
+                style={{ display: "flex", gap: 10, padding: "11px 0", borderBottom: "1px dotted rgba(0,0,0,0.18)", textDecoration: "none" }}
+              >
+                <span style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 22, fontWeight: 700, color: "var(--brand, #E01B1B)", lineHeight: 1, flexShrink: 0 }}>
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <h4 style={{ fontFamily: "var(--font-telugu-heading), serif", fontSize: 14, fontWeight: 700, lineHeight: 1.35, color: "var(--n-900, #111827)", margin: 0 }}>
+                  {t.title}
+                </h4>
+              </Link>
+            ))}
           </aside>
         </div>
       </main>
 
-      <Footer />
+      <Footer config={config} />
+
+      <style>{`
+        .cat-rail-head {
+          font-family: var(--font-telugu-heading), serif;
+          font-size: 14px;
+          font-weight: 800;
+          color: var(--n-900, #111827);
+          padding-bottom: 8px;
+          border-bottom: 2px solid var(--n-900, #111827);
+          margin-bottom: 4px;
+        }
+        @media (max-width: 900px) {
+          main > div { flex-direction: column !important; }
+          aside { flex-basis: auto !important; }
+        }
+      `}</style>
     </div>
   );
 }

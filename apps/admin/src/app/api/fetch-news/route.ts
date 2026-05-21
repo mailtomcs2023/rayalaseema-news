@@ -71,6 +71,12 @@ export async function POST(req: NextRequest) {
       categoryId = defaultCat?.id || "";
     }
 
+    // Dedup — skip if this source article already imported
+    if (sourceUrl) {
+      const dupe = await prisma.article.findUnique({ where: { sourceUrl }, select: { id: true, slug: true } });
+      if (dupe) return NextResponse.json({ error: "Already imported", existing: dupe }, { status: 409 });
+    }
+
     // Find admin user as author
     const admin = await prisma.user.findFirst({ where: { role: "ADMIN" } });
 
@@ -84,6 +90,7 @@ export async function POST(req: NextRequest) {
         summary: description?.substring(0, 200) || null,
         body: `<p>${description || ""}</p>\n<p><em>Source: <a href="${sourceUrl}">${sourceUrl}</a></em></p>`,
         featuredImage: imageUrl || null,
+        sourceUrl: sourceUrl || null,
         language: "TELUGU",
         status: "DRAFT",
         authorId: admin?.id || "",

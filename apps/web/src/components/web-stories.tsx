@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { SectionShell } from "./section-shell";
 
 // All data comes from DB via props - no hardcoded content
 
@@ -83,10 +84,10 @@ function StoryViewer({ story, onClose, onNext, onPrev, index, total }: {
 
         {/* Content */}
         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: 20, zIndex: 10 }}>
-          <span style={{ display: "inline-block", padding: "3px 10px", background: "#FF2C2C", borderRadius: 3, color: "#fff", marginBottom: 8 }}>
+          <span style={{ display: "inline-block", padding: "3px 10px", background: "#E01B1B", borderRadius: 3, color: "#fff", marginBottom: 8, fontFamily: "var(--font-telugu-body), sans-serif", fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em" }}>
             {story.category}
           </span>
-          <h3 style={{ lineHeight: 1.4, color: "#fff", textShadow: "1px 1px 4px rgba(0,0,0,0.8)" }}>
+          <h3 style={{ fontFamily: "var(--font-telugu-heading), serif", fontWeight: 800, fontSize: 20, lineHeight: 1.35, color: "#fff", textShadow: "1px 1px 4px rgba(0,0,0,0.8)" }}>
             {story.title}
           </h3>
         </div>
@@ -120,79 +121,61 @@ export function WebStories({ items }: { items: { id: string; title: string; imag
 
   return (
     <>
-      <div style={{ background: "#fff", border: "1px solid #e5e7eb" }}>
-        {/* Header - inline red tab */}
-        <div style={{ padding: "8px 8px 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{
-            display: "inline-flex", alignItems: "center", gap: 6,
-            padding: "4px 12px", background: "#E01B1B", borderRadius: "3px 3px 0 0",
-          }}>
-            <svg width="14" height="14" fill="#fff" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-            <span style={{ color: "#fff",  }}>
-              వెబ్ స్టోరీస్
-            </span>
-          </span>
-          <span style={{ color: "#999" }}>
-            {storyItems.length} స్టోరీస్
-          </span>
-        </div>
-
-        {/* 4-column scrollable stories */}
-        <div style={{ padding: 8, overflowX: "auto" }} className="scrollbar-hide">
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 6 }}>
-            {storyItems.slice(0, 12).map((story, i) => (
-              <button
-                key={story.id}
-                onClick={() => openStory(i)}
-                style={{
-                  position: "relative", overflow: "hidden", borderRadius: 8,
-                  border: "2px solid #e5e7eb", padding: 0, cursor: "pointer",
-                  background: "none", textAlign: "left",
-                }}
-                className="group"
-              >
-                <div style={{ aspectRatio: "3/5", overflow: "hidden" }}>
-                  <img
-                    src={story.image}
-                    alt={story.title}
-                    className="group-hover:scale-110 transition-transform duration-500"
-                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                    loading="lazy"
-                  />
-                </div>
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 40%)" }} />
-                {/* Category tag */}
-                <span style={{
-                  position: "absolute", top: 6, left: 6,
-                  fontSize: 8, color: "#fff",
-                  background: "#FF2C2C", padding: "2px 6px", borderRadius: 2,
-                }}>
-                  {story.category}
-                </span>
-                {/* Ring on hover */}
-                <div
-                  className="group-hover:border-red-500"
-                  style={{ position: "absolute", inset: 0, border: "3px solid transparent", borderRadius: 8, transition: "border-color 0.2s" }}
+      <SectionShell
+        title="వెబ్ స్టోరీస్"
+        count={`${storyItems.length} స్టోరీస్`}
+        moreHref="/stories"
+        moreLabel="అన్ని స్టోరీలు చూడండి"
+      >
+        {/* Story grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 10 }}>
+          {storyItems.slice(0, 12).map((story, i) => (
+            <button
+              key={story.id}
+              onClick={() => openStory(i)}
+              style={{
+                position: "relative", overflow: "hidden", borderRadius: 6,
+                padding: 0, cursor: "pointer", background: "#000", textAlign: "left",
+              }}
+              className="group"
+            >
+              <div style={{ aspectRatio: "3/5", overflow: "hidden" }}>
+                <img
+                  src={story.image}
+                  alt={story.title}
+                  className="group-hover:scale-105 transition-transform duration-500"
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                  loading="lazy"
                 />
-                {/* Title */}
-                <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: 6 }}>
-                  <p style={{
-                    lineHeight: 1.35, color: "#fff",
+              </div>
+              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 48%)" }} />
+              <span
+                style={{
+                  position: "absolute", top: 7, left: 7,
+                  fontFamily: "var(--font-telugu-body), sans-serif",
+                  fontSize: 9, fontWeight: 800, color: "#fff",
+                  background: "#E01B1B", padding: "2px 7px", borderRadius: 2,
+                  textTransform: "uppercase", letterSpacing: "0.04em",
+                }}
+              >
+                {story.category}
+              </span>
+              <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "8px 8px 10px" }}>
+                <p
+                  style={{
+                    fontFamily: "var(--font-telugu-heading), serif",
+                    fontSize: 13, fontWeight: 700, lineHeight: 1.35, color: "#fff",
+                    textShadow: "0 1px 3px rgba(0,0,0,0.7)",
                     display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" as const, overflow: "hidden",
-                  }}>
-                    {story.title}
-                  </p>
-                </div>
-              </button>
-            ))}
-          </div>
+                  }}
+                >
+                  {story.title}
+                </p>
+              </div>
+            </button>
+          ))}
         </div>
-
-        {/* View all */}
-        <a href="/stories" style={{ display: "block", textAlign: "center", padding: 8, borderTop: "1px solid #eee", fontSize: 13, fontWeight: 700, color: "var(--color-brand)", textDecoration: "none" }}>
-          మరిన్ని →
-        </a>
-      </div>
+      </SectionShell>
 
       {/* Fullscreen viewer */}
       {viewerOpen && (
