@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 import { buildSlugFromTitle, sanitizeSlug } from "@/lib/slug";
+import { uploadImageFromUrl } from "@/lib/blob";
 
 const NEWSDATA_KEY = process.env.NEWSDATA_API_KEY;
 const AI_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT!;
@@ -218,6 +219,9 @@ export async function POST(req: NextRequest) {
         // Translate to Telugu
         const translated = await translateToTelugu(news.title, fullContent);
 
+        // Re-host source image on Azure Blob (publishers block hotlinking)
+        const hostedImage = await uploadImageFromUrl(news.image_url);
+
         // Create slug — sanitized + timestamp for uniqueness
         const slug = sanitizeSlug(`${buildSlugFromTitle(news.title)}-${Date.now()}`);
 
@@ -228,7 +232,7 @@ export async function POST(req: NextRequest) {
             slug,
             summary: translated.summary || news.description?.substring(0, 200),
             body: translated.body || `<p>${news.description}</p>`,
-            featuredImage: news.image_url || null,
+            featuredImage: hostedImage,
             sourceUrl: news.link || null,
             language: "TELUGU",
             status: articleStatus,

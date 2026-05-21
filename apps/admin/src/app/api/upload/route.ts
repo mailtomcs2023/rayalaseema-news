@@ -1,15 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { BlobServiceClient } from "@azure/storage-blob";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
+import { uploadBuffer, blobConfigured } from "@/lib/blob";
 
-const CONN = process.env.AZURE_STORAGE_CONNECTION_STRING;
-const CONTAINER = "uploads";
+const EXT_BY_TYPE: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+  "image/avif": "avif",
+};
 
 export async function POST(req: NextRequest) {
   const session = await requireAuth();
   if (isAuthError(session)) return session;
 
-  if (!CONN) {
+  if (!blobConfigured()) {
     return NextResponse.json({ error: "AZURE_STORAGE_CONNECTION_STRING not configured" }, { status: 503 });
   }
 
@@ -18,28 +23,17 @@ export async function POST(req: NextRequest) {
     const file = formData.get("file") as File;
     if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 });
 
-    const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"];
-    if (!allowed.includes(file.type)) {
+    if (!EXT_BY_TYPE[file.type]) {
       return NextResponse.json({ error: "Only JPEG, PNG, WebP, GIF, AVIF allowed" }, { status: 400 });
     }
     if (file.size > 5 * 1024 * 1024) {
       return NextResponse.json({ error: "File too large (max 5MB)" }, { status: 400 });
     }
 
-    // Unique blob name
-    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-    const filename = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
-
-    // Upload to Azure Blob Storage
     const buffer = Buffer.from(await file.arrayBuffer());
-    const blobService = BlobServiceClient.fromConnectionString(CONN);
-    const container = blobService.getContainerClient(CONTAINER);
-    const blob = container.getBlockBlobClient(filename);
-    await blob.uploadData(buffer, {
-      blobHTTPHeaders: { blobContentType: file.type, blobCacheControl: "public, max-age=31536000" },
-    });
+    const url = await uploadBuffer(buffer, EXT_BY_TYPE[file.type], file.type);
 
-    return NextResponse.json({ url: blob.url, filename, size: file.size });
+    return NextResponse.json({ url, size: file.size });
   } catch (error) {
     return apiError(error);
   }

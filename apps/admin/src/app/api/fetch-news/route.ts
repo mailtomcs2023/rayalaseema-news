@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError } from "@/lib/api-utils";
 import { buildSlugFromTitle, sanitizeSlug } from "@/lib/slug";
+import { uploadImageFromUrl } from "@/lib/blob";
 
 const NEWSDATA_API_KEY = process.env.NEWSDATA_API_KEY;
 
@@ -80,6 +81,9 @@ export async function POST(req: NextRequest) {
     // Find admin user as author
     const admin = await prisma.user.findFirst({ where: { role: "ADMIN" } });
 
+    // Re-host source image on Azure Blob (publishers block hotlinking)
+    const hostedImage = await uploadImageFromUrl(imageUrl);
+
     // Create slug from title — sanitized + timestamp for uniqueness
     const slug = sanitizeSlug(`${buildSlugFromTitle(title)}-${Date.now()}`);
 
@@ -89,7 +93,7 @@ export async function POST(req: NextRequest) {
         slug,
         summary: description?.substring(0, 200) || null,
         body: `<p>${description || ""}</p>\n<p><em>Source: <a href="${sourceUrl}">${sourceUrl}</a></em></p>`,
-        featuredImage: imageUrl || null,
+        featuredImage: hostedImage,
         sourceUrl: sourceUrl || null,
         language: "TELUGU",
         status: "DRAFT",

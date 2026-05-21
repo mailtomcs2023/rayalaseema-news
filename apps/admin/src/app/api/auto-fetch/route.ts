@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError } from "@/lib/api-utils";
 import { buildSlugFromTitle, uniqueSlug } from "@/lib/slug";
+import { uploadImageFromUrl } from "@/lib/blob";
 
 const NEWSDATA_KEY = process.env.NEWSDATA_API_KEY;
 const AZURE_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT || "https://rayalaseema-ai.openai.azure.com/";
@@ -185,6 +186,9 @@ export async function POST(req: NextRequest) {
         }
         const slug = generateSlug(article.title, existingSlugs);
 
+        // Re-host source image on Azure Blob (publishers block hotlinking)
+        const hostedImage = await uploadImageFromUrl(article.image_url);
+
         // Create article
         await prisma.article.create({
           data: {
@@ -194,7 +198,7 @@ export async function POST(req: NextRequest) {
             body: `${translated.body}\n<p style="font-size:11px;color:#999;margin-top:16px;">Source: <a href="${article.link || "#"}" target="_blank">${article.source_id || "External"}</a></p>`,
             categoryId,
             authorId: admin.id,
-            featuredImage: article.image_url || null,
+            featuredImage: hostedImage,
             sourceUrl: article.link || null,
             status: "PUBLISHED",
             featured: false,
