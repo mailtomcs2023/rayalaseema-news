@@ -188,11 +188,11 @@ export async function POST(req: NextRequest) {
 
     // Batch dedup by source URL — the stable, reliable key
     const sourceUrls = newsArticles.slice(0, needed).map((n: any) => n.link).filter(Boolean);
-    const existing = sourceUrls.length > 0 ? await prisma.article.findMany({
+    const existingBySource = sourceUrls.length > 0 ? await prisma.article.findMany({
       where: { sourceUrl: { in: sourceUrls } },
       select: { sourceUrl: true },
     }) : [];
-    const existingSourceSet = new Set(existing.map((a) => a.sourceUrl));
+    const existingSourceSet = new Set(existingBySource.map((a) => a.sourceUrl));
 
     let created = 0;
     for (const news of newsArticles.slice(0, needed)) {
