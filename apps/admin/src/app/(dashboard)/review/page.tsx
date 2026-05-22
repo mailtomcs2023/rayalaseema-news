@@ -97,7 +97,7 @@ export default function ReviewPage() {
         <p style={{ fontSize: 13, color: "#888", marginBottom: 16 }}>Editorial workflow - review, approve, publish articles</p>
 
         {/* Status Tabs */}
-        <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
           {statusTabs.map((tab) => (
             <button key={tab.key} onClick={() => load(tab.key)} style={{
               padding: "8px 16px", borderRadius: 8, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer",
@@ -119,8 +119,8 @@ export default function ReviewPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {articles.map((a) => (
               <div key={a.id} style={{ background: "#fff", borderRadius: 10, padding: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
+                  <div style={{ flex: "1 1 240px", minWidth: 0 }}>
                     <Link href={`/articles/${a.id}`} style={{ fontSize: 15, fontWeight: 700, color: "#111", textDecoration: "none" }}>
                       {a.title}
                     </Link>
@@ -138,7 +138,7 @@ export default function ReviewPage() {
                     )}
                   </div>
                   {/* Actions */}
-                  <div style={{ display: "flex", gap: 4, flexShrink: 0, marginLeft: 12 }}>
+                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap", flexShrink: 0 }}>
                     <Link href={`/articles/${a.id}`} style={{ padding: "6px 12px", background: "#eff6ff", color: "#2563eb", borderRadius: 6, fontSize: 11, fontWeight: 700, textDecoration: "none" }}>
                       Edit
                     </Link>
@@ -161,10 +161,10 @@ export default function ReviewPage() {
 
                 {/* Reject note input */}
                 {rejectArticleId === a.id && (
-                  <div style={{ marginTop: 8, display: "flex", gap: 6, alignItems: "center" }}>
+                  <div style={{ marginTop: 8, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                     <input value={rejectNote} onChange={(e) => setRejectNote(e.target.value)}
                       placeholder="Rejection reason / feedback for reporter..."
-                      style={{ flex: 1, padding: "8px 12px", border: "1px solid #fecaca", borderRadius: 6, fontSize: 12, outline: "none" }} />
+                      style={{ flex: "1 1 200px", minWidth: 0, padding: "8px 12px", border: "1px solid #fecaca", borderRadius: 6, fontSize: 12, outline: "none" }} />
                     <button onClick={() => doAction(a.id, "reject", rejectNote)}
                       style={{ padding: "8px 16px", background: "#dc2626", color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
                       Reject

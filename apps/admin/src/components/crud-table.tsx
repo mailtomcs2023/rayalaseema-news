@@ -86,7 +86,7 @@ export function CrudTable({ title, apiPath, columns, data, fields }: CrudTablePr
   return (
     <>
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111" }}>{title}</h1>
           <p style={{ fontSize: 13, color: "#888", marginTop: 4 }}>{data.length} items</p>
@@ -98,7 +98,8 @@ export function CrudTable({ title, apiPath, columns, data, fields }: CrudTablePr
 
       {/* Table */}
       <div style={{ background: "#fff", borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <div className="table-scroll">
+        <table style={{ width: "100%", minWidth: 640, borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ borderBottom: "2px solid #f3f4f6" }}>
               {columns.map((col) => (
@@ -146,12 +147,13 @@ export function CrudTable({ title, apiPath, columns, data, fields }: CrudTablePr
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Modal Form */}
       {showForm && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setShowForm(false)}>
-          <div style={{ background: "#fff", borderRadius: 12, width: 520, maxHeight: "85vh", overflow: "auto", padding: 24 }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, zIndex: 100 }} onClick={() => setShowForm(false)}>
+          <div style={{ background: "#fff", borderRadius: 12, width: "min(520px, 100%)", maxHeight: "85vh", overflow: "auto", padding: 24 }} onClick={(e) => e.stopPropagation()}>
             <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>{editId ? "Edit" : "Create New"} {title.replace(/s$/, "")}</h2>
 
             {error && <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "8px 12px", marginBottom: 12, fontSize: 13, color: "#dc2626" }}>{error}</div>}

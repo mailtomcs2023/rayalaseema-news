@@ -258,12 +258,12 @@ export default function EditArticlePage() {
       <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
           <div>
             <h1 style={{ fontSize: 22, fontWeight: 800, color: "#111" }}>Edit Article</h1>
             <p style={{ fontSize: 12, color: "#888", marginTop: 2, fontFamily: "monospace" }}>ID: {articleId}</p>
           </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             {/* Status badge */}
             <span style={{
               padding: "4px 12px", borderRadius: 6, fontSize: 12, fontWeight: 700,
@@ -337,9 +337,9 @@ export default function EditArticlePage() {
         {error && <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "10px 16px", marginBottom: 16, fontSize: 13, color: "#dc2626" }}>{error}</div>}
         {success && <div style={{ background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 8, padding: "10px 16px", marginBottom: 16, fontSize: 13, color: "#166534" }}>{success}</div>}
 
-        <div style={{ display: "flex", gap: 20 }}>
+        <div className="admin-split" style={{ display: "flex", gap: 20 }}>
           {/* Left: Editor */}
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             {/* Title */}
             <div style={{ background: "#fff", borderRadius: 10, padding: 20, marginBottom: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
               <TeluguInput
@@ -368,7 +368,7 @@ export default function EditArticlePage() {
             </div>
 
             {/* AI Tools Bar - Just 2 buttons */}
-            <div style={{ background: "#111827", borderRadius: 10, padding: "12px 16px", marginBottom: 12, display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ background: "#111827", borderRadius: 10, padding: "12px 16px", marginBottom: 12, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: "#9ca3af" }}>AI (GPT-5.1):</span>
 
               {/* Button 1: Standard Telugu */}
@@ -419,7 +419,7 @@ export default function EditArticlePage() {
           </div>
 
           {/* Right: Settings */}
-          <div style={{ width: 300, flexShrink: 0 }}>
+          <div className="admin-side" style={{ width: 300, flexShrink: 0 }}>
             {/* Category */}
             <div style={{ background: "#fff", borderRadius: 10, padding: 16, marginBottom: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
               <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#555", marginBottom: 6 }}>Category</label>
@@ -613,9 +613,9 @@ export default function EditArticlePage() {
         {/* ===== Revisions Drawer ===== */}
         {showRevisions && (
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 1000, display: "flex", justifyContent: "flex-end" }} onClick={() => { setShowRevisions(false); setPreviewRev(null); }}>
-            <div onClick={(e) => e.stopPropagation()} style={{ width: "min(900px, 95vw)", height: "100vh", background: "#fff", overflow: "auto", display: "flex" }}>
+            <div onClick={(e) => e.stopPropagation()} className="admin-rev-drawer" style={{ width: "min(900px, 95vw)", height: "100vh", background: "#fff", overflow: "auto", display: "flex" }}>
               {/* Revision list */}
-              <div style={{ width: 320, borderRight: "1px solid #eee", overflowY: "auto" }}>
+              <div className="admin-rev-list" style={{ width: 320, borderRight: "1px solid #eee", overflowY: "auto" }}>
                 <div style={{ padding: 16, borderBottom: "1px solid #eee", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <h2 style={{ fontSize: 16, fontWeight: 800, color: "#111" }}>Version History</h2>
                   <button onClick={() => { setShowRevisions(false); setPreviewRev(null); }}
@@ -658,7 +658,7 @@ export default function EditArticlePage() {
                 )}
                 {previewRev && (
                   <div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
                       <div>
                         <p style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: "0.06em" }}>Version from</p>
                         <p style={{ fontSize: 14, fontWeight: 700, color: "#111" }}>

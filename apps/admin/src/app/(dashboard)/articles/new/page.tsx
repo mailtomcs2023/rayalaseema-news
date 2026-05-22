@@ -161,12 +161,12 @@ export default function NewArticlePage() {
       <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 24 }}>
           <div>
             <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111" }}>New Article</h1>
             <p style={{ fontSize: 13, color: "#888", marginTop: 4 }}>Create a new article</p>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button
               onClick={() => handleSubmit("DRAFT")}
               disabled={saving}
@@ -212,9 +212,9 @@ export default function NewArticlePage() {
           </div>
         )}
 
-        <div style={{ display: "flex", gap: 20 }}>
+        <div className="admin-split" style={{ display: "flex", gap: 20 }}>
           {/* Left: Main editor */}
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             {/* Title */}
             <div style={{ background: "#fff", borderRadius: 10, padding: 20, marginBottom: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
               <TeluguInput
@@ -290,7 +290,7 @@ export default function NewArticlePage() {
           </div>
 
           {/* Right: Sidebar settings */}
-          <div style={{ width: 320, flexShrink: 0 }}>
+          <div className="admin-side" style={{ width: 320, flexShrink: 0 }}>
             {/* Category */}
             <div style={{ background: "#fff", borderRadius: 10, padding: 20, marginBottom: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
               <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#555", marginBottom: 8 }}>Category *</label>

@@ -87,7 +87,7 @@ RULES:
 
     // Parse the structured output
     const titleMatch = result.match(/TITLE:\s*(.+)/);
-    const summaryMatch = result.match(/SUMMARY:\s*(.+?)(?=\nBODY:|$)/s);
+    const summaryMatch = result.match(/SUMMARY:\s*([\s\S]+?)(?=\nBODY:|$)/);
     const bodyMatch = result.match(/BODY:\s*([\s\S]+)/);
 
     return {

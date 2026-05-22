@@ -45,8 +45,8 @@ export default async function AuthorPage({ params }: { params: Promise<{ slug: s
             <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111" }}>{author.name}</h1>
             <span style={{
               fontSize: 11, fontWeight: 700, padding: "2px 10px", borderRadius: 4,
-              background: author.role === "ADMIN" ? "#fef3c7" : author.role === "EDITOR" ? "#dbeafe" : "#dcfce7",
-              color: author.role === "ADMIN" ? "#92400e" : author.role === "EDITOR" ? "#1e40af" : "#166534",
+              background: author.role === "ADMIN" ? "#fef3c7" : author.role !== "REPORTER" ? "#dbeafe" : "#dcfce7",
+              color: author.role === "ADMIN" ? "#92400e" : author.role !== "REPORTER" ? "#1e40af" : "#166534",
             }}>
               {author.role}
             </span>

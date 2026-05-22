@@ -54,7 +54,7 @@ export function DistrictPicker() {
         animation: "slideUp 0.3s ease-out",
       }}>
         {/* Logo */}
-        <img src="/logo.svg" alt="RE" style={{ height: 40, margin: "0 auto 12px" }} />
+        <img src="/logo-transparent.svg" alt="RE" style={{ height: 40, margin: "0 auto 12px" }} />
 
         <h2 style={{ fontSize: 20, fontWeight: 900, color: "#111", marginBottom: 4 }}>
           మీ జిల్లా ఎంచుకోండి

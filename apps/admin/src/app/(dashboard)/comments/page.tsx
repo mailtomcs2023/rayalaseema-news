@@ -51,7 +51,7 @@ export default function CommentsPage() {
         ) : (
           comments.map((c) => (
             <div key={c.id} style={{ background: "#fff", borderRadius: 10, padding: 16, marginBottom: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
                 <div>
                   <span style={{ fontSize: 14, fontWeight: 700, color: "#111" }}>{c.name}</span>
                   <span style={{ fontSize: 11, color: "#888", marginLeft: 10 }}>{new Date(c.createdAt).toLocaleString()}</span>

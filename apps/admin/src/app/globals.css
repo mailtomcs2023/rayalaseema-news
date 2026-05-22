@@ -24,3 +24,205 @@
 .tiptap-editor * {
   font-family: "Noto Sans Telugu", "Inter", sans-serif !important;
 }
+
+/* Sidebar nav - slim scrollbar that blends with the dark theme */
+.sidebar-nav {
+  scrollbar-width: thin;
+  scrollbar-color: #374151 transparent;
+}
+.sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background-color: #374151;
+  border-radius: 3px;
+}
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background-color: #4b5563;
+}
+
+/* Dashboard stat cards */
+.stat-card {
+  display: block;
+  background: #fff;
+  border: 1px solid #eef0f2;
+  border-radius: 14px;
+  padding: 18px;
+  text-decoration: none;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+}
+.stat-card:hover {
+  transform: translateY(-3px);
+  border-color: #e2e5e9;
+}
+
+/* ===== Responsive admin shell ===== */
+
+/* Mobile top bar + drawer chrome — hidden on desktop */
+.admin-topbar {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 52px;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  z-index: 30;
+}
+.admin-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.55);
+  z-index: 40;
+}
+.admin-drawer-close {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  /* Content fills the width and clears the fixed top bar */
+  main {
+    margin-left: 0 !important;
+    padding-top: 72px !important;
+    /* allow the flex child to shrink below its content width
+       so nothing forces the page wider than the screen */
+    min-width: 0;
+    overflow-x: clip;
+  }
+  /* Sidebar becomes an off-canvas drawer */
+  .admin-sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+  }
+  .admin-sidebar.open {
+    transform: translateX(0);
+    box-shadow: 6px 0 28px rgba(0, 0, 0, 0.35);
+  }
+  .admin-topbar {
+    display: flex;
+  }
+  .admin-backdrop.open {
+    display: block;
+  }
+  .admin-drawer-close {
+    display: inline-flex;
+  }
+}
+
+/* ===== Dashboard layout ===== */
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+  margin-bottom: 24px;
+}
+.quick-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.stat-value {
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1;
+  color: #111827;
+  white-space: nowrap;
+}
+@media (max-width: 1280px) {
+  .stat-grid { grid-template-columns: repeat(4, 1fr); }
+}
+@media (max-width: 960px) {
+  .stat-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 768px) {
+  .quick-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .stat-card { padding: 14px; }
+  .stat-value { font-size: 24px; }
+  main {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+}
+@media (max-width: 480px) {
+  .dashboard-header > a {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ===== Shared responsive helpers (used across all admin pages) ===== */
+
+/* Two-column editor / detail layouts — stack on tablet & mobile.
+   The element keeps its inline `display:flex; gap`; this only flips direction. */
+@media (max-width: 1024px) {
+  .admin-split {
+    flex-direction: column;
+  }
+  .admin-split > .admin-side {
+    width: 100% !important;
+  }
+}
+
+/* Settings-style two-column form grid — single column on small screens. */
+@media (max-width: 768px) {
+  .admin-form-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Card grids (news feed, etc.) — single column on small screens. */
+@media (max-width: 768px) {
+  .admin-card-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Multi-field filter grid — collapses in steps as width shrinks. */
+@media (max-width: 1024px) {
+  .admin-filter-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+@media (max-width: 560px) {
+  .admin-filter-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Revisions side-drawer — stack the version list above the preview. */
+@media (max-width: 760px) {
+  .admin-rev-drawer {
+    flex-direction: column;
+  }
+  .admin-rev-drawer > .admin-rev-list {
+    width: 100% !important;
+    border-right: none !important;
+    border-bottom: 1px solid #eee;
+    max-height: 40vh;
+  }
+}

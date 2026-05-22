@@ -128,7 +128,7 @@ export default function ArticlesPage() {
       <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
           <div>
             <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111" }}>Articles</h1>
             <p style={{ fontSize: 13, color: "#888", marginTop: 4 }}>{total} total articles</p>
@@ -140,12 +140,12 @@ export default function ArticlesPage() {
         </div>
 
         {/* Search + Filters */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 16, background: "#fff", padding: 12, borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16, background: "#fff", padding: 12, borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
           <input
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             placeholder="Search articles by title..."
-            style={{ flex: 1, padding: "8px 12px", border: "1px solid #eee", borderRadius: 8, fontSize: 13, outline: "none" }}
+            style={{ flex: "1 1 220px", minWidth: 0, padding: "8px 12px", border: "1px solid #eee", borderRadius: 8, fontSize: 13, outline: "none" }}
           />
           <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
             style={{ padding: "8px 12px", border: "1px solid #eee", borderRadius: 8, fontSize: 13, outline: "none" }}>
@@ -169,7 +169,7 @@ export default function ArticlesPage() {
         {/* Bulk Actions Bar */}
         {selected.size > 0 && (
           <div style={{
-            display: "flex", alignItems: "center", gap: 10, marginBottom: 12, padding: "10px 16px",
+            display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 12, padding: "10px 16px",
             background: "#eff6ff", borderRadius: 10, border: "1px solid #bfdbfe",
           }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: "#1d4ed8" }}>
@@ -196,8 +196,8 @@ export default function ArticlesPage() {
         )}
 
         {/* Table */}
-        <div style={{ background: "#fff", borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", opacity: loading ? 0.6 : 1 }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <div className="table-scroll" style={{ background: "#fff", borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", opacity: loading ? 0.6 : 1 }}>
+          <table style={{ width: "100%", minWidth: 720, borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: "2px solid #f3f4f6" }}>
                 <th style={{ padding: "12px 10px 12px 16px", width: 36 }}>
@@ -262,7 +262,7 @@ export default function ArticlesPage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, marginTop: 16 }}>
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", flexWrap: "wrap", gap: 8, marginTop: 16 }}>
             <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}
               style={{ padding: "6px 14px", background: page === 1 ? "#f3f4f6" : "#fff", border: "1px solid #ddd", borderRadius: 6, fontSize: 13, cursor: page === 1 ? "not-allowed" : "pointer", color: page === 1 ? "#aaa" : "#333" }}>
               Previous

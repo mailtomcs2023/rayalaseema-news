@@ -74,7 +74,7 @@ export default function PollsPage() {
           const totalVotes = poll.options.reduce((s, o) => s + o.votes, 0);
           return (
             <div key={poll.id} style={{ background: "#fff", borderRadius: 10, padding: 16, marginBottom: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
                 <div>
                   <h3 style={{ fontSize: 15, fontWeight: 700, color: "#111" }}>{poll.question}</h3>
                   <span style={{ fontSize: 12, color: "#888" }}>{totalVotes} votes | {new Date(poll.createdAt).toLocaleDateString()}</span>

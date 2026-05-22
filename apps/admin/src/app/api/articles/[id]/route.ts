@@ -154,7 +154,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       action: "article.delete",
       resource: "article",
       resourceId: id,
-      meta: existing ? { title: existing.title, slug: existing.slug, status: existing.status } : null,
+      meta: existing ? { title: existing.title, slug: existing.slug, status: existing.status } : undefined,
       actor: { id: session.user.id, email: session.user.email, role: (session.user as any).role },
       req,
     });

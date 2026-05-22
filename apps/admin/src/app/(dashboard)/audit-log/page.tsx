@@ -75,7 +75,7 @@ export default function AuditLogPage() {
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
       <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
           <div>
             <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111" }}>Audit Log</h1>
             <p style={{ fontSize: 13, color: "#888", marginTop: 4 }}>{total.toLocaleString()} entries</p>
@@ -83,7 +83,7 @@ export default function AuditLogPage() {
         </div>
 
         {/* Filters */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 160px 140px 140px 140px", gap: 8, marginBottom: 16, background: "#fff", padding: 12, borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+        <div className="admin-filter-grid" style={{ display: "grid", gridTemplateColumns: "1fr 160px 140px 140px 140px", gap: 8, marginBottom: 16, background: "#fff", padding: 12, borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
           <input
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
@@ -119,7 +119,8 @@ export default function AuditLogPage() {
 
         {/* Log table */}
         <div style={{ background: "#fff", borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", opacity: loading ? 0.6 : 1, overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <div className="table-scroll">
+          <table style={{ width: "100%", minWidth: 640, borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: "2px solid #f3f4f6" }}>
                 <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 12, color: "#888", fontWeight: 600 }}>When</th>
@@ -184,11 +185,12 @@ export default function AuditLogPage() {
               )}
             </tbody>
           </table>
+          </div>
         </div>
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, marginTop: 16 }}>
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", flexWrap: "wrap", gap: 8, marginTop: 16 }}>
             <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}
               style={{ padding: "6px 14px", background: page === 1 ? "#f3f4f6" : "#fff", border: "1px solid #ddd", borderRadius: 6, fontSize: 13, cursor: page === 1 ? "not-allowed" : "pointer" }}>
               Previous

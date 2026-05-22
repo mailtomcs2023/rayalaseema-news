@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
       .replace(/<[^>]+>/g, " ")
       .replace(/&nbsp;/g, " ")
       .replace(/&amp;/g, "&")
-      .replace(/Source:.*$/s, "") // Remove source attribution
+      .replace(/Source:[\s\S]*$/, "") // Remove source attribution
       .replace(/\s+/g, " ")
       .trim()
       .substring(0, 5000);

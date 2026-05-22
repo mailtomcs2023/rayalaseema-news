@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     if (!title) return NextResponse.json({ error: "Title required" }, { status: 400 });
 
     // Find category or use default
-    let categoryId: string;
+    let categoryId = "";
     if (categorySlug) {
       const cat = await prisma.category.findUnique({ where: { slug: categorySlug } });
       categoryId = cat?.id || "";

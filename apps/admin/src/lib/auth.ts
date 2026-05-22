@@ -1,4 +1,5 @@
 import NextAuth from "next-auth";
+import type { NextAuthResult } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@rayalaseema/db";
 import { compare } from "bcryptjs";
@@ -8,7 +9,7 @@ interface ExtendedUser {
   role: string;
 }
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+const nextAuth = NextAuth({
   providers: [
     Credentials({
       name: "credentials",
@@ -51,8 +52,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     async session({ session, token }) {
       if (session.user) {
-        (session.user as ExtendedUser).role = token.role;
-        (session.user as ExtendedUser).id = token.id;
+        (session.user as any).role = token.role;
+        (session.user as any).id = token.id;
       }
       return session;
     },
@@ -69,3 +70,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
 });
+
+// Explicit annotations: next-auth's inferred export types reference non-portable
+// internal paths (TS2742) when consumed across the monorepo.
+export const handlers: NextAuthResult["handlers"] = nextAuth.handlers;
+export const auth: NextAuthResult["auth"] = nextAuth.auth;
+export const signIn: NextAuthResult["signIn"] = nextAuth.signIn;
+export const signOut: NextAuthResult["signOut"] = nextAuth.signOut;

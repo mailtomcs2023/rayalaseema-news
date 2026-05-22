@@ -65,7 +65,7 @@ export default async function RootLayout({
           name: "Rayalaseema Express",
           alternateName: "రాయలసీమ ఎక్స్‌ప్రెస్",
           url: "https://rayalaseemaexpress.com",
-          logo: "https://rayalaseemaexpress.com/logo.svg",
+          logo: "https://rayalaseemaexpress.com/logo-transparent.svg",
           sameAs: [],
           publishingPrinciples: "https://rayalaseemaexpress.com/about",
         }) }} />

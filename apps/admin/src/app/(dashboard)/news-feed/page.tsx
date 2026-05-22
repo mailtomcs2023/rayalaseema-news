@@ -85,12 +85,12 @@ export default function NewsFeedPage() {
         </div>
 
         {/* Search bar */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 20, background: "#fff", padding: 16, borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20, background: "#fff", padding: 16, borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search keywords..."
-            style={{ flex: 1, padding: "10px 14px", border: "1px solid #ddd", borderRadius: 8, fontSize: 14, outline: "none" }}
+            style={{ flex: "1 1 220px", minWidth: 0, padding: "10px 14px", border: "1px solid #ddd", borderRadius: 8, fontSize: 14, outline: "none" }}
             onKeyDown={(e) => e.key === "Enter" && fetchNews()}
           />
           <select value={language} onChange={(e) => setLanguage(e.target.value)} style={{ padding: "10px 14px", border: "1px solid #ddd", borderRadius: 8, fontSize: 14 }}>
@@ -134,7 +134,7 @@ export default function NewsFeedPage() {
           </div>
         )}
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
+        <div className="admin-card-grid" style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
           {articles.map((article) => (
             <div key={article.externalId} style={{ background: "#fff", borderRadius: 10, overflow: "hidden", border: "1px solid #eee", display: "flex", flexDirection: "column" }}>
               {article.imageUrl && (

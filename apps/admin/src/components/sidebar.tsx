@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
 
 const navItems = [
   { name: "Dashboard", href: "/", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
@@ -31,59 +32,103 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const [open, setOpen] = useState(false);
+  const close = () => setOpen(false);
+
+  // Lock background scroll while the mobile drawer is open
+  useEffect(() => {
+    document.body.style.overflow = open ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
 
   return (
-    <aside style={{ width: 240, height: "100vh", background: "#111827", color: "#fff", position: "fixed", left: 0, top: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      {/* Logo */}
-      <div style={{ padding: "16px 20px", borderBottom: "1px solid #1f2937" }}>
-        <img src="/logo.svg" alt="RE" style={{ height: 28, filter: "brightness(0) invert(1)" }} />
-        <p style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>Content Management System</p>
-      </div>
-
-      {/* Nav */}
-      <nav style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
-        {navItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              style={{
-                display: "flex", alignItems: "center", gap: 10,
-                padding: "10px 20px", fontSize: 13, fontWeight: 600,
-                color: isActive ? "#fff" : "#9ca3af",
-                background: isActive ? "#FF2C2C" : "transparent",
-                textDecoration: "none", transition: "all 0.15s",
-                borderLeft: isActive ? "3px solid #fff" : "3px solid transparent",
-              }}
-            >
-              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ opacity: isActive ? 1 : 0.6 }}>
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={item.icon} />
-              </svg>
-              {item.name}
-            </Link>
-          );
-        })}
-      </nav>
-
-      {/* User */}
-      <div style={{ padding: "12px 20px", borderTop: "1px solid #1f2937", fontSize: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-          <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#FF2C2C", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800 }}>
-            {session?.user?.name?.[0] || "A"}
-          </div>
-          <div>
-            <p style={{ color: "#fff", fontWeight: 600 }}>{session?.user?.name || "Admin"}</p>
-            <p style={{ color: "#6b7280", fontSize: 11 }}>{(session?.user as any)?.role || "ADMIN"}</p>
-          </div>
-        </div>
+    <>
+      {/* Mobile top bar (hidden on desktop) */}
+      <header className="admin-topbar">
         <button
-          onClick={() => signOut({ callbackUrl: "/login" })}
-          style={{ width: "100%", padding: "6px 0", background: "#1f2937", color: "#9ca3af", border: "none", borderRadius: 6, fontSize: 12, cursor: "pointer" }}
+          aria-label="Open menu"
+          onClick={() => setOpen(true)}
+          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 38, height: 38, border: "none", background: "transparent", borderRadius: 8, cursor: "pointer", color: "#111827" }}
         >
-          Sign Out
+          <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
         </button>
-      </div>
-    </aside>
+        <img src="/logo-transparent.svg" alt="Rayalaseema Express" style={{ height: 26 }} />
+      </header>
+
+      {/* Drawer backdrop (mobile only, when open) */}
+      <div className={`admin-backdrop${open ? " open" : ""}`} onClick={close} aria-hidden="true" />
+
+      {/* Sidebar / off-canvas drawer */}
+      <aside
+        className={`admin-sidebar${open ? " open" : ""}`}
+        style={{ width: 240, height: "100vh", background: "#111827", color: "#fff", position: "fixed", left: 0, top: 0, display: "flex", flexDirection: "column", overflow: "hidden", zIndex: 50 }}
+      >
+        {/* Logo */}
+        <div style={{ padding: "16px 20px", borderBottom: "1px solid #1f2937", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+          <div>
+            <img src="/logo-transparent.svg" alt="RE" style={{ height: 28 }} />
+            <p style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>Content Management System</p>
+          </div>
+          <button
+            className="admin-drawer-close"
+            aria-label="Close menu"
+            onClick={close}
+            style={{ border: "none", background: "transparent", color: "#9ca3af", cursor: "pointer", fontSize: 20, lineHeight: 1, padding: 4 }}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Nav */}
+        <nav className="sidebar-nav" style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
+          {navItems.map((item) => {
+            const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={close}
+                style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  padding: "10px 20px", fontSize: 13, fontWeight: 600,
+                  color: isActive ? "#fff" : "#9ca3af",
+                  background: isActive ? "#FF2C2C" : "transparent",
+                  textDecoration: "none", transition: "all 0.15s",
+                  borderLeft: isActive ? "3px solid #fff" : "3px solid transparent",
+                }}
+              >
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ opacity: isActive ? 1 : 0.6 }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={item.icon} />
+                </svg>
+                {item.name}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* User */}
+        <div style={{ padding: "12px 20px", borderTop: "1px solid #1f2937", fontSize: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+            <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#FF2C2C", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800 }}>
+              {session?.user?.name?.[0] || "A"}
+            </div>
+            <div>
+              <p style={{ color: "#fff", fontWeight: 600 }}>{session?.user?.name || "Admin"}</p>
+              <p style={{ color: "#6b7280", fontSize: 11 }}>{(session?.user as any)?.role || "ADMIN"}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            style={{ width: "100%", padding: "6px 0", background: "#1f2937", color: "#9ca3af", border: "none", borderRadius: 6, fontSize: 12, cursor: "pointer" }}
+          >
+            Sign Out
+          </button>
+        </div>
+      </aside>
+    </>
   );
 }

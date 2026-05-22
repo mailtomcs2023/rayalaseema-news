@@ -183,11 +183,11 @@ export const RichEditor = React.forwardRef<RichEditorRef, { content: string; onC
 
       {/* Link panel - only shows when link button is clicked */}
       {activePanel === "link" && (
-        <div style={{ padding: "8px 12px", background: "#f0f9ff", borderBottom: "1px solid #bae6fd", display: "flex", gap: 6, alignItems: "center" }}>
+        <div style={{ padding: "8px 12px", background: "#f0f9ff", borderBottom: "1px solid #bae6fd", display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
           <svg width="16" height="16" fill="none" stroke="#3b82f6" strokeWidth="2" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" strokeLinecap="round"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" strokeLinecap="round"/></svg>
           <input type="url" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="Paste link URL..." autoFocus
             onKeyDown={(e) => { if (e.key === "Enter") { editor.chain().focus().extendMarkRange("link").setLink({ href: linkUrl }).run(); setLinkUrl(""); setActivePanel("none"); } if (e.key === "Escape") setActivePanel("none"); }}
-            style={{ flex: 1, padding: "6px 10px", border: "1px solid #93c5fd", borderRadius: 6, fontSize: 13, outline: "none" }} />
+            style={{ flex: "1 1 160px", minWidth: 0, padding: "6px 10px", border: "1px solid #93c5fd", borderRadius: 6, fontSize: 13, outline: "none" }} />
           <button onClick={() => { editor.chain().focus().extendMarkRange("link").setLink({ href: linkUrl }).run(); setLinkUrl(""); setActivePanel("none"); }}
             style={{ padding: "6px 12px", background: "#3b82f6", color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Add</button>
           <button onClick={() => { editor.chain().focus().unsetLink().run(); setActivePanel("none"); }}
@@ -198,7 +198,7 @@ export const RichEditor = React.forwardRef<RichEditorRef, { content: string; onC
       {/* Image panel - only shows when image button is clicked */}
       {activePanel === "image" && (
         <div style={{ padding: "10px 12px", background: "#fafafa", borderBottom: "1px solid #eee" }}>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             {/* Upload from device */}
             <button onClick={() => fileInputRef.current?.click()}
               style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "#fff", border: "2px dashed #d1d5db", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#555" }}>
@@ -209,7 +209,7 @@ export const RichEditor = React.forwardRef<RichEditorRef, { content: string; onC
             {/* URL input */}
             <input type="url" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="Paste image URL..."
               onKeyDown={(e) => { if (e.key === "Enter" && imageUrl) { editor.chain().focus().setImage({ src: imageUrl }).run(); setImageUrl(""); setActivePanel("none"); } if (e.key === "Escape") setActivePanel("none"); }}
-              style={{ flex: 1, padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 13, outline: "none" }} />
+              style={{ flex: "1 1 160px", minWidth: 0, padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 13, outline: "none" }} />
             <button onClick={() => { if (imageUrl) { editor.chain().focus().setImage({ src: imageUrl }).run(); setImageUrl(""); setActivePanel("none"); } }}
               style={{ padding: "8px 14px", background: "#16a34a", color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Insert</button>
           </div>
@@ -222,7 +222,7 @@ export const RichEditor = React.forwardRef<RichEditorRef, { content: string; onC
         onChange={(e) => { if (e.target.files?.[0]) { uploadFile(e.target.files[0]); setActivePanel("none"); } e.target.value = ""; }} />
 
       {/* Bubble Menu - only appears on text selection (Medium style) */}
-      <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }}>
+      <BubbleMenu editor={editor}>
         <div style={{ display: "flex", gap: 1, background: "#1e293b", borderRadius: 8, padding: "3px 5px", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}>
           <B on={editor.isActive("bold")} fn={() => editor.chain().focus().toggleBold().run()}><b>B</b></B>
           <B on={editor.isActive("italic")} fn={() => editor.chain().focus().toggleItalic().run()}><i>I</i></B>
@@ -257,6 +257,12 @@ export const RichEditor = React.forwardRef<RichEditorRef, { content: string; onC
         .tiptap-editor hr { border: none; border-top: 2px solid #eee; margin: 36px 0; }
         .tiptap-editor mark { background: #fef08a; padding: 0 3px; border-radius: 2px; }
         .tiptap p.is-editor-empty:first-child::before { content: attr(data-placeholder); color: #ccc; float: left; pointer-events: none; height: 0; font-size: 18px; }
+        @media (max-width: 640px) {
+          .tiptap-editor { padding: 18px 16px; font-size: 16px; line-height: 1.8; }
+          .tiptap-editor h2 { font-size: 23px; }
+          .tiptap-editor h3 { font-size: 19px; }
+          .tiptap-editor h4 { font-size: 17px; }
+        }
       `}</style>
     </div>
   );

@@ -22,7 +22,7 @@ ${articles.map((a) => `  <url>
       </news:publication>
       <news:publication_date>${(a.publishedAt || new Date()).toISOString()}</news:publication_date>
       <news:title>${escXml(a.title)}</news:title>
-      <news:keywords>${escXml(a.category.nameEn)}</news:keywords>
+      <news:keywords>${escXml(a.category.nameEn || "")}</news:keywords>
     </news:news>
   </url>`).join("\n")}
 </urlset>`;

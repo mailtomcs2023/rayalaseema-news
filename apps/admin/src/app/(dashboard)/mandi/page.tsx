@@ -100,8 +100,9 @@ export default function MandiPage() {
         </div>
 
         {/* Prices Table */}
-        <div style={{ background: "#fff", borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <div style={{ background: "#fff", borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", overflow: "hidden" }}>
+          <div className="table-scroll">
+          <table style={{ width: "100%", minWidth: 560, borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: "2px solid #f3f4f6" }}>
                 <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 12, color: "#888" }}>Commodity</th>
@@ -125,6 +126,7 @@ export default function MandiPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       </main>
     </div>

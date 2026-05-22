@@ -49,9 +49,9 @@ export default function JournalistsPage() {
         <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111", marginBottom: 4 }}>Journalists & KYC</h1>
         <p style={{ fontSize: 13, color: "#888", marginBottom: 20 }}>Manage reporter profiles, verify KYC, track performance</p>
 
-        <div style={{ display: "flex", gap: 16 }}>
+        <div className="admin-split" style={{ display: "flex", gap: 16 }}>
           {/* Left: Journalist List */}
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             {journalists.length === 0 ? (
               <div style={{ background: "#fff", borderRadius: 10, padding: 40, textAlign: "center", color: "#aaa" }}>
                 <p>No journalists registered yet.</p>
@@ -87,7 +87,7 @@ export default function JournalistsPage() {
 
           {/* Right: Selected Journalist Details */}
           {selected?.journalistProfile && (
-            <div style={{ width: 400, flexShrink: 0 }}>
+            <div className="admin-side" style={{ width: 400, flexShrink: 0 }}>
               <div style={{ background: "#fff", borderRadius: 10, padding: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", position: "sticky", top: 24 }}>
                 <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>{selected.journalistProfile.fullName}</h3>
 

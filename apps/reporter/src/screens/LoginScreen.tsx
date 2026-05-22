@@ -46,7 +46,7 @@ export function LoginScreen({ navigation }: any) {
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <View style={styles.card}>
-        <Text style={styles.logo}>RE</Text>
+        <Image source={require("../../assets/logo.png")} style={styles.logo} resizeMode="contain" />
         <Text style={styles.title}>RE Reporter</Text>
         <Text style={styles.subtitle}>రాయలసీమ ఎక్స్‌ప్రెస్ జర్నలిస్ట్ యాప్</Text>
 
@@ -81,7 +81,7 @@ export function LoginScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#f3f4f6", padding: 20 },
   card: { width: "100%", maxWidth: 400, backgroundColor: "#fff", borderRadius: 16, padding: 32, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 16, elevation: 8 },
-  logo: { fontSize: 48, fontWeight: "900", color: "#FF2C2C", textAlign: "center" },
+  logo: { width: 240, height: 48, alignSelf: "center", marginBottom: 4 },
   title: { fontSize: 24, fontWeight: "800", color: "#111", textAlign: "center", marginTop: 4 },
   subtitle: { fontSize: 13, color: "#888", textAlign: "center", marginBottom: 24 },
   input: { borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 10, padding: 14, fontSize: 15, marginBottom: 12, backgroundColor: "#fafafa" },

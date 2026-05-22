@@ -3,7 +3,15 @@
 import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/sidebar";
 
-const sections = [
+type SettingField = {
+  key: string;
+  label: string;
+  type: string;
+  placeholder?: string;
+  options?: string[];
+};
+
+const sections: { title: string; icon: string; fields: SettingField[] }[] = [
   {
     title: "Branding",
     icon: "🎨",
@@ -123,7 +131,7 @@ export default function SettingsPage() {
       <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, position: "sticky", top: 0, background: "#f3f4f6", zIndex: 10, padding: "8px 0" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 24, position: "sticky", top: 0, background: "#f3f4f6", zIndex: 10, padding: "8px 0" }}>
           <div>
             <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111" }}>Site Settings</h1>
             <p style={{ fontSize: 13, color: "#888", marginTop: 4 }}>Configure your newspaper portal - all changes apply to frontend</p>
@@ -150,7 +158,7 @@ export default function SettingsPage() {
                 <h2 style={{ fontSize: 15, fontWeight: 700, color: "#111" }}>{section.title}</h2>
               </div>
               {/* Fields */}
-              <div style={{ padding: 20, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <div className="admin-form-grid" style={{ padding: 20, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                 {section.fields.map((f) => (
                   <div key={f.key} style={f.type === "text" && f.key.includes("description") ? { gridColumn: "1 / -1" } : {}}>
                     <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#555", marginBottom: 4 }}>{f.label}</label>

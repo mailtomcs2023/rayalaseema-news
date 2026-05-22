@@ -47,8 +47,9 @@ export default function PaymentsPage() {
         <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111", marginBottom: 4 }}>Payment Configuration</h1>
         <p style={{ fontSize: 13, color: "#888", marginBottom: 20 }}>Set per-article rates for journalists. All rates in INR (₹)</p>
 
-        <div style={{ background: "#fff", borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <div style={{ background: "#fff", borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", overflow: "hidden" }}>
+          <div className="table-scroll">
+          <table style={{ width: "100%", minWidth: 640, borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: "2px solid #f3f4f6" }}>
                 <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 12, color: "#888" }}>Article Type</th>
@@ -107,6 +108,7 @@ export default function PaymentsPage() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       </main>
     </div>
