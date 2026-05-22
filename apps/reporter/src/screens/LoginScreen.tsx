@@ -1,44 +1,51 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, KeyboardAvoidingView, Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useT } from "../i18n";
+import { LanguageToggle } from "../components/LanguageToggle";
+import { FieldError } from "../components/FieldError";
+import { loginSchema, fieldErrors } from "../lib/validation";
+import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+import { useRouter } from "expo-router";
 
-const API_URL = __DEV__ ? "http://10.0.2.2:3001" : "https://admin.rayalaseemaexpress.com";
+const API_URL = process.env.EXPO_PUBLIC_API_URL || (__DEV__ ? "http://10.0.2.2:3001" : "https://admin.rayalaseemaexpress.com");
 
-export function LoginScreen({ navigation }: any) {
+export function LoginScreen() {
+  const { t } = useT();
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const clearErr = (k: string) => setErrors((e) => (e[k] ? { ...e, [k]: "" } : e));
 
   const handleLogin = async () => {
-    if (!email || !password) return Alert.alert("Error", "Email and password required");
+    Haptics.selectionAsync();
+    const parsed = loginSchema(t).safeParse({ email, password });
+    if (!parsed.success) return setErrors(fieldErrors(parsed.error));
+    setErrors({});
     setLoading(true);
 
     try {
-      // Get CSRF token
-      const csrfRes = await fetch(`${API_URL}/api/auth/csrf`);
-      const { csrfToken } = await csrfRes.json();
-
-      // Login
-      const res = await fetch(`${API_URL}/api/auth/callback/credentials`, {
+      // Single JSON POST to the reporter login endpoint — no cookies/redirects.
+      const res = await fetch(`${API_URL}/api/reporter/login`, {
         method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: `csrfToken=${csrfToken}&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`,
-        redirect: "manual",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), password }),
       });
+      const data = await res.json();
 
-      // Get session
-      const sessionRes = await fetch(`${API_URL}/api/auth/session`);
-      const session = await sessionRes.json();
-
-      if (session?.user) {
-        await AsyncStorage.setItem("user", JSON.stringify(session.user));
-        await AsyncStorage.setItem("auth-token", "session-active");
-        navigation.reset({ index: 0, routes: [{ name: "Main" }] });
+      if (res.ok && data.user && data.token) {
+        await AsyncStorage.setItem("user", JSON.stringify(data.user));
+        await AsyncStorage.setItem("auth-token", data.token);
+        router.replace("/home");
       } else {
-        Alert.alert("Login Failed", "Invalid email or password");
+        Alert.alert(t("login.loginFailed"), data.error || t("login.invalidCredentials"));
       }
     } catch (e: any) {
-      Alert.alert("Error", e.message);
+      Alert.alert(t("common.error"), e.message);
     }
     setLoading(false);
   };
@@ -46,32 +53,54 @@ export function LoginScreen({ navigation }: any) {
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <View style={styles.card}>
+        <View style={styles.toggleRow}>
+          <LanguageToggle />
+        </View>
         <Image source={require("../../assets/logo.png")} style={styles.logo} resizeMode="contain" />
-        <Text style={styles.title}>RE Reporter</Text>
-        <Text style={styles.subtitle}>రాయలసీమ ఎక్స్‌ప్రెస్ జర్నలిస్ట్ యాప్</Text>
+        <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>{t("login.appName")}</Text>
+        <Text style={styles.subtitle}>{t("login.subtitle")}</Text>
 
         <TextInput
-          style={styles.input}
-          placeholder="Email"
+          style={[styles.input, errors.email ? styles.inputError : null]}
+          placeholder={t("login.email")}
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(v) => { setEmail(v); clearErr("email"); }}
           keyboardType="email-address"
           autoCapitalize="none"
         />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
+        <FieldError message={errors.email} />
+        <View style={[styles.passwordField, errors.password ? styles.inputError : null]}>
+          <TextInput
+            style={styles.passwordInput}
+            placeholder={t("login.password")}
+            value={password}
+            onChangeText={(v) => { setPassword(v); clearErr("password"); }}
+            secureTextEntry={!showPassword}
+            autoCapitalize="none"
+          />
+          <TouchableOpacity
+            onPress={() => { Haptics.selectionAsync(); setShowPassword(!showPassword); }}
+            style={styles.eyeButton}
+            accessibilityLabel={showPassword ? t("register.hidePassword") : t("register.showPassword")}
+          >
+            <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={22} color="#888" />
+          </TouchableOpacity>
+        </View>
+        <FieldError message={errors.password} />
 
-        <TouchableOpacity style={[styles.button, loading && styles.buttonDisabled]} onPress={handleLogin} disabled={loading}>
-          <Text style={styles.buttonText}>{loading ? "Logging in..." : "Login"}</Text>
+        <TouchableOpacity
+          style={styles.forgotLink}
+          onPress={() => Alert.alert(t("login.forgotPassword"), t("login.forgotPasswordMsg"))}
+        >
+          <Text style={styles.forgotText}>{t("login.forgotPassword")}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.registerLink} onPress={() => navigation.navigate("Register")}>
-          <Text style={styles.registerText}>New journalist? <Text style={{ color: "#FF2C2C", fontWeight: "700" }}>Register here</Text></Text>
+        <TouchableOpacity style={[styles.button, loading && styles.buttonDisabled]} onPress={handleLogin} disabled={loading}>
+          <Text style={styles.buttonText}>{loading ? t("login.loggingIn") : t("login.loginBtn")}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.registerLink} onPress={() => router.push("/register")}>
+          <Text style={styles.registerText}>{t("login.registerPrompt")}<Text style={{ color: "#FF2C2C", fontWeight: "700" }}>{t("login.registerLink")}</Text></Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -81,13 +110,22 @@ export function LoginScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#f3f4f6", padding: 20 },
   card: { width: "100%", maxWidth: 400, backgroundColor: "#fff", borderRadius: 16, padding: 32, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 16, elevation: 8 },
+  toggleRow: { flexDirection: "row", justifyContent: "flex-end", marginBottom: 4 },
   logo: { width: 240, height: 48, alignSelf: "center", marginBottom: 4 },
-  title: { fontSize: 24, fontWeight: "800", color: "#111", textAlign: "center", marginTop: 4 },
-  subtitle: { fontSize: 13, color: "#888", textAlign: "center", marginBottom: 24 },
-  input: { borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 10, padding: 14, fontSize: 15, marginBottom: 12, backgroundColor: "#fafafa" },
-  button: { backgroundColor: "#FF2C2C", borderRadius: 10, padding: 16, alignItems: "center", marginTop: 4 },
+  // Fixed lineHeight / height values below keep the layout identical in English
+  // and Telugu — Telugu glyphs are taller, so without these the card resizes.
+  title: { fontSize: 24, lineHeight: 32, fontWeight: "800", color: "#111", textAlign: "center", marginTop: 4, paddingTop: 14 },
+  subtitle: { fontSize: 13, lineHeight: 20, color: "#888", textAlign: "center", marginBottom: 24 },
+  input: { borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 10, height: 52, paddingHorizontal: 14, fontSize: 15, marginBottom: 12, backgroundColor: "#fafafa" },
+  inputError: { borderColor: "#dc2626" },
+  passwordField: { flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 10, height: 52, marginBottom: 12, backgroundColor: "#fafafa" },
+  passwordInput: { flex: 1, height: "100%", paddingHorizontal: 14, fontSize: 15 },
+  eyeButton: { height: "100%", paddingHorizontal: 12, justifyContent: "center" },
+  forgotLink: { alignSelf: "flex-end", marginBottom: 14, marginTop: -2 },
+  forgotText: { fontSize: 13, lineHeight: 18, color: "#FF2C2C", fontWeight: "600" },
+  button: { backgroundColor: "#FF2C2C", borderRadius: 10, height: 54, alignItems: "center", justifyContent: "center", marginTop: 4 },
   buttonDisabled: { backgroundColor: "#999" },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  buttonText: { color: "#fff", fontSize: 16, lineHeight: 26, fontWeight: "700" },
   registerLink: { marginTop: 20, alignItems: "center" },
-  registerText: { fontSize: 13, color: "#888" },
+  registerText: { fontSize: 13, lineHeight: 20, color: "#888" },
 });

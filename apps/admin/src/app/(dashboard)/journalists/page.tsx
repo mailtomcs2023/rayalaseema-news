@@ -1,166 +1,1312 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import {
+  type ColumnDef,
+  type ColumnFiltersState,
+  type FilterFn,
+  flexRender,
+  getCoreRowModel,
+  getFacetedUniqueValues,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  type PaginationState,
+  type SortingState,
+  useReactTable,
+  type VisibilityState,
+} from "@tanstack/react-table";
+import {
+  ChevronDownIcon,
+  ChevronFirstIcon,
+  ChevronLastIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ChevronUpIcon,
+  CircleXIcon,
+  Columns3Icon,
+  EllipsisIcon,
+  FilterIcon,
+  ListFilterIcon,
+  TrashIcon,
+  UserPlusIcon,
+} from "lucide-react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+
 import { Sidebar } from "@/components/sidebar";
+import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { DatePicker } from "@/components/ui/date-picker";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Pagination, PaginationContent, PaginationItem } from "@/components/ui/pagination";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
+// ---- API shapes (from GET /api/journalists) ----
 interface JournalistProfile {
-  id: string; fullName: string; kycStatus: string; primaryDistrict: string;
-  aadhaarFrontUrl: string; aadhaarBackUrl: string; panCardUrl: string; photoUrl: string;
-  upiId: string; phone: string; kycRejectionNote: string; createdAt: string; verifiedAt: string;
+  id: string;
+  fullName: string;
+  fatherName: string | null;
+  kycStatus: string;
+  dateOfBirth: string | null;
+  gender: string | null;
+  address: string | null;
+  city: string | null;
+  pincode: string | null;
+  primaryDistrict: string | null;
+  secondaryDistricts: string[];
+  aadhaarNumber: string | null;
+  aadhaarFrontUrl: string;
+  aadhaarBackUrl: string;
+  panNumber: string | null;
+  panCardUrl: string;
+  idCardUrl: string | null;
+  photoUrl: string;
+  upiId: string | null;
+  bankName: string | null;
+  bankAccount: string | null;
+  bankIfsc: string | null;
+  bankBranch: string | null;
+  experience: string | null;
+  languages: string[];
+  specialization: string | null;
+  kycRejectionNote: string;
+  createdAt: string;
+  verifiedAt: string;
 }
-
 interface Journalist {
-  id: string; email: string; name: string; phone: string; active: boolean; createdAt: string;
+  id: string;
+  email: string;
+  name: string;
+  phone: string;
+  active: boolean;
+  createdAt: string;
   journalistProfile: JournalistProfile | null;
   _count: { articles: number; payments: number };
 }
 
-const kycColors: Record<string, { bg: string; color: string }> = {
-  PENDING: { bg: "#fef3c7", color: "#92400e" },
-  SUBMITTED: { bg: "#dbeafe", color: "#1d4ed8" },
-  VERIFIED: { bg: "#dcfce7", color: "#166534" },
-  REJECTED: { bg: "#fef2f2", color: "#dc2626" },
+// ---- table row ----
+interface JournalistRow {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  district: string;
+  kyc: string;
+  articles: number;
+  joinedAt: string;
+  raw: Journalist;
+}
+
+const KYC_BADGE: Record<string, string> = {
+  VERIFIED: "bg-green-100 text-green-700 border-green-200",
+  SUBMITTED: "bg-blue-100 text-blue-700 border-blue-200",
+  PENDING: "bg-amber-100 text-amber-700 border-amber-200",
+  REJECTED: "bg-red-100 text-red-700 border-red-200",
+  "NO PROFILE": "bg-muted text-muted-foreground border-transparent",
 };
 
-export default function JournalistsPage() {
-  const [journalists, setJournalists] = useState<Journalist[]>([]);
-  const [selected, setSelected] = useState<Journalist | null>(null);
-  const [rejectNote, setRejectNote] = useState("");
+// Test/QA reporter account(s) — editable, but never deletable.
+const PROTECTED_EMAILS = new Set(["reporter@rayalaseemaexpress.com"]);
+const isProtected = (email: string) => PROTECTED_EMAILS.has((email || "").trim().toLowerCase());
 
-  useEffect(() => {
-    fetch("/api/journalists").then((r) => r.json()).then(setJournalists);
+const fmtDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString() : "—");
+const fmtAadhaar = (n?: string | null) => (n ? n.replace(/(\d{4})(?=\d)/g, "$1 ") : "");
+
+// Search across name / email / phone
+const multiColumnFilterFn: FilterFn<JournalistRow> = (row, _columnId, filterValue) => {
+  const content = `${row.original.name} ${row.original.email} ${row.original.phone}`.toLowerCase();
+  return content.includes((filterValue ?? "").toLowerCase());
+};
+
+const kycFilterFn: FilterFn<JournalistRow> = (row, columnId, filterValue: string[]) => {
+  if (!filterValue?.length) return true;
+  return filterValue.includes(row.getValue(columnId) as string);
+};
+
+function toRow(j: Journalist): JournalistRow {
+  return {
+    id: j.id,
+    name: j.name,
+    email: j.email,
+    phone: j.phone || "",
+    district: j.journalistProfile?.primaryDistrict || "",
+    kyc: j.journalistProfile?.kycStatus || "NO PROFILE",
+    articles: j._count.articles,
+    joinedAt: j.createdAt,
+    raw: j,
+  };
+}
+
+export default function JournalistsPage() {
+  const id = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const [data, setData] = useState<JournalistRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [reviewing, setReviewing] = useState<Journalist | null>(null);
+
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+  const [sorting, setSorting] = useState<SortingState>([{ id: "name", desc: false }]);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    fetch("/api/journalists")
+      .then((r) => r.json())
+      .then((rows: Journalist[]) => {
+        setData(Array.isArray(rows) ? rows.map(toRow) : []);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   }, []);
 
-  const handleAction = async (profileId: string, action: string, note?: string) => {
-    await fetch("/api/journalists", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ profileId, action, note }),
-    });
-    setSelected(null);
-    setRejectNote("");
-    fetch("/api/journalists").then((r) => r.json()).then(setJournalists);
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // keep the open review dialog in sync after a refetch
+  useEffect(() => {
+    if (!reviewing) return;
+    const fresh = data.find((d) => d.id === reviewing.id);
+    if (fresh) setReviewing(fresh.raw);
+  }, [data]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const openReview = useCallback((j: Journalist) => setReviewing(j), []);
+
+  const [formFor, setFormFor] = useState<
+    { mode: "create" } | { mode: "edit"; journalist: Journalist } | null
+  >(null);
+  const openEdit = useCallback((j: Journalist) => setFormFor({ mode: "edit", journalist: j }), []);
+
+  const [confirmDelete, setConfirmDelete] = useState<JournalistRow[] | null>(null);
+  const openDelete = useCallback((row: JournalistRow) => setConfirmDelete([row]), []);
+
+  const columns = useMemo<ColumnDef<JournalistRow>[]>(
+    () => [
+      {
+        id: "select",
+        size: 28,
+        enableSorting: false,
+        enableHiding: false,
+        header: ({ table }) => (
+          <Checkbox
+            aria-label="Select all"
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && "indeterminate")
+            }
+            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            aria-label="Select row"
+            checked={row.getIsSelected()}
+            disabled={!row.getCanSelect()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+          />
+        ),
+      },
+      {
+        accessorKey: "name",
+        header: "Name",
+        size: 170,
+        enableHiding: false,
+        filterFn: multiColumnFilterFn,
+        cell: ({ row }) => <div className="font-medium">{row.getValue("name")}</div>,
+      },
+      { accessorKey: "email", header: "Email", size: 220 },
+      {
+        accessorKey: "phone",
+        header: "Phone",
+        size: 130,
+        cell: ({ row }) =>
+          row.getValue("phone") || <span className="text-muted-foreground">—</span>,
+      },
+      {
+        accessorKey: "district",
+        header: "District",
+        size: 130,
+        cell: ({ row }) =>
+          row.getValue("district") || <span className="text-muted-foreground">—</span>,
+      },
+      {
+        accessorKey: "kyc",
+        header: "KYC Status",
+        size: 120,
+        filterFn: kycFilterFn,
+        cell: ({ row }) => {
+          const k = row.getValue("kyc") as string;
+          return (
+            <Badge variant="outline" className={cn("border", KYC_BADGE[k] ?? KYC_BADGE["NO PROFILE"])}>
+              {k}
+            </Badge>
+          );
+        },
+      },
+      {
+        accessorKey: "articles",
+        header: "Articles",
+        size: 90,
+        cell: ({ row }) => <span className="tabular-nums">{row.getValue("articles")}</span>,
+      },
+      {
+        accessorKey: "joinedAt",
+        header: "Joined",
+        size: 120,
+        cell: ({ row }) => <span className="text-muted-foreground">{fmtDate(row.getValue("joinedAt"))}</span>,
+      },
+      {
+        id: "actions",
+        size: 60,
+        enableSorting: false,
+        enableHiding: false,
+        header: () => <span className="sr-only">Actions</span>,
+        cell: ({ row }) => (
+          <RowActions
+            row={row.original}
+            onReview={openReview}
+            onEdit={openEdit}
+            onDelete={openDelete}
+          />
+        ),
+      },
+    ],
+    [openReview, openEdit, openDelete],
+  );
+
+  const table = useReactTable({
+    columns,
+    data,
+    enableSortingRemoval: false,
+    enableRowSelection: (row) => !isProtected(row.original.email),
+    getCoreRowModel: getCoreRowModel(),
+    getFacetedUniqueValues: getFacetedUniqueValues(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    onColumnFiltersChange: setColumnFilters,
+    onColumnVisibilityChange: setColumnVisibility,
+    onPaginationChange: setPagination,
+    onSortingChange: setSorting,
+    state: { columnFilters, columnVisibility, pagination, sorting },
+  });
+
+  const kycColumn = table.getColumn("kyc");
+  const uniqueKycValues = useMemo(() => {
+    if (!kycColumn) return [] as string[];
+    return Array.from(kycColumn.getFacetedUniqueValues().keys()).sort();
+  }, [kycColumn, data]);
+  const kycCounts = useMemo(() => {
+    return kycColumn ? kycColumn.getFacetedUniqueValues() : new Map<string, number>();
+  }, [kycColumn, data]);
+  const selectedKyc = (kycColumn?.getFilterValue() as string[]) ?? [];
+
+  const handleKycChange = (checked: boolean, value: string) => {
+    const current = (kycColumn?.getFilterValue() as string[]) ?? [];
+    const next = checked ? [...current, value] : current.filter((v) => v !== value);
+    kycColumn?.setFilterValue(next.length ? next : undefined);
+  };
+
+  const handleDelete = async () => {
+    if (!confirmDelete) return;
+    try {
+      const res = await fetch("/api/journalists", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "delete", userIds: confirmDelete.map((r) => r.id) }),
+      });
+      const result = await res.json().catch(() => ({}));
+      table.resetRowSelection();
+      setConfirmDelete(null);
+      load();
+      if (result.skipped?.length) {
+        alert(
+          `Deleted ${result.deleted}. Skipped ${result.skipped.length} — they have content and can't be deleted:\n` +
+            result.skipped
+              .map((s: { name: string; reason: string }) => `• ${s.name} (${s.reason})`)
+              .join("\n") +
+            `\n\nDeactivate those instead (⋯ → Edit details → Account status).`,
+        );
+      }
+    } catch {
+      setConfirmDelete(null);
+      alert("Delete failed. Please try again.");
+    }
   };
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
       <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111", marginBottom: 4 }}>Journalists & KYC</h1>
-        <p style={{ fontSize: 13, color: "#888", marginBottom: 20 }}>Manage reporter profiles, verify KYC, track performance</p>
+        <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111", marginBottom: 4 }}>Journalists &amp; KYC</h1>
+        <p style={{ fontSize: 13, color: "#888", marginBottom: 20 }}>
+          Manage reporter profiles, verify KYC, track performance
+        </p>
 
-        <div className="admin-split" style={{ display: "flex", gap: 16 }}>
-          {/* Left: Journalist List */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            {journalists.length === 0 ? (
-              <div style={{ background: "#fff", borderRadius: 10, padding: 40, textAlign: "center", color: "#aaa" }}>
-                <p>No journalists registered yet.</p>
-                <p style={{ fontSize: 12, marginTop: 4 }}>They'll appear here when they sign up via the RE Reporter app.</p>
+        <div className="shadcn-scope space-y-4">
+          {/* Filters */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Search */}
+            <div className="relative">
+              <Input
+                aria-label="Filter by name, email or phone"
+                className={cn(
+                  "peer min-w-60 ps-9",
+                  Boolean(table.getColumn("name")?.getFilterValue()) && "pe-9",
+                )}
+                id={`${id}-input`}
+                onChange={(e) => table.getColumn("name")?.setFilterValue(e.target.value)}
+                placeholder="Filter by name, email or phone..."
+                ref={inputRef}
+                type="text"
+                value={(table.getColumn("name")?.getFilterValue() ?? "") as string}
+              />
+              <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 text-muted-foreground/80">
+                <ListFilterIcon aria-hidden="true" size={16} />
               </div>
-            ) : (
-              journalists.map((j) => {
-                const p = j.journalistProfile;
-                const kyc = kycColors[p?.kycStatus || "PENDING"];
-                return (
-                  <div key={j.id} onClick={() => setSelected(j)} style={{
-                    background: selected?.id === j.id ? "#eff6ff" : "#fff",
-                    borderRadius: 10, padding: 14, marginBottom: 8, cursor: "pointer",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.06)", border: selected?.id === j.id ? "2px solid #3b82f6" : "2px solid transparent",
-                  }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <div>
-                        <span style={{ fontSize: 15, fontWeight: 700, color: "#111" }}>{j.name}</span>
-                        <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4, background: kyc.bg, color: kyc.color }}>
-                          {p?.kycStatus || "NO PROFILE"}
-                        </span>
+              {Boolean(table.getColumn("name")?.getFilterValue()) && (
+                <button
+                  aria-label="Clear filter"
+                  className="absolute inset-y-0 end-0 flex h-full w-9 items-center justify-center rounded-e-md text-muted-foreground/80 outline-none transition-colors hover:text-foreground"
+                  onClick={() => {
+                    table.getColumn("name")?.setFilterValue("");
+                    inputRef.current?.focus();
+                  }}
+                  type="button"
+                >
+                  <CircleXIcon aria-hidden="true" size={16} />
+                </button>
+              )}
+            </div>
+
+            {/* KYC status filter */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline">
+                  <FilterIcon aria-hidden="true" className="-ms-1 opacity-60" size={16} />
+                  KYC Status
+                  {selectedKyc.length > 0 && (
+                    <span className="-me-1 inline-flex h-5 items-center rounded border bg-background px-1 text-[0.625rem] font-medium text-muted-foreground/70">
+                      {selectedKyc.length}
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-auto min-w-40 p-3">
+                <div className="space-y-3">
+                  <div className="text-xs font-medium text-muted-foreground">Filters</div>
+                  <div className="space-y-3">
+                    {uniqueKycValues.map((value, i) => (
+                      <div className="flex items-center gap-2" key={value}>
+                        <Checkbox
+                          checked={selectedKyc.includes(value)}
+                          id={`${id}-kyc-${i}`}
+                          onCheckedChange={(checked: boolean) => handleKycChange(checked, value)}
+                        />
+                        <Label
+                          className="flex grow justify-between gap-2 font-normal"
+                          htmlFor={`${id}-kyc-${i}`}
+                        >
+                          {value}
+                          <span className="ms-2 text-xs text-muted-foreground">{kycCounts.get(value)}</span>
+                        </Label>
                       </div>
-                      <span style={{ fontSize: 12, color: "#888" }}>{j._count.articles} articles</span>
-                    </div>
-                    <div style={{ fontSize: 11, color: "#888", marginTop: 4 }}>
-                      {j.email} {j.phone ? `| ${j.phone}` : ""} {p?.primaryDistrict ? `| ${p.primaryDistrict}` : ""}
-                    </div>
+                    ))}
                   </div>
-                );
-              })
-            )}
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {/* Column visibility */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Columns3Icon aria-hidden="true" className="-ms-1 opacity-60" size={16} />
+                  View
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
+                {table
+                  .getAllColumns()
+                  .filter((column) => column.getCanHide())
+                  .map((column) => (
+                    <DropdownMenuCheckboxItem
+                      checked={column.getIsVisible()}
+                      className="capitalize"
+                      key={column.id}
+                      onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                      onSelect={(event) => event.preventDefault()}
+                    >
+                      {column.id}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <div className="ms-auto flex items-center gap-3">
+              <span className="text-sm text-muted-foreground">
+                {table.getRowCount()} journalist{table.getRowCount() === 1 ? "" : "s"}
+              </span>
+              {table.getSelectedRowModel().rows.length > 0 && (
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    setConfirmDelete(table.getSelectedRowModel().rows.map((r) => r.original))
+                  }
+                >
+                  <TrashIcon aria-hidden="true" className="-ms-1 opacity-60" size={16} />
+                  Delete ({table.getSelectedRowModel().rows.length})
+                </Button>
+              )}
+              <Button onClick={() => setFormFor({ mode: "create" })}>
+                <UserPlusIcon aria-hidden="true" className="-ms-1 opacity-90" size={16} />
+                Add Journalist
+              </Button>
+            </div>
           </div>
 
-          {/* Right: Selected Journalist Details */}
-          {selected?.journalistProfile && (
-            <div className="admin-side" style={{ width: 400, flexShrink: 0 }}>
-              <div style={{ background: "#fff", borderRadius: 10, padding: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", position: "sticky", top: 24 }}>
-                <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>{selected.journalistProfile.fullName}</h3>
-
-                {/* KYC Status */}
-                <div style={{ marginBottom: 12 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 4, ...kycColors[selected.journalistProfile.kycStatus] }}>
-                    KYC: {selected.journalistProfile.kycStatus}
-                  </span>
-                </div>
-
-                {/* Documents */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
-                  {selected.journalistProfile.photoUrl && (
-                    <div>
-                      <p style={{ fontSize: 10, color: "#888", marginBottom: 2 }}>Photo</p>
-                      <img src={selected.journalistProfile.photoUrl} alt="Photo" style={{ width: "100%", borderRadius: 6, border: "1px solid #eee" }} />
-                    </div>
-                  )}
-                  {selected.journalistProfile.aadhaarFrontUrl && (
-                    <div>
-                      <p style={{ fontSize: 10, color: "#888", marginBottom: 2 }}>Aadhaar Front</p>
-                      <img src={selected.journalistProfile.aadhaarFrontUrl} alt="Aadhaar" style={{ width: "100%", borderRadius: 6, border: "1px solid #eee" }} />
-                    </div>
-                  )}
-                  {selected.journalistProfile.aadhaarBackUrl && (
-                    <div>
-                      <p style={{ fontSize: 10, color: "#888", marginBottom: 2 }}>Aadhaar Back</p>
-                      <img src={selected.journalistProfile.aadhaarBackUrl} alt="Aadhaar Back" style={{ width: "100%", borderRadius: 6, border: "1px solid #eee" }} />
-                    </div>
-                  )}
-                  {selected.journalistProfile.panCardUrl && (
-                    <div>
-                      <p style={{ fontSize: 10, color: "#888", marginBottom: 2 }}>PAN Card</p>
-                      <img src={selected.journalistProfile.panCardUrl} alt="PAN" style={{ width: "100%", borderRadius: 6, border: "1px solid #eee" }} />
-                    </div>
-                  )}
-                </div>
-
-                {/* Details */}
-                <div style={{ fontSize: 12, color: "#555", lineHeight: 2 }}>
-                  <p><strong>District:</strong> {selected.journalistProfile.primaryDistrict || "—"}</p>
-                  <p><strong>UPI:</strong> {selected.journalistProfile.upiId || "—"}</p>
-                  <p><strong>Articles:</strong> {selected._count.articles}</p>
-                  <p><strong>Joined:</strong> {new Date(selected.createdAt).toLocaleDateString()}</p>
-                </div>
-
-                {/* Actions */}
-                {selected.journalistProfile.kycStatus === "SUBMITTED" && (
-                  <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 8 }}>
-                    <button onClick={() => handleAction(selected.journalistProfile!.id, "verify")}
-                      style={{ width: "100%", padding: "10px", background: "#16a34a", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-                      Verify KYC ✓
-                    </button>
-                    <input value={rejectNote} onChange={(e) => setRejectNote(e.target.value)} placeholder="Rejection reason..."
-                      style={{ width: "100%", padding: "8px 12px", border: "1px solid #fecaca", borderRadius: 6, fontSize: 12, boxSizing: "border-box" }} />
-                    <button onClick={() => handleAction(selected.journalistProfile!.id, "reject", rejectNote)}
-                      style={{ width: "100%", padding: "10px", background: "#dc2626", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-                      Reject KYC
-                    </button>
-                  </div>
+          {/* Table */}
+          <div className="overflow-hidden rounded-md border bg-background">
+            <Table className="table-fixed">
+              <TableHeader>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow className="hover:bg-transparent" key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => (
+                      <TableHead
+                        className="h-11"
+                        key={header.id}
+                        style={{ width: `${header.getSize()}px` }}
+                      >
+                        {header.isPlaceholder ? null : header.column.getCanSort() ? (
+                          <div
+                            className="flex h-full cursor-pointer select-none items-center justify-between gap-2"
+                            onClick={header.column.getToggleSortingHandler()}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                header.column.getToggleSortingHandler()?.(e);
+                              }
+                            }}
+                            tabIndex={0}
+                          >
+                            {flexRender(header.column.columnDef.header, header.getContext())}
+                            {{
+                              asc: <ChevronUpIcon className="shrink-0 opacity-60" size={16} />,
+                              desc: <ChevronDownIcon className="shrink-0 opacity-60" size={16} />,
+                            }[header.column.getIsSorted() as string] ?? null}
+                          </div>
+                        ) : (
+                          flexRender(header.column.columnDef.header, header.getContext())
+                        )}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow data-state={row.getIsSelected() && "selected"} key={row.id}>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell className="last:py-0" key={cell.id}>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell className="h-24 text-center" colSpan={columns.length}>
+                      {loading ? "Loading journalists..." : "No journalists found."}
+                    </TableCell>
+                  </TableRow>
                 )}
+              </TableBody>
+            </Table>
+          </div>
 
-                {selected.journalistProfile.kycRejectionNote && (
-                  <div style={{ marginTop: 12, padding: 10, background: "#fef2f2", borderRadius: 6, borderLeft: "3px solid #dc2626" }}>
-                    <p style={{ fontSize: 10, fontWeight: 700, color: "#dc2626" }}>Rejection Note:</p>
-                    <p style={{ fontSize: 12, color: "#666" }}>{selected.journalistProfile.kycRejectionNote}</p>
-                  </div>
-                )}
-              </div>
+          {/* Pagination */}
+          <div className="flex items-center justify-between gap-8">
+            <div className="flex items-center gap-3">
+              <Label className="max-sm:sr-only" htmlFor={id}>
+                Rows per page
+              </Label>
+              <Select
+                onValueChange={(value) => table.setPageSize(Number(value))}
+                value={table.getState().pagination.pageSize.toString()}
+              >
+                <SelectTrigger className="w-fit whitespace-nowrap" id={id}>
+                  <SelectValue placeholder="Rows" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[5, 10, 25, 50].map((pageSize) => (
+                    <SelectItem key={pageSize} value={pageSize.toString()}>
+                      {pageSize}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          )}
+            <div className="flex grow justify-end whitespace-nowrap text-sm text-muted-foreground">
+              <p aria-live="polite">
+                <span className="text-foreground">
+                  {table.getRowCount() === 0
+                    ? 0
+                    : table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}
+                  -
+                  {Math.min(
+                    (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
+                    table.getRowCount(),
+                  )}
+                </span>{" "}
+                of <span className="text-foreground">{table.getRowCount()}</span>
+              </p>
+            </div>
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <Button
+                    aria-label="Go to first page"
+                    disabled={!table.getCanPreviousPage()}
+                    onClick={() => table.firstPage()}
+                    size="icon"
+                    variant="outline"
+                  >
+                    <ChevronFirstIcon aria-hidden="true" size={16} />
+                  </Button>
+                </PaginationItem>
+                <PaginationItem>
+                  <Button
+                    aria-label="Go to previous page"
+                    disabled={!table.getCanPreviousPage()}
+                    onClick={() => table.previousPage()}
+                    size="icon"
+                    variant="outline"
+                  >
+                    <ChevronLeftIcon aria-hidden="true" size={16} />
+                  </Button>
+                </PaginationItem>
+                <PaginationItem>
+                  <Button
+                    aria-label="Go to next page"
+                    disabled={!table.getCanNextPage()}
+                    onClick={() => table.nextPage()}
+                    size="icon"
+                    variant="outline"
+                  >
+                    <ChevronRightIcon aria-hidden="true" size={16} />
+                  </Button>
+                </PaginationItem>
+                <PaginationItem>
+                  <Button
+                    aria-label="Go to last page"
+                    disabled={!table.getCanNextPage()}
+                    onClick={() => table.lastPage()}
+                    size="icon"
+                    variant="outline"
+                  >
+                    <ChevronLastIcon aria-hidden="true" size={16} />
+                  </Button>
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+
+          {/* KYC review dialog */}
+          <ReviewDialog journalist={reviewing} onClose={() => setReviewing(null)} onChanged={load} />
+
+          {/* Create / edit journalist form */}
+          <JournalistFormDialog target={formFor} onClose={() => setFormFor(null)} onSaved={load} />
+
+          {/* Delete confirmation */}
+          <AlertDialog open={!!confirmDelete} onOpenChange={(open) => !open && setConfirmDelete(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Delete {confirmDelete?.length ?? 0} journalist
+                  {(confirmDelete?.length ?? 0) === 1 ? "" : "s"}?
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  This permanently removes the account and KYC profile. Journalists who have
+                  published articles or payments are skipped automatically — deactivate those
+                  instead. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={handleDelete}
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </main>
     </div>
+  );
+}
+
+function RowActions({
+  row,
+  onReview,
+  onEdit,
+  onDelete,
+}: {
+  row: JournalistRow;
+  onReview: (j: Journalist) => void;
+  onEdit: (j: Journalist) => void;
+  onDelete: (row: JournalistRow) => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <div className="flex justify-end">
+          <Button aria-label="Row actions" className="shadow-none" size="icon" variant="ghost">
+            <EllipsisIcon aria-hidden="true" size={16} />
+          </Button>
+        </div>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => onReview(row.raw)}>Review &amp; documents</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onEdit(row.raw)}>Edit details</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onReview(row.raw)}>Reset password</DropdownMenuItem>
+        {!isProtected(row.email) && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={() => onDelete(row)}
+            >
+              Delete journalist
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function Field({ label, value }: { label: string; value?: string | null }) {
+  if (!value) return null;
+  return (
+    <p className="leading-relaxed">
+      <span className="font-semibold text-foreground">{label}:</span>{" "}
+      <span className="text-muted-foreground">{value}</span>
+    </p>
+  );
+}
+
+function DocThumb({ label, url }: { label: string; url?: string | null }) {
+  if (!url) return null;
+  return (
+    <div>
+      <p className="mb-1 text-[10px] text-muted-foreground">{label}</p>
+      <a href={url} target="_blank" rel="noreferrer">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img alt={label} className="block w-full rounded-md border" src={url} />
+      </a>
+    </div>
+  );
+}
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="mb-1.5 mt-4 border-b pb-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+      {children}
+    </p>
+  );
+}
+
+function ReviewDialog({
+  journalist,
+  onClose,
+  onChanged,
+}: {
+  journalist: Journalist | null;
+  onClose: () => void;
+  onChanged: () => void;
+}) {
+  const [rejectNote, setRejectNote] = useState("");
+  const [tempPassword, setTempPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  // reset transient state whenever a different journalist opens
+  useEffect(() => {
+    setRejectNote("");
+    setTempPassword("");
+  }, [journalist?.id]);
+
+  const p = journalist?.journalistProfile ?? null;
+
+  const act = async (action: string, note?: string) => {
+    if (!p) return;
+    setBusy(true);
+    try {
+      await fetch("/api/journalists", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profileId: p.id, action, note }),
+      });
+      onChanged();
+      onClose();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resetPassword = async () => {
+    if (!p) return;
+    if (!confirm("Reset this reporter's password? Their current password stops working immediately.")) return;
+    setBusy(true);
+    try {
+      const res = await fetch("/api/journalists", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profileId: p.id, action: "reset-password" }),
+      });
+      const data = await res.json();
+      if (data.tempPassword) setTempPassword(data.tempPassword);
+      else alert(data.error || "Reset failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const hasDocs = !!(
+    p &&
+    (p.photoUrl || p.aadhaarFrontUrl || p.aadhaarBackUrl || p.panCardUrl || p.idCardUrl)
+  );
+
+  return (
+    <Dialog open={!!journalist} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-h-[88vh] max-w-2xl overflow-y-auto">
+        {journalist && (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                {journalist.name}
+                <Badge
+                  variant="outline"
+                  className={cn("border", KYC_BADGE[p?.kycStatus || "NO PROFILE"])}
+                >
+                  {p?.kycStatus || "NO PROFILE"}
+                </Badge>
+              </DialogTitle>
+              <DialogDescription>
+                {journalist.email}
+                {journalist.phone ? ` · ${journalist.phone}` : ""}
+              </DialogDescription>
+            </DialogHeader>
+
+            {!p ? (
+              <p className="text-sm text-muted-foreground">
+                This reporter has not submitted a KYC profile yet.
+              </p>
+            ) : (
+              <div className="text-sm">
+                {hasDocs && (
+                  <>
+                    <SectionTitle>Documents</SectionTitle>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      <DocThumb label="Passport Photo" url={p.photoUrl} />
+                      <DocThumb label="Aadhaar Front" url={p.aadhaarFrontUrl} />
+                      <DocThumb label="Aadhaar Back" url={p.aadhaarBackUrl} />
+                      <DocThumb label="PAN Card" url={p.panCardUrl} />
+                      <DocThumb label="Press / ID Card" url={p.idCardUrl} />
+                    </div>
+                  </>
+                )}
+
+                <SectionTitle>Personal</SectionTitle>
+                <Field label="Father's Name" value={p.fatherName} />
+                <Field label="Date of Birth" value={p.dateOfBirth ? fmtDate(p.dateOfBirth) : null} />
+                <Field label="Gender" value={p.gender} />
+                <Field label="Address" value={p.address} />
+                <Field label="City" value={p.city} />
+                <Field label="Pincode" value={p.pincode} />
+                <Field label="Primary District" value={p.primaryDistrict} />
+                <Field label="Other Districts" value={p.secondaryDistricts?.join(", ")} />
+                <Field label="Languages" value={p.languages?.join(", ")} />
+                <Field label="Specialization" value={p.specialization} />
+                <Field label="Experience" value={p.experience} />
+
+                <SectionTitle>KYC Details</SectionTitle>
+                <Field label="Aadhaar No." value={fmtAadhaar(p.aadhaarNumber)} />
+                <Field label="PAN No." value={p.panNumber} />
+
+                <SectionTitle>Bank / Payment</SectionTitle>
+                <Field label="UPI ID" value={p.upiId} />
+                <Field label="Bank Name" value={p.bankName} />
+                <Field label="Account No." value={p.bankAccount} />
+                <Field label="IFSC" value={p.bankIfsc} />
+                <Field label="Branch" value={p.bankBranch} />
+
+                <SectionTitle>Activity</SectionTitle>
+                <Field label="Articles" value={String(journalist._count.articles)} />
+                <Field label="Payments" value={String(journalist._count.payments)} />
+                <Field label="Account" value={journalist.active ? "Active" : "Inactive"} />
+                <Field label="Joined" value={fmtDate(journalist.createdAt)} />
+                <Field label="Verified" value={p.verifiedAt ? fmtDate(p.verifiedAt) : null} />
+
+                {p.kycRejectionNote && (
+                  <div className="mt-3 rounded-md border-l-2 border-red-500 bg-red-50 p-2.5">
+                    <p className="text-[11px] font-bold text-red-600">Rejection Note</p>
+                    <p className="text-xs text-muted-foreground">{p.kycRejectionNote}</p>
+                  </div>
+                )}
+
+                {/* KYC decision — available for any not-yet-final state, so a
+                    PENDING profile (registered without docs) can still be approved. */}
+                <SectionTitle>KYC Decision</SectionTitle>
+                <div className="space-y-2">
+                  {p.kycStatus !== "VERIFIED" && (
+                    <Button
+                      className="w-full bg-green-600 hover:bg-green-700"
+                      disabled={busy}
+                      onClick={() => act("verify")}
+                    >
+                      Verify &amp; Approve KYC ✓
+                    </Button>
+                  )}
+                  {p.kycStatus !== "REJECTED" && (
+                    <>
+                      <Input
+                        onChange={(e) => setRejectNote(e.target.value)}
+                        placeholder="Rejection reason (optional)..."
+                        value={rejectNote}
+                      />
+                      <Button
+                        className="w-full"
+                        disabled={busy}
+                        onClick={() => act("reject", rejectNote)}
+                        variant="destructive"
+                      >
+                        {p.kycStatus === "VERIFIED" ? "Revoke Verification" : "Reject KYC"}
+                      </Button>
+                    </>
+                  )}
+                  {p.kycStatus === "VERIFIED" && (
+                    <p className="text-xs text-muted-foreground">
+                      KYC is verified. Use “Revoke Verification” only if this was a mistake.
+                    </p>
+                  )}
+                </div>
+
+                {/* Password reset */}
+                <SectionTitle>Password</SectionTitle>
+                <Button className="w-full" disabled={busy} onClick={resetPassword} variant="outline">
+                  Reset Password
+                </Button>
+                {tempPassword && (
+                  <div className="mt-2 rounded-md border border-amber-300 bg-amber-50 p-3">
+                    <p className="text-[11px] font-bold text-amber-800">
+                      Temporary password — share it with the reporter:
+                    </p>
+                    <div className="my-1.5 flex items-center gap-2">
+                      <code className="text-lg font-extrabold tracking-wide text-foreground">{tempPassword}</code>
+                      <Button
+                        className="h-7"
+                        onClick={() => navigator.clipboard?.writeText(tempPassword)}
+                        size="sm"
+                        variant="outline"
+                      >
+                        Copy
+                      </Button>
+                    </div>
+                    <p className="text-[11px] text-amber-700">
+                      They log in with this password. It won&apos;t be shown again.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+const DISTRICTS = [
+  { value: "kurnool", label: "Kurnool" },
+  { value: "nandyal", label: "Nandyal" },
+  { value: "ananthapuramu", label: "Anantapur" },
+  { value: "sri-sathya-sai", label: "Sri Sathya Sai" },
+  { value: "ysr-kadapa", label: "YSR Kadapa" },
+  { value: "annamayya", label: "Annamayya" },
+  { value: "tirupati", label: "Tirupati" },
+  { value: "chittoor", label: "Chittoor" },
+];
+
+interface FormState {
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+  active: boolean;
+  fatherName: string;
+  dateOfBirth: string;
+  gender: string;
+  address: string;
+  city: string;
+  pincode: string;
+  primaryDistrict: string;
+  specialization: string;
+  experience: string;
+  languages: string;
+  aadhaarNumber: string;
+  panNumber: string;
+  upiId: string;
+  bankName: string;
+  bankAccount: string;
+  bankIfsc: string;
+  bankBranch: string;
+  kycStatus: string;
+}
+
+const EMPTY_FORM: FormState = {
+  name: "",
+  email: "",
+  phone: "",
+  password: "",
+  active: true,
+  fatherName: "",
+  dateOfBirth: "",
+  gender: "",
+  address: "",
+  city: "",
+  pincode: "",
+  primaryDistrict: "",
+  specialization: "",
+  experience: "",
+  languages: "Telugu",
+  aadhaarNumber: "",
+  panNumber: "",
+  upiId: "",
+  bankName: "",
+  bankAccount: "",
+  bankIfsc: "",
+  bankBranch: "",
+  kycStatus: "PENDING",
+};
+
+function formFromJournalist(j: Journalist): FormState {
+  const p = j.journalistProfile;
+  return {
+    name: j.name,
+    email: j.email,
+    phone: j.phone || "",
+    password: "",
+    active: j.active,
+    fatherName: p?.fatherName || "",
+    dateOfBirth: p?.dateOfBirth ? p.dateOfBirth.slice(0, 10) : "",
+    gender: p?.gender || "",
+    address: p?.address || "",
+    city: p?.city || "",
+    pincode: p?.pincode || "",
+    primaryDistrict: p?.primaryDistrict || "",
+    specialization: p?.specialization || "",
+    experience: p?.experience || "",
+    languages: (p?.languages || []).join(", "),
+    aadhaarNumber: p?.aadhaarNumber || "",
+    panNumber: p?.panNumber || "",
+    upiId: p?.upiId || "",
+    bankName: p?.bankName || "",
+    bankAccount: p?.bankAccount || "",
+    bankIfsc: p?.bankIfsc || "",
+    bankBranch: p?.bankBranch || "",
+    kycStatus: p?.kycStatus || "PENDING",
+  };
+}
+
+function FormField({
+  label,
+  full,
+  children,
+}: {
+  label: string;
+  full?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={cn("space-y-1", full && "col-span-2")}>
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      {children}
+    </div>
+  );
+}
+
+function JournalistFormDialog({
+  target,
+  onClose,
+  onSaved,
+}: {
+  target: { mode: "create" } | { mode: "edit"; journalist: Journalist } | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const isEdit = target?.mode === "edit";
+  const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!target) return;
+    setError("");
+    setForm(target.mode === "edit" ? formFromJournalist(target.journalist) : EMPTY_FORM);
+  }, [target]);
+
+  const set = (key: keyof FormState, value: string | boolean) =>
+    setForm((f) => ({ ...f, [key]: value }));
+
+  const save = async () => {
+    if (!form.name.trim() || !form.email.trim()) {
+      setError("Name and email are required.");
+      return;
+    }
+    if (!isEdit && !form.password.trim()) {
+      setError("A password is required for a new journalist.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const payload =
+        target && target.mode === "edit"
+          ? {
+              action: "update",
+              userId: target.journalist.id,
+              // KYC status is omitted on edit — it moves only via verify/reject.
+              data: { ...form, kycStatus: undefined },
+            }
+          : { action: "create", data: form };
+      const res = await fetch("/api/journalists", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json.error) {
+        setError(json.error || "Could not save. Please try again.");
+        setBusy(false);
+        return;
+      }
+      setBusy(false);
+      onSaved();
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not save.");
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open={!!target} onOpenChange={(open) => !open && !busy && onClose()}>
+      <DialogContent className="max-h-[88vh] max-w-2xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{isEdit ? "Edit journalist" : "Add journalist"}</DialogTitle>
+          <DialogDescription>
+            {isEdit
+              ? "Update this reporter's account and profile."
+              : "Create a reporter account and profile — they can log in immediately."}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-1 text-sm">
+          <SectionTitle>Account</SectionTitle>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Name *">
+              <Input value={form.name} onChange={(e) => set("name", e.target.value)} />
+            </FormField>
+            <FormField label="Email *">
+              <Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} />
+            </FormField>
+            <FormField label="Phone">
+              <Input value={form.phone} onChange={(e) => set("phone", e.target.value)} />
+            </FormField>
+            {isEdit ? (
+              <FormField label="Account status">
+                <label className="flex h-9 items-center gap-2">
+                  <Checkbox checked={form.active} onCheckedChange={(v) => set("active", !!v)} />
+                  <span className="text-sm">{form.active ? "Active" : "Inactive"}</span>
+                </label>
+              </FormField>
+            ) : (
+              <FormField label="Password *">
+                <Input value={form.password} onChange={(e) => set("password", e.target.value)} />
+              </FormField>
+            )}
+          </div>
+
+          <SectionTitle>Personal</SectionTitle>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Father's Name">
+              <Input value={form.fatherName} onChange={(e) => set("fatherName", e.target.value)} />
+            </FormField>
+            <FormField label="Date of Birth">
+              <DatePicker
+                value={form.dateOfBirth}
+                onChange={(v) => set("dateOfBirth", v)}
+                placeholder="Select date of birth"
+                toYear={new Date().getFullYear()}
+              />
+            </FormField>
+            <FormField label="Gender">
+              <Select value={form.gender} onValueChange={(v) => set("gender", v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Male">Male</SelectItem>
+                  <SelectItem value="Female">Female</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormField>
+            <FormField label="Primary District">
+              <Select value={form.primaryDistrict} onValueChange={(v) => set("primaryDistrict", v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select district" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DISTRICTS.map((d) => (
+                    <SelectItem key={d.value} value={d.value}>
+                      {d.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+            <FormField label="City">
+              <Input value={form.city} onChange={(e) => set("city", e.target.value)} />
+            </FormField>
+            <FormField label="Pincode">
+              <Input value={form.pincode} onChange={(e) => set("pincode", e.target.value)} />
+            </FormField>
+            <FormField label="Specialization">
+              <Input value={form.specialization} onChange={(e) => set("specialization", e.target.value)} />
+            </FormField>
+            <FormField label="Languages (comma-separated)">
+              <Input value={form.languages} onChange={(e) => set("languages", e.target.value)} />
+            </FormField>
+            <FormField full label="Address">
+              <Input value={form.address} onChange={(e) => set("address", e.target.value)} />
+            </FormField>
+            <FormField full label="Experience">
+              <Input value={form.experience} onChange={(e) => set("experience", e.target.value)} />
+            </FormField>
+          </div>
+
+          <SectionTitle>KYC</SectionTitle>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Aadhaar Number">
+              <Input value={form.aadhaarNumber} onChange={(e) => set("aadhaarNumber", e.target.value)} />
+            </FormField>
+            <FormField label="PAN Number">
+              <Input value={form.panNumber} onChange={(e) => set("panNumber", e.target.value)} />
+            </FormField>
+            {!isEdit && (
+              <FormField label="KYC Status">
+                <Select value={form.kycStatus} onValueChange={(v) => set("kycStatus", v)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PENDING">Pending</SelectItem>
+                    <SelectItem value="SUBMITTED">Submitted</SelectItem>
+                    <SelectItem value="VERIFIED">Verified</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormField>
+            )}
+          </div>
+          {isEdit && (
+            <p className="pt-1 text-xs text-muted-foreground">
+              Documents and KYC status are managed from “Review &amp; documents”.
+            </p>
+          )}
+
+          <SectionTitle>Bank / Payment</SectionTitle>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="UPI ID">
+              <Input value={form.upiId} onChange={(e) => set("upiId", e.target.value)} />
+            </FormField>
+            <FormField label="Bank Name">
+              <Input value={form.bankName} onChange={(e) => set("bankName", e.target.value)} />
+            </FormField>
+            <FormField label="Account Number">
+              <Input value={form.bankAccount} onChange={(e) => set("bankAccount", e.target.value)} />
+            </FormField>
+            <FormField label="IFSC">
+              <Input value={form.bankIfsc} onChange={(e) => set("bankIfsc", e.target.value)} />
+            </FormField>
+            <FormField label="Branch">
+              <Input value={form.bankBranch} onChange={(e) => set("bankBranch", e.target.value)} />
+            </FormField>
+          </div>
+        </div>
+
+        {error && <p className="text-sm font-medium text-destructive">{error}</p>}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
+          <Button onClick={save} disabled={busy}>
+            {busy ? "Saving..." : isEdit ? "Save changes" : "Create journalist"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

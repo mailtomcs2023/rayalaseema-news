@@ -33,12 +33,13 @@ export async function uploadImage(uri: string): Promise<string> {
   const token = await AsyncStorage.getItem("auth-token");
   const formData = new FormData();
   const filename = uri.split("/").pop() || "photo.jpg";
-  const match = /\.(\w+)$/.exec(filename);
-  const type = match ? `image/${match[1]}` : "image/jpeg";
+  // Normalise the extension — "jpg" must map to the "image/jpeg" MIME type.
+  const ext = (/\.(\w+)$/.exec(filename)?.[1] || "jpg").toLowerCase();
+  const type = ext === "jpg" ? "image/jpeg" : `image/${ext}`;
 
   formData.append("file", { uri, name: filename, type } as any);
 
-  const res = await fetch(`${API_URL}/api/upload`, {
+  const res = await fetch(`${API_URL}/api/reporter/upload`, {
     method: "POST",
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: formData,

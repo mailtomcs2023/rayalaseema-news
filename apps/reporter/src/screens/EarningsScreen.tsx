@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, FlatList, StyleSheet } from "react-native";
 import { api } from "../api/client";
+import { useT } from "../i18n";
+import { ScreenHeader } from "../components/ScreenHeader";
 
 export function EarningsScreen() {
+  const { t } = useT();
   const [payments, setPayments] = useState<any[]>([]);
   const [summary, setSummary] = useState({ total: 0, paid: 0, pending: 0, thisMonth: 0 });
 
   useEffect(() => {
-    api("/api/my-earnings").then((data) => {
+    api("/api/reporter/earnings").then((data) => {
       setPayments(data.payments || []);
       setSummary(data.summary || { total: 0, paid: 0, pending: 0, thisMonth: 0 });
     }).catch(() => {});
@@ -18,31 +21,33 @@ export function EarningsScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={styles.screen}>
+      <ScreenHeader />
+      <View style={styles.container}>
       {/* Summary Cards */}
       <View style={styles.summaryRow}>
         <View style={[styles.summaryCard, { backgroundColor: "#dcfce7" }]}>
           <Text style={[styles.summaryAmount, { color: "#166534" }]}>₹{summary.total}</Text>
-          <Text style={styles.summaryLabel}>Total Earnings</Text>
+          <Text style={styles.summaryLabel}>{t("earnings.totalEarnings")}</Text>
         </View>
         <View style={[styles.summaryCard, { backgroundColor: "#dbeafe" }]}>
           <Text style={[styles.summaryAmount, { color: "#1d4ed8" }]}>₹{summary.thisMonth}</Text>
-          <Text style={styles.summaryLabel}>This Month</Text>
+          <Text style={styles.summaryLabel}>{t("earnings.thisMonth")}</Text>
         </View>
       </View>
       <View style={styles.summaryRow}>
         <View style={[styles.summaryCard, { backgroundColor: "#fef3c7" }]}>
           <Text style={[styles.summaryAmount, { color: "#92400e" }]}>₹{summary.pending}</Text>
-          <Text style={styles.summaryLabel}>Pending</Text>
+          <Text style={styles.summaryLabel}>{t("earnings.pending")}</Text>
         </View>
         <View style={[styles.summaryCard, { backgroundColor: "#f0fdf4" }]}>
           <Text style={[styles.summaryAmount, { color: "#166534" }]}>₹{summary.paid}</Text>
-          <Text style={styles.summaryLabel}>Paid</Text>
+          <Text style={styles.summaryLabel}>{t("earnings.paid")}</Text>
         </View>
       </View>
 
       {/* Payment History */}
-      <Text style={styles.sectionTitle}>Payment History</Text>
+      <Text style={styles.sectionTitle}>{t("earnings.paymentHistory")}</Text>
       <FlatList
         data={payments}
         keyExtractor={(item) => item.id}
@@ -50,7 +55,7 @@ export function EarningsScreen() {
           <View style={styles.paymentCard}>
             <View style={styles.paymentRow}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.paymentTitle} numberOfLines={1}>{item.article?.title || "Article"}</Text>
+                <Text style={styles.paymentTitle} numberOfLines={1}>{item.article?.title || t("earnings.articleFallback")}</Text>
                 <Text style={styles.paymentMeta}>{item.config?.name || item.articleType} • {new Date(item.createdAt).toLocaleDateString()}</Text>
               </View>
               <View style={{ alignItems: "flex-end" }}>
@@ -61,22 +66,24 @@ export function EarningsScreen() {
               </View>
             </View>
             {item.transactionId && (
-              <Text style={styles.txId}>Ref: {item.transactionId}</Text>
+              <Text style={styles.txId}>{t("earnings.ref")}{item.transactionId}</Text>
             )}
           </View>
         )}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={{ fontSize: 32, marginBottom: 8 }}>💰</Text>
-            <Text style={styles.emptyText}>No earnings yet. Publish articles to start earning!</Text>
+            <Text style={styles.emptyText}>{t("earnings.empty")}</Text>
           </View>
         }
       />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: "#f3f4f6" },
   container: { flex: 1, backgroundColor: "#f3f4f6", padding: 16 },
   summaryRow: { flexDirection: "row", gap: 8, marginBottom: 8 },
   summaryCard: { flex: 1, borderRadius: 12, padding: 16, alignItems: "center" },

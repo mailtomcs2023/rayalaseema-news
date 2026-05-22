@@ -1,7 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useLayoutEffect } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Image } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import { Ionicons } from "@expo/vector-icons";
 import { api, uploadImage } from "../api/client";
+import { useT } from "../i18n";
+import { FieldError } from "../components/FieldError";
+import { articleSchema, fieldErrors } from "../lib/validation";
+import { useRouter, useNavigation } from "expo-router";
 
 const districts = [
   { label: "కర్నూలు", value: "kurnool" },
@@ -14,7 +19,10 @@ const districts = [
   { label: "చిత్తూరు", value: "chittoor" },
 ];
 
-export function NewArticleScreen({ navigation }: any) {
+export function NewArticleScreen() {
+  const { t } = useT();
+  const router = useRouter();
+  const navigation = useNavigation();
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [body, setBody] = useState("");
@@ -23,10 +31,16 @@ export function NewArticleScreen({ navigation }: any) {
   const [imageUri, setImageUri] = useState("");
   const [saving, setSaving] = useState(false);
   const [translating, setTranslating] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const clearErr = (k: string) => setErrors((e) => (e[k] ? { ...e, [k]: "" } : e));
 
   useEffect(() => {
-    api("/api/categories").then(setCategories).catch(() => {});
+    api("/api/reporter/categories").then(setCategories).catch(() => {});
   }, []);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({ title: t("nav.newArticle") });
+  }, [navigation, t]);
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: "images", quality: 0.8 });
@@ -41,7 +55,7 @@ export function NewArticleScreen({ navigation }: any) {
   };
 
   const translateToTelugu = async () => {
-    if (!body && !title) return Alert.alert("Write something first");
+    if (!body && !title) return Alert.alert(t("newArticle.writeFirst"));
     setTranslating(true);
     try {
       const data = await api("/api/ai/rewrite", {
@@ -57,10 +71,10 @@ export function NewArticleScreen({ navigation }: any) {
         if (pMatch) setSummary(pMatch[1].replace(/<[^>]+>/g, "").trim().substring(0, 200));
         // Set body
         setBody(data.result.replace(/<[^>]+>/g, " ").trim());
-        Alert.alert("Translated!", "Content translated to Telugu");
+        Alert.alert(t("newArticle.translatedTitle"), t("newArticle.translatedMsg"));
       }
     } catch (e: any) {
-      Alert.alert("Error", e.message);
+      Alert.alert(t("common.error"), e.message);
     }
     setTranslating(false);
   };
@@ -72,8 +86,9 @@ export function NewArticleScreen({ navigation }: any) {
   };
 
   const handleSubmit = async (status: string) => {
-    if (!title.trim()) return Alert.alert("Error", "Title required");
-    if (!categoryId) return Alert.alert("Error", "Select a category");
+    const parsed = articleSchema(t).safeParse({ title, body, categoryId });
+    if (!parsed.success) return setErrors(fieldErrors(parsed.error));
+    setErrors({});
     setSaving(true);
 
     try {
@@ -83,7 +98,7 @@ export function NewArticleScreen({ navigation }: any) {
         featuredImage = await uploadImage(imageUri);
       }
 
-      await api("/api/articles", {
+      await api("/api/reporter/articles", {
         method: "POST",
         body: {
           title: title.trim(),
@@ -97,61 +112,68 @@ export function NewArticleScreen({ navigation }: any) {
       });
 
       Alert.alert(
-        status === "SUBMITTED" ? "Submitted!" : "Saved!",
-        status === "SUBMITTED" ? "Article submitted for review." : "Draft saved.",
-        [{ text: "OK", onPress: () => navigation.goBack() }]
+        status === "SUBMITTED" ? t("newArticle.submittedTitle") : t("newArticle.savedTitle"),
+        status === "SUBMITTED" ? t("newArticle.submittedMsg") : t("newArticle.draftSavedMsg"),
+        [{ text: t("common.ok"), onPress: () => router.back() }]
       );
     } catch (e: any) {
-      Alert.alert("Error", e.message);
+      Alert.alert(t("common.error"), e.message);
     }
     setSaving(false);
   };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
-      <Text style={styles.header}>New Article</Text>
+      <Text style={styles.header}>{t("newArticle.header")}</Text>
 
       {/* Title */}
-      <Text style={styles.label}>Headline *</Text>
-      <TextInput style={styles.input} value={title} onChangeText={setTitle}
-        placeholder="Article headline..." multiline numberOfLines={2} />
+      <Text style={styles.label}>{t("newArticle.headline")}</Text>
+      <TextInput style={[styles.input, errors.title ? styles.inputError : null]} value={title}
+        onChangeText={(v) => { setTitle(v); clearErr("title"); }}
+        placeholder={t("newArticle.headlinePlaceholder")} multiline numberOfLines={2} />
+      <FieldError message={errors.title} />
 
       {/* Summary */}
-      <Text style={styles.label}>Summary</Text>
+      <Text style={styles.label}>{t("newArticle.summary")}</Text>
       <TextInput style={[styles.input, { height: 60 }]} value={summary} onChangeText={setSummary}
-        placeholder="Brief summary (2-3 lines)..." multiline />
+        placeholder={t("newArticle.summaryPlaceholder")} multiline />
 
       {/* Body */}
-      <Text style={styles.label}>Article Body *</Text>
-      <TextInput style={[styles.input, { height: 200, textAlignVertical: "top" }]} value={body} onChangeText={setBody}
-        placeholder="Write your article here... Type in English and use Translate button for Telugu." multiline />
+      <Text style={styles.label}>{t("newArticle.body")}</Text>
+      <TextInput style={[styles.input, { height: 200, textAlignVertical: "top" }, errors.body ? styles.inputError : null]} value={body}
+        onChangeText={(v) => { setBody(v); clearErr("body"); }}
+        placeholder={t("newArticle.bodyPlaceholder")} multiline />
+      <FieldError message={errors.body} />
 
       {/* AI Translate */}
       <TouchableOpacity style={styles.translateBtn} onPress={translateToTelugu} disabled={translating}>
-        <Text style={styles.translateText}>{translating ? "Translating..." : "🤖 తెలుగులో రాయండి (Translate to Telugu)"}</Text>
+        <Text style={styles.translateText}>{translating ? t("newArticle.translating") : t("newArticle.translateBtn")}</Text>
       </TouchableOpacity>
 
       {/* Category */}
-      <Text style={styles.label}>Category *</Text>
+      <Text style={styles.label}>{t("newArticle.category")}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
         <View style={styles.chipRow}>
           {categories.map((c) => (
-            <TouchableOpacity key={c.id} onPress={() => setCategoryId(c.id)}
+            <TouchableOpacity key={c.id} onPress={() => { setCategoryId(c.id); clearErr("categoryId"); }}
               style={[styles.chip, categoryId === c.id && { backgroundColor: c.color || "#FF2C2C", borderColor: c.color || "#FF2C2C" }]}>
               <Text style={[styles.chipText, categoryId === c.id && { color: "#fff" }]}>{c.name}</Text>
             </TouchableOpacity>
           ))}
         </View>
       </ScrollView>
+      <FieldError message={errors.categoryId} />
 
       {/* Photo */}
-      <Text style={styles.label}>Featured Image</Text>
+      <Text style={styles.label}>{t("newArticle.featuredImage")}</Text>
       <View style={styles.photoRow}>
         <TouchableOpacity style={styles.photoBtn} onPress={takePhoto}>
-          <Text style={styles.photoBtnText}>📷 Camera</Text>
+          <Ionicons name="camera-outline" size={16} color="#555" />
+          <Text style={styles.photoBtnText}>{t("common.camera")}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.photoBtn} onPress={pickImage}>
-          <Text style={styles.photoBtnText}>📁 Gallery</Text>
+          <Ionicons name="images-outline" size={16} color="#555" />
+          <Text style={styles.photoBtnText}>{t("newArticle.gallery")}</Text>
         </TouchableOpacity>
       </View>
       {imageUri ? <Image source={{ uri: imageUri }} style={styles.preview} /> : null}
@@ -159,10 +181,10 @@ export function NewArticleScreen({ navigation }: any) {
       {/* Submit */}
       <View style={styles.submitRow}>
         <TouchableOpacity style={styles.draftBtn} onPress={() => handleSubmit("DRAFT")} disabled={saving}>
-          <Text style={styles.draftText}>{saving ? "..." : "Save Draft"}</Text>
+          <Text style={styles.draftText}>{saving ? "..." : t("newArticle.saveDraft")}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.submitBtn} onPress={() => handleSubmit("SUBMITTED")} disabled={saving}>
-          <Text style={styles.submitText}>{saving ? "Submitting..." : "Submit for Review"}</Text>
+          <Text style={styles.submitText}>{saving ? t("newArticle.submitting") : t("newArticle.submitReview")}</Text>
         </TouchableOpacity>
       </View>
 
@@ -176,13 +198,14 @@ const styles = StyleSheet.create({
   header: { fontSize: 22, fontWeight: "800", color: "#111", marginBottom: 16 },
   label: { fontSize: 12, fontWeight: "700", color: "#555", marginBottom: 4, marginTop: 8 },
   input: { backgroundColor: "#fff", borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 10, padding: 14, fontSize: 15, marginBottom: 8 },
+  inputError: { borderColor: "#dc2626" },
   translateBtn: { backgroundColor: "#111827", borderRadius: 10, padding: 14, alignItems: "center", marginBottom: 12 },
   translateText: { color: "#fff", fontSize: 14, fontWeight: "700" },
   chipRow: { flexDirection: "row", gap: 6, paddingVertical: 4 },
   chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: "#fff", borderWidth: 1, borderColor: "#e5e7eb" },
   chipText: { fontSize: 13, fontWeight: "700", color: "#555" },
   photoRow: { flexDirection: "row", gap: 8, marginBottom: 8 },
-  photoBtn: { flex: 1, padding: 14, backgroundColor: "#fff", borderRadius: 10, borderWidth: 1, borderColor: "#e5e7eb", alignItems: "center" },
+  photoBtn: { flex: 1, flexDirection: "row", gap: 6, padding: 14, backgroundColor: "#fff", borderRadius: 10, borderWidth: 1, borderColor: "#e5e7eb", alignItems: "center", justifyContent: "center" },
   photoBtnText: { fontSize: 14, fontWeight: "700", color: "#555" },
   preview: { width: "100%", height: 200, borderRadius: 10, marginBottom: 12 },
   submitRow: { flexDirection: "row", gap: 8, marginTop: 16 },

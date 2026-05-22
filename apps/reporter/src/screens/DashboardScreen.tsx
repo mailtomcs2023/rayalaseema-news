@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { api } from "../api/client";
+import { useT } from "../i18n";
+import { useRouter } from "expo-router";
+import { ScreenHeader } from "../components/ScreenHeader";
 
 const statusColors: Record<string, { bg: string; text: string }> = {
   DRAFT: { bg: "#f3f4f6", text: "#555" },
@@ -12,7 +16,9 @@ const statusColors: Record<string, { bg: string; text: string }> = {
   REJECTED: { bg: "#fef2f2", text: "#dc2626" },
 };
 
-export function DashboardScreen({ navigation }: any) {
+export function DashboardScreen() {
+  const { t } = useT();
+  const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [articles, setArticles] = useState<any[]>([]);
   const [stats, setStats] = useState({ total: 0, published: 0, pending: 0, earnings: 0 });
@@ -23,12 +29,14 @@ export function DashboardScreen({ navigation }: any) {
     if (userData) setUser(JSON.parse(userData));
 
     try {
-      const data = await api("/api/articles?limit=20&authorId=me");
-      setArticles(data.articles || []);
+      // The endpoint derives the reporter from the bearer token api() sends.
+      const data = await api("/api/reporter/articles?limit=20");
+      const list = data.articles || [];
+      setArticles(list);
       setStats({
         total: data.total || 0,
-        published: (data.articles || []).filter((a: any) => a.status === "PUBLISHED").length,
-        pending: (data.articles || []).filter((a: any) => ["SUBMITTED", "IN_REVIEW"].includes(a.status)).length,
+        published: list.filter((a: any) => a.status === "PUBLISHED").length,
+        pending: list.filter((a: any) => ["SUBMITTED", "IN_REVIEW"].includes(a.status)).length,
         earnings: 0,
       });
     } catch {}
@@ -38,70 +46,42 @@ export function DashboardScreen({ navigation }: any) {
 
   const onRefresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
 
-  const handleLogout = async () => {
-    await AsyncStorage.multiRemove(["user", "auth-token"]);
-    navigation.reset({ index: 0, routes: [{ name: "Login" }] });
-  };
+  const name = user?.name || t("dashboard.reporterFallback");
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>నమస్కారం, {user?.name || "Reporter"}</Text>
-          <Text style={styles.role}>{user?.role || "REPORTER"}</Text>
-        </View>
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Stats */}
-      <View style={styles.statsRow}>
-        <View style={[styles.statCard, { borderTopColor: "#3b82f6" }]}>
-          <Text style={styles.statNumber}>{stats.total}</Text>
-          <Text style={styles.statLabel}>Total</Text>
-        </View>
-        <View style={[styles.statCard, { borderTopColor: "#16a34a" }]}>
-          <Text style={styles.statNumber}>{stats.published}</Text>
-          <Text style={styles.statLabel}>Published</Text>
-        </View>
-        <View style={[styles.statCard, { borderTopColor: "#f59e0b" }]}>
-          <Text style={styles.statNumber}>{stats.pending}</Text>
-          <Text style={styles.statLabel}>Pending</Text>
-        </View>
-        <View style={[styles.statCard, { borderTopColor: "#16a34a" }]}>
-          <Text style={styles.statNumber}>₹{stats.earnings}</Text>
-          <Text style={styles.statLabel}>Earnings</Text>
-        </View>
-      </View>
-
-      {/* Quick Actions */}
-      <View style={styles.actionsRow}>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate("NewArticle")}>
-          <Text style={styles.actionIcon}>✏️</Text>
-          <Text style={styles.actionText}>New Article</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate("Earnings")}>
-          <Text style={styles.actionIcon}>💰</Text>
-          <Text style={styles.actionText}>Earnings</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate("Profile")}>
-          <Text style={styles.actionIcon}>👤</Text>
-          <Text style={styles.actionText}>Profile</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Articles List */}
-      <Text style={styles.sectionTitle}>My Articles</Text>
+      <ScreenHeader />
       <FlatList
+        style={styles.list}
         data={articles}
         keyExtractor={(item) => item.id}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#FF2C2C"]} />}
+        contentContainerStyle={{ paddingBottom: 28 }}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#FF2C2C"]} tintColor="#FF2C2C" />
+        }
+        ListHeaderComponent={
+          <View>
+            <Text style={styles.welcome}>{t("dashboard.greeting", { name })}</Text>
+            {/* KPI grid */}
+            <View style={styles.kpiGrid}>
+              <KpiCard icon="document-text-outline" tint="#3b82f6" value={stats.total} label={t("dashboard.total")} />
+              <KpiCard icon="checkmark-done-outline" tint="#16a34a" value={stats.published} label={t("dashboard.published")} />
+              <KpiCard icon="time-outline" tint="#f59e0b" value={stats.pending} label={t("dashboard.pending")} />
+              <KpiCard icon="wallet-outline" tint="#FF2C2C" value={`₹${stats.earnings}`} label={t("dashboard.earnings")} />
+            </View>
+
+            <Text style={styles.sectionTitle}>{t("dashboard.myArticles")}</Text>
+          </View>
+        }
         renderItem={({ item }) => {
           const sc = statusColors[item.status] || statusColors.DRAFT;
           return (
-            <TouchableOpacity style={styles.articleCard} onPress={() => navigation.navigate("EditArticle", { id: item.id })}>
+            <TouchableOpacity
+              style={styles.articleCard}
+              activeOpacity={0.8}
+              onPress={() => router.push(`/edit-article?id=${item.id}`)}
+            >
               <View style={styles.articleRow}>
                 <Text style={styles.articleTitle} numberOfLines={2}>{item.title}</Text>
                 <View style={[styles.statusBadge, { backgroundColor: sc.bg }]}>
@@ -109,11 +89,11 @@ export function DashboardScreen({ navigation }: any) {
                 </View>
               </View>
               <Text style={styles.articleMeta}>
-                {item.category?.nameEn || ""} • {item.viewCount || 0} views • {new Date(item.createdAt).toLocaleDateString()}
+                {item.category?.nameEn || ""} • {item.viewCount || 0} {t("dashboard.views")} • {new Date(item.createdAt).toLocaleDateString()}
               </Text>
               {item.rejectionNote && item.status === "REJECTED" && (
                 <View style={styles.rejectionBox}>
-                  <Text style={styles.rejectionLabel}>Feedback:</Text>
+                  <Text style={styles.rejectionLabel}>{t("dashboard.feedback")}</Text>
                   <Text style={styles.rejectionText}>{item.rejectionNote}</Text>
                 </View>
               )}
@@ -122,39 +102,91 @@ export function DashboardScreen({ navigation }: any) {
         }}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>No articles yet. Tap "New Article" to start writing!</Text>
+            <Ionicons name="document-text-outline" size={48} color="#d1d5db" />
+            <Text style={styles.emptyText}>{t("dashboard.empty")}</Text>
           </View>
         }
       />
+
+      {/* New-article action — floating button */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => router.push("/new-article")}
+        accessibilityLabel={t("dashboard.newArticle")}
+      >
+        <Ionicons name="add" size={28} color="#fff" />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+// A single KPI tile — tinted icon chip, big number, label.
+function KpiCard({ icon, tint, value, label }: {
+  icon: keyof typeof Ionicons.glyphMap;
+  tint: string;
+  value: number | string;
+  label: string;
+}) {
+  return (
+    <View style={styles.kpiCard}>
+      <View style={[styles.kpiIcon, { backgroundColor: tint + "1A" }]}>
+        <Ionicons name={icon} size={18} color={tint} />
+      </View>
+      <Text style={styles.kpiValue}>{value}</Text>
+      <Text style={styles.kpiLabel}>{label}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f3f4f6" },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16, paddingTop: 50, backgroundColor: "#FF2C2C" },
-  greeting: { fontSize: 18, fontWeight: "800", color: "#fff" },
-  role: { fontSize: 11, color: "rgba(255,255,255,0.7)", fontWeight: "600" },
-  logoutBtn: { padding: 8, backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 8 },
-  logoutText: { color: "#fff", fontSize: 12, fontWeight: "600" },
-  statsRow: { flexDirection: "row", padding: 12, gap: 8 },
-  statCard: { flex: 1, backgroundColor: "#fff", borderRadius: 10, padding: 12, alignItems: "center", borderTopWidth: 3, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 4, elevation: 2 },
-  statNumber: { fontSize: 20, fontWeight: "900", color: "#111" },
-  statLabel: { fontSize: 10, color: "#888", marginTop: 2 },
-  actionsRow: { flexDirection: "row", paddingHorizontal: 12, gap: 8, marginBottom: 12 },
-  actionBtn: { flex: 1, backgroundColor: "#fff", borderRadius: 10, padding: 14, alignItems: "center", shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 4, elevation: 2 },
-  actionIcon: { fontSize: 22 },
-  actionText: { fontSize: 11, fontWeight: "700", color: "#555", marginTop: 4 },
-  sectionTitle: { fontSize: 16, fontWeight: "800", color: "#111", paddingHorizontal: 16, marginBottom: 8 },
-  articleCard: { backgroundColor: "#fff", marginHorizontal: 12, marginBottom: 8, borderRadius: 10, padding: 14, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 4, elevation: 2 },
+  list: { flex: 1 },
+
+  welcome: { fontSize: 17, lineHeight: 24, fontWeight: "800", color: "#111", paddingHorizontal: 16, paddingTop: 16 },
+
+  // KPI grid (2x2)
+  kpiGrid: {
+    flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between",
+    paddingHorizontal: 14, paddingTop: 10,
+  },
+  kpiCard: {
+    width: "48.5%", marginBottom: 10,
+    backgroundColor: "#fff", borderRadius: 16, padding: 14,
+    shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2,
+  },
+  kpiIcon: {
+    width: 34, height: 34, borderRadius: 10,
+    alignItems: "center", justifyContent: "center", marginBottom: 8,
+  },
+  kpiValue: { fontSize: 22, fontWeight: "900", color: "#111" },
+  kpiLabel: { fontSize: 12, color: "#888", fontWeight: "600", marginTop: 1 },
+
+  sectionTitle: { fontSize: 16, fontWeight: "800", color: "#111", paddingHorizontal: 16, marginTop: 6, marginBottom: 10 },
+
+  // Floating "new article" button
+  fab: {
+    position: "absolute", right: 16, bottom: 96,
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: "#FF2C2C",
+    alignItems: "center", justifyContent: "center",
+    shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 8, shadowOffset: { width: 0, height: 3 },
+    elevation: 6,
+  },
+
+  // Article cards
+  articleCard: {
+    backgroundColor: "#fff", marginHorizontal: 14, marginBottom: 10, borderRadius: 14, padding: 14,
+    shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2,
+  },
   articleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
-  articleTitle: { flex: 1, fontSize: 14, fontWeight: "700", color: "#111", marginRight: 8 },
-  statusBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 },
-  statusText: { fontSize: 10, fontWeight: "700" },
-  articleMeta: { fontSize: 11, color: "#888", marginTop: 6 },
-  rejectionBox: { marginTop: 8, padding: 8, backgroundColor: "#fef2f2", borderRadius: 6, borderLeftWidth: 3, borderLeftColor: "#dc2626" },
-  rejectionLabel: { fontSize: 10, fontWeight: "700", color: "#dc2626" },
-  rejectionText: { fontSize: 12, color: "#666" },
-  empty: { padding: 40, alignItems: "center" },
+  articleTitle: { flex: 1, fontSize: 14, fontWeight: "700", color: "#111", marginRight: 8, lineHeight: 20 },
+  statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  statusText: { fontSize: 9, fontWeight: "800", letterSpacing: 0.4 },
+  articleMeta: { fontSize: 11, color: "#999", marginTop: 6 },
+  rejectionBox: { marginTop: 10, padding: 9, backgroundColor: "#fef2f2", borderRadius: 8, borderLeftWidth: 3, borderLeftColor: "#dc2626" },
+  rejectionLabel: { fontSize: 10, fontWeight: "800", color: "#dc2626" },
+  rejectionText: { fontSize: 12, color: "#666", marginTop: 1 },
+
+  empty: { padding: 48, alignItems: "center", gap: 10 },
   emptyText: { fontSize: 14, color: "#aaa", textAlign: "center" },
 });
