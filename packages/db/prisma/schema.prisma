@@ -305,18 +305,52 @@ model Media {
 
 model EpaperEdition {
   id          String   @id @default(cuid())
-  date        DateTime @unique @db.Date
+  date        DateTime @db.Date
+  edition     String   @default("main") // "main" or a district slug — one paper per district
   title       String?
-  section     String   @default("main") // main, supplement, district
-  pdfUrl      String
+  pdfUrl      String?  // combined PDF — set once generation finishes
   thumbnailUrl String?
   pageCount   Int      @default(0)
+  layout      Json?    // editable plan — [{label,isFront,slots:{lead,majors[],secondary[],briefs[]}}]
+  status      String   @default("pending") // pending | draft | generating | ready | failed
   active      Boolean  @default(true)
+  pages       EpaperPage[]
+  ads         EpaperAd[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  @@unique([date, edition])
   @@index([date])
   @@map("epaper_editions")
+}
+
+model EpaperAd {
+  id          String         @id @default(cuid())
+  editionId   String
+  edition     EpaperEdition  @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  pageNumber  Int            // which page this ad sits on
+  slot        String         // "top" | "bottom"
+  imageUrl    String         // ad creative on Azure Blob
+  linkUrl     String?
+  createdAt   DateTime       @default(now())
+
+  @@index([editionId])
+  @@map("epaper_ads")
+}
+
+model EpaperPage {
+  id          String         @id @default(cuid())
+  editionId   String
+  edition     EpaperEdition  @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  pageNumber  Int
+  label       String         // "ముఖ్యాంశాలు", "రాజకీయం", ...
+  imageUrl    String         // rendered broadsheet page PNG on Azure Blob
+  hotspots    Json?          // [{slug,x,y,w,h}] — percentage boxes, clickable story regions
+  createdAt   DateTime       @default(now())
+
+  @@unique([editionId, pageNumber])
+  @@index([editionId])
+  @@map("epaper_pages")
 }
 
 // ============ BREAKING NEWS ============

@@ -49,7 +49,7 @@ export function ReturnVisitBanner() {
       padding: "8px 16px",
       display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
     }}>
-      <span style={{ fontSize: 16 }}>{"\\uD83D\\uDC4B"}</span>
+      <span style={{ fontSize: 16 }}>👋</span>
       <span style={{ fontSize: 13, fontWeight: 600, color: "#92400e" }}>{message}</span>
       <Link href="/" style={{
         fontSize: 11, fontWeight: 700, color: "#fff", background: "var(--color-brand)",

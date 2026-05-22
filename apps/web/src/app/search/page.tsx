@@ -204,7 +204,7 @@ export default function SearchPage() {
 
             {articles.length === 0 && !loading && (
               <div style={{ textAlign: "center", padding: 60, color: "#aaa" }}>
-                <p style={{ fontSize: 40, marginBottom: 12 }}>{"\\uD83D\\uDD0D"}</p>
+                <p style={{ fontSize: 40, marginBottom: 12 }}>🔍</p>
                 <p style={{ fontSize: 16, fontWeight: 600 }}>ఫలితాలు లేవు</p>
                 <p style={{ fontSize: 13 }}>No results found. Try different keywords.</p>
               </div>

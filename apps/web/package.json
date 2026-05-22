@@ -9,11 +9,12 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@azure/storage-blob": "^12.31.0",
+    "@rayalaseema/db": "*",
+    "@rayalaseema/ui": "*",
     "next": "^16.2.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "@rayalaseema/ui": "*",
-    "@rayalaseema/db": "*"
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "typescript": "^5.7.0",
