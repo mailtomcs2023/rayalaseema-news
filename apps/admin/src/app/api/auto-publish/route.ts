@@ -5,8 +5,8 @@ import { buildSlugFromTitle, sanitizeSlug } from "@/lib/slug";
 import { uploadImageFromUrl } from "@/lib/blob";
 
 const NEWSDATA_KEY = process.env.NEWSDATA_API_KEY;
-const AI_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT!;
-const AI_KEY = process.env.AZURE_OPENAI_KEY!;
+const AI_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT;
+const AI_KEY = process.env.AZURE_OPENAI_KEY;
 const AI_DEPLOYMENT = process.env.AZURE_OPENAI_DEPLOYMENT || "gpt51";
 const AI_VERSION = process.env.AZURE_OPENAI_API_VERSION || "2024-10-21";
 
@@ -110,6 +110,7 @@ Rules: Pure Telugu except proper nouns. 300-400 words body. Professional newspap
 export async function POST(req: NextRequest) {
   const session = await requireAuth(["ADMIN"]); if (isAuthError(session)) return session;
   if (!NEWSDATA_KEY) return NextResponse.json({ error: "NEWSDATA_API_KEY not configured" }, { status: 503 });
+  if (!AI_ENDPOINT || !AI_KEY) return NextResponse.json({ error: "AZURE_OPENAI not configured" }, { status: 503 });
   const { searchParams } = new URL(req.url);
   const dryRun = searchParams.get("dry") === "true";
   const maxPerCategory = parseInt(searchParams.get("max") || "3");

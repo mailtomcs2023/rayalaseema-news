@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 
-const ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT!;
-const KEY = process.env.AZURE_OPENAI_KEY!;
+const ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT;
+const KEY = process.env.AZURE_OPENAI_KEY;
 const DEPLOYMENT = process.env.AZURE_OPENAI_DEPLOYMENT || "gpt51";
 const API_VERSION = process.env.AZURE_OPENAI_API_VERSION || "2024-10-21";
 
@@ -68,6 +68,9 @@ async function scrapeSource(url: string): Promise<string> {
 
 export async function POST(req: NextRequest) {
   const session = await requireAuth(["ADMIN"]); if (isAuthError(session)) return session;
+  if (!ENDPOINT || !KEY) {
+    return NextResponse.json({ error: "AZURE_OPENAI not configured" }, { status: 503 });
+  }
   try {
     const { text, action, sourceUrl } = await req.json();
     if (!text && !sourceUrl) return NextResponse.json({ error: "Text or source URL required" }, { status: 400 });

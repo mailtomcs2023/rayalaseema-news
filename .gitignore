@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# DB snapshot — share via file transfer, not git
+db-snapshot.sql
