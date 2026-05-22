@@ -77,7 +77,7 @@ async function translateToTelugu(title: string, content: string): Promise<{ titl
     `${AI_ENDPOINT}openai/deployments/${AI_DEPLOYMENT}/chat/completions?api-version=${AI_VERSION}`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json", "api-key": AI_KEY },
+      headers: { "Content-Type": "application/json", "api-key": AI_KEY || "" },
       body: JSON.stringify({
         messages: [
           {
