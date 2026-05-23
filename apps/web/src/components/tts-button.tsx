@@ -1,97 +1,113 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
+/**
+ * Free, browser-native Telugu TTS via the Web Speech API (`speechSynthesis`).
+ * No server call, no Azure cost. Voice quality depends on the user's device:
+ *  - Android Chrome: Google Telugu voice (good)
+ *  - Windows: te-IN voice if installed via Settings → Time & Language → Language → Add language → Telugu → Speech
+ *  - iOS Safari: limited Telugu support pre-iOS 18; otherwise will skip with a notice
+ *
+ * Falls back to a disabled state with a hint if no Telugu voice is found on
+ * the device. Strips article HTML before reading.
+ */
 export function TTSButton({ text }: { text: string }) {
-  const [state, setState] = useState<"idle" | "loading" | "playing" | "paused">("idle");
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const bgRef = useRef<HTMLAudioElement | null>(null);
+  const [state, setState] = useState<"idle" | "playing" | "paused" | "unsupported">("idle");
+  const [voiceReady, setVoiceReady] = useState(false);
+  const utterRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  // Cleanup when leaving page
   useEffect(() => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      setState("unsupported");
+      return;
+    }
+    // Voices load asynchronously on most browsers. Listen for voiceschanged
+    // and pick a Telugu one when it shows up.
+    const pickVoice = () => {
+      const voices = window.speechSynthesis.getVoices();
+      const teVoice = voices.find((v) => v.lang === "te-IN" || v.lang.startsWith("te"));
+      setVoiceReady(!!teVoice);
+    };
+    pickVoice();
+    window.speechSynthesis.onvoiceschanged = pickVoice;
+
     return () => {
-      if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ""; }
-      if (bgRef.current) { bgRef.current.pause(); bgRef.current.src = ""; }
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.onvoiceschanged = null;
     };
   }, []);
 
-  const handleClick = async () => {
-    // If playing, pause both voice and BGM
-    if (state === "playing" && audioRef.current) {
-      audioRef.current.pause();
-      bgRef.current?.pause();
+  const handleClick = () => {
+    if (state === "unsupported") return;
+
+    if (state === "playing") {
+      window.speechSynthesis.pause();
       setState("paused");
       return;
     }
-
-    // If paused, resume both
-    if (state === "paused" && audioRef.current) {
-      audioRef.current.play();
-      bgRef.current?.play();
+    if (state === "paused") {
+      window.speechSynthesis.resume();
       setState("playing");
       return;
     }
 
-    // Generate audio from Azure TTS
-    setState("loading");
+    // Fresh play — strip HTML & limit length (browsers choke past ~30k chars).
+    const cleanText = text
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/Source:[\s\S]*$/, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .substring(0, 8000);
 
-    try {
-      const res = await fetch("/api/tts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
-      });
+    if (cleanText.length < 5) return;
 
-      if (!res.ok) throw new Error("TTS failed");
+    const utter = new SpeechSynthesisUtterance(cleanText);
+    utter.lang = "te-IN";
+    utter.rate = 0.95;
+    utter.pitch = 1;
+    utter.volume = 1;
 
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
+    const voices = window.speechSynthesis.getVoices();
+    const teVoice =
+      voices.find((v) => v.lang === "te-IN") ||
+      voices.find((v) => v.lang.startsWith("te"));
+    if (teVoice) utter.voice = teVoice;
 
-      // Clean up previous audio
-      if (audioRef.current) {
-        audioRef.current.pause();
-        URL.revokeObjectURL(audioRef.current.src);
-      }
-      if (bgRef.current) {
-        bgRef.current.pause();
-      }
+    utter.onend = () => setState("idle");
+    utter.onerror = () => setState("idle");
 
-      // Voice audio
-      const audio = new Audio(url);
-      audioRef.current = audio;
-
-      // Background music - soft news studio ambience
-      const bg = new Audio("/audio/news-bg.mp3");
-      bg.loop = true;
-      bg.volume = 0.25; // Audible but not overpowering voice
-      bgRef.current = bg;
-
-      audio.onended = () => { setState("idle"); bg.pause(); };
-      audio.onerror = () => { setState("idle"); bg.pause(); };
-
-      bg.play().catch(() => {}); // BGM might fail if no file, that's ok
-      await audio.play();
-      setState("playing");
-    } catch {
-      setState("idle");
-      alert("Audio generation failed. Try again.");
-    }
+    utterRef.current = utter;
+    window.speechSynthesis.cancel(); // clear any stale queue
+    window.speechSynthesis.speak(utter);
+    setState("playing");
   };
 
+  if (state === "unsupported") {
+    return null; // hide button on browsers without the API
+  }
+
+  const disabled = !voiceReady && state === "idle";
+
   return (
-    <button onClick={handleClick} disabled={state === "loading"} style={{
-      display: "inline-flex", alignItems: "center", gap: 6,
-      padding: "8px 16px", background: state === "playing" ? "#fef2f2" : state === "loading" ? "#f3f4f6" : "#f3f4f6",
-      border: "1px solid #e5e7eb", borderRadius: 8, cursor: state === "loading" ? "wait" : "pointer",
-      fontSize: 13, fontWeight: 600, color: state === "playing" ? "#dc2626" : "#555",
-      transition: "all 0.15s",
-    }}>
-      {state === "loading" ? (
-        <>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-spin"><circle cx="12" cy="12" r="10" strokeDasharray="60" strokeDashoffset="20"/></svg>
-          లోడ్ అవుతోంది...
-        </>
-      ) : state === "playing" ? (
+    <button
+      onClick={handleClick}
+      disabled={disabled}
+      title={disabled ? "మీ పరికరంలో తెలుగు వాయిస్ లేదు" : ""}
+      style={{
+        display: "inline-flex", alignItems: "center", gap: 6,
+        padding: "8px 16px",
+        background: state === "playing" ? "#fef2f2" : "#f3f4f6",
+        border: "1px solid #e5e7eb", borderRadius: 8,
+        cursor: disabled ? "not-allowed" : "pointer",
+        fontSize: 13, fontWeight: 600,
+        color: state === "playing" ? "#dc2626" : disabled ? "#bbb" : "#555",
+        opacity: disabled ? 0.6 : 1,
+        transition: "all 0.15s",
+      }}>
+      {state === "playing" ? (
         <>
           <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
           ఆపండి

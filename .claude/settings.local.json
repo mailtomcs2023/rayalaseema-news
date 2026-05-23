@@ -19,7 +19,13 @@
       "Read(//tmp/**)",
       "Bash(curl -sS -o /tmp/tts_post.bin -w \"HTTP %{http_code} | bytes: %{size_download}\\\\n\" -X POST \"https://rayalaseemaexpress.com/api/tts?nocache=$\\(date +%s%N\\)\" -H \"Content-Type: application/json\" -d '{\"text\":\"నేడు రాయలసీమ ఎక్స్‌ప్రెస్‌లో తాజా వార్తలు అందుబాటులో ఉన్నాయి. ఇది ఒక పరీక్ష.\"}')",
       "Bash(curl -sS -i -X POST \"https://rayalaseemaexpress.com/api/tts?probe=1&t=$\\(date +%s%N\\)\" -H \"Content-Type: application/json\" -d '{\"text\":\"రాయలసీమ ఎక్స్‌ప్రెస్ పరీక్ష.\"}')",
-      "Bash(git commit -m 'Add TTS diagnostic endpoint \\(?diag=1\\) to surface Azure response details *)"
+      "Bash(git commit -m 'Add TTS diagnostic endpoint \\(?diag=1\\) to surface Azure response details *)",
+      "Bash(curl -sS -X POST \"https://rayalaseemaexpress.com/api/tts?diag=1&t=$\\(date +%s%N\\)\" -H \"Content-Type: application/json\" -d '{\"text\":\"రాయలసీమ ఎక్స్‌ప్రెస్ పరీక్ష పరిస్థితి.\"}')",
+      "mcp__plugin_microsoft-docs_microsoft-learn__microsoft_docs_search",
+      "Bash(az monitor *)",
+      "Bash(curl -sS -i -X POST https://centralindia.tts.speech.microsoft.com/cognitiveservices/v1 -H 'Ocp-Apim-Subscription-Key: __TRACKED_VAR__' -H 'Content-Type: application/ssml+xml' -H 'X-Microsoft-OutputFormat: audio-24khz-96kbitrate-mono-mp3' --data-binary '<speak version=\"1.0\" xmlns=\"http://www.w3.org/2001/10/synthesis\" xml:lang=\"te-IN\"><voice name=\"te-IN-MohanNeural\">పరీక్ష</voice></speak>')",
+      "Bash(curl -sS -X POST https://centralindia.tts.speech.microsoft.com/cognitiveservices/v1 -H 'Ocp-Apim-Subscription-Key: __TRACKED_VAR__' -H 'Content-Type: application/ssml+xml' -H 'X-Microsoft-OutputFormat: audio-24khz-96kbitrate-mono-mp3' --data-binary '<speak version=\"1.0\" xmlns=\"http://www.w3.org/2001/10/synthesis\" xml:lang=\"te-IN\"><voice name=\"te-IN-MohanNeural\">పరీక్ష</voice></speak>' -o /tmp/audio.mp3 -w 'size=%{size_download}\\\\n')",
+      "Bash(curl -sS -X POST https://centralindia.tts.speech.microsoft.com/cognitiveservices/v1 -H 'Ocp-Apim-Subscription-Key: __TRACKED_VAR__' -H 'Content-Type: application/ssml+xml' -H 'X-Microsoft-OutputFormat: audio-24khz-96kbitrate-mono-mp3' --data-binary '<speak version=\"1.0\" xml:lang=\"en-US\"><voice name=\"en-US-JennyNeural\">Hello world test</voice></speak>' -o /tmp/audio2.mp3 -w 'size=%{size_download}\\\\n')"
     ]
   }
 }
