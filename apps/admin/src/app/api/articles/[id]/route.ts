@@ -3,6 +3,7 @@ import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 import { logAudit, diffSummary } from "@/lib/audit";
 import { sanitizeSlug } from "@/lib/slug";
+import { resolveDeskId } from "@/lib/desk-resolver";
 
 // GET single article
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -29,10 +30,32 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const { id } = await params;
     const body = await req.json();
     const data: any = {};
-    for (const key of ["title", "slug", "summary", "body", "categoryId", "featuredImage", "status", "featured", "breaking", "constituencyId", "metaTitle", "metaDescription", "ogImage"] as const) {
+    for (const key of ["title", "slug", "summary", "body", "categoryId", "featuredImage", "status", "featured", "breaking", "constituencyId", "deskId", "metaTitle", "metaDescription", "ogImage"] as const) {
       if (body[key] !== undefined) data[key] = body[key];
     }
     if (!data.constituencyId) data.constituencyId = null;
+
+    // Auto-resolve desk if category/constituency changed (or if no desk currently set).
+    // If editor explicitly cleared deskId, treat as "reset to auto".
+    const needsDeskResolve =
+      body.deskId !== undefined ||
+      body.categoryId !== undefined ||
+      body.constituencyId !== undefined;
+    if (needsDeskResolve) {
+      const currentForDesk = await prisma.article.findUnique({
+        where: { id },
+        select: { categoryId: true, constituencyId: true, deskId: true },
+      });
+      const effectiveCategoryId = data.categoryId ?? currentForDesk?.categoryId ?? null;
+      const effectiveConstituencyId = data.constituencyId ?? currentForDesk?.constituencyId ?? null;
+      // body.deskId === null means "clear/auto"; undefined means "don't change" (use current)
+      const effectiveDeskId = body.deskId === undefined ? currentForDesk?.deskId ?? null : body.deskId;
+      data.deskId = await resolveDeskId({
+        deskId: effectiveDeskId,
+        categoryId: effectiveCategoryId,
+        constituencyId: effectiveConstituencyId,
+      });
+    }
 
     // Sanitize slug if present in update payload.
     if (data.slug !== undefined) {

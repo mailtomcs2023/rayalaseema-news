@@ -6,6 +6,7 @@ interface OpinionArticle {
   featuredImage: string | null;
   publishedAt: string;
   author: { name: string };
+  desk?: { name: string; nameEn: string } | null;
 }
 
 export function OpinionSection({ articles }: { articles: OpinionArticle[] }) {
@@ -30,10 +31,10 @@ export function OpinionSection({ articles }: { articles: OpinionArticle[] }) {
             <div className="flex items-center gap-2 mt-1.5">
               <div className="w-5 h-5 rounded-full bg-orange-100 flex items-center justify-center">
                 <span className="text-xs text-orange-600 font-bold">
-                  {article.author.name[0]}
+                  {(article.desk?.name ?? article.author.name)[0]}
                 </span>
               </div>
-              <span className="text-xs text-gray-500 font-telugu">{article.author.name}</span>
+              <span className="text-xs text-gray-500 font-telugu">{article.desk?.name ?? article.author.name}</span>
             </div>
           </a>
         ))}

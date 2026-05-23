@@ -124,7 +124,8 @@ export function AboveFold({
           {latest.map((a) => (
             <Link key={a.id} href={`/article/${a.slug}`} className="af-rail-item">
               <div className="af-rail-meta">
-                {timeAgo(a.publishedAt) && <span className="af-rail-time">{timeAgo(a.publishedAt)}</span>}
+                {/* Newspaper front-page convention: no timestamps in the trending rail.
+                    Stale "40 రోజులు" labels on every item read as misleading. */}
                 <span className="af-rail-cat">{a.category.name}</span>
               </div>
               <h4 className="af-rail-title">{a.title}</h4>

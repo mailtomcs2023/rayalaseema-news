@@ -63,7 +63,7 @@ function StoryViewer({ story, onClose, onNext, onPrev, index, total }: {
 
         {/* Logo */}
         <div style={{ position: "absolute", top: 20, left: 12, zIndex: 20 }}>
-          <img src="/logo-transparent.svg" alt="RE" style={{ height: 18, filter: "brightness(0) invert(1)", opacity: 0.8 }} />
+          <img src="/logo.svg" alt="RE" style={{ height: 18, filter: "brightness(0) invert(1)", opacity: 0.8 }} />
         </div>
 
         {/* Pause */}

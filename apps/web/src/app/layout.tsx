@@ -14,6 +14,8 @@ export const metadata: Metadata = {
   title: "రాయలసీమ ఎక్స్‌ప్రెస్ | Rayalaseema Express",
   description:
     "రాయలసీమ ప్రాంతం నుండి తాజా వార్తలు, రాజకీయాలు, క్రీడలు, వ్యాపారం మరియు మరిన్ని. Latest news from Rayalaseema region.",
+  manifest: "/manifest.json",
+  themeColor: "#E01B1B",
   keywords: [
     "Rayalaseema Express",
     "రాయలసీమ ఎక్స్‌ప్రెస్",
@@ -69,7 +71,7 @@ export default async function RootLayout({
           name: "Rayalaseema Express",
           alternateName: "రాయలసీమ ఎక్స్‌ప్రెస్",
           url: "https://rayalaseemaexpress.com",
-          logo: "https://rayalaseemaexpress.com/logo-transparent.svg",
+          logo: "https://rayalaseemaexpress.com/logo.svg",
           sameAs: [],
           publishingPrinciples: "https://rayalaseemaexpress.com/about",
         }) }} />

@@ -23,10 +23,25 @@ function timeAgo(d: Date | null): string {
   if (!d) return "";
   const diff = Date.now() - d.getTime();
   const m = Math.floor(diff / 60000);
-  if (m < 60) return `${m} నిమి.`;
+  if (m < 1) return "Just now";
+  if (m < 60) return `${m} min ago`;
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h} గం.`;
-  return `${Math.floor(h / 24)} రోజులు`;
+  if (h < 24) return h === 1 ? "1 hour ago" : `${h} hours ago`;
+  const d2 = Math.floor(h / 24);
+  return d2 === 1 ? "1 day ago" : `${d2} days ago`;
+}
+
+/** Newest of publishedAt vs updatedAt (newspaper convention). */
+function effective(a: { publishedAt: Date | null; updatedAt: Date | null }): Date | null {
+  if (a.updatedAt && a.publishedAt) {
+    return a.updatedAt.getTime() > a.publishedAt.getTime() ? a.updatedAt : a.publishedAt;
+  }
+  return a.publishedAt || a.updatedAt || null;
+}
+
+function bylineLine(a: { publishedAt: Date | null; updatedAt: Date | null; desk?: { name: string } | null }): string {
+  const t = timeAgo(effective(a));
+  return a.desk?.name ? `${a.desk.name} · ${t}` : t;
 }
 
 export default async function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -44,7 +59,11 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
       where: { status: "PUBLISHED", categoryId: category.id },
       orderBy: { publishedAt: "desc" },
       take: 30,
-      select: { id: true, title: true, slug: true, summary: true, featuredImage: true, publishedAt: true },
+      select: {
+        id: true, title: true, slug: true, summary: true, featuredImage: true,
+        publishedAt: true, updatedAt: true,
+        desk: { select: { name: true } },
+      },
     }),
     getTrendingArticles(8),
     isSports ? getCricketScores() : Promise.resolve([]),
@@ -99,6 +118,9 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
               >
                 {lead.title}
               </h1>
+              <div style={{ fontFamily: "var(--font-telugu-body), sans-serif", fontSize: 12, color: "#6b7280", margin: "4px 0 8px" }}>
+                {bylineLine(lead)}
+              </div>
               {lead.summary && (
                 <p style={{ fontFamily: "var(--font-telugu-body), sans-serif", fontSize: 14, color: "#4b5563", lineHeight: 1.6 }}>
                   {lead.summary}
@@ -128,18 +150,23 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
                       style={{ width: 110, height: 74, objectFit: "cover", borderRadius: 4, flexShrink: 0 }}
                     />
                   )}
-                  <h3
-                    style={{
-                      fontFamily: "var(--font-telugu-heading), serif",
-                      fontSize: 15,
-                      fontWeight: 700,
-                      lineHeight: 1.35,
-                      color: "var(--n-900, #111827)",
-                      margin: 0,
-                    }}
-                  >
-                    {a.title}
-                  </h3>
+                  <div>
+                    <h3
+                      style={{
+                        fontFamily: "var(--font-telugu-heading), serif",
+                        fontSize: 15,
+                        fontWeight: 700,
+                        lineHeight: 1.35,
+                        color: "var(--n-900, #111827)",
+                        margin: 0,
+                      }}
+                    >
+                      {a.title}
+                    </h3>
+                    <div style={{ fontFamily: "var(--font-telugu-body), sans-serif", fontSize: 11, color: "#9ca3af", marginTop: 3 }}>
+                      {bylineLine(a)}
+                    </div>
+                  </div>
                 </Link>
               ))}
             </div>
@@ -181,6 +208,9 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
                     >
                       {a.title}
                     </h3>
+                    <div style={{ fontFamily: "var(--font-telugu-body), sans-serif", fontSize: 11, color: "#9ca3af", marginTop: 4 }}>
+                      {bylineLine(a)}
+                    </div>
                     {a.summary && (
                       <p style={{ fontFamily: "var(--font-telugu-body), sans-serif", fontSize: 13, color: "#6b7280", lineHeight: 1.55, margin: "5px 0 0" }}>
                         {a.summary}

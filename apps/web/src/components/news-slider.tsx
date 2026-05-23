@@ -12,14 +12,18 @@ interface SliderItem {
   featuredImage: string;
   publishedAt: string;
   author: { name: string };
+  desk?: { name: string; nameEn: string } | null;
 }
 
 function formatTimeAgo(dateString: string) {
   const diff = Date.now() - new Date(dateString).getTime();
-  const hours = Math.floor(diff / 3600000);
-  if (hours < 1) return `${Math.floor(diff / 60000)} ని. క్రితం`;
-  if (hours < 24) return `${hours} గంటల క్రితం`;
-  return `${Math.floor(hours / 24)} రోజుల క్రితం`;
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return "Just now";
+  if (min < 60) return `${min} min ago`;
+  const hours = Math.floor(min / 60);
+  if (hours < 24) return hours === 1 ? "1 hour ago" : `${hours} hours ago`;
+  const days = Math.floor(hours / 24);
+  return days === 1 ? "1 day ago" : `${days} days ago`;
 }
 
 export function NewsSlider({ items }: { items: SliderItem[] }) {
@@ -98,7 +102,7 @@ export function NewsSlider({ items }: { items: SliderItem[] }) {
           </Link>
           <p className="news-slider-summary">{item.summary}</p>
           <div className="news-slider-meta">
-            <span>{item.author.name}</span>
+            <span>{item.desk?.name ?? item.author.name}</span>
             <span style={{ opacity: 0.4 }}>|</span>
             <span>{formatTimeAgo(item.publishedAt)}</span>
           </div>

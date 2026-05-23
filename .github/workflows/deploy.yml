@@ -46,6 +46,21 @@ jobs:
             echo "=== Rebuild constituencies (idempotent: inserts missing ACs + remaps old) ==="
             bunx tsx scripts/rebuild-constituencies.ts
             bunx tsx scripts/remap-constituencies.ts
+
+            echo "=== Verify constituency state ==="
+            bunx tsx scripts/verify-constituencies.ts | tail -30
+
+            echo "=== Seed desks (root + districts + ACs + topical + editorial) ==="
+            bunx tsx scripts/seed-desks.ts
+
+            echo "=== Backfill article deskId for any article still missing one ==="
+            bunx tsx scripts/backfill-desks.ts
+
+            echo "=== Backfill Telugu mandal names ==="
+            bunx tsx scripts/backfill-mandal-telugu.ts
+
+            echo "=== Seed e-paper v2 templates (front + 8 district + 4 section) ==="
+            bunx tsx scripts/seed-epaper-templates.ts
             cd ../..
 
             echo "=== Install Playwright Chromium (e-paper render) ==="

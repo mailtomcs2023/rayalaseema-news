@@ -213,6 +213,10 @@ model Article {
   mandalId        String?
   mandal          Mandal?       @relation("ArticleMandal", fields: [mandalId], references: [id])
 
+  // Desk byline (auto-picked on save unless editor overrides; see lib/desk-resolver.ts)
+  deskId          String?
+  desk            Desk?         @relation(fields: [deskId], references: [id])
+
   // Analytics
   viewCount       Int           @default(0)
 
@@ -233,6 +237,7 @@ model Article {
   @@index([categoryId])
   @@index([authorId])
   @@index([constituencyId])
+  @@index([deskId])
   @@index([slug])
   @@index([status, featured, publishedAt])
   @@index([categoryId, status, publishedAt])
@@ -257,6 +262,7 @@ model Category {
   articles    Article[]
   videos      Video[]
   assignedUsers UserCategory[]
+  desk        Desk?      // back-relation: TOPICAL desk auto-derived from category
 
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
@@ -351,13 +357,55 @@ model EpaperPage {
   edition     EpaperEdition  @relation(fields: [editionId], references: [id], onDelete: Cascade)
   pageNumber  Int
   label       String         // "ముఖ్యాంశాలు", "రాజకీయం", ...
-  imageUrl    String         // rendered broadsheet page PNG on Azure Blob
-  hotspots    Json?          // [{slug,x,y,w,h}] — percentage boxes, clickable story regions
+  templateSlug String?       // → EpaperTemplate.slug — which template this page was built from
+  // Per-page WYSIWYG layout. Replaces the old slot-dropdown model. Shape:
+  //   { blocks: [{ id, type: "lead"|"major"|"secondary"|"brief"|"image"|"ad"|"text"|"masthead"|"section-band"|"story-jump",
+  //                x, y, w, h,            // grid coords (12-col by N-row)
+  //                articleId?, content?,  // story blocks point at an Article; text/image carry their own
+  //                href?, targetPage?,    // hyperlink target (URL) or internal page-jump
+  //                locked?: boolean,      // operator locked → auto-fill won't replace
+  //                style?: object } ] }
+  layout      Json?
+  imageUrl    String         // rendered broadsheet page PNG on Azure Blob (legacy raster path)
+  pdfUrl      String?        // per-page vector PDF (new v2 render path)
+  hotspots    Json?          // [{slug,x,y,w,h}] — legacy raster overlay click regions
   createdAt   DateTime       @default(now())
 
   @@unique([editionId, pageNumber])
   @@index([editionId])
   @@map("epaper_pages")
+}
+
+enum EpaperTemplateType {
+  FRONT       // front page — lead + majors + briefs + ad band
+  DISTRICT    // per-district edition page
+  SECTION     // sports / cinema / editorial / classifieds / etc.
+  BACK        // back page
+}
+
+/// Reusable page layouts. DTP staff curates these JSON blocks once; the
+/// auto-fill engine then drops the day's articles into matching slots.
+model EpaperTemplate {
+  id            String              @id @default(cuid())
+  slug          String              @unique          // "front", "district-kurnool", "section-sports", ...
+  name          String                               // "Front Page" / "Sports Section"
+  type          EpaperTemplateType
+  // Default label rendered in the section-band block of the produced page
+  // (e.g. "క్రీడలు" for sports). When `type = DISTRICT` the label is dynamic.
+  defaultLabel  String?
+  // Optional filters used by the auto-fill engine when matching articles to
+  // slots inside this template (e.g. `{ "categorySlug": "sports" }` or
+  // `{ "districtSlug": "kurnool" }`).
+  fillRules     Json?
+  // Block layout — same shape as EpaperPage.layout but with empty articleIds.
+  layout        Json
+  sortOrder     Int                 @default(0)
+  active        Boolean             @default(true)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@index([type])
+  @@map("epaper_templates")
 }
 
 // ============ BREAKING NEWS ============
@@ -431,6 +479,7 @@ model District {
   sortOrder       Int             @default(0)
   active          Boolean         @default(true)
   constituencies  Constituency[]
+  desk            Desk?           // back-relation: GEOGRAPHIC desk for this district
   createdAt       DateTime        @default(now())
 
   @@map("districts")
@@ -449,12 +498,54 @@ model Constituency {
   loksabha    String?  // Which Lok Sabha seat this falls under
   mandals     Mandal[]
   articles    Article[] @relation("ArticleConstituency")
+  desk        Desk?     // back-relation: GEOGRAPHIC desk for this AC (e.g. "ప్రొద్దుటూరు")
   sortOrder   Int      @default(0)
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
 
   @@index([districtId])
   @@map("constituencies")
+}
+
+// ============ DESKS (byline + e-paper section grouping) ============
+
+enum DeskBranch {
+  TOPICAL      // e.g. "రాయలసీమ ఎక్స్‌ప్రెస్ బిజినెస్ డెస్క్" (linked to a Category)
+  GEOGRAPHIC   // e.g. "రాయలసీమ ఎక్స్‌ప్రెస్" (root), "అనంతపురం" (district), "ప్రొద్దుటూరు" (AC)
+  EDITORIAL    // e.g. "రాయలసీమ ఎక్స్‌ప్రెస్ ఎడిటోరియల్ డెస్క్"
+}
+
+/// Desk = byline & section grouping. Hierarchical (Topical/Geographic/Editorial branches).
+/// Auto-resolved on article save via fallback chain (see lib/desk-resolver.ts):
+///   manual deskId → constituency desk → district desk → category desk → root (Rayalaseema Express)
+model Desk {
+  id              String        @id @default(cuid())
+  name            String        // Telugu display name (the byline string)
+  nameEn          String        // English name (admin UI + slug source)
+  slug            String        @unique
+  branch          DeskBranch
+  parentId        String?
+  parent          Desk?         @relation("DeskHierarchy", fields: [parentId], references: [id])
+  children        Desk[]        @relation("DeskHierarchy")
+
+  // Optional links so we can auto-derive the desk from article metadata.
+  // All three are @unique — one desk per category / district / constituency at most.
+  categoryId      String?       @unique
+  category        Category?     @relation(fields: [categoryId], references: [id])
+  districtId      String?       @unique
+  district        District?     @relation(fields: [districtId], references: [id])
+  constituencyId  String?       @unique
+  constituency    Constituency? @relation(fields: [constituencyId], references: [id])
+
+  articles        Article[]
+  sortOrder       Int           @default(0)
+  active          Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([branch])
+  @@index([parentId])
+  @@map("desks")
 }
 
 model Mandal {

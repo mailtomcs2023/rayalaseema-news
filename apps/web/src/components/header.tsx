@@ -161,7 +161,7 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
           <div className="shrink-0 flex items-center gap-4">
             <Link href="/" className="block">
               <img
-                src="/logo-transparent.svg"
+                src="/logo.svg"
                 alt="రాయలసీమ ఎక్స్‌ప్రెస్"
                 className="h-12 md:h-16 w-auto"
               />

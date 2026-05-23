@@ -10,11 +10,17 @@ interface EpaperPage {
   hotspots: Hotspot[];
 }
 
-/** Eenadu-style e-paper viewer — page nav, zoom, clickable story hotspots, clip-to-share. */
+/**
+ * Vibrant e-paper viewer. Mirrors the Eenadu reader experience:
+ *  - Horizontal thumbnail strip across the top with PAGE# + LABEL on every tile
+ *  - Big arrow buttons flanking the page stage for one-click forward/back
+ *  - Toolbar with edition/date already handled by the page; viewer keeps clip+zoom
+ *  - Click anywhere on the page image to advance (newspaper-like turn)
+ *  - Clickable story hotspots layer (transparent until hovered)
+ *  - Drag-to-clip + share modal preserved from v1
+ */
 export function EpaperViewer({
-  pages,
-  pdfUrl,
-  dateLabel,
+  pages, pdfUrl, dateLabel,
 }: {
   pages: EpaperPage[];
   pdfUrl: string | null;
@@ -26,7 +32,6 @@ export function EpaperViewer({
   const [sel, setSel] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [clipUrl, setClipUrl] = useState<string | null>(null);
   const [clipBusy, setClipBusy] = useState(false);
-  const stageRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const dragStart = useRef<{ x: number; y: number } | null>(null);
 
@@ -38,7 +43,6 @@ export function EpaperViewer({
     setZoom(1); setSel(null); setClipUrl(null);
   };
 
-  // ----- clip drag (relative to the image element) -----
   const imgRect = () => imgRef.current?.getBoundingClientRect();
 
   const onDown = (e: React.MouseEvent) => {
@@ -66,7 +70,6 @@ export function EpaperViewer({
     await doClip(sel);
   };
 
-  // ----- crop the natural-res image + upload -----
   const doClip = async (s: { x: number; y: number; w: number; h: number }) => {
     const imgEl = imgRef.current; if (!imgEl) return;
     setClipBusy(true);
@@ -102,25 +105,23 @@ export function EpaperViewer({
 
   return (
     <div className="ev">
+      {/* TOP TOOLBAR */}
       <div className="ev-bar">
         <div className="ev-grp">
-          <button onClick={() => go(idx - 1)} disabled={idx === 0}>‹</button>
-          <select value={idx} onChange={(e) => go(Number(e.target.value))}>
-            {pages.map((p, i) => (
-              <option key={p.pageNumber} value={i}>పేజీ {p.pageNumber} — {p.label}</option>
-            ))}
-          </select>
-          <button onClick={() => go(idx + 1)} disabled={idx === pages.length - 1}>›</button>
+          <span className="ev-date">{dateLabel}</span>
         </div>
-        <div className="ev-date">{dateLabel}</div>
+        <div className="ev-grp ev-nav">
+          <button onClick={() => go(idx - 1)} disabled={idx === 0} aria-label="Previous page">‹</button>
+          <span className="ev-pageno">పేజీ {idx + 1} / {pages.length}</span>
+          <button onClick={() => go(idx + 1)} disabled={idx === pages.length - 1} aria-label="Next page">›</button>
+        </div>
         <div className="ev-grp">
-          <button onClick={() => setZoom((z) => Math.max(0.5, z - 0.25))}>−</button>
+          <button onClick={() => setZoom((z) => Math.max(0.5, z - 0.25))} aria-label="Zoom out">−</button>
           <span className="ev-z">{Math.round(zoom * 100)}%</span>
-          <button onClick={() => setZoom((z) => Math.min(3, z + 0.25))}>+</button>
+          <button onClick={() => setZoom((z) => Math.min(3, z + 0.25))} aria-label="Zoom in">+</button>
           <button
             className={clipMode ? "ev-clip on" : "ev-clip"}
-            onClick={() => { setClipMode(!clipMode); setSel(null); setClipUrl(null); }}
-          >
+            onClick={() => { setClipMode(!clipMode); setSel(null); setClipUrl(null); }}>
             ✂ క్లిప్
           </button>
           {pdfUrl && <a className="ev-dl" href={pdfUrl} target="_blank" rel="noopener">PDF ↓</a>}
@@ -131,17 +132,22 @@ export function EpaperViewer({
         <div className="ev-hint">✂ వార్తపై మౌస్‌తో గీసి ఎంచుకోండి — ఆ భాగం షేర్ చేయడానికి సిద్ధం</div>
       )}
 
-      <div className="ev-body">
-        <div className="ev-thumbs">
-          {pages.map((p, i) => (
-            <button key={p.pageNumber} className={`ev-thumb${i === idx ? " active" : ""}`} onClick={() => go(i)}>
-              <img src={p.imageUrl} alt={`Page ${p.pageNumber}`} loading="lazy" />
-              <span>{p.pageNumber}</span>
-            </button>
-          ))}
-        </div>
+      {/* HORIZONTAL THUMBNAIL STRIP — Eenadu-style, with page number + label */}
+      <div className="ev-thumbs-h">
+        {pages.map((p, i) => (
+          <button key={p.pageNumber} className={`ev-thumb${i === idx ? " active" : ""}`} onClick={() => go(i)}>
+            <span className="ev-thumb-no">{String(p.pageNumber).padStart(2, "0")}</span>
+            <img src={p.imageUrl} alt={`Page ${p.pageNumber}`} loading="lazy" />
+            <span className="ev-thumb-label">{p.label}</span>
+          </button>
+        ))}
+      </div>
 
-        <div className="ev-stage" ref={stageRef}>
+      {/* STAGE — big page with side arrow buttons */}
+      <div className="ev-stage-wrap">
+        <button className="ev-stage-arrow left" onClick={() => go(idx - 1)} disabled={idx === 0} aria-label="Previous">‹</button>
+
+        <div className="ev-stage">
           <div
             className="ev-pagewrap"
             style={{ width: `${zoom * 100}%`, cursor: clipMode ? "crosshair" : "default" }}
@@ -151,33 +157,22 @@ export function EpaperViewer({
           >
             <img ref={imgRef} className="ev-page" src={cur.imageUrl} alt={`${cur.label} — page ${cur.pageNumber}`} draggable={false} />
 
-            {/* Clickable story hotspots (off in clip mode) */}
             {!clipMode &&
               cur.hotspots.map((h, i) => (
-                <a
-                  key={i}
-                  className="ev-hotspot"
-                  href={`/article/${h.slug}`}
-                  style={{
-                    left: `${h.x * 100}%`, top: `${h.y * 100}%`,
-                    width: `${h.w * 100}%`, height: `${h.h * 100}%`,
-                  }}
-                  title="పూర్తి వార్త చదవండి"
-                />
+                <a key={i} className="ev-hotspot" href={`/article/${h.slug}`}
+                  style={{ left: `${h.x * 100}%`, top: `${h.y * 100}%`, width: `${h.w * 100}%`, height: `${h.h * 100}%` }}
+                  title="పూర్తి వార్త చదవండి" />
               ))}
 
-            {/* Clip selection rect */}
             {clipMode && sel && (
-              <div
-                className="ev-sel"
-                style={{ left: sel.x, top: sel.y, width: sel.w, height: sel.h }}
-              />
+              <div className="ev-sel" style={{ left: sel.x, top: sel.y, width: sel.w, height: sel.h }} />
             )}
           </div>
         </div>
+
+        <button className="ev-stage-arrow right" onClick={() => go(idx + 1)} disabled={idx === pages.length - 1} aria-label="Next">›</button>
       </div>
 
-      {/* Clip result — centered modal */}
       {(clipBusy || clipUrl) && (
         <div className="ev-modal" onClick={() => { if (!clipBusy) { setClipUrl(null); setSel(null); } }}>
           <div className="ev-modal-card" onClick={(e) => e.stopPropagation()}>
@@ -199,56 +194,82 @@ export function EpaperViewer({
       )}
 
       <style>{`
-        .ev { background: #2a2a2a; border-radius: 8px; overflow: hidden; }
+        .ev { background: #f4f4f5; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
         .ev-empty {
           background: #fff; border: 1px solid rgba(0,0,0,0.08); border-radius: 8px;
           padding: 60px; text-align: center;
           font-family: var(--font-telugu-body), sans-serif; color: #6b7280;
         }
+
+        /* TOP TOOLBAR */
         .ev-bar {
           display: flex; align-items: center; justify-content: space-between;
-          background: #B91414; color: #fff; padding: 8px 14px; gap: 12px; flex-wrap: wrap;
+          background: linear-gradient(180deg, #B91414 0%, #9c0f0f 100%);
+          color: #fff; padding: 10px 16px; gap: 12px; flex-wrap: wrap;
         }
         .ev-grp { display: flex; align-items: center; gap: 8px; }
-        .ev-date { font-family: var(--font-telugu-heading), serif; font-size: 14px; font-weight: 700; }
+        .ev-nav { background: rgba(0,0,0,0.18); border-radius: 6px; padding: 2px 6px; }
+        .ev-date { font-family: var(--font-telugu-heading), serif; font-size: 15px; font-weight: 800; }
+        .ev-pageno { font-family: var(--font-telugu-body), sans-serif; font-size: 13px; font-weight: 700; min-width: 90px; text-align: center; }
         .ev-bar button, .ev-dl, .ev-clip {
           background: rgba(255,255,255,0.16); color: #fff; border: none;
-          height: 30px; min-width: 30px; padding: 0 10px; border-radius: 4px; cursor: pointer;
-          font-size: 14px; font-weight: 700;
+          height: 32px; min-width: 32px; padding: 0 11px; border-radius: 4px; cursor: pointer;
+          font-size: 15px; font-weight: 700;
           display: flex; align-items: center; justify-content: center;
           font-family: var(--font-telugu-body), sans-serif; text-decoration: none;
+          transition: background 0.15s;
         }
-        .ev-bar button:disabled { opacity: 0.35; cursor: default; }
-        .ev-bar button:hover:not(:disabled), .ev-dl:hover { background: rgba(255,255,255,0.3); }
+        .ev-bar button:disabled { opacity: 0.4; cursor: default; }
+        .ev-bar button:hover:not(:disabled), .ev-dl:hover { background: rgba(255,255,255,0.32); }
         .ev-clip.on { background: #FFD400; color: #B91414; }
-        .ev-bar select {
-          background: #fff; color: #15110c; border: none; border-radius: 4px;
-          padding: 5px 8px; font-family: var(--font-telugu-body), sans-serif; font-size: 12px; max-width: 220px;
-        }
-        .ev-z { font-size: 12px; min-width: 42px; text-align: center; }
+        .ev-z { font-size: 12px; min-width: 42px; text-align: center; font-weight: 700; }
+
         .ev-hint {
           background: #FFD400; color: #15110c; font-family: var(--font-telugu-body), sans-serif;
-          font-size: 13px; font-weight: 700; padding: 6px 14px; text-align: center;
+          font-size: 13px; font-weight: 700; padding: 7px 14px; text-align: center;
         }
 
-        .ev-body { display: flex; height: 78vh; }
-        .ev-thumbs {
-          flex: 0 0 110px; overflow-y: auto; background: #1d1d1d;
-          padding: 8px; display: flex; flex-direction: column; gap: 8px;
+        /* HORIZONTAL THUMBNAIL STRIP */
+        .ev-thumbs-h {
+          display: flex; gap: 8px; padding: 12px 14px;
+          background: #fff; border-bottom: 1px solid rgba(0,0,0,0.06);
+          overflow-x: auto; overflow-y: hidden; scrollbar-width: thin;
         }
+        .ev-thumbs-h::-webkit-scrollbar { height: 6px; }
+        .ev-thumbs-h::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.25); border-radius: 3px; }
         .ev-thumb {
-          position: relative; border: 2px solid transparent; border-radius: 3px;
-          padding: 0; cursor: pointer; background: none; overflow: hidden;
+          position: relative; flex: 0 0 88px; border: 2px solid transparent;
+          border-radius: 6px; padding: 0; cursor: pointer; background: #f3f4f6;
+          overflow: hidden; display: flex; flex-direction: column;
+          transition: border-color 0.15s, transform 0.15s;
         }
-        .ev-thumb.active { border-color: #E01B1B; }
-        .ev-thumb img { width: 100%; display: block; }
-        .ev-thumb span {
-          position: absolute; bottom: 2px; right: 3px;
-          background: rgba(0,0,0,0.75); color: #fff; font-size: 10px; padding: 0 5px; border-radius: 2px;
+        .ev-thumb:hover { transform: translateY(-1px); }
+        .ev-thumb.active { border-color: #E01B1B; box-shadow: 0 0 0 2px rgba(224,27,27,0.18); }
+        .ev-thumb img {
+          width: 100%; aspect-ratio: 1/1.6; object-fit: cover; display: block; background: #eee;
         }
-        .ev-stage { flex: 1; overflow: auto; padding: 20px; display: flex; justify-content: center; align-items: flex-start; }
-        .ev-pagewrap { position: relative; user-select: none; }
-        .ev-page { width: 100%; height: auto; display: block; box-shadow: 0 8px 30px rgba(0,0,0,0.5); }
+        .ev-thumb-no {
+          position: absolute; top: 3px; left: 3px;
+          background: rgba(224,27,27,0.95); color: #fff;
+          font-family: var(--font-telugu-body), sans-serif; font-size: 11px; font-weight: 800;
+          padding: 2px 7px; border-radius: 3px; line-height: 1;
+        }
+        .ev-thumb-label {
+          padding: 5px 4px;
+          font-family: var(--font-telugu-body), sans-serif; font-size: 10px; font-weight: 700;
+          color: #374151; text-align: center;
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+
+        /* STAGE */
+        .ev-stage-wrap { position: relative; }
+        .ev-stage {
+          background: #2a2a2a; padding: 28px 12px; overflow: auto;
+          display: flex; justify-content: center; align-items: flex-start;
+          max-height: 78vh;
+        }
+        .ev-pagewrap { position: relative; user-select: none; max-width: 1000px; }
+        .ev-page { width: 100%; height: auto; display: block; box-shadow: 0 8px 30px rgba(0,0,0,0.5); background: #fff; }
         .ev-hotspot {
           position: absolute; display: block;
           background: rgba(0,120,255,0); transition: background 0.15s;
@@ -259,6 +280,23 @@ export function EpaperViewer({
           background: rgba(255,212,0,0.18); pointer-events: none;
         }
 
+        /* SIDE NAV ARROWS */
+        .ev-stage-arrow {
+          position: absolute; top: 50%; transform: translateY(-50%);
+          width: 48px; height: 48px; border-radius: 50%;
+          background: rgba(255,255,255,0.94); color: #B91414;
+          border: none; font-size: 32px; font-weight: 800;
+          display: flex; align-items: center; justify-content: center;
+          cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+          z-index: 5; transition: background 0.15s, transform 0.15s;
+          line-height: 1;
+        }
+        .ev-stage-arrow:hover:not(:disabled) { background: #fff; transform: translateY(-50%) scale(1.08); }
+        .ev-stage-arrow:disabled { opacity: 0.3; cursor: default; }
+        .ev-stage-arrow.left { left: 16px; }
+        .ev-stage-arrow.right { right: 16px; }
+
+        /* MODAL */
         .ev-modal {
           position: fixed; inset: 0; z-index: 9999;
           background: rgba(0,0,0,0.78);
@@ -269,32 +307,21 @@ export function EpaperViewer({
           max-width: 560px; width: 100%; text-align: center;
           max-height: 90vh; overflow: auto;
         }
-        .ev-modal-busy {
-          font-family: var(--font-telugu-body), sans-serif; font-size: 15px;
-          color: #374151; padding: 30px;
-        }
-        .ev-modal-title {
-          font-family: var(--font-telugu-heading), serif; font-size: 18px; font-weight: 800;
-          color: #15110b; margin-bottom: 14px;
-        }
-        .ev-clip-prev {
-          max-width: 100%; max-height: 50vh;
-          border: 2px solid #d1d5db; border-radius: 4px; display: block; margin: 0 auto 16px;
-        }
+        .ev-modal-busy { font-family: var(--font-telugu-body), sans-serif; font-size: 15px; color: #374151; padding: 30px; }
+        .ev-modal-title { font-family: var(--font-telugu-heading), serif; font-size: 18px; font-weight: 800; color: #15110b; margin-bottom: 14px; }
+        .ev-clip-prev { max-width: 100%; max-height: 50vh; border: 2px solid #d1d5db; border-radius: 4px; display: block; margin: 0 auto 16px; }
         .ev-clip-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-        .ev-wa, .ev-copy, .ev-close {
-          font-family: var(--font-telugu-body), sans-serif; font-size: 13px; font-weight: 700;
-          padding: 9px 16px; border-radius: 6px; cursor: pointer; text-decoration: none; border: none;
-        }
+        .ev-wa, .ev-copy, .ev-close { font-family: var(--font-telugu-body), sans-serif; font-size: 13px; font-weight: 700; padding: 9px 16px; border-radius: 6px; cursor: pointer; text-decoration: none; border: none; }
         .ev-wa { background: #25D366; color: #fff; }
         .ev-copy { background: #374151; color: #fff; }
         .ev-close { background: #e5e7eb; color: #374151; }
 
         @media (max-width: 768px) {
-          .ev-body { flex-direction: column; height: auto; }
-          .ev-thumbs { flex: none; flex-direction: row; overflow-x: auto; width: 100%; height: 88px; }
-          .ev-thumb { flex: 0 0 56px; }
-          .ev-stage { height: 70vh; }
+          .ev-thumb { flex: 0 0 64px; }
+          .ev-stage { padding: 14px 6px; max-height: 70vh; }
+          .ev-stage-arrow { width: 38px; height: 38px; font-size: 24px; }
+          .ev-stage-arrow.left { left: 6px; }
+          .ev-stage-arrow.right { right: 6px; }
         }
       `}</style>
     </div>

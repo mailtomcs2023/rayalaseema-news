@@ -53,10 +53,21 @@ export async function POST(req: NextRequest) {
     }
     const arts = await prisma.article.findMany({
       where: { id: { in: [...ids] } },
-      select: { id: true, slug: true, title: true, summary: true, featuredImage: true, category: { select: { name: true } } },
+      select: {
+        id: true, slug: true, title: true, summary: true, featuredImage: true,
+        category: { select: { name: true } },
+        desk: { select: { name: true } },
+      },
     });
     const artMap = new Map<string, EpaperArticle>(
-      arts.map((a) => [a.id, { slug: a.slug, title: a.title, summary: a.summary, featuredImage: a.featuredImage, categoryName: a.category.name }])
+      arts.map((a) => [a.id, {
+        slug: a.slug,
+        title: a.title,
+        summary: a.summary,
+        featuredImage: a.featuredImage,
+        categoryName: a.category.name,
+        deskName: a.desk?.name ?? null,
+      }])
     );
     const get = (id: string | null): EpaperArticle | null => (id ? artMap.get(id) || null : null);
     const getMany = (idList: string[]) => idList.map(get).filter(Boolean) as EpaperArticle[];

@@ -7,7 +7,39 @@
       "Bash(dir:*)",
       "Bash(test:*)",
       "PowerShell(node -e \"const c = require\\('C:/Users/reddygs/.claude/hooks/caveman-config.js'\\); console.log\\('default:', c.getDefaultMode\\(\\)\\); console.log\\('flag:', c.readFlag\\('C:/Users/reddygs/.claude/.caveman-active'\\)\\);\")",
-      "Bash(curl -s http://localhost:4001 -o /tmp/page.html)"
+      "Bash(curl -s http://localhost:4001 -o /tmp/page.html)",
+      "Bash(git commit -m ' *)",
+      "Bash(curl -sS -X POST https://rayalaseemaexpress.com/api/tts -H \"Content-Type: application/json\" -d '{\"text\":\"తాజా వార్తల కోసం రాయలసీమ ఎక్స్‌ప్రెస్‌ను అనుసరించండి.\"}' -o /tmp/tts-test.bin -w \"HTTP %{http_code} | content-type: %{content_type} | bytes: %{size_download}\\\\n\")",
+      "Bash(curl -sS -X POST https://rayalaseemaexpress.com/api/tts -H \"Content-Type: application/json\" -d '{\"text\":\"నేడు ఆంధ్రప్రదేశ్ రాష్ట్రంలో రాజకీయ పరిస్థితి కీలకంగా మారింది. రాష్ట్ర ముఖ్యమంత్రి, ప్రతిపక్ష నాయకులు ముఖ్యమైన ప్రకటనలు చేశారు. ఇది ప్రజలకు ప్రత్యక్ష ప్రభావం చూపుతుందని విశ్లేషకులు అంటున్నారు.\"}' -o /tmp/tts-test2.bin -w \"HTTP %{http_code} | bytes: %{size_download}\\\\n\")",
+      "Bash(curl -sS -v -X POST https://rayalaseemaexpress.com/api/tts -H \"Content-Type: application/json\" -d '{\"text\":\"నేడు రాయలసీమ ఎక్స్‌ప్రెస్‌లో తాజా వార్తలు అందుబాటులో ఉన్నాయి.\"}' -o /tmp/tts-test3.bin)",
+      "Bash(curl -sS -i -X POST https://rayalaseemaexpress.com/api/tts -H \"Content-Type: application/json\" -d '{\"text\":\"నేడు రాయలసీమ ఎక్స్‌ప్రెస్‌లో తాజా వార్తలు అందుబాటులో ఉన్నాయి.\"}')",
+      "Bash(curl -sS -i -X POST \"https://rayalaseemaexpress.com/api/tts?nocache=$\\(date +%s\\)\" -H \"Cache-Control: no-cache\" -H \"Pragma: no-cache\" -H \"Content-Type: application/json\" -d '{\"text\":\"నేడు రాయలసీమ ఎక్స్‌ప్రెస్‌లో తాజా వార్తలు అందుబాటులో ఉన్నాయి. ఇది ఒక పరీక్ష.\",\"_t\":1}')",
+      "Bash(curl -sS -X POST \"https://rayalaseemaexpress.com/api/tts?nocache=$\\(date +%s%N\\)\" -H \"Content-Type: application/json\" -d '{\"text\":\"నేడు రాయలసీమ ఎక్స్‌ప్రెస్‌లో తాజా వార్తలు అందుబాటులో ఉన్నాయి. ఇది ఒక పరీక్ష పరిస్థితి.\",\"_t\":42}' -o /tmp/tts4.bin -w \"bytes=%{size_download}\\\\n\")",
+      "Read(//d/Rayalaseema express/apps/web/**)",
+      "Read(//tmp/**)",
+      "Bash(curl -sS -o /tmp/tts_post.bin -w \"HTTP %{http_code} | bytes: %{size_download}\\\\n\" -X POST \"https://rayalaseemaexpress.com/api/tts?nocache=$\\(date +%s%N\\)\" -H \"Content-Type: application/json\" -d '{\"text\":\"నేడు రాయలసీమ ఎక్స్‌ప్రెస్‌లో తాజా వార్తలు అందుబాటులో ఉన్నాయి. ఇది ఒక పరీక్ష.\"}')",
+      "Bash(curl -sS -i -X POST \"https://rayalaseemaexpress.com/api/tts?probe=1&t=$\\(date +%s%N\\)\" -H \"Content-Type: application/json\" -d '{\"text\":\"రాయలసీమ ఎక్స్‌ప్రెస్ పరీక్ష.\"}')",
+      "Bash(git commit -m 'Add TTS diagnostic endpoint \\(?diag=1\\) to surface Azure response details *)",
+      "Bash(curl -sS -X POST \"https://rayalaseemaexpress.com/api/tts?diag=1&t=$\\(date +%s%N\\)\" -H \"Content-Type: application/json\" -d '{\"text\":\"రాయలసీమ ఎక్స్‌ప్రెస్ పరీక్ష పరిస్థితి.\"}')",
+      "mcp__plugin_microsoft-docs_microsoft-learn__microsoft_docs_search",
+      "Bash(az monitor *)",
+      "Bash(curl -sS -i -X POST https://centralindia.tts.speech.microsoft.com/cognitiveservices/v1 -H 'Ocp-Apim-Subscription-Key: __TRACKED_VAR__' -H 'Content-Type: application/ssml+xml' -H 'X-Microsoft-OutputFormat: audio-24khz-96kbitrate-mono-mp3' --data-binary '<speak version=\"1.0\" xmlns=\"http://www.w3.org/2001/10/synthesis\" xml:lang=\"te-IN\"><voice name=\"te-IN-MohanNeural\">పరీక్ష</voice></speak>')",
+      "Bash(curl -sS -X POST https://centralindia.tts.speech.microsoft.com/cognitiveservices/v1 -H 'Ocp-Apim-Subscription-Key: __TRACKED_VAR__' -H 'Content-Type: application/ssml+xml' -H 'X-Microsoft-OutputFormat: audio-24khz-96kbitrate-mono-mp3' --data-binary '<speak version=\"1.0\" xmlns=\"http://www.w3.org/2001/10/synthesis\" xml:lang=\"te-IN\"><voice name=\"te-IN-MohanNeural\">పరీక్ష</voice></speak>' -o /tmp/audio.mp3 -w 'size=%{size_download}\\\\n')",
+      "Bash(curl -sS -X POST https://centralindia.tts.speech.microsoft.com/cognitiveservices/v1 -H 'Ocp-Apim-Subscription-Key: __TRACKED_VAR__' -H 'Content-Type: application/ssml+xml' -H 'X-Microsoft-OutputFormat: audio-24khz-96kbitrate-mono-mp3' --data-binary '<speak version=\"1.0\" xml:lang=\"en-US\"><voice name=\"en-US-JennyNeural\">Hello world test</voice></speak>' -o /tmp/audio2.mp3 -w 'size=%{size_download}\\\\n')",
+      "Bash(cp D:/RSE2026M365/assets/masthead/masthead-horizontal-nobg.svg 'd:/Rayalaseema express/apps/web/public/logo.svg')",
+      "Bash(cp D:/RSE2026M365/assets/masthead/masthead-horizontal-nobg.svg 'd:/Rayalaseema express/apps/admin/public/logo.svg')",
+      "Bash(cp D:/RSE2026M365/assets/masthead/masthead-icon-red.png 'd:/Rayalaseema express/apps/web/src/app/icon.png')",
+      "Bash(cp D:/RSE2026M365/assets/masthead/masthead-icon-red.png 'd:/Rayalaseema express/apps/web/src/app/apple-icon.png')",
+      "Bash(cp D:/RSE2026M365/assets/masthead/masthead-stacked.png 'd:/Rayalaseema express/apps/web/src/app/opengraph-image.png')",
+      "Bash(git commit -m 'Bake Telugu mandal backfill into deploy *)",
+      "Bash(git rm *)",
+      "WebFetch(domain:epaperscript.com)",
+      "Bash(git commit -m 'seed: 4 more categories for v2.1 epaper sections \\(vasundhara, hai-bujji, sunday-magazine, obituaries\\) *)",
+      "Bash(cp \"D:/RSE2026M365/assets/masthead/masthead-inverse-nobg.svg\" \"d:/Rayalaseema express/apps/web/public/logo-inverse.svg\" && ls -la \"d:/Rayalaseema express/apps/web/public/logo-inverse.svg\" 2>&1)",
+      "Bash(git commit -m 'Fix build: drop unused react-resizable CSS import \\(RGL pulls its own\\) *)"
+    ],
+    "additionalDirectories": [
+      "D:\\RSE2026M365\\assets\\masthead"
     ]
   }
 }

@@ -8,6 +8,7 @@ import { CommentsSection } from "@/components/comments-section";
 import { ScrollShareNudge } from "@/components/scroll-share-nudge";
 import { ShareBar } from "@/components/share-bar";
 import { getArticleBySlug, getTrendingArticles, getArticlesByCategory, incrementViewCount } from "@/lib/db-queries";
+import { injectInlineByline, formatRelativeTelugu } from "@/lib/byline";
 import type { Metadata } from "next";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -18,7 +19,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   // Per-article SEO overrides w/ sensible fallbacks
   const metaTitle = (article as any).metaTitle || article.title;
   const metaDescription = (article as any).metaDescription || article.summary || article.title;
-  const ogImage = (article as any).ogImage || article.featuredImage || `${siteUrl}/logo-transparent.svg`;
+  const ogImage = (article as any).ogImage || article.featuredImage || `${siteUrl}/logo.svg`;
   const canonical = `${siteUrl}/article/${slug}`;
   const noindex = article.status !== "PUBLISHED";
   return {
@@ -38,7 +39,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       images: ogImage ? [{ url: ogImage }] : undefined,
       publishedTime: article.publishedAt?.toISOString(),
       modifiedTime: article.updatedAt?.toISOString(),
-      authors: [article.author.name],
+      authors: [article.desk?.name ?? article.author.name],
     },
     twitter: {
       card: "summary_large_image",
@@ -85,11 +86,16 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     image: article.featuredImage || undefined,
     datePublished: article.publishedAt?.toISOString(),
     dateModified: article.updatedAt?.toISOString(),
-    author: { "@type": "Person", name: article.author.name },
+    // Desk byline is treated as an Organization for schema.org; falls back to the
+    // individual author's Person name only if the article wasn't assigned a desk
+    // (shouldn't happen for new articles — auto-resolver always assigns one).
+    author: article.desk
+      ? { "@type": "Organization", name: article.desk.name }
+      : { "@type": "Person", name: article.author.name },
     publisher: {
       "@type": "Organization",
       name: "Rayalaseema Express",
-      logo: { "@type": "ImageObject", url: `${siteUrl}/logo-transparent.svg` },
+      logo: { "@type": "ImageObject", url: `${siteUrl}/logo.svg` },
     },
     mainEntityOfPage: { "@type": "WebPage", "@id": `${siteUrl}/article/${slug}` },
     articleSection: article.category.nameEn,
@@ -134,12 +140,23 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               {article.title}
             </h1>
 
-            {/* Meta */}
+            {/* Byline strip — desk name + (published / updated) timestamps.
+                If updatedAt is materially later than publishedAt we surface "నవీకరించబడింది" so
+                readers see when the article was last edited (Sakshi/Eenadu convention). */}
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 12, paddingBottom: 12, borderBottom: "1px solid #eee" }}>
               <div>
-                <a href={`/author/${article.author.id}`} style={{ fontSize: 14, fontWeight: 700, color: "#333", textDecoration: "none" }} className="hover:underline">{article.author.name}</a>
-                <p style={{ fontSize: 12, color: "#888" }}>
-                  {article.publishedAt ? new Date(article.publishedAt).toLocaleDateString("te-IN", { day: "numeric", month: "long", year: "numeric" }) : ""}
+                <div style={{ fontFamily: "var(--font-telugu-heading), serif", fontSize: 15, fontWeight: 800, color: "#1a1a1a" }}>
+                  {article.desk?.name ?? article.author.name}
+                </div>
+                <p style={{ fontSize: 12, color: "#888", marginTop: 2 }}>
+                  {(() => {
+                    const pub = article.publishedAt ? new Date(article.publishedAt) : null;
+                    const upd = article.updatedAt ? new Date(article.updatedAt) : null;
+                    const edited = pub && upd && upd.getTime() - pub.getTime() > 5 * 60_000;
+                    if (edited && upd) return `Updated · ${formatRelativeTelugu(upd)}`;
+                    if (pub) return `Published · ${formatRelativeTelugu(pub)}`;
+                    return "";
+                  })()}
                 </p>
               </div>
               <div style={{ marginLeft: "auto", fontSize: 12, color: "#888" }}>
@@ -151,7 +168,14 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0" }}>
               <TTSButton text={article.body || ""} />
             </div>
-            <ShareBar title={article.title} slug={slug} siteUrl={siteUrl} body={article.body || ""} />
+            <ShareBar
+              title={article.title}
+              slug={slug}
+              siteUrl={siteUrl}
+              body={article.body || ""}
+              featuredImage={article.featuredImage}
+              deskName={article.desk?.name ?? null}
+            />
 
             {/* Featured Image */}
             {article.featuredImage && (
@@ -161,11 +185,14 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               </div>
             )}
 
-            {/* Article Body */}
+            {/* Article Body — first paragraph gets an inline newspaper-style byline:
+                "రాయలసీమ ఎక్స్‌ప్రెస్, బనగానపల్లె: <body>" */}
             <div
               className="article-body"
               style={{ marginTop: 24 }}
-              dangerouslySetInnerHTML={{ __html: sanitizeHtml(article.body) }}
+              dangerouslySetInnerHTML={{
+                __html: injectInlineByline(sanitizeHtml(article.body), article.desk?.name, article.title),
+              }}
             />
 
             {/* Tags */}

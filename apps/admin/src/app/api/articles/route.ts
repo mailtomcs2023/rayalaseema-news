@@ -3,6 +3,7 @@ import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 import { logAudit } from "@/lib/audit";
 import { sanitizeSlug } from "@/lib/slug";
+import { resolveDeskId } from "@/lib/desk-resolver";
 
 // GET /api/articles - list with search, pagination, filters
 export async function GET(req: NextRequest) {
@@ -16,6 +17,18 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get("status") || "";
     const category = searchParams.get("category") || "";
     const offset = (page - 1) * limit;
+
+    // `?ids=a,b,c` short-circuits the listing — returns just those rows
+    // (used by the e-paper editor to look up article titles by id).
+    const idsParam = searchParams.get("ids");
+    if (idsParam) {
+      const ids = idsParam.split(",").map((s) => s.trim()).filter(Boolean).slice(0, 500);
+      const articles = await prisma.article.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, title: true, slug: true },
+      });
+      return NextResponse.json({ articles, total: articles.length });
+    }
 
     const where: any = {};
     if (search) {
@@ -56,7 +69,7 @@ export async function POST(req: NextRequest) {
     const authorId = session.user.id;
 
     const body = await req.json();
-    const { title, slug, summary, body: articleBody, categoryId, featuredImage, status, featured, breaking, constituencyId, scheduledAt, tagNames, metaTitle, metaDescription, ogImage } = body;
+    const { title, slug, summary, body: articleBody, categoryId, featuredImage, status, featured, breaking, constituencyId, deskId, scheduledAt, tagNames, metaTitle, metaDescription, ogImage } = body;
 
     if (!title || !title.trim()) return NextResponse.json({ error: "Title is required" }, { status: 400 });
     if (!slug || !slug.trim()) return NextResponse.json({ error: "Slug is required" }, { status: 400 });
@@ -80,6 +93,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "SCHEDULED status requires a future scheduledAt date" }, { status: 400 });
     }
 
+    const resolvedDeskId = await resolveDeskId({
+      deskId: deskId || null,
+      categoryId,
+      constituencyId: constituencyId || null,
+    });
+
     const article = await prisma.article.create({
       data: {
         title: title.trim(),
@@ -92,6 +111,7 @@ export async function POST(req: NextRequest) {
         featured: featured || false,
         breaking: breaking || false,
         constituencyId: constituencyId || null,
+        deskId: resolvedDeskId,
         language: "TELUGU",
         authorId,
         publishedAt: finalStatus === "PUBLISHED" ? new Date() : null,

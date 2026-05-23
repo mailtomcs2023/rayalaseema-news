@@ -22,11 +22,13 @@ export function Footer({ config: initialConfig = {} }: FooterProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
           {/* Brand */}
           <div className="lg:col-span-2">
-            <div className="mb-4 bg-white rounded-lg p-2 inline-block">
+            <div className="mb-4 inline-block">
+              {/* Footer sits on bg-gray-900; the inverse masthead (white wordmark
+                  on transparent) reads cleanly without a white card around it. */}
               <img
-                src="/logo-transparent.svg"
+                src="/logo-inverse.svg"
                 alt="రాయలసీమ ఎక్స్‌ప్రెస్"
-                className="h-10 w-auto"
+                className="h-12 w-auto"
               />
             </div>
             <p className="text-sm text-gray-400 font-telugu leading-relaxed mb-4">
