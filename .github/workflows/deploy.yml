@@ -55,6 +55,9 @@ jobs:
 
             echo "=== Backfill article deskId for any article still missing one ==="
             bunx tsx scripts/backfill-desks.ts
+
+            echo "=== Backfill Telugu mandal names ==="
+            bunx tsx scripts/backfill-mandal-telugu.ts
             cd ../..
 
             echo "=== Install Playwright Chromium (e-paper render) ==="
