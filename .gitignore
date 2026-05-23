@@ -45,3 +45,6 @@ db-snapshot.sql
 
 # Generated recruitment tracker (regenerate via packages/db/scripts/export-recruitment-xlsx.ts)
 rayalaseema-recruitment.xlsx
+
+# Excel lock files (open document indicators)
+~$*
