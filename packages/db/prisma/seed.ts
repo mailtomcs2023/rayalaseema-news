@@ -69,6 +69,11 @@ async function main() {
     { name: "రాయలసీమ రుచులు", nameEn: "Rayalaseema Ruchulu", slug: "rayalaseema-ruchulu", color: "#D97706", sortOrder: 27 },
     { name: "ఎట్టెట", nameEn: "Yetteta", slug: "yetteta", color: "#EC4899", sortOrder: 28 },
     { name: "పజిల్స్", nameEn: "Puzzles", slug: "puzzles", color: "#16A34A", sortOrder: 29 },
+    // E-paper v2.1 section sources
+    { name: "వసుంధర", nameEn: "Vasundhara", slug: "vasundhara", color: "#DB2777", sortOrder: 30 },
+    { name: "హాయ్ బుజ్జి", nameEn: "Hai Bujji", slug: "hai-bujji", color: "#F59E0B", sortOrder: 31 },
+    { name: "ఆదివారం మాగజైన్", nameEn: "Sunday Magazine", slug: "sunday-magazine", color: "#7C3AED", sortOrder: 32 },
+    { name: "శ్రద్ధాంజలి", nameEn: "Obituaries & Birthdays", slug: "obituaries", color: "#475569", sortOrder: 33 },
   ];
 
   for (const cat of categories) {

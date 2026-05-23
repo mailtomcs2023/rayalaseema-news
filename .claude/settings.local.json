@@ -33,7 +33,8 @@
       "Bash(cp D:/RSE2026M365/assets/masthead/masthead-stacked.png 'd:/Rayalaseema express/apps/web/src/app/opengraph-image.png')",
       "Bash(git commit -m 'Bake Telugu mandal backfill into deploy *)",
       "Bash(git rm *)",
-      "WebFetch(domain:epaperscript.com)"
+      "WebFetch(domain:epaperscript.com)",
+      "Bash(git commit -m 'seed: 4 more categories for v2.1 epaper sections \\(vasundhara, hai-bujji, sunday-magazine, obituaries\\) *)"
     ]
   }
 }
