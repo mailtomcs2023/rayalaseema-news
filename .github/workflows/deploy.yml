@@ -58,6 +58,9 @@ jobs:
 
             echo "=== Backfill Telugu mandal names ==="
             bunx tsx scripts/backfill-mandal-telugu.ts
+
+            echo "=== Seed e-paper v2 templates (front + 8 district + 4 section) ==="
+            bunx tsx scripts/seed-epaper-templates.ts
             cd ../..
 
             echo "=== Install Playwright Chromium (e-paper render) ==="

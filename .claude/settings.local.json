@@ -30,7 +30,8 @@
       "Bash(cp D:/RSE2026M365/assets/masthead/masthead-horizontal-nobg.svg 'd:/Rayalaseema express/apps/admin/public/logo.svg')",
       "Bash(cp D:/RSE2026M365/assets/masthead/masthead-icon-red.png 'd:/Rayalaseema express/apps/web/src/app/icon.png')",
       "Bash(cp D:/RSE2026M365/assets/masthead/masthead-icon-red.png 'd:/Rayalaseema express/apps/web/src/app/apple-icon.png')",
-      "Bash(cp D:/RSE2026M365/assets/masthead/masthead-stacked.png 'd:/Rayalaseema express/apps/web/src/app/opengraph-image.png')"
+      "Bash(cp D:/RSE2026M365/assets/masthead/masthead-stacked.png 'd:/Rayalaseema express/apps/web/src/app/opengraph-image.png')",
+      "Bash(git commit -m 'Bake Telugu mandal backfill into deploy *)"
     ]
   }
 }
