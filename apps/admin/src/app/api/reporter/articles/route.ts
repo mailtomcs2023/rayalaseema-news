@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { getReporterId } from "@/lib/reporter-auth";
 import { sanitizeSlug } from "@/lib/slug";
+import { resolveDeskId } from "@/lib/desk-resolver";
 
 // Articles for the reporter (Expo) app — scoped to ONE reporter.
 //
@@ -61,6 +62,12 @@ export async function POST(req: NextRequest) {
     // A reporter may only save a draft or submit for review — not publish.
     const finalStatus = status === "SUBMITTED" ? "SUBMITTED" : "DRAFT";
 
+    // Auto-pick desk so reporter app doesn't need a desk picker UI.
+    const resolvedDeskId = await resolveDeskId({
+      categoryId,
+      constituencyId: null,
+    });
+
     const article = await prisma.article.create({
       data: {
         title: String(title).trim(),
@@ -70,6 +77,7 @@ export async function POST(req: NextRequest) {
         categoryId,
         featuredImage: featuredImage ? String(featuredImage).trim() : null,
         status: finalStatus,
+        deskId: resolvedDeskId,
         language: "TELUGU",
         authorId: reporterId,
       },

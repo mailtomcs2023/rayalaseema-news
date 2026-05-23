@@ -12,6 +12,7 @@ interface SliderItem {
   featuredImage: string;
   publishedAt: string;
   author: { name: string };
+  desk?: { name: string; nameEn: string } | null;
 }
 
 function formatTimeAgo(dateString: string) {
@@ -98,7 +99,7 @@ export function NewsSlider({ items }: { items: SliderItem[] }) {
           </Link>
           <p className="news-slider-summary">{item.summary}</p>
           <div className="news-slider-meta">
-            <span>{item.author.name}</span>
+            <span>{item.desk?.name ?? item.author.name}</span>
             <span style={{ opacity: 0.4 }}>|</span>
             <span>{formatTimeAgo(item.publishedAt)}</span>
           </div>

@@ -38,6 +38,9 @@ export default function EditArticlePage() {
   const [metaTitle, setMetaTitle] = useState("");
   const [metaDescription, setMetaDescription] = useState("");
   const [ogImage, setOgImage] = useState("");
+  const [deskId, setDeskId] = useState("");   // "" = auto-resolve on save
+  const [desks, setDesks] = useState<any[]>([]);
+  const [currentDeskLabel, setCurrentDeskLabel] = useState("");
 
   // Revisions
   const [revisions, setRevisions] = useState<any[]>([]);
@@ -65,8 +68,10 @@ export default function EditArticlePage() {
       fetch(`/api/articles/${articleId}`).then((r) => r.json()),
       fetch("/api/categories").then((r) => r.json()),
       fetch("/api/locations").then((r) => r.json()).catch(() => []),
-    ]).then(([article, cats, locs]) => {
+      fetch("/api/desks").then((r) => r.json()).catch(() => []),
+    ]).then(([article, cats, locs, deskList]) => {
       setDistricts(locs || []);
+      setDesks(deskList || []);
       if (article.error) {
         setError("Article not found");
         setLoading(false);
@@ -95,6 +100,12 @@ export default function EditArticlePage() {
       setMetaTitle(article.metaTitle || "");
       setMetaDescription(article.metaDescription || "");
       setOgImage(article.ogImage || "");
+      setDeskId(article.deskId || "");
+      // Look up the current desk name for display (the article API doesn't include the join).
+      if (article.deskId && Array.isArray(deskList)) {
+        const d = deskList.find((x: any) => x.id === article.deskId);
+        if (d) setCurrentDeskLabel(`${d.name} (${d.branch})`);
+      }
       setCategories(cats);
       setLoading(false);
     });
@@ -120,6 +131,7 @@ export default function EditArticlePage() {
         status: newStatus || status,
         featured, breaking,
         constituencyId: selectedConstituency || null,
+        deskId: deskId || null,    // null → backend auto-resolves via desk-resolver.ts
         scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
         tagNames: tagsInput.split(",").map((s) => s.trim()).filter(Boolean),
         metaTitle: metaTitle.trim() || null,
@@ -448,6 +460,35 @@ export default function EditArticlePage() {
                 </select>
               )}
               <p style={{ fontSize: 11, color: "#aaa", marginTop: 4 }}>Tag to district/constituency for location-based news</p>
+            </div>
+
+            {/* Desk byline */}
+            <div style={{ background: "#fff", borderRadius: 10, padding: 16, marginBottom: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#555", marginBottom: 6 }}>Desk (byline)</label>
+              <select value={deskId} onChange={(e) => setDeskId(e.target.value)}
+                style={{ width: "100%", border: "1px solid #eee", borderRadius: 8, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }}>
+                <option value="">Auto (resolve from category/location)</option>
+                <optgroup label="Geographic">
+                  {desks.filter((d) => d.branch === "GEOGRAPHIC").map((d) => (
+                    <option key={d.id} value={d.id}>{d.name}{d.nameEn ? ` — ${d.nameEn}` : ""}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="Topical">
+                  {desks.filter((d) => d.branch === "TOPICAL").map((d) => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="Editorial">
+                  {desks.filter((d) => d.branch === "EDITORIAL").map((d) => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </optgroup>
+              </select>
+              {currentDeskLabel && deskId === "" && (
+                <p style={{ fontSize: 11, color: "#aaa", marginTop: 4 }}>
+                  Currently: {currentDeskLabel}. Picking "Auto" will recompute on next save.
+                </p>
+              )}
             </div>
 
             {/* Featured Image */}

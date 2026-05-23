@@ -97,17 +97,10 @@ async function main() {
       create: { name: d.name, nameEn: d.nameEn, slug: d.slug },
     });
 
-    for (let i = 0; i < d.constituencies.length; i++) {
-      const c = d.constituencies[i];
-      const slug = c.toLowerCase().replace(/\s+/g, "-");
-      await prisma.constituency.upsert({
-        where: { slug },
-        update: {},
-        create: { name: c, nameEn: c, slug, districtId: district.id, sortOrder: i },
-      });
-    }
+    // Constituencies are now managed by packages/db/scripts/rebuild-constituencies.ts
+    // (55 official ECI-numbered Rayalaseema ACs, delimitation 2024). Do NOT upsert here.
   }
-  console.log(`  ${districts.length} districts with constituencies created`);
+  console.log(`  ${districts.length} districts upserted (constituencies handled by rebuild-constituencies.ts)`);
 
   // ========== BREAKING NEWS ==========
   await prisma.breakingNews.deleteMany({});

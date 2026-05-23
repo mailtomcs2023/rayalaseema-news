@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       images: ogImage ? [{ url: ogImage }] : undefined,
       publishedTime: article.publishedAt?.toISOString(),
       modifiedTime: article.updatedAt?.toISOString(),
-      authors: [article.author.name],
+      authors: [article.desk?.name ?? article.author.name],
     },
     twitter: {
       card: "summary_large_image",
@@ -85,7 +85,12 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     image: article.featuredImage || undefined,
     datePublished: article.publishedAt?.toISOString(),
     dateModified: article.updatedAt?.toISOString(),
-    author: { "@type": "Person", name: article.author.name },
+    // Desk byline is treated as an Organization for schema.org; falls back to the
+    // individual author's Person name only if the article wasn't assigned a desk
+    // (shouldn't happen for new articles — auto-resolver always assigns one).
+    author: article.desk
+      ? { "@type": "Organization", name: article.desk.name }
+      : { "@type": "Person", name: article.author.name },
     publisher: {
       "@type": "Organization",
       name: "Rayalaseema Express",
@@ -134,11 +139,15 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               {article.title}
             </h1>
 
-            {/* Meta */}
+            {/* Byline — desk name (Telugu) is primary; English subtitle + date below.
+                Falls back to author for old articles that pre-date the desk system. */}
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 12, paddingBottom: 12, borderBottom: "1px solid #eee" }}>
               <div>
-                <a href={`/author/${article.author.id}`} style={{ fontSize: 14, fontWeight: 700, color: "#333", textDecoration: "none" }} className="hover:underline">{article.author.name}</a>
-                <p style={{ fontSize: 12, color: "#888" }}>
+                <div style={{ fontFamily: "var(--font-telugu-heading), serif", fontSize: 15, fontWeight: 800, color: "#1a1a1a" }}>
+                  {article.desk?.name ?? article.author.name}
+                </div>
+                <p style={{ fontSize: 12, color: "#888", marginTop: 2 }}>
+                  {article.desk?.nameEn && <span>{article.desk.nameEn} · </span>}
                   {article.publishedAt ? new Date(article.publishedAt).toLocaleDateString("te-IN", { day: "numeric", month: "long", year: "numeric" }) : ""}
                 </p>
               </div>

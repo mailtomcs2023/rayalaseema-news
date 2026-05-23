@@ -206,6 +206,10 @@ model Article {
   mandalId        String?
   mandal          Mandal?       @relation("ArticleMandal", fields: [mandalId], references: [id])
 
+  // Desk byline (auto-picked on save unless editor overrides; see lib/desk-resolver.ts)
+  deskId          String?
+  desk            Desk?         @relation(fields: [deskId], references: [id])
+
   // Analytics
   viewCount       Int           @default(0)
 
@@ -226,6 +230,7 @@ model Article {
   @@index([categoryId])
   @@index([authorId])
   @@index([constituencyId])
+  @@index([deskId])
   @@index([slug])
   @@index([status, featured, publishedAt])
   @@index([categoryId, status, publishedAt])
@@ -250,6 +255,7 @@ model Category {
   articles    Article[]
   videos      Video[]
   assignedUsers UserCategory[]
+  desk        Desk?      // back-relation: TOPICAL desk auto-derived from category
 
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
@@ -424,6 +430,7 @@ model District {
   sortOrder       Int             @default(0)
   active          Boolean         @default(true)
   constituencies  Constituency[]
+  desk            Desk?           // back-relation: GEOGRAPHIC desk for this district
   createdAt       DateTime        @default(now())
 
   @@map("districts")
@@ -442,12 +449,54 @@ model Constituency {
   loksabha    String?  // Which Lok Sabha seat this falls under
   mandals     Mandal[]
   articles    Article[] @relation("ArticleConstituency")
+  desk        Desk?     // back-relation: GEOGRAPHIC desk for this AC (e.g. "ప్రొద్దుటూరు")
   sortOrder   Int      @default(0)
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
 
   @@index([districtId])
   @@map("constituencies")
+}
+
+// ============ DESKS (byline + e-paper section grouping) ============
+
+enum DeskBranch {
+  TOPICAL      // e.g. "రాయలసీమ ఎక్స్‌ప్రెస్ బిజినెస్ డెస్క్" (linked to a Category)
+  GEOGRAPHIC   // e.g. "రాయలసీమ ఎక్స్‌ప్రెస్" (root), "అనంతపురం" (district), "ప్రొద్దుటూరు" (AC)
+  EDITORIAL    // e.g. "రాయలసీమ ఎక్స్‌ప్రెస్ ఎడిటోరియల్ డెస్క్"
+}
+
+/// Desk = byline & section grouping. Hierarchical (Topical/Geographic/Editorial branches).
+/// Auto-resolved on article save via fallback chain (see lib/desk-resolver.ts):
+///   manual deskId → constituency desk → district desk → category desk → root (Rayalaseema Express)
+model Desk {
+  id              String        @id @default(cuid())
+  name            String        // Telugu display name (the byline string)
+  nameEn          String        // English name (admin UI + slug source)
+  slug            String        @unique
+  branch          DeskBranch
+  parentId        String?
+  parent          Desk?         @relation("DeskHierarchy", fields: [parentId], references: [id])
+  children        Desk[]        @relation("DeskHierarchy")
+
+  // Optional links so we can auto-derive the desk from article metadata.
+  // All three are @unique — one desk per category / district / constituency at most.
+  categoryId      String?       @unique
+  category        Category?     @relation(fields: [categoryId], references: [id])
+  districtId      String?       @unique
+  district        District?     @relation(fields: [districtId], references: [id])
+  constituencyId  String?       @unique
+  constituency    Constituency? @relation(fields: [constituencyId], references: [id])
+
+  articles        Article[]
+  sortOrder       Int           @default(0)
+  active          Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([branch])
+  @@index([parentId])
+  @@map("desks")
 }
 
 model Mandal {

@@ -15,6 +15,7 @@ export async function getFeaturedArticles(limit = 6) {
     include: {
       category: { select: { name: true, nameEn: true, slug: true, color: true } },
       author: { select: { name: true } },
+      desk: { select: { name: true, nameEn: true } },
     },
     orderBy: { publishedAt: "desc" },
     take: limit,
@@ -38,6 +39,7 @@ export async function getArticlesByCategory(categorySlug: string, limit = 5) {
     include: {
       category: { select: { name: true, nameEn: true, slug: true, color: true } },
       author: { select: { name: true } },
+      desk: { select: { name: true, nameEn: true } },
     },
     orderBy: { publishedAt: "desc" },
     take: limit,
@@ -103,6 +105,7 @@ export async function getArticleBySlug(slug: string) {
     include: {
       category: { select: { name: true, nameEn: true, slug: true, color: true } },
       author: { select: { id: true, name: true, bio: true, avatar: true } },
+      desk: { select: { name: true, nameEn: true, branch: true } },
       tags: { include: { tag: true } },
     },
   });

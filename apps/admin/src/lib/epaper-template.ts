@@ -7,6 +7,7 @@ export interface EpaperArticle {
   summary?: string | null;
   featuredImage?: string | null;
   categoryName?: string | null;
+  deskName?: string | null;   // Telugu byline (e.g. "రాయలసీమ ఎక్స్‌ప్రెస్ బిజినెస్ డెస్క్", "ప్రొద్దుటూరు")
 }
 
 export interface PageOptions {
@@ -53,11 +54,12 @@ export function renderBroadsheetPage(o: PageOptions): string {
          <span class="secbar-meta">రాయలసీమ ఎక్స్‌ప్రెస్ · ${esc(o.dateLabel)} · పేజీ ${o.pageNumber}</span>
        </div>`;
 
-  // Lead — spans 4 cols: kicker, banner headline, photo, 3-col justified dek
+  // Lead — spans 4 cols: kicker, banner headline, byline, photo, 3-col justified dek
   const lead = `
     <article class="lead" data-slug="${esc(o.lead.slug)}">
       ${o.lead.categoryName ? `<div class="kicker">${esc(o.lead.categoryName)}</div>` : ""}
       <h1 class="lead-hl">${esc(o.lead.title)}</h1>
+      ${o.lead.deskName ? `<div class="byline">— ${esc(o.lead.deskName)}</div>` : ""}
       ${img(o.lead.featuredImage, "lead-img")}
       ${o.lead.summary ? `<p class="lead-dek">${esc(o.lead.summary)}</p>` : ""}
     </article>`;
@@ -73,6 +75,7 @@ export function renderBroadsheetPage(o: PageOptions): string {
           ${img(a.featuredImage, "maj-img")}
           ${a.categoryName ? `<div class="kicker sm">${esc(a.categoryName)}</div>` : ""}
           <h2 class="maj-hl">${esc(a.title)}</h2>
+          ${a.deskName ? `<div class="byline sm">— ${esc(a.deskName)}</div>` : ""}
           ${a.summary ? `<p class="maj-dek">${esc(a.summary)}</p>` : ""}
         </article>`
         )
@@ -140,6 +143,8 @@ export function renderBroadsheetPage(o: PageOptions): string {
 
   .kicker{font-family:'Noto Sans Telugu',sans-serif;font-size:13px;font-weight:800;color:#A50D0D;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px}
   .kicker.sm{font-size:10px;margin:5px 0 3px}
+  .byline{font-family:'Noto Sans Telugu',sans-serif;font-size:13px;font-weight:700;color:#6b6155;margin:0 0 8px;font-style:italic}
+  .byline.sm{font-size:10px;margin:2px 0 4px}
 
   /* ===== TOP BLOCK: lead (4col) + majors (2col) ===== */
   .topblock{display:grid;grid-template-columns:2fr 1fr;gap:0;border-bottom:3px double #14110b;padding-bottom:14px}
