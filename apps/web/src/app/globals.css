@@ -236,7 +236,7 @@
   .article-body .re-byline {
     font-family: var(--font-telugu-heading);
     font-weight: 800;
-    color: var(--n-900);
+    color: var(--brand);   /* Red — Sakshi-style standout dateline */
     margin-right: 4px;
   }
 

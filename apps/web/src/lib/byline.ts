@@ -1,14 +1,25 @@
+const BRAND_TE = "రాయలసీమ ఎక్స్‌ప్రెస్";
+
 /**
  * Inline byline formatting for the Sakshi/Eenadu newspaper style:
- *   "రాయలసీమ ఎక్స్‌ప్రెస్, బనగానపల్లె: <body starts here>"
+ *   "రాయలసీమ ఎక్స్‌ప్రెస్, బనగానపల్లె: <body>"
+ *   "రాయలసీమ ఎక్స్‌ప్రెస్, పొలిటికల్ డెస్క్: <body>"
  *
- * The Desk table stores names with a dash separator for geographic desks
- * ("రాయలసీమ ఎక్స్‌ప్రెస్ - బనగానపల్లె") to keep the standalone byline readable.
- * Inline, we swap the dash for a comma so it reads naturally as a dateline.
+ * The Desk table stores geographic desks with " - " ("రాయలసీమ ఎక్స్‌ప్రెస్ - బనగానపల్లె")
+ * and topical/editorial desks with " " separators. For inline reading both should
+ * read as "<brand>, <rest>" with a comma right after the brand. We:
+ *  1. Swap any " - " for ", " (geographic).
+ *  2. Insert ", " right after the "రాయలసీమ ఎక్స్‌ప్రెస్" prefix when the next char
+ *     is a space (topical/editorial), unless a comma is already there.
  */
 export function formatInlineByline(deskName: string | null | undefined): string {
-  if (!deskName) return "రాయలసీమ ఎక్స్‌ప్రెస్";
-  return deskName.replace(/ - /g, ", ");
+  if (!deskName) return BRAND_TE;
+  let s = deskName.replace(/ - /g, ", ");
+  // Insert comma right after the brand prefix if it isn't already followed by one.
+  if (s.startsWith(`${BRAND_TE} `) && !s.startsWith(`${BRAND_TE}, `)) {
+    s = `${BRAND_TE}, ${s.slice(BRAND_TE.length + 1)}`;
+  }
+  return s;
 }
 
 /**
