@@ -151,7 +151,9 @@ export function KycUploadScreen() {
           busy={busyKey === "photoUri"}
           onCamera={() => takePhoto("photoUri")}
           onGallery={() => pickImage("photoUri")}
+          onRemove={() => setDoc("photoUri", "")}
           error={errors.photo}
+          t={t}
         />
       </Section>
 
@@ -181,7 +183,9 @@ export function KycUploadScreen() {
           busy={busyKey === "aadhaarFrontUri"}
           onCamera={() => takePhoto("aadhaarFrontUri")}
           onGallery={() => pickImage("aadhaarFrontUri")}
+          onRemove={() => setDoc("aadhaarFrontUri", "")}
           error={errors.aadhaarFront}
+          t={t}
         />
         <Text style={styles.label}>{t("register.aadhaarBack")}</Text>
         <DocPicker
@@ -191,7 +195,9 @@ export function KycUploadScreen() {
           busy={busyKey === "aadhaarBackUri"}
           onCamera={() => takePhoto("aadhaarBackUri")}
           onGallery={() => pickImage("aadhaarBackUri")}
+          onRemove={() => setDoc("aadhaarBackUri", "")}
           error={errors.aadhaarBack}
+          t={t}
         />
       </Section>
 
@@ -221,7 +227,9 @@ export function KycUploadScreen() {
           busy={busyKey === "panCardUri"}
           onCamera={() => takePhoto("panCardUri")}
           onGallery={() => pickImage("panCardUri")}
+          onRemove={() => setDoc("panCardUri", "")}
           error={errors.panCard}
+          t={t}
         />
       </Section>
 
@@ -266,9 +274,13 @@ function Section({
   );
 }
 
-// Camera + Gallery row with a preview when uploaded. Inline error caption.
+// Two visual states, matching the register-flow Step 2 pattern:
+//   - No upload yet → Camera + Gallery side-by-side.
+//   - Uploaded     → preview only, with a small "×" at top-right to remove
+//                    it. Tapping × calls `onRemove`, which the parent uses
+//                    to clear the URI and bring back the upload buttons.
 function DocPicker({
-  uri, label, icon, busy, onCamera, onGallery, error,
+  uri, label, icon, busy, onCamera, onGallery, onRemove, error, t,
 }: {
   uri: string;
   label: string;
@@ -276,21 +288,36 @@ function DocPicker({
   busy?: boolean;
   onCamera: () => void;
   onGallery: () => void;
+  onRemove: () => void;
   error?: string;
+  t: (k: string) => string;
 }) {
   return (
     <View style={{ marginBottom: 10 }}>
-      <View style={styles.docRow}>
-        <TouchableOpacity style={[styles.docBtn, !!error && styles.docBtnError]} onPress={onCamera} disabled={busy}>
-          <Ionicons name={icon} size={16} color="#555" />
-          <Text style={styles.docBtnText}>{label}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.docBtn, !!error && styles.docBtnError]} onPress={onGallery} disabled={busy}>
-          <Ionicons name="images-outline" size={16} color="#555" />
-          <Text style={styles.docBtnText}>Gallery</Text>
-        </TouchableOpacity>
-      </View>
-      {uri ? <Image source={{ uri }} style={styles.preview} /> : null}
+      {uri ? (
+        <View style={styles.previewWrap}>
+          <Image source={{ uri }} style={styles.preview} />
+          <TouchableOpacity
+            style={styles.previewRemove}
+            onPress={onRemove}
+            hitSlop={10}
+            accessibilityLabel="Remove photo"
+          >
+            <Ionicons name="close" size={16} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={styles.docRow}>
+          <TouchableOpacity style={[styles.docBtn, !!error && styles.docBtnError]} onPress={onCamera} disabled={busy}>
+            <Ionicons name={icon} size={16} color="#555" />
+            <Text style={styles.docBtnText}>{label}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.docBtn, !!error && styles.docBtnError]} onPress={onGallery} disabled={busy}>
+            <Ionicons name="images-outline" size={16} color="#555" />
+            <Text style={styles.docBtnText}>{t("common.gallery")}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
       {error ? <Text style={styles.errText}>{error}</Text> : null}
     </View>
   );
@@ -339,7 +366,17 @@ const styles = StyleSheet.create({
   },
   docBtnError: { borderColor: "#fecaca" },
   docBtnText: { fontSize: 13, fontWeight: "700", color: "#555" },
-  preview: { width: "100%", height: 160, borderRadius: 8, marginTop: 8 },
+  // Preview is positioned (relative) so the absolute × can sit on top of it.
+  // Geometry matches the register flow's renderDoc so this screen feels like
+  // a continuation, not a redesign.
+  previewWrap: { position: "relative" },
+  preview: { width: "100%", height: 160, borderRadius: 8 },
+  previewRemove: {
+    position: "absolute", top: 8, right: 8,
+    width: 26, height: 26, borderRadius: 13,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    alignItems: "center", justifyContent: "center",
+  },
 
   submit: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,

@@ -1,0 +1,12 @@
+# Workspace-wide Bun config.
+#
+# linker = "hoisted" makes Bun install dependencies the way npm/yarn do —
+# a single copy of each version lifted to the top-level node_modules — rather
+# than Bun's default "isolated" mode which creates a separate cache slot per
+# consumer. The isolated mode tripped expo-doctor's "duplicate dependencies"
+# check because it sees the same version of expo / @expo/vector-icons /
+# expo-constants etc. living under several .bun/<hash>/node_modules paths
+# and counts each one as a duplicate, which then fails EAS Build's pre-build
+# step.
+[install]
+linker = "hoisted"

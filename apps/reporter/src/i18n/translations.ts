@@ -314,6 +314,11 @@ export const translations = {
       bankWarningMsg: "Future payments will be held until the admin verifies the new bank details.",
       continueSubmit: "Submit anyway",
 
+      // Image / document field strings
+      replacePhoto: "Replace photo",
+      keepCurrent: "Keep current photo",
+      newPhotoBadge: "New",
+
       // Password
       changePassword: "Change Password",
       currentPassword: "Current Password",
@@ -689,6 +694,11 @@ export const translations = {
       bankWarningTitle: "బ్యాంక్ మార్పుకు ధృవీకరణ అవసరం",
       bankWarningMsg: "అడ్మిన్ కొత్త బ్యాంక్ వివరాలను ధృవీకరించే వరకు భవిష్యత్ చెల్లింపులు నిలిపివేయబడతాయి.",
       continueSubmit: "అయినా సమర్పించండి",
+
+      // Image / document field strings
+      replacePhoto: "ఫోటోను మార్చండి",
+      keepCurrent: "ప్రస్తుత ఫోటోను ఉంచండి",
+      newPhotoBadge: "కొత్తది",
 
       // Password
       changePassword: "పాస్‌వర్డ్ మార్చండి",

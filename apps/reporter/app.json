@@ -24,7 +24,14 @@
       },
       "package": "com.rayalaseemaexpress.reporter",
       "edgeToEdgeEnabled": true,
-      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE", "ACCESS_FINE_LOCATION"]
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -34,6 +41,13 @@
       "expo-camera",
       "expo-image-picker",
       "expo-location"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "efbe4234-28db-4ebd-a5ec-fe0dd349c490"
+      }
+    },
+    "owner": "mailtomcs2023"
   }
 }

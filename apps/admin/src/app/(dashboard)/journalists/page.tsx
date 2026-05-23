@@ -232,6 +232,23 @@ export default function JournalistsPage() {
   const [confirmDelete, setConfirmDelete] = useState<JournalistRow[] | null>(null);
   const openDelete = useCallback((row: JournalistRow) => setConfirmDelete([row]), []);
 
+  // One-click reactivate from the row dropdown for soft-deleted journalists.
+  // No confirmation dialog — activation is non-destructive.
+  const activate = useCallback(
+    async (j: Journalist) => {
+      try {
+        await fetch("/api/journalists", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "activate", userIds: [j.id] }),
+        });
+      } finally {
+        load();
+      }
+    },
+    [load],
+  );
+
   const columns = useMemo<ColumnDef<JournalistRow>[]>(
     () => [
       {
@@ -264,7 +281,19 @@ export default function JournalistsPage() {
         size: 170,
         enableHiding: false,
         filterFn: multiColumnFilterFn,
-        cell: ({ row }) => <div className="font-medium">{row.getValue("name")}</div>,
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            <span className="font-medium">{row.getValue("name")}</span>
+            {!row.original.raw.active && (
+              <Badge
+                variant="outline"
+                className="border-slate-300 bg-slate-100 text-[10px] font-semibold uppercase tracking-wide text-slate-600"
+              >
+                Inactive
+              </Badge>
+            )}
+          </div>
+        ),
       },
       { accessorKey: "email", header: "Email", size: 220 },
       {
@@ -345,12 +374,13 @@ export default function JournalistsPage() {
             onReview={openReview}
             onEdit={openEdit}
             onReset={openReset}
+            onActivate={activate}
             onDelete={openDelete}
           />
         ),
       },
     ],
-    [openReview, openEdit, openReset, openDelete],
+    [openReview, openEdit, openReset, activate, openDelete],
   );
 
   const table = useReactTable({
@@ -535,7 +565,7 @@ export default function JournalistsPage() {
                   }
                 >
                   <TrashIcon aria-hidden="true" className="-ms-1 opacity-60" size={16} />
-                  Delete ({table.getSelectedRowModel().rows.length})
+                  Deactivate ({table.getSelectedRowModel().rows.length})
                 </Button>
               )}
               <Button onClick={() => setFormFor({ mode: "create" })}>
@@ -701,18 +731,19 @@ export default function JournalistsPage() {
           {/* Create / edit journalist form */}
           <JournalistFormDialog target={formFor} onClose={() => setFormFor(null)} onSaved={load} />
 
-          {/* Delete confirmation */}
+          {/* Deactivate confirmation */}
           <AlertDialog open={!!confirmDelete} onOpenChange={(open) => !open && setConfirmDelete(null)}>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>
-                  Delete {confirmDelete?.length ?? 0} journalist
+                  Deactivate {confirmDelete?.length ?? 0} journalist
                   {(confirmDelete?.length ?? 0) === 1 ? "" : "s"}?
                 </AlertDialogTitle>
                 <AlertDialogDescription>
-                  This permanently removes the account and KYC profile. Journalists who have
-                  published articles or payments are skipped automatically — deactivate those
-                  instead. This action cannot be undone.
+                  They&apos;ll be unable to log in to the reporter app. Their articles, payments,
+                  and KYC documents are preserved. To reactivate later, edit the journalist and
+                  tick &ldquo;Active&rdquo; — or resetting their password also reactivates the
+                  account automatically.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -721,7 +752,7 @@ export default function JournalistsPage() {
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   onClick={handleDelete}
                 >
-                  Delete
+                  Deactivate
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -737,14 +768,17 @@ function RowActions({
   onReview,
   onEdit,
   onReset,
+  onActivate,
   onDelete,
 }: {
   row: JournalistRow;
   onReview: (j: Journalist) => void;
   onEdit: (j: Journalist) => void;
   onReset: (j: Journalist) => void;
+  onActivate: (j: Journalist) => void;
   onDelete: (row: JournalistRow) => void;
 }) {
+  const isActive = row.raw.active;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -761,12 +795,21 @@ function RowActions({
         {!isProtected(row.email) && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
-              onClick={() => onDelete(row)}
-            >
-              Deactivate journalist
-            </DropdownMenuItem>
+            {isActive ? (
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => onDelete(row)}
+              >
+                Deactivate journalist
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem
+                className="text-green-700 focus:text-green-700"
+                onClick={() => onActivate(row.raw)}
+              >
+                Activate journalist
+              </DropdownMenuItem>
+            )}
           </>
         )}
       </DropdownMenuContent>

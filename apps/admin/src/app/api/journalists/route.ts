@@ -140,7 +140,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
-    // ---- delete one or more journalists (skips any that have content) ----
+    // ---- deactivate one or more journalists (soft-delete) ----
+    // We flip `active: false` instead of hard-deleting. That keeps every
+    // article / payment / KYC document intact, leaves an obvious "Inactive"
+    // marker in the journalists list, and is one click away from
+    // reactivation (Edit details → tick Active, or Reset password —
+    // resetting their password automatically flips active back to true).
     if (action === "delete") {
       const userIds = body.userIds as string[];
       if (!Array.isArray(userIds) || userIds.length === 0) {
@@ -148,43 +153,46 @@ export async function POST(req: NextRequest) {
       }
       const users = await prisma.user.findMany({
         where: { id: { in: userIds }, role: "REPORTER" },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          _count: {
-            select: {
-              articles: true,
-              payments: true,
-              media: true,
-              reviewedArticles: true,
-              articleRevisions: true,
-            },
-          },
-        },
+        select: { id: true, name: true, email: true },
       });
-      const deletable: string[] = [];
+      const deactivatable: string[] = [];
       const skipped: { name: string; reason: string }[] = [];
       for (const u of users) {
         if (PROTECTED_EMAILS.includes(u.email.toLowerCase())) {
           skipped.push({ name: u.name, reason: "protected test account" });
           continue;
         }
-        const c = u._count;
-        const blockers: string[] = [];
-        if (c.articles) blockers.push(`${c.articles} article(s)`);
-        if (c.payments) blockers.push(`${c.payments} payment(s)`);
-        if (c.media) blockers.push(`${c.media} uploaded file(s)`);
-        if (c.reviewedArticles || c.articleRevisions) blockers.push("editorial history");
-        if (blockers.length) skipped.push({ name: u.name, reason: blockers.join(", ") });
-        else deletable.push(u.id);
+        deactivatable.push(u.id);
       }
-      // JournalistProfile + category assignments cascade on delete; audit logs
-      // keep a denormalised actor email, so the trail survives the deletion.
-      if (deletable.length) {
-        await prisma.user.deleteMany({ where: { id: { in: deletable } } });
+      if (deactivatable.length) {
+        await prisma.user.updateMany({
+          where: { id: { in: deactivatable } },
+          data: { active: false },
+        });
       }
-      return NextResponse.json({ success: true, deleted: deletable.length, skipped });
+      // `deleted` retained in the response shape for any older client; the
+      // value is the same idea (how many rows we acted on).
+      return NextResponse.json({
+        success: true,
+        deactivated: deactivatable.length,
+        deleted: deactivatable.length,
+        skipped,
+      });
+    }
+
+    // ---- reactivate one or more journalists (undo a soft-delete) ----
+    // Inverse of action:"delete". No content checks needed — flipping
+    // `active: true` lets them sign in again; nothing was destroyed.
+    if (action === "activate") {
+      const userIds = body.userIds as string[];
+      if (!Array.isArray(userIds) || userIds.length === 0) {
+        return NextResponse.json({ error: "userIds required" }, { status: 400 });
+      }
+      const result = await prisma.user.updateMany({
+        where: { id: { in: userIds }, role: "REPORTER" },
+        data: { active: true },
+      });
+      return NextResponse.json({ success: true, activated: result.count });
     }
 
     // ---- KYC + password actions (operate on a JournalistProfile) ----

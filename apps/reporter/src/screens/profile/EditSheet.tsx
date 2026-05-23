@@ -202,22 +202,14 @@ export function EditSheet({ visible, field, currentValue, pending, onClose, onAf
           <Text style={s.fieldLabel}>{fieldLabel}</Text>
 
           {meta.kind === "url" ? (
-            <View>
-              <Image
-                source={imageUri ? { uri: imageUri } : currentValue ? { uri: String(currentValue) } : undefined}
-                style={[s.currentImage, !imageUri && !currentValue && s.imagePlaceholder]}
-              />
-              <View style={s.pickRow}>
-                <TouchableOpacity style={s.pickBtn} onPress={() => pickImage("camera")}>
-                  <Ionicons name="camera-outline" size={18} color="#FF2C2C" />
-                  <Text style={s.pickText}>{t("common.camera")}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={s.pickBtn} onPress={() => pickImage("library")}>
-                  <Ionicons name="image-outline" size={18} color="#FF2C2C" />
-                  <Text style={s.pickText}>{t("common.gallery")}</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+            <UrlField
+              hasCurrent={!!currentValue}
+              currentUri={currentValue ? String(currentValue) : null}
+              pickedUri={imageUri}
+              onPick={pickImage}
+              onDiscardPick={() => setImageUri(null)}
+              t={t}
+            />
           ) : meta.kind === "date" ? (
             <DateField
               date={date}
@@ -279,6 +271,81 @@ export function EditSheet({ visible, field, currentValue, pending, onClose, onAf
 }
 
 // ─── Sub-controls used by the EditSheet ─────────────────────────────────────
+
+// Image / document control. Three visual states, so the reporter doesn't see
+// a "you must upload" prompt the moment they tap a field that already has a
+// photo:
+//
+//   1. No current value — empty placeholder + Camera / Gallery side-by-side
+//      so they can pick the first time.
+//   2. Current value, no new pick — show the existing photo with a single
+//      "Replace photo" outline button. Tap it to get a Camera / Gallery /
+//      Cancel action sheet. The default position is "I'm happy with what I
+//      already uploaded".
+//   3. Current value + new pick — show the newly-picked image with a small
+//      "Keep current photo" link so the reporter can back out without
+//      closing the sheet.
+function UrlField({
+  hasCurrent, currentUri, pickedUri, onPick, onDiscardPick, t,
+}: {
+  hasCurrent: boolean;
+  currentUri: string | null;
+  pickedUri: string | null;
+  onPick: (source: "camera" | "library") => void;
+  onDiscardPick: () => void;
+  t: (k: string) => string;
+}) {
+  const previewUri = pickedUri || currentUri;
+  const showSinglePickButton = hasCurrent && !pickedUri;
+
+  const openReplaceSheet = () => {
+    Alert.alert(t("profile.replacePhoto"), "", [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("common.camera"), onPress: () => onPick("camera") },
+      { text: t("common.gallery"), onPress: () => onPick("library") },
+    ]);
+  };
+
+  return (
+    <View>
+      <Image
+        source={previewUri ? { uri: previewUri } : undefined}
+        style={[s.currentImage, !previewUri && s.imagePlaceholder]}
+      />
+      {pickedUri ? (
+        <View style={s.newPickRow}>
+          <View style={s.newPickBadge}>
+            <Ionicons name="sparkles" size={11} color="#1d4ed8" />
+            <Text style={s.newPickBadgeText}>{t("profile.newPhotoBadge")}</Text>
+          </View>
+          {hasCurrent ? (
+            <TouchableOpacity onPress={onDiscardPick}>
+              <Text style={s.keepCurrentText}>{t("profile.keepCurrent")}</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      ) : null}
+
+      {showSinglePickButton ? (
+        <TouchableOpacity style={s.replaceBtn} onPress={openReplaceSheet}>
+          <Ionicons name="refresh-outline" size={16} color="#FF2C2C" />
+          <Text style={s.pickText}>{t("profile.replacePhoto")}</Text>
+        </TouchableOpacity>
+      ) : (
+        <View style={s.pickRow}>
+          <TouchableOpacity style={s.pickBtn} onPress={() => onPick("camera")}>
+            <Ionicons name="camera-outline" size={18} color="#FF2C2C" />
+            <Text style={s.pickText}>{t("common.camera")}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.pickBtn} onPress={() => onPick("library")}>
+            <Ionicons name="image-outline" size={18} color="#FF2C2C" />
+            <Text style={s.pickText}>{t("common.gallery")}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
+}
 
 // Single-select chip row. Used for gender, specialization, anything where the
 // reporter should pick one from a small known list (vs free text).
@@ -405,6 +472,31 @@ const s = StyleSheet.create({
   pickRow: { flexDirection: "row", gap: 10, marginTop: 8 },
   pickBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, padding: 12, borderWidth: 1, borderColor: "#FF2C2C", borderRadius: 10 },
   pickText: { color: "#FF2C2C", fontSize: 14, fontWeight: "700" },
+  // Single Replace button shown when there's already an image on file. Same
+  // padding and border treatment as `pickBtn`, but spans full width to read
+  // as a quiet "you can change this if you want" rather than a required step.
+  replaceBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+    padding: 12, borderWidth: 1, borderColor: "#FF2C2C", borderRadius: 10,
+    marginTop: 8,
+  },
+  // Row above the pick buttons, only when a new image has been selected:
+  // shows a "NEW" badge on the left and a "Keep current photo" undo link on
+  // the right so the reporter can back out of a mistake.
+  newPickRow: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    marginTop: 8,
+  },
+  newPickBadge: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999,
+    backgroundColor: "#dbeafe",
+  },
+  newPickBadgeText: {
+    color: "#1d4ed8", fontSize: 10, fontWeight: "800",
+    textTransform: "uppercase", letterSpacing: 0.5,
+  },
+  keepCurrentText: { fontSize: 12, fontWeight: "700", color: "#FF2C2C" },
   input: { borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 10, padding: 13, fontSize: 14, backgroundColor: "#fafafa" },
   inputMultiline: { minHeight: 140, textAlignVertical: "top", paddingTop: 12 },
 

@@ -127,18 +127,27 @@ export function ProfileScreen() {
           ) : null}
         </View>
 
-        {/* Section list — each pushes to its own detail page */}
+        {/* Section list — each pushes to its own detail page.
+            Exception: the KYC row routes to the full /kyc upload form while
+            the reporter isn't VERIFIED yet (PENDING / SUBMITTED / REJECTED).
+            That form is the single-shot submission flow; the per-field
+            edit sheets only make sense for post-verification updates, where
+            each change needs admin re-approval. */}
         <View style={styles.group}>
-          {Object.entries(SECTIONS).map(([key, def], i, arr) => (
-            <MenuRow
-              key={key}
-              icon={def.icon.name}
-              iconFamily={def.icon.family}
-              label={t(`profile.${def.titleKey}`)}
-              last={i === arr.length - 1}
-              onPress={() => router.push(`/profile-section/${key}`)}
-            />
-          ))}
+          {Object.entries(SECTIONS).map(([key, def], i, arr) => {
+            const isKycRow = key === "kyc";
+            const goToUploadForm = isKycRow && kycStatus !== "VERIFIED";
+            return (
+              <MenuRow
+                key={key}
+                icon={def.icon.name}
+                iconFamily={def.icon.family}
+                label={t(`profile.${def.titleKey}`)}
+                last={i === arr.length - 1}
+                onPress={() => router.push(goToUploadForm ? "/kyc" : `/profile-section/${key}`)}
+              />
+            );
+          })}
         </View>
 
         {/* Pending requests — only show the row when there's something to see */}
