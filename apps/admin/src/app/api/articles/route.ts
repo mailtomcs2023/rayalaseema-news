@@ -18,6 +18,18 @@ export async function GET(req: NextRequest) {
     const category = searchParams.get("category") || "";
     const offset = (page - 1) * limit;
 
+    // `?ids=a,b,c` short-circuits the listing — returns just those rows
+    // (used by the e-paper editor to look up article titles by id).
+    const idsParam = searchParams.get("ids");
+    if (idsParam) {
+      const ids = idsParam.split(",").map((s) => s.trim()).filter(Boolean).slice(0, 500);
+      const articles = await prisma.article.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, title: true, slug: true },
+      });
+      return NextResponse.json({ articles, total: articles.length });
+    }
+
     const where: any = {};
     if (search) {
       where.OR = [
