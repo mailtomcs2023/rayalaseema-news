@@ -160,7 +160,14 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0" }}>
               <TTSButton text={article.body || ""} />
             </div>
-            <ShareBar title={article.title} slug={slug} siteUrl={siteUrl} body={article.body || ""} />
+            <ShareBar
+              title={article.title}
+              slug={slug}
+              siteUrl={siteUrl}
+              body={article.body || ""}
+              featuredImage={article.featuredImage}
+              deskName={article.desk?.name ?? null}
+            />
 
             {/* Featured Image */}
             {article.featuredImage && (

@@ -30,20 +30,23 @@ async function main() {
   });
   console.log(`root: ${root.nameEn}`);
 
-  // 2. District desks (child of root). Byline = bare district Telugu name per user spec.
+  // 2. District desks (child of root). Byline prefixed with the brand:
+  //    "రాయలసీమ ఎక్స్‌ప్రెస్ - కర్నూలు" / "Rayalaseema Express - Kurnool"
   const districts = await prisma.district.findMany({
     orderBy: { sortOrder: "asc" },
     select: { id: true, name: true, nameEn: true, slug: true },
   });
   let dCount = 0;
   for (const d of districts) {
+    const teName = `${ROOT_NAME_TE} - ${d.name}`;
+    const enName = `${ROOT_NAME_EN} - ${d.nameEn}`;
     await prisma.desk.upsert({
       where: { slug: `desk-district-${d.slug}` },
-      update: { name: d.name, nameEn: d.nameEn, parentId: root.id, districtId: d.id, branch: "GEOGRAPHIC" },
+      update: { name: teName, nameEn: enName, parentId: root.id, districtId: d.id, branch: "GEOGRAPHIC" },
       create: {
         slug: `desk-district-${d.slug}`,
-        name: d.name,
-        nameEn: d.nameEn,
+        name: teName,
+        nameEn: enName,
         branch: "GEOGRAPHIC",
         parentId: root.id,
         districtId: d.id,
@@ -54,7 +57,8 @@ async function main() {
   }
   console.log(`district desks: ${dCount}`);
 
-  // 3. AC desks (child of their district desk). Byline = bare AC Telugu name.
+  // 3. AC desks (child of their district desk). Byline prefixed with the brand:
+  //    "రాయలసీమ ఎక్స్‌ప్రెస్ - ప్రొద్దుటూరు" / "Rayalaseema Express - Proddatur"
   const acs = await prisma.constituency.findMany({
     where: { acNumber: { not: null } },
     orderBy: { acNumber: "asc" },
@@ -66,19 +70,21 @@ async function main() {
       where: { districtId: ac.districtId, branch: "GEOGRAPHIC" },
       select: { id: true },
     });
+    const teName = `${ROOT_NAME_TE} - ${ac.name}`;
+    const enName = `${ROOT_NAME_EN} - ${ac.nameEn}`;
     await prisma.desk.upsert({
       where: { slug: `desk-ac-${ac.acNumber}` },
       update: {
-        name: ac.name,
-        nameEn: ac.nameEn,
+        name: teName,
+        nameEn: enName,
         parentId: districtDesk?.id ?? root.id,
         constituencyId: ac.id,
         branch: "GEOGRAPHIC",
       },
       create: {
         slug: `desk-ac-${ac.acNumber}`,
-        name: ac.name,
-        nameEn: ac.nameEn,
+        name: teName,
+        nameEn: enName,
         branch: "GEOGRAPHIC",
         parentId: districtDesk?.id ?? root.id,
         constituencyId: ac.id,

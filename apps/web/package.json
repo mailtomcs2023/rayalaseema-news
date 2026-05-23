@@ -12,6 +12,7 @@
     "@azure/storage-blob": "^12.31.0",
     "@rayalaseema/db": "*",
     "@rayalaseema/ui": "*",
+    "html-to-image": "^1.11.13",
     "next": "^16.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
