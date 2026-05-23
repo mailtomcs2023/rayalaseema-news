@@ -206,6 +206,47 @@ const editorialPage: TemplateSpec = {
   },
 };
 
+// One page combines the three small utility widgets that don't deserve full
+// pages of their own. Each gets its own band + quarter-page block.
+const utilityPage: TemplateSpec = {
+  slug: "section-utility",
+  name: "Mandi · Panchangam · Weather",
+  type: "SECTION",
+  defaultLabel: "ఉపయోగకరం",
+  sortOrder: 90,
+  layout: {
+    blocks: [
+      { id: "band", type: "section-band", x: 0, y: 0, w: 12, h: 2 },
+      // Mandi top-left
+      { id: "mandi-band", type: "text", x: 0, y: 2, w: 6, h: 1, text: "<b>మండీ ధరలు</b>" },
+      { id: "mandi-1", type: "brief", x: 0, y: 3, w: 6, h: 2 },
+      { id: "mandi-2", type: "brief", x: 0, y: 5, w: 6, h: 2 },
+      { id: "mandi-3", type: "brief", x: 0, y: 7, w: 6, h: 2 },
+      // Panchangam top-right
+      { id: "panch-band", type: "text", x: 6, y: 2, w: 6, h: 1, text: "<b>పంచాంగం · రాశి ఫలాలు</b>" },
+      { id: "panch-1", type: "brief", x: 6, y: 3, w: 6, h: 2, slotFilter: { categorySlug: "rasi-phalalu" } },
+      { id: "panch-2", type: "brief", x: 6, y: 5, w: 6, h: 2, slotFilter: { categorySlug: "rasi-phalalu" } },
+      { id: "panch-3", type: "brief", x: 6, y: 7, w: 6, h: 2, slotFilter: { categorySlug: "rasi-phalalu" } },
+      // Weather mid-page
+      { id: "weather-band", type: "text", x: 0, y: 9, w: 12, h: 1, text: "<b>వాతావరణం</b>" },
+      { id: "weather-1", type: "secondary", x: 0, y: 10, w: 3, h: 5, slotFilter: { categorySlug: "weather" } },
+      { id: "weather-2", type: "secondary", x: 3, y: 10, w: 3, h: 5, slotFilter: { categorySlug: "weather" } },
+      { id: "weather-3", type: "secondary", x: 6, y: 10, w: 3, h: 5, slotFilter: { categorySlug: "weather" } },
+      { id: "weather-4", type: "secondary", x: 9, y: 10, w: 3, h: 5, slotFilter: { categorySlug: "weather" } },
+      // Briefs filler
+      { id: "br-1", type: "brief", x: 0, y: 15, w: 6, h: 2 },
+      { id: "br-2", type: "brief", x: 0, y: 17, w: 6, h: 2 },
+      { id: "br-3", type: "brief", x: 0, y: 19, w: 6, h: 2 },
+      { id: "br-4", type: "brief", x: 0, y: 21, w: 6, h: 2 },
+      { id: "br-5", type: "brief", x: 6, y: 15, w: 6, h: 2 },
+      { id: "br-6", type: "brief", x: 6, y: 17, w: 6, h: 2 },
+      { id: "br-7", type: "brief", x: 6, y: 19, w: 6, h: 2 },
+      { id: "br-8", type: "brief", x: 6, y: 21, w: 6, h: 2 },
+      { id: "ad", type: "ad", x: 0, y: 23, w: 12, h: 4 },
+    ],
+  },
+};
+
 const classifiedsPage: TemplateSpec = {
   slug: "section-classifieds",
   name: "Classifieds + Real Estate",
@@ -242,33 +283,43 @@ const DISTRICTS: Array<{ slug: string; nameTe: string }> = [
   { slug: "chittoor", nameTe: "చిత్తూరు" },
 ];
 
-// Section templates routed through categories that may or may not exist yet.
+// Section templates routed through categories. Restructured to lead with our
+// brand-unique sections (Navyaseema, Rayalaseema Ruchulu, Yetteta, NRI,
+// Puzzles) instead of mimicking Eenadu/Sakshi tab-for-tab. Standalone
+// Mandi/Panchangam/Weather were dropped — they're quarter-page widgets and
+// belong inside the Utility page, not their own broadsheet pages.
+//
 // `seed.ts` ensures every referenced category is upserted on deploy.
 const SECTIONS: Array<{ slug: string; cat: string | null; name: string; label: string; sortOrder: number }> = [
-  // State & World
-  { slug: "section-andhra-pradesh",   cat: "andhra-pradesh",   name: "Andhra Pradesh", label: "ఆంధ్రప్రదేశ్",         sortOrder: 50 },
-  { slug: "section-telangana",        cat: "telangana",        name: "Telangana",      label: "తెలంగాణ",              sortOrder: 51 },
-  { slug: "section-national",         cat: "national",         name: "National",       label: "జాతీయం",                sortOrder: 52 },
-  { slug: "section-international",    cat: "international",    name: "International",  label: "అంతర్జాతీయం",         sortOrder: 53 },
-  // Topical
-  { slug: "section-politics",         cat: "politics",         name: "Politics",       label: "రాజకీయాలు",            sortOrder: 60 },
-  { slug: "section-business",         cat: "business",         name: "Business",       label: "బిజినెస్",              sortOrder: 61 },
-  { slug: "section-sports",           cat: "sports",           name: "Sports",         label: "క్రీడలు",               sortOrder: 62 },
-  { slug: "section-cinema",           cat: "entertainment",    name: "Cinema",         label: "సినిమా",                sortOrder: 63 },
-  { slug: "section-movie-reviews",    cat: "movie-reviews",    name: "Movie Reviews",  label: "సినిమా రివ్యూలు",      sortOrder: 64 },
-  { slug: "section-technology",       cat: "technology",       name: "Technology",     label: "టెక్నాలజీ",           sortOrder: 65 },
-  { slug: "section-education",        cat: "education",        name: "Education",      label: "విద్య",                 sortOrder: 66 },
-  { slug: "section-health",           cat: "health",           name: "Health",         label: "ఆరోగ్యం",              sortOrder: 67 },
-  { slug: "section-jobs",             cat: "jobs",             name: "Jobs",           label: "ఉద్యోగాలు",            sortOrder: 68 },
-  // Utility
-  { slug: "section-mandi",            cat: null,               name: "Mandi & Markets", label: "మండీ ధరలు",            sortOrder: 90 },
-  { slug: "section-panchangam",       cat: "rasi-phalalu",     name: "Panchangam & Horoscope", label: "పంచాంగం",  sortOrder: 91 },
-  { slug: "section-weather",          cat: "weather",          name: "Weather",        label: "వాతావరణం",             sortOrder: 92 },
-  // Lifestyle / Misc (filtered by category when present; otherwise pulls anything)
-  { slug: "section-vasundhara",       cat: null,               name: "Vasundhara (Women & Family)", label: "వసుంధర", sortOrder: 100 },
-  { slug: "section-hai-bujji",        cat: null,               name: "Hai Bujji (Kids)", label: "హాయ్ బుజ్జి",      sortOrder: 101 },
-  { slug: "section-sunday-magazine",  cat: null,               name: "Sunday Magazine", label: "ఆదివారం మాగజైన్",   sortOrder: 102 },
-  { slug: "section-obituaries",       cat: null,               name: "Obituaries & Birthdays", label: "శ్రద్ధాంజలి", sortOrder: 103 },
+  // ===== BRAND-UNIQUE (the reasons readers pick us over Eenadu/Sakshi) =====
+  { slug: "section-navyaseema",       cat: "navyaseema",       name: "Navyaseema",        label: "నవ్యసీమ",            sortOrder: 40 },
+  { slug: "section-rayalaseema-ruchulu", cat: "rayalaseema-ruchulu", name: "Rayalaseema Ruchulu (Recipes)", label: "రాయలసీమ రుచులు", sortOrder: 41 },
+  { slug: "section-yetteta",          cat: "yetteta",          name: "Yetteta (Humor)",   label: "ఎట్టెట",             sortOrder: 42 },
+  { slug: "section-nri",              cat: "nri",              name: "NRI News",          label: "NRI వార్తలు",        sortOrder: 43 },
+  { slug: "section-puzzles",          cat: "puzzles",          name: "Puzzles",           label: "పజిల్స్",             sortOrder: 44 },
+
+  // ===== STATE & WORLD =====
+  { slug: "section-andhra-pradesh",   cat: "andhra-pradesh",   name: "Andhra Pradesh",    label: "ఆంధ్రప్రదేశ్",         sortOrder: 50 },
+  { slug: "section-telangana",        cat: "telangana",        name: "Telangana",         label: "తెలంగాణ",             sortOrder: 51 },
+  { slug: "section-national",         cat: "national",         name: "National",          label: "జాతీయం",              sortOrder: 52 },
+  { slug: "section-international",    cat: "international",    name: "International",     label: "అంతర్జాతీయం",        sortOrder: 53 },
+
+  // ===== TOPICAL =====
+  { slug: "section-politics",         cat: "politics",         name: "Politics",          label: "రాజకీయాలు",          sortOrder: 60 },
+  { slug: "section-business",         cat: "business",         name: "Business",          label: "బిజినెస్",             sortOrder: 61 },
+  { slug: "section-sports",           cat: "sports",           name: "Sports",            label: "క్రీడలు",             sortOrder: 62 },
+  { slug: "section-cinema",           cat: "entertainment",    name: "Cinema",            label: "సినిమా",              sortOrder: 63 },
+  { slug: "section-movie-reviews",    cat: "movie-reviews",    name: "Movie Reviews",     label: "సినిమా రివ్యూలు",     sortOrder: 64 },
+  { slug: "section-technology",       cat: "technology",       name: "Technology",        label: "టెక్నాలజీ",          sortOrder: 65 },
+  { slug: "section-education",        cat: "education",        name: "Education",         label: "విద్య",                sortOrder: 66 },
+  { slug: "section-health",           cat: "health",           name: "Health",            label: "ఆరోగ్యం",             sortOrder: 67 },
+  { slug: "section-jobs",             cat: "jobs",             name: "Jobs",              label: "ఉద్యోగాలు",           sortOrder: 68 },
+
+  // ===== LIFESTYLE =====
+  { slug: "section-vasundhara",       cat: "vasundhara",       name: "Vasundhara (Women & Family)", label: "వసుంధర",   sortOrder: 100 },
+  { slug: "section-hai-bujji",        cat: "hai-bujji",        name: "Hai Bujji (Kids)",  label: "హాయ్ బుజ్జి",         sortOrder: 101 },
+  { slug: "section-sunday-magazine",  cat: "sunday-magazine",  name: "Sunday Magazine",   label: "ఆదివారం మాగజైన్",    sortOrder: 102 },
+  { slug: "section-obituaries",       cat: "obituaries",       name: "Obituaries & Birthdays", label: "శ్రద్ధాంజలి",   sortOrder: 103 },
 ];
 
 async function main() {
@@ -277,8 +328,16 @@ async function main() {
     ...DISTRICTS.map((d, i) => districtPage(d.slug, d.nameTe, 10 + i)),
     ...SECTIONS.map((s) => sectionPage(s.slug, s.cat, s.name, s.label, s.sortOrder)),
     editorialPage,
+    utilityPage,
     classifiedsPage,
   ];
+
+  // Deactivate any standalone-utility templates from the prior structure so the
+  // combined Utility page replaces them.
+  await prisma.epaperTemplate.updateMany({
+    where: { slug: { in: ["section-mandi", "section-panchangam", "section-weather"] } },
+    data: { active: false },
+  });
 
   let upserted = 0;
   for (const t of all) {
