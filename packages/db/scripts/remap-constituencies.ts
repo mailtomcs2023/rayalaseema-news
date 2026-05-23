@@ -24,6 +24,10 @@ const NAME_OVERRIDES: Record<string, number> = {
   "Satyavedu (SC)": 169,
   "Sullurpeta (SC)": 121,
   "Badvel (SC)": 124,
+  // Prod-only legacy rows (different historical state than local)
+  "Kurnool City": 137,            // city variant → Kurnool AC
+  "Banaganapalli": 140,           // spelling variant → Banaganapalle
+  "Koilkuntla": 140,              // defunct AC (dissolved 2009 delimitation); town now in Banaganapalle AC
 };
 
 function norm(s: string): string {
