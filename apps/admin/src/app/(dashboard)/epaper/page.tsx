@@ -50,7 +50,30 @@ interface ArticleSummary {
   featuredImage: string | null;
   category: { name: string; slug: string };
   publishedAt: string | null;
+  breaking?: boolean;
+  featured?: boolean;
+  viewCount?: number;
 }
+
+type SortKey = "newest" | "views" | "breaking" | "featured";
+
+// Operator-toggleable filter chips. Slot defaults populate the chip state on
+// block-select; operator can untick to widen the search.
+interface PickerFilters {
+  hasImage: boolean;
+  minWords: number;        // 0 = no requirement
+  categorySlug: string;    // "" = no category filter
+  districtSlug: string;    // "" = no district filter
+  breaking: boolean;
+  featured: boolean;
+  windowDays: number;      // 1 | 7 | 30 | 90 | 365
+  sort: SortKey;
+}
+
+const DEFAULT_FILTERS: PickerFilters = {
+  hasImage: false, minWords: 0, categorySlug: "", districtSlug: "",
+  breaking: false, featured: false, windowDays: 7, sort: "newest",
+};
 
 const STORY_TYPES = new Set(["lead", "major", "secondary", "brief"]);
 
@@ -66,6 +89,8 @@ export default function EpaperEditorPage() {
 
   const [pickerArticles, setPickerArticles] = useState<ArticleSummary[]>([]);
   const [pickerQuery, setPickerQuery] = useState("");
+  const [pickerFilters, setPickerFilters] = useState<PickerFilters>(DEFAULT_FILTERS);
+  const [pickerTotal, setPickerTotal] = useState(0);  // total in window before chip filters — for empty-state hints
 
   const [titles, setTitles] = useState<Record<string, string>>({});
 
@@ -135,19 +160,40 @@ export default function EpaperEditorPage() {
 
   const activePage = edition?.pages?.[activePageIdx];
 
+  // When a block is selected, seed the chip filters from its slot rules.
+  // Operator can untick chips after this to widen.
   useEffect(() => {
-    if (!selectedBlockId || !activePage) { setPickerArticles([]); return; }
+    if (!selectedBlockId || !activePage) return;
     const block = activePage.layout.blocks.find((b) => b.id === selectedBlockId);
     if (!block) return;
+    setPickerFilters((f) => ({
+      ...DEFAULT_FILTERS,
+      hasImage: !!(block.slotFilter?.minImages && block.slotFilter.minImages > 0),
+      categorySlug: block.slotFilter?.categorySlug || "",
+      districtSlug: block.slotFilter?.districtSlug || "",
+      // Keep operator's current windowDays/sort preferences across slots.
+      windowDays: f.windowDays,
+      sort: f.sort,
+    }));
+  }, [selectedBlockId, activePage]);
+
+  // Refetch picker results whenever the selected block, query, or any chip changes.
+  useEffect(() => {
+    if (!selectedBlockId || !activePage) { setPickerArticles([]); setPickerTotal(0); return; }
     const params = new URLSearchParams();
-    if (block.slotFilter?.categorySlug) params.set("categorySlug", block.slotFilter.categorySlug);
-    if (block.slotFilter?.districtSlug) params.set("districtSlug", block.slotFilter.districtSlug);
-    if (block.slotFilter?.minImages && block.slotFilter.minImages > 0) params.set("hasImage", "1");
+    if (pickerFilters.categorySlug) params.set("categorySlug", pickerFilters.categorySlug);
+    if (pickerFilters.districtSlug) params.set("districtSlug", pickerFilters.districtSlug);
+    if (pickerFilters.hasImage) params.set("hasImage", "1");
+    if (pickerFilters.minWords > 0) params.set("minWords", String(pickerFilters.minWords));
+    if (pickerFilters.breaking) params.set("breaking", "1");
+    if (pickerFilters.featured) params.set("featured", "1");
+    params.set("windowDays", String(pickerFilters.windowDays));
+    params.set("sort", pickerFilters.sort);
     if (pickerQuery) params.set("q", pickerQuery);
     fetch(`/api/epaper/article-picker?${params.toString()}`)
       .then((r) => r.json())
-      .then((data) => setPickerArticles(data.articles || []));
-  }, [selectedBlockId, pickerQuery, activePage]);
+      .then((data) => { setPickerArticles(data.articles || []); setPickerTotal(data.totalInWindow ?? 0); });
+  }, [selectedBlockId, pickerQuery, pickerFilters, activePage]);
 
   const setBlockArticle = async (articleId: string | null) => {
     if (!activePage || !selectedBlockId) return;
@@ -273,25 +319,117 @@ export default function EpaperEditorPage() {
               )}
             </section>
 
-            {/* Article picker */}
-            <aside style={{ width: 300, background: "#fff", borderRadius: 8, padding: 12, overflowY: "auto" }}>
-              <h3 style={{ fontSize: 13, fontWeight: 800, color: "#555", marginBottom: 8 }}>ARTICLE PICKER</h3>
+            {/* Article picker — chip-based filters so the operator can SEE every
+                rule the slot has + untick to widen the search. */}
+            <aside style={{ width: 320, background: "#fff", borderRadius: 8, padding: 12, overflowY: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
+              <h3 style={{ fontSize: 13, fontWeight: 800, color: "#555" }}>ARTICLE PICKER</h3>
               {!selectedBlockId && <p style={{ fontSize: 12, color: "#888" }}>Click a story block on the page to pick an article.</p>}
               {selectedBlockId && (
                 <>
                   <input value={pickerQuery} onChange={(e) => setPickerQuery(e.target.value)}
                     placeholder="Search title…"
-                    style={{ width: "100%", padding: "6px 8px", border: "1px solid #ddd", borderRadius: 6, fontSize: 12, marginBottom: 8, boxSizing: "border-box" }} />
-                  <button onClick={() => setBlockArticle(null)}
-                    style={{ width: "100%", padding: "6px 8px", background: "#fee2e2", color: "#991b1b", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 600, marginBottom: 8, cursor: "pointer" }}>
-                    Clear assignment
-                  </button>
-                  <p style={{ fontSize: 11, color: "#aaa", marginBottom: 6 }}>{pickerArticles.length} candidates</p>
+                    style={{ width: "100%", padding: "8px 10px", border: "1px solid #ddd", borderRadius: 6, fontSize: 13, boxSizing: "border-box" }} />
+
+                  {/* Time window */}
+                  <ChipRow label="TIME">
+                    {[
+                      { v: 1, label: "24h" },
+                      { v: 7, label: "7 days" },
+                      { v: 30, label: "30 days" },
+                      { v: 90, label: "90 days" },
+                      { v: 365, label: "1 year" },
+                    ].map((opt) => (
+                      <Chip key={opt.v} active={pickerFilters.windowDays === opt.v}
+                        onClick={() => setPickerFilters((f) => ({ ...f, windowDays: opt.v }))}>
+                        {opt.label}
+                      </Chip>
+                    ))}
+                  </ChipRow>
+
+                  {/* Sort */}
+                  <ChipRow label="SORT">
+                    {([
+                      ["newest", "Newest"],
+                      ["views", "Most read"],
+                      ["breaking", "Breaking"],
+                      ["featured", "Featured"],
+                    ] as Array<[SortKey, string]>).map(([k, label]) => (
+                      <Chip key={k} active={pickerFilters.sort === k}
+                        onClick={() => setPickerFilters((f) => ({ ...f, sort: k }))}>
+                        {label}
+                      </Chip>
+                    ))}
+                  </ChipRow>
+
+                  {/* Slot-derived chips that operator can disable */}
+                  <ChipRow label="FILTERS">
+                    {pickerFilters.categorySlug && (
+                      <Chip active onClick={() => setPickerFilters((f) => ({ ...f, categorySlug: "" }))}>
+                        {pickerFilters.categorySlug} ✕
+                      </Chip>
+                    )}
+                    {pickerFilters.districtSlug && (
+                      <Chip active onClick={() => setPickerFilters((f) => ({ ...f, districtSlug: "" }))}>
+                        {pickerFilters.districtSlug} ✕
+                      </Chip>
+                    )}
+                    <Chip active={pickerFilters.hasImage}
+                      onClick={() => setPickerFilters((f) => ({ ...f, hasImage: !f.hasImage }))}>
+                      📷 Has image
+                    </Chip>
+                    <Chip active={pickerFilters.breaking}
+                      onClick={() => setPickerFilters((f) => ({ ...f, breaking: !f.breaking }))}>
+                      ⚡ Breaking
+                    </Chip>
+                    <Chip active={pickerFilters.featured}
+                      onClick={() => setPickerFilters((f) => ({ ...f, featured: !f.featured }))}>
+                      ⭐ Featured
+                    </Chip>
+                  </ChipRow>
+
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button onClick={() => setBlockArticle(null)}
+                      style={{ flex: 1, padding: "8px 8px", background: "#fee2e2", color: "#991b1b", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                      Clear assignment
+                    </button>
+                    <button onClick={() => setPickerFilters({ ...DEFAULT_FILTERS, windowDays: pickerFilters.windowDays, sort: pickerFilters.sort })}
+                      style={{ flex: 1, padding: "8px 8px", background: "#e5e7eb", color: "#374151", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                      Reset filters
+                    </button>
+                  </div>
+
+                  <p style={{ fontSize: 11, color: "#666", margin: 0 }}>
+                    <b>{pickerArticles.length}</b> match · {pickerTotal} published in {pickerFilters.windowDays}d window
+                  </p>
+
+                  {pickerArticles.length === 0 && pickerTotal > 0 && (
+                    <div style={{ padding: 10, background: "#fef3c7", color: "#92400e", borderRadius: 6, fontSize: 12 }}>
+                      Filters hide all {pickerTotal} articles. Untick a chip above to widen, or extend the time window.
+                    </div>
+                  )}
+                  {pickerTotal === 0 && (
+                    <div style={{ padding: 10, background: "#fef3c7", color: "#92400e", borderRadius: 6, fontSize: 12 }}>
+                      No articles published in the last {pickerFilters.windowDays} days. Try a longer window.
+                    </div>
+                  )}
+
                   {pickerArticles.map((a) => (
                     <button key={a.id} onClick={() => setBlockArticle(a.id)}
-                      style={{ width: "100%", textAlign: "left", padding: 8, marginBottom: 4, border: "1px solid #eee", borderRadius: 6, cursor: "pointer", background: "#fafafa", fontSize: 12 }}>
-                      <div style={{ fontWeight: 700, lineHeight: 1.3, marginBottom: 2 }}>{a.title.slice(0, 80)}</div>
-                      <div style={{ color: "#888", fontSize: 10 }}>{a.category.name}{a.featuredImage ? " · 📷" : ""}</div>
+                      style={{ width: "100%", textAlign: "left", padding: 8, border: "1px solid #eee", borderRadius: 6, cursor: "pointer", background: "#fafafa", fontSize: 12, display: "flex", gap: 8 }}>
+                      {a.featuredImage ? (
+                        <img src={a.featuredImage} alt="" style={{ width: 46, height: 46, objectFit: "cover", borderRadius: 4, flexShrink: 0 }} />
+                      ) : (
+                        <div style={{ width: 46, height: 46, background: "#e5e7eb", borderRadius: 4, flexShrink: 0 }} />
+                      )}
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontWeight: 700, lineHeight: 1.3, marginBottom: 2 }}>{a.title.slice(0, 90)}</div>
+                        <div style={{ color: "#888", fontSize: 10, display: "flex", gap: 6 }}>
+                          <span>{a.category.name}</span>
+                          {a.breaking && <span style={{ color: "#dc2626", fontWeight: 700 }}>⚡</span>}
+                          {a.featured && <span style={{ color: "#f59e0b" }}>⭐</span>}
+                          {typeof a.viewCount === "number" && a.viewCount > 0 && <span>{a.viewCount.toLocaleString()} views</span>}
+                        </div>
+                      </div>
                     </button>
                   ))}
                 </>
@@ -301,6 +439,30 @@ export default function EpaperEditorPage() {
         )}
       </main>
     </div>
+  );
+}
+
+function ChipRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div style={{ fontSize: 10, fontWeight: 800, color: "#9ca3af", marginBottom: 4 }}>{label}</div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>{children}</div>
+    </div>
+  );
+}
+
+function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button onClick={onClick}
+      style={{
+        padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700,
+        border: active ? "1px solid #4f46e5" : "1px solid #d1d5db",
+        background: active ? "#4f46e5" : "#fff",
+        color: active ? "#fff" : "#4b5563",
+        cursor: "pointer",
+      }}>
+      {children}
+    </button>
   );
 }
 
