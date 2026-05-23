@@ -27,7 +27,8 @@ export default async function DistrictPage({ params }: { params: Promise<{ slug:
     where: { slug },
     include: {
       constituencies: {
-        orderBy: { sortOrder: "asc" },
+        where: { acNumber: { not: null } },   // safety: hide legacy rows that lack official AC number
+        orderBy: { name: "asc" },             // alphabetical by Telugu name
         include: { _count: { select: { mandals: true } } },
       },
     },

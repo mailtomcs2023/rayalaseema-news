@@ -126,6 +126,25 @@ async function main() {
       });
     }
     console.log(`Renamed ${newACs.length} slugs to clean form`);
+
+    // 5. Safety sweep: any constituency still without acNumber (orphans from any earlier
+    //    aborted run or manual inserts) is illegal in our model — delete it.
+    const orphans = await tx.constituency.findMany({
+      where: { acNumber: null },
+      select: { id: true, nameEn: true, slug: true, _count: { select: { mandals: true, articles: true } } },
+    });
+    if (orphans.length > 0) {
+      const reattachable = orphans.filter(o => o._count.mandals === 0 && o._count.articles === 0);
+      console.log(`Safety sweep: ${orphans.length} orphan acNumber=null rows found, ${reattachable.length} are empty (deleting)`);
+      for (const o of orphans) {
+        if (o._count.mandals > 0 || o._count.articles > 0) {
+          console.error(`  WARN: cannot delete ${o.nameEn} (${o.slug}) — has ${o._count.mandals} mandals, ${o._count.articles} articles. Re-add to NAME_OVERRIDES.`);
+        }
+      }
+      await tx.constituency.deleteMany({
+        where: { id: { in: reattachable.map(o => o.id) } },
+      });
+    }
   }, { timeout: 60_000 });
 
   // Verify

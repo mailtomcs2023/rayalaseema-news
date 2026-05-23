@@ -46,6 +46,9 @@ jobs:
             echo "=== Rebuild constituencies (idempotent: inserts missing ACs + remaps old) ==="
             bunx tsx scripts/rebuild-constituencies.ts
             bunx tsx scripts/remap-constituencies.ts
+
+            echo "=== Verify constituency state ==="
+            bunx tsx scripts/verify-constituencies.ts | tail -30
             cd ../..
 
             echo "=== Install Playwright Chromium (e-paper render) ==="
