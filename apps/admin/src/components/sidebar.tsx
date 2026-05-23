@@ -57,7 +57,7 @@ export function Sidebar() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
-        <img src="/logo-transparent.svg" alt="Rayalaseema Express" style={{ height: 26 }} />
+        <img src="/logo.svg" alt="Rayalaseema Express" style={{ height: 26 }} />
       </header>
 
       {/* Drawer backdrop (mobile only, when open) */}
@@ -71,7 +71,7 @@ export function Sidebar() {
         {/* Logo */}
         <div style={{ padding: "16px 20px", borderBottom: "1px solid #1f2937", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
           <div>
-            <img src="/logo-transparent.svg" alt="RE" style={{ height: 28 }} />
+            <img src="/logo.svg" alt="RE" style={{ height: 28 }} />
             <p style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>Content Management System</p>
           </div>
           <button

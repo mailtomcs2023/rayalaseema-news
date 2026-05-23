@@ -25,7 +25,12 @@
       "Bash(az monitor *)",
       "Bash(curl -sS -i -X POST https://centralindia.tts.speech.microsoft.com/cognitiveservices/v1 -H 'Ocp-Apim-Subscription-Key: __TRACKED_VAR__' -H 'Content-Type: application/ssml+xml' -H 'X-Microsoft-OutputFormat: audio-24khz-96kbitrate-mono-mp3' --data-binary '<speak version=\"1.0\" xmlns=\"http://www.w3.org/2001/10/synthesis\" xml:lang=\"te-IN\"><voice name=\"te-IN-MohanNeural\">పరీక్ష</voice></speak>')",
       "Bash(curl -sS -X POST https://centralindia.tts.speech.microsoft.com/cognitiveservices/v1 -H 'Ocp-Apim-Subscription-Key: __TRACKED_VAR__' -H 'Content-Type: application/ssml+xml' -H 'X-Microsoft-OutputFormat: audio-24khz-96kbitrate-mono-mp3' --data-binary '<speak version=\"1.0\" xmlns=\"http://www.w3.org/2001/10/synthesis\" xml:lang=\"te-IN\"><voice name=\"te-IN-MohanNeural\">పరీక్ష</voice></speak>' -o /tmp/audio.mp3 -w 'size=%{size_download}\\\\n')",
-      "Bash(curl -sS -X POST https://centralindia.tts.speech.microsoft.com/cognitiveservices/v1 -H 'Ocp-Apim-Subscription-Key: __TRACKED_VAR__' -H 'Content-Type: application/ssml+xml' -H 'X-Microsoft-OutputFormat: audio-24khz-96kbitrate-mono-mp3' --data-binary '<speak version=\"1.0\" xml:lang=\"en-US\"><voice name=\"en-US-JennyNeural\">Hello world test</voice></speak>' -o /tmp/audio2.mp3 -w 'size=%{size_download}\\\\n')"
+      "Bash(curl -sS -X POST https://centralindia.tts.speech.microsoft.com/cognitiveservices/v1 -H 'Ocp-Apim-Subscription-Key: __TRACKED_VAR__' -H 'Content-Type: application/ssml+xml' -H 'X-Microsoft-OutputFormat: audio-24khz-96kbitrate-mono-mp3' --data-binary '<speak version=\"1.0\" xml:lang=\"en-US\"><voice name=\"en-US-JennyNeural\">Hello world test</voice></speak>' -o /tmp/audio2.mp3 -w 'size=%{size_download}\\\\n')",
+      "Bash(cp D:/RSE2026M365/assets/masthead/masthead-horizontal-nobg.svg 'd:/Rayalaseema express/apps/web/public/logo.svg')",
+      "Bash(cp D:/RSE2026M365/assets/masthead/masthead-horizontal-nobg.svg 'd:/Rayalaseema express/apps/admin/public/logo.svg')",
+      "Bash(cp D:/RSE2026M365/assets/masthead/masthead-icon-red.png 'd:/Rayalaseema express/apps/web/src/app/icon.png')",
+      "Bash(cp D:/RSE2026M365/assets/masthead/masthead-icon-red.png 'd:/Rayalaseema express/apps/web/src/app/apple-icon.png')",
+      "Bash(cp D:/RSE2026M365/assets/masthead/masthead-stacked.png 'd:/Rayalaseema express/apps/web/src/app/opengraph-image.png')"
     ]
   }
 }

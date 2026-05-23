@@ -45,17 +45,38 @@ export function formatRelativeTelugu(d: Date | string | null | undefined): strin
 }
 
 /**
- * Prepends a bold byline like "<b>రాయలసీమ ఎక్స్‌ప్రెస్, బనగానపల్లె:</b> " to the
- * start of the first paragraph in the article body. If the body doesn't begin
- * with a paragraph, just prepends to the start.
+ * Cleans the article body for inline byline injection:
+ *  1. Strips any leading <h1>/<h2>/<h3> whose text matches the article title
+ *     (AI translation often emits "<h2>{title}</h2>" at the top of the body,
+ *     duplicating the page h1 — the duplicate breaks the Sakshi-style inline
+ *     flow and just reads as a repeat to the user).
+ *  2. Injects "<b class="re-byline">{prefix}:</b> " at the start of the first
+ *     remaining <p>. If the body still doesn't open with a <p>, prepends a
+ *     standalone <p> with the byline.
  */
-export function injectInlineByline(bodyHtml: string, deskName: string | null | undefined): string {
+export function injectInlineByline(
+  bodyHtml: string,
+  deskName: string | null | undefined,
+  articleTitle?: string,
+): string {
+  let body = bodyHtml;
+
+  // 1. Strip leading duplicate-of-title heading.
+  if (articleTitle) {
+    const norm = (s: string) => s.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+    const wantTitle = norm(articleTitle);
+    body = body.replace(/^\s*<h[1-3][^>]*>([\s\S]*?)<\/h[1-3]>\s*/i, (match, inner) => {
+      return norm(inner) === wantTitle ? "" : match;
+    });
+  }
+
+  // 2. Inject byline.
   const prefix = formatInlineByline(deskName);
   const tag = `<b class="re-byline">${escapeHtml(prefix)}:</b> `;
-  if (/^\s*<p[^>]*>/.test(bodyHtml)) {
-    return bodyHtml.replace(/^(\s*<p[^>]*>)/, `$1${tag}`);
+  if (/^\s*<p[^>]*>/.test(body)) {
+    return body.replace(/^(\s*<p[^>]*>)/, `$1${tag}`);
   }
-  return `<p>${tag}</p>${bodyHtml}`;
+  return `<p>${tag}</p>${body}`;
 }
 
 function escapeHtml(s: string): string {

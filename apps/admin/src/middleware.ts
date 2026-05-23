@@ -9,7 +9,7 @@ export function middleware(req: NextRequest) {
     pathname.startsWith("/api/") ||
     pathname.startsWith("/_next/") ||
     pathname === "/favicon.ico" ||
-    pathname === "/logo-transparent.svg" ||
+    pathname === "/logo.svg" ||
     pathname.startsWith("/uploads")
   ) {
     return NextResponse.next();

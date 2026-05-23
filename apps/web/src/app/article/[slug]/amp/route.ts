@@ -55,7 +55,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ slug: stri
     publisher: {
       "@type": "Organization",
       name: "Rayalaseema Express",
-      logo: { "@type": "ImageObject", url: `${siteUrl}/logo-transparent.svg`, width: 600, height: 60 },
+      logo: { "@type": "ImageObject", url: `${siteUrl}/logo.svg`, width: 600, height: 60 },
     },
     inLanguage: "te",
   };
@@ -88,7 +88,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ slug: stri
 </head>
 <body>
   <header>
-    <a href="${siteUrl}"><amp-img src="${siteUrl}/logo-transparent.svg" width="120" height="32" alt="Rayalaseema Express"></amp-img></a>
+    <a href="${siteUrl}"><amp-img src="${siteUrl}/logo.svg" width="120" height="32" alt="Rayalaseema Express"></amp-img></a>
   </header>
   <article>
     <a href="${siteUrl}/category/${article.category.slug}" class="brand">${article.category.name}</a>

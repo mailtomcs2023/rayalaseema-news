@@ -24,7 +24,7 @@ export function Footer({ config: initialConfig = {} }: FooterProps) {
           <div className="lg:col-span-2">
             <div className="mb-4 bg-white rounded-lg p-2 inline-block">
               <img
-                src="/logo-transparent.svg"
+                src="/logo.svg"
                 alt="రాయలసీమ ఎక్స్‌ప్రెస్"
                 className="h-10 w-auto"
               />
