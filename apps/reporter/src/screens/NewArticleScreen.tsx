@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect } from "react";
+import React, { useState, useEffect, useLayoutEffect, useCallback } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Image } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
@@ -28,15 +28,31 @@ export function NewArticleScreen() {
   const [body, setBody] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [categories, setCategories] = useState<any[]>([]);
+  const [catLoading, setCatLoading] = useState(true);
+  const [catError, setCatError] = useState("");
   const [imageUri, setImageUri] = useState("");
   const [saving, setSaving] = useState(false);
   const [translating, setTranslating] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const clearErr = (k: string) => setErrors((e) => (e[k] ? { ...e, [k]: "" } : e));
 
-  useEffect(() => {
-    api("/api/reporter/categories").then(setCategories).catch(() => {});
-  }, []);
+  // Load the category list. Failures are surfaced inline (with a retry) instead
+  // of swallowed — an empty list otherwise looks like "no categories exist".
+  const loadCategories = useCallback(async () => {
+    setCatLoading(true);
+    setCatError("");
+    try {
+      const data = await api("/api/reporter/categories");
+      setCategories(Array.isArray(data) ? data : []);
+    } catch (e: any) {
+      const msg = e?.message || "";
+      // A bad/expired token 401s — tell the reporter to re-login.
+      setCatError(/unauthor/i.test(msg) ? t("newArticle.sessionExpired") : t("newArticle.categoriesError"));
+    }
+    setCatLoading(false);
+  }, [t]);
+
+  useEffect(() => { loadCategories(); }, [loadCategories]);
 
   useLayoutEffect(() => {
     navigation.setOptions({ title: t("nav.newArticle") });
@@ -152,16 +168,28 @@ export function NewArticleScreen() {
 
       {/* Category */}
       <Text style={styles.label}>{t("newArticle.category")}</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
-        <View style={styles.chipRow}>
-          {categories.map((c) => (
-            <TouchableOpacity key={c.id} onPress={() => { setCategoryId(c.id); clearErr("categoryId"); }}
-              style={[styles.chip, categoryId === c.id && { backgroundColor: c.color || "#FF2C2C", borderColor: c.color || "#FF2C2C" }]}>
-              <Text style={[styles.chipText, categoryId === c.id && { color: "#fff" }]}>{c.name}</Text>
-            </TouchableOpacity>
-          ))}
+      {catError ? (
+        <View style={styles.catError}>
+          <Text style={styles.catErrorText}>{catError}</Text>
+          <TouchableOpacity onPress={loadCategories} style={styles.retryBtn}>
+            <Ionicons name="refresh" size={14} color="#FF2C2C" />
+            <Text style={styles.retryText}>{t("common.retry")}</Text>
+          </TouchableOpacity>
         </View>
-      </ScrollView>
+      ) : catLoading ? (
+        <Text style={styles.catLoading}>{t("common.loading")}</Text>
+      ) : (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+          <View style={styles.chipRow}>
+            {categories.map((c) => (
+              <TouchableOpacity key={c.id} onPress={() => { setCategoryId(c.id); clearErr("categoryId"); }}
+                style={[styles.chip, categoryId === c.id && { backgroundColor: c.color || "#FF2C2C", borderColor: c.color || "#FF2C2C" }]}>
+                <Text style={[styles.chipText, categoryId === c.id && { color: "#fff" }]}>{c.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
+      )}
       <FieldError message={errors.categoryId} />
 
       {/* Photo */}
@@ -204,6 +232,11 @@ const styles = StyleSheet.create({
   chipRow: { flexDirection: "row", gap: 6, paddingVertical: 4 },
   chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: "#fff", borderWidth: 1, borderColor: "#e5e7eb" },
   chipText: { fontSize: 13, fontWeight: "700", color: "#555" },
+  catLoading: { fontSize: 13, color: "#999", paddingVertical: 10, marginBottom: 8 },
+  catError: { backgroundColor: "#fef2f2", borderRadius: 10, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: "#fecaca" },
+  catErrorText: { fontSize: 13, color: "#dc2626", fontWeight: "600" },
+  retryBtn: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 8 },
+  retryText: { fontSize: 13, color: "#FF2C2C", fontWeight: "700" },
   photoRow: { flexDirection: "row", gap: 8, marginBottom: 8 },
   photoBtn: { flex: 1, flexDirection: "row", gap: 6, padding: 14, backgroundColor: "#fff", borderRadius: 10, borderWidth: 1, borderColor: "#e5e7eb", alignItems: "center", justifyContent: "center" },
   photoBtnText: { fontSize: 14, fontWeight: "700", color: "#555" },

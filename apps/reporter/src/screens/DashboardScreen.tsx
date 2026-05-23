@@ -63,12 +63,28 @@ export function DashboardScreen() {
         ListHeaderComponent={
           <View>
             <Text style={styles.welcome}>{t("dashboard.greeting", { name })}</Text>
-            {/* KPI grid */}
+            {/* KPI grid — each card deep-links to the matching tab/filter */}
             <View style={styles.kpiGrid}>
-              <KpiCard icon="document-text-outline" tint="#3b82f6" value={stats.total} label={t("dashboard.total")} />
-              <KpiCard icon="checkmark-done-outline" tint="#16a34a" value={stats.published} label={t("dashboard.published")} />
-              <KpiCard icon="time-outline" tint="#f59e0b" value={stats.pending} label={t("dashboard.pending")} />
-              <KpiCard icon="wallet-outline" tint="#FF2C2C" value={`₹${stats.earnings}`} label={t("dashboard.earnings")} />
+              <KpiCard
+                icon="document-text-outline" tint="#3b82f6"
+                value={stats.total} label={t("dashboard.total")}
+                onPress={() => router.navigate("/articles")}
+              />
+              <KpiCard
+                icon="checkmark-done-outline" tint="#16a34a"
+                value={stats.published} label={t("dashboard.published")}
+                onPress={() => router.navigate("/articles?status=PUBLISHED")}
+              />
+              <KpiCard
+                icon="time-outline" tint="#f59e0b"
+                value={stats.pending} label={t("dashboard.pending")}
+                onPress={() => router.navigate("/articles?status=SUBMITTED")}
+              />
+              <KpiCard
+                icon="wallet-outline" tint="#FF2C2C"
+                value={`₹${stats.earnings}`} label={t("dashboard.earnings")}
+                onPress={() => router.navigate("/earnings")}
+              />
             </View>
 
             <Text style={styles.sectionTitle}>{t("dashboard.myArticles")}</Text>
@@ -120,21 +136,31 @@ export function DashboardScreen() {
   );
 }
 
-// A single KPI tile — tinted icon chip, big number, label.
-function KpiCard({ icon, tint, value, label }: {
+// A single KPI tile — tinted icon chip, big number, label. Tapping it
+// navigates to the related tab (see onPress wiring in the grid above).
+function KpiCard({ icon, tint, value, label, onPress }: {
   icon: keyof typeof Ionicons.glyphMap;
   tint: string;
   value: number | string;
   label: string;
+  onPress?: () => void;
 }) {
   return (
-    <View style={styles.kpiCard}>
-      <View style={[styles.kpiIcon, { backgroundColor: tint + "1A" }]}>
-        <Ionicons name={icon} size={18} color={tint} />
+    <TouchableOpacity
+      style={styles.kpiCard}
+      activeOpacity={0.7}
+      onPress={onPress}
+      disabled={!onPress}
+    >
+      <View style={styles.kpiTopRow}>
+        <View style={[styles.kpiIcon, { backgroundColor: tint + "1A" }]}>
+          <Ionicons name={icon} size={18} color={tint} />
+        </View>
+        <Ionicons name="chevron-forward" size={16} color="#c4c4c4" />
       </View>
       <Text style={styles.kpiValue}>{value}</Text>
       <Text style={styles.kpiLabel}>{label}</Text>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -154,9 +180,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff", borderRadius: 16, padding: 14,
     shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2,
   },
+  kpiTopRow: {
+    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+    marginBottom: 8,
+  },
   kpiIcon: {
     width: 34, height: 34, borderRadius: 10,
-    alignItems: "center", justifyContent: "center", marginBottom: 8,
+    alignItems: "center", justifyContent: "center",
   },
   kpiValue: { fontSize: 22, fontWeight: "900", color: "#111" },
   kpiLabel: { fontSize: 12, color: "#888", fontWeight: "600", marginTop: 1 },

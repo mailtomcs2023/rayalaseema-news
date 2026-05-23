@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { api } from "../api/client";
 import { useT } from "../i18n";
 import { ScreenHeader } from "../components/ScreenHeader";
@@ -22,14 +22,25 @@ const FILTERS = [
   { value: "REJECTED", key: "status.rejected" },
   { value: "PUBLISHED", key: "status.published" },
 ];
+const FILTER_VALUES = FILTERS.map((f) => f.value);
 
 // The "Articles" tab — the reporter's full article list, with a + New action.
 export function ArticlesScreen() {
   const { t } = useT();
   const router = useRouter();
+  // A KPI card on the home screen can deep-link here with ?status=PUBLISHED etc.
+  const { status } = useLocalSearchParams<{ status?: string }>();
   const [articles, setArticles] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState("SUBMITTED");
+  const [filter, setFilter] = useState(
+    status && FILTER_VALUES.includes(status) ? status : "SUBMITTED",
+  );
+
+  // Re-sync the active chip when navigated to with a new ?status= while
+  // this tab is already mounted.
+  useEffect(() => {
+    if (status && FILTER_VALUES.includes(status)) setFilter(status);
+  }, [status]);
 
   const load = useCallback(async () => {
     try {

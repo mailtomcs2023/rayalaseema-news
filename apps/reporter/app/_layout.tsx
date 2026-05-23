@@ -8,7 +8,7 @@ import { LanguageProvider } from "../src/i18n";
 export default function RootLayout() {
   return (
     <LanguageProvider>
-      <Stack screenOptions={{ headerShown: false }}>
+      <Stack screenOptions={{ headerShown: false, headerBackButtonDisplayMode: "minimal", headerBackTitle: "" }}>
         <Stack.Screen name="register" options={{ headerShown: true, title: "Register", headerTintColor: "#FF2C2C" }} />
         <Stack.Screen name="new-article" options={{ headerShown: true, title: "New Article", headerTintColor: "#FF2C2C" }} />
       </Stack>
