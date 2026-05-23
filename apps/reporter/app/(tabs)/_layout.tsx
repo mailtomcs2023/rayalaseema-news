@@ -8,7 +8,7 @@ import { useT } from "../../src/i18n";
 export default function TabsLayout() {
   const { t } = useT();
   return (
-    <NativeTabs>
+    <NativeTabs tintColor="#FF2C2C">
       <NativeTabs.Trigger name="home">
         <Icon sf="house.fill" />
         <Label>{t("nav.home")}</Label>

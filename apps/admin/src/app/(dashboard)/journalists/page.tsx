@@ -31,6 +31,7 @@ import {
   UserPlusIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 
 import { Sidebar } from "@/components/sidebar";
 import { cn } from "@/lib/utils";
@@ -116,6 +117,7 @@ interface JournalistProfile {
   kycRejectionNote: string;
   createdAt: string;
   verifiedAt: string;
+  _count?: { profileUpdateRequests: number };
 }
 interface Journalist {
   id: string;
@@ -137,6 +139,7 @@ interface JournalistRow {
   district: string;
   kyc: string;
   articles: number;
+  pendingUpdates: number;     // reporter-initiated profile changes awaiting review
   joinedAt: string;
   raw: Journalist;
 }
@@ -176,6 +179,7 @@ function toRow(j: Journalist): JournalistRow {
     district: j.journalistProfile?.primaryDistrict || "",
     kyc: j.journalistProfile?.kycStatus || "NO PROFILE",
     articles: j._count.articles,
+    pendingUpdates: j.journalistProfile?._count?.profileUpdateRequests || 0,
     joinedAt: j.createdAt,
     raw: j,
   };
@@ -188,6 +192,7 @@ export default function JournalistsPage() {
   const [data, setData] = useState<JournalistRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [reviewing, setReviewing] = useState<Journalist | null>(null);
+  const [resetting, setResetting] = useState<Journalist | null>(null);
 
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -217,6 +222,7 @@ export default function JournalistsPage() {
   }, [data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openReview = useCallback((j: Journalist) => setReviewing(j), []);
+  const openReset = useCallback((j: Journalist) => setResetting(j), []);
 
   const [formFor, setFormFor] = useState<
     { mode: "create" } | { mode: "edit"; journalist: Journalist } | null
@@ -225,6 +231,23 @@ export default function JournalistsPage() {
 
   const [confirmDelete, setConfirmDelete] = useState<JournalistRow[] | null>(null);
   const openDelete = useCallback((row: JournalistRow) => setConfirmDelete([row]), []);
+
+  // One-click reactivate from the row dropdown for soft-deleted journalists.
+  // No confirmation dialog — activation is non-destructive.
+  const activate = useCallback(
+    async (j: Journalist) => {
+      try {
+        await fetch("/api/journalists", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "activate", userIds: [j.id] }),
+        });
+      } finally {
+        load();
+      }
+    },
+    [load],
+  );
 
   const columns = useMemo<ColumnDef<JournalistRow>[]>(
     () => [
@@ -258,7 +281,19 @@ export default function JournalistsPage() {
         size: 170,
         enableHiding: false,
         filterFn: multiColumnFilterFn,
-        cell: ({ row }) => <div className="font-medium">{row.getValue("name")}</div>,
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            <span className="font-medium">{row.getValue("name")}</span>
+            {!row.original.raw.active && (
+              <Badge
+                variant="outline"
+                className="border-slate-300 bg-slate-100 text-[10px] font-semibold uppercase tracking-wide text-slate-600"
+              >
+                Inactive
+              </Badge>
+            )}
+          </div>
+        ),
       },
       { accessorKey: "email", header: "Email", size: 220 },
       {
@@ -296,6 +331,32 @@ export default function JournalistsPage() {
         cell: ({ row }) => <span className="tabular-nums">{row.getValue("articles")}</span>,
       },
       {
+        accessorKey: "pendingUpdates",
+        header: "Updates",
+        size: 130,
+        enableSorting: false,
+        // "View" links straight to the per-journalist filter on the
+        // profile-requests review page. Shows a pending count when there's
+        // something awaiting action; otherwise a quiet "—".
+        cell: ({ row }) => {
+          const count = row.getValue("pendingUpdates") as number;
+          const journalistId = row.original.raw.journalistProfile?.id;
+          if (!journalistId) return <span className="text-muted-foreground">—</span>;
+          return count > 0 ? (
+            <Link href={`/profile-requests?journalistId=${journalistId}`}>
+              <Button size="sm" variant="default" className="h-7 gap-1.5 px-2.5">
+                <Badge variant="secondary" className="h-4 min-w-4 px-1 text-[10px] tabular-nums">{count}</Badge>
+                Review
+              </Button>
+            </Link>
+          ) : (
+            <Link href={`/profile-requests?journalistId=${journalistId}&status=ALL`}>
+              <Button size="sm" variant="outline" className="h-7 px-2.5 text-xs">View</Button>
+            </Link>
+          );
+        },
+      },
+      {
         accessorKey: "joinedAt",
         header: "Joined",
         size: 120,
@@ -312,12 +373,14 @@ export default function JournalistsPage() {
             row={row.original}
             onReview={openReview}
             onEdit={openEdit}
+            onReset={openReset}
+            onActivate={activate}
             onDelete={openDelete}
           />
         ),
       },
     ],
-    [openReview, openEdit, openDelete],
+    [openReview, openEdit, openReset, activate, openDelete],
   );
 
   const table = useReactTable({
@@ -502,7 +565,7 @@ export default function JournalistsPage() {
                   }
                 >
                   <TrashIcon aria-hidden="true" className="-ms-1 opacity-60" size={16} />
-                  Delete ({table.getSelectedRowModel().rows.length})
+                  Deactivate ({table.getSelectedRowModel().rows.length})
                 </Button>
               )}
               <Button onClick={() => setFormFor({ mode: "create" })}>
@@ -662,21 +725,25 @@ export default function JournalistsPage() {
           {/* KYC review dialog */}
           <ReviewDialog journalist={reviewing} onClose={() => setReviewing(null)} onChanged={load} />
 
+          {/* Focused password-reset dialog (custom password + one-time flag) */}
+          <PasswordResetDialog journalist={resetting} onClose={() => setResetting(null)} />
+
           {/* Create / edit journalist form */}
           <JournalistFormDialog target={formFor} onClose={() => setFormFor(null)} onSaved={load} />
 
-          {/* Delete confirmation */}
+          {/* Deactivate confirmation */}
           <AlertDialog open={!!confirmDelete} onOpenChange={(open) => !open && setConfirmDelete(null)}>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>
-                  Delete {confirmDelete?.length ?? 0} journalist
+                  Deactivate {confirmDelete?.length ?? 0} journalist
                   {(confirmDelete?.length ?? 0) === 1 ? "" : "s"}?
                 </AlertDialogTitle>
                 <AlertDialogDescription>
-                  This permanently removes the account and KYC profile. Journalists who have
-                  published articles or payments are skipped automatically — deactivate those
-                  instead. This action cannot be undone.
+                  They&apos;ll be unable to log in to the reporter app. Their articles, payments,
+                  and KYC documents are preserved. To reactivate later, edit the journalist and
+                  tick &ldquo;Active&rdquo; — or resetting their password also reactivates the
+                  account automatically.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -685,7 +752,7 @@ export default function JournalistsPage() {
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   onClick={handleDelete}
                 >
-                  Delete
+                  Deactivate
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -700,13 +767,18 @@ function RowActions({
   row,
   onReview,
   onEdit,
+  onReset,
+  onActivate,
   onDelete,
 }: {
   row: JournalistRow;
   onReview: (j: Journalist) => void;
   onEdit: (j: Journalist) => void;
+  onReset: (j: Journalist) => void;
+  onActivate: (j: Journalist) => void;
   onDelete: (row: JournalistRow) => void;
 }) {
+  const isActive = row.raw.active;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -719,16 +791,25 @@ function RowActions({
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => onReview(row.raw)}>Review &amp; documents</DropdownMenuItem>
         <DropdownMenuItem onClick={() => onEdit(row.raw)}>Edit details</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onReview(row.raw)}>Reset password</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onReset(row.raw)}>Reset password</DropdownMenuItem>
         {!isProtected(row.email) && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
-              onClick={() => onDelete(row)}
-            >
-              Delete journalist
-            </DropdownMenuItem>
+            {isActive ? (
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => onDelete(row)}
+              >
+                Deactivate journalist
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem
+                className="text-green-700 focus:text-green-700"
+                onClick={() => onActivate(row.raw)}
+              >
+                Activate journalist
+              </DropdownMenuItem>
+            )}
           </>
         )}
       </DropdownMenuContent>
@@ -975,6 +1056,202 @@ function ReviewDialog({
       </DialogContent>
     </Dialog>
   );
+}
+
+// ─── Focused password-reset modal ──────────────────────────────────────────
+//
+// Triggered by the row "Reset password" action. Two-step flow:
+//   1. Admin types a password (or hits Generate) + chooses one-time vs
+//      permanent, then submits.
+//   2. Backend returns the password we just set; we surface it once so the
+//      admin can copy/relay it.
+function PasswordResetDialog({
+  journalist,
+  onClose,
+}: {
+  journalist: Journalist | null;
+  onClose: () => void;
+}) {
+  const [password, setPassword] = useState("");
+  const [oneTime, setOneTime] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [resultPassword, setResultPassword] = useState("");
+  const [error, setError] = useState("");
+
+  // Fresh state each time a different journalist opens.
+  useEffect(() => {
+    setPassword("");
+    setOneTime(true);
+    setResultPassword("");
+    setError("");
+    setBusy(false);
+  }, [journalist?.id]);
+
+  const generate = () => {
+    setPassword(makeStrongPassword());
+    setError("");
+  };
+
+  const submit = async () => {
+    if (!journalist?.journalistProfile) {
+      setError("This reporter has no profile yet.");
+      return;
+    }
+    if (password && password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/journalists", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          profileId: journalist.journalistProfile.id,
+          action: "reset-password",
+          customPassword: password || undefined,
+          oneTime,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Reset failed");
+        return;
+      }
+      setResultPassword(data.password || data.tempPassword || "");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Network error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const done = !!resultPassword;
+
+  return (
+    <Dialog open={!!journalist} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-md">
+        {journalist && (
+          <>
+            <DialogHeader>
+              <DialogTitle>Reset password</DialogTitle>
+              <DialogDescription>
+                Set a new password for <span className="font-semibold">{journalist.name}</span>.
+              </DialogDescription>
+            </DialogHeader>
+
+            {!done ? (
+              <>
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-xs" htmlFor="rp-password">New password</Label>
+                    <div className="mt-1 flex gap-2">
+                      <Input
+                        id="rp-password"
+                        type="text"
+                        placeholder="Type or click Generate"
+                        value={password}
+                        onChange={(e) => { setPassword(e.target.value); setError(""); }}
+                        autoComplete="new-password"
+                        autoCapitalize="off"
+                        autoCorrect="off"
+                        spellCheck={false}
+                        disabled={busy}
+                      />
+                      <Button type="button" variant="outline" onClick={generate} disabled={busy}>
+                        Generate
+                      </Button>
+                    </div>
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      Leave blank to let the system generate one for you.
+                    </p>
+                    {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
+                  </div>
+
+                  <label className="flex cursor-pointer items-start gap-2">
+                    <Checkbox
+                      checked={oneTime}
+                      onCheckedChange={(v) => setOneTime(v === true)}
+                      className="mt-0.5"
+                      disabled={busy}
+                    />
+                    <div className="text-sm leading-tight">
+                      <p className="font-semibold">Require password change at next sign-in</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        Reporter must replace this one-time password the first time they log in.
+                        Uncheck for a permanent password.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+
+                <DialogFooter className="mt-2">
+                  <Button variant="outline" onClick={onClose} disabled={busy}>Cancel</Button>
+                  <Button onClick={submit} disabled={busy}>
+                    {busy ? "Resetting…" : "Reset password"}
+                  </Button>
+                </DialogFooter>
+              </>
+            ) : (
+              <>
+                <div className="rounded-md border border-amber-300 bg-amber-50 p-3">
+                  <p className="mb-2 text-[11px] font-bold text-amber-800">
+                    {oneTime
+                      ? "One-time password — they must change it at next sign-in."
+                      : "New password set."}
+                  </p>
+                  <div className="flex gap-2">
+                    {/* Read-only shadcn Input so the result mirrors the form
+                        above visually — same border, same padding, same
+                        focus ring. The user can also tap-select-all. */}
+                    <Input
+                      readOnly
+                      value={resultPassword}
+                      onFocus={(e) => e.currentTarget.select()}
+                      className="font-mono tracking-wide"
+                      aria-label="Generated password"
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={() => navigator.clipboard?.writeText(resultPassword)}
+                    >
+                      Copy
+                    </Button>
+                  </div>
+                  <p className="mt-2 text-[11px] text-amber-700">
+                    Share it with the reporter. It won&apos;t be shown again.
+                  </p>
+                </div>
+                <DialogFooter className="mt-2">
+                  <Button onClick={onClose}>Done</Button>
+                </DialogFooter>
+              </>
+            )}
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Strong 14-char password mixing upper / lower / digit / symbol, with
+// lookalike chars (0/O, 1/l/I) excluded so it survives reading aloud and
+// chat copy-paste. We deliberately don't use crypto.randomBytes here —
+// this runs in the browser, and the modal surfaces the result once
+// rather than persisting it as a secret.
+function makeStrongPassword(length = 14): string {
+  const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const lower = "abcdefghijkmnopqrstuvwxyz";
+  const digits = "23456789";
+  const symbols = "!@#$%^&*-_=+";
+  const all = upper + lower + digits + symbols;
+  const pickFrom = (s: string) => s[Math.floor(Math.random() * s.length)];
+  // Seed with one of each character class so the result always passes
+  // typical strength checks.
+  const seeded = [pickFrom(upper), pickFrom(lower), pickFrom(digits), pickFrom(symbols)];
+  while (seeded.length < length) seeded.push(pickFrom(all));
+  return seeded.sort(() => Math.random() - 0.5).join("");
 }
 
 const DISTRICTS = [

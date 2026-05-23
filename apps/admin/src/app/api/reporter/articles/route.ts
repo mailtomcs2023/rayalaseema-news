@@ -13,7 +13,7 @@ import { resolveDeskId } from "@/lib/desk-resolver";
 //        or submit for review (never publish directly).
 export async function GET(req: NextRequest) {
   try {
-    const reporterId = getReporterId(req);
+    const reporterId = await getReporterId(req);
     if (!reporterId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const reporterId = getReporterId(req);
+  const reporterId = await getReporterId(req);
   if (!reporterId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -61,6 +61,26 @@ export async function POST(req: NextRequest) {
 
     // A reporter may only save a draft or submit for review — not publish.
     const finalStatus = status === "SUBMITTED" ? "SUBMITTED" : "DRAFT";
+
+    // KYC gate: only VERIFIED reporters can create ANY article — including
+    // drafts. Existing articles can still be edited/submitted via PATCH; this
+    // only blocks fresh creation. The reporter app's FAB and empty-state CTAs
+    // surface a friendly Alert before getting here, so this 403 is the
+    // server-side safety net.
+    const jp = await prisma.journalistProfile.findUnique({
+      where: { userId: reporterId },
+      select: { kycStatus: true },
+    });
+    if (!jp || jp.kycStatus !== "VERIFIED") {
+      return NextResponse.json(
+        {
+          error: "KYC not verified. You can create articles once admin verifies your documents.",
+          code: "KYC_NOT_VERIFIED",
+          kycStatus: jp?.kycStatus || "PENDING",
+        },
+        { status: 403 },
+      );
+    }
 
     // Auto-pick desk so reporter app doesn't need a desk picker UI.
     const resolvedDeskId = await resolveDeskId({

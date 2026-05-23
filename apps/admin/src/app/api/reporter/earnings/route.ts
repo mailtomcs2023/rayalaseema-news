@@ -5,11 +5,27 @@ import { getReporterId } from "@/lib/reporter-auth";
 // Earnings for the reporter app — the signed-in reporter's article payments
 // plus a summary. Token-protected (identity comes from the bearer token).
 export async function GET(req: NextRequest) {
-  const reporterId = getReporterId(req);
+  const reporterId = await getReporterId(req);
   if (!reporterId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {
+    // KYC gate: earnings have payout implications, only surface them to
+    // VERIFIED reporters. For other statuses, return an empty summary plus
+    // the KYC state so the screen can render a "locked until KYC" state.
+    const jp = await prisma.journalistProfile.findUnique({
+      where: { userId: reporterId },
+      select: { kycStatus: true },
+    });
+    if (!jp || jp.kycStatus !== "VERIFIED") {
+      return NextResponse.json({
+        payments: [],
+        summary: { total: 0, paid: 0, pending: 0, thisMonth: 0 },
+        locked: true,
+        kycStatus: jp?.kycStatus || "PENDING",
+      });
+    }
+
     const payments = await prisma.articlePayment.findMany({
       where: { journalistId: reporterId },
       include: {

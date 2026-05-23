@@ -58,7 +58,16 @@ export async function GET() {
     const journalists = await prisma.user.findMany({
       where: { role: "REPORTER" },
       include: {
-        journalistProfile: true,
+        // Include the pending change-request count alongside the profile so
+        // the journalists table can surface "this reporter has N updates
+        // awaiting your review" without a second round-trip per row.
+        journalistProfile: {
+          include: {
+            _count: {
+              select: { profileUpdateRequests: { where: { status: "PENDING" } } },
+            },
+          },
+        },
         _count: { select: { articles: true, payments: true } },
       },
       orderBy: { createdAt: "desc" },
@@ -131,7 +140,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
-    // ---- delete one or more journalists (skips any that have content) ----
+    // ---- deactivate one or more journalists (soft-delete) ----
+    // We flip `active: false` instead of hard-deleting. That keeps every
+    // article / payment / KYC document intact, leaves an obvious "Inactive"
+    // marker in the journalists list, and is one click away from
+    // reactivation (Edit details → tick Active, or Reset password —
+    // resetting their password automatically flips active back to true).
     if (action === "delete") {
       const userIds = body.userIds as string[];
       if (!Array.isArray(userIds) || userIds.length === 0) {
@@ -139,43 +153,46 @@ export async function POST(req: NextRequest) {
       }
       const users = await prisma.user.findMany({
         where: { id: { in: userIds }, role: "REPORTER" },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          _count: {
-            select: {
-              articles: true,
-              payments: true,
-              media: true,
-              reviewedArticles: true,
-              articleRevisions: true,
-            },
-          },
-        },
+        select: { id: true, name: true, email: true },
       });
-      const deletable: string[] = [];
+      const deactivatable: string[] = [];
       const skipped: { name: string; reason: string }[] = [];
       for (const u of users) {
         if (PROTECTED_EMAILS.includes(u.email.toLowerCase())) {
           skipped.push({ name: u.name, reason: "protected test account" });
           continue;
         }
-        const c = u._count;
-        const blockers: string[] = [];
-        if (c.articles) blockers.push(`${c.articles} article(s)`);
-        if (c.payments) blockers.push(`${c.payments} payment(s)`);
-        if (c.media) blockers.push(`${c.media} uploaded file(s)`);
-        if (c.reviewedArticles || c.articleRevisions) blockers.push("editorial history");
-        if (blockers.length) skipped.push({ name: u.name, reason: blockers.join(", ") });
-        else deletable.push(u.id);
+        deactivatable.push(u.id);
       }
-      // JournalistProfile + category assignments cascade on delete; audit logs
-      // keep a denormalised actor email, so the trail survives the deletion.
-      if (deletable.length) {
-        await prisma.user.deleteMany({ where: { id: { in: deletable } } });
+      if (deactivatable.length) {
+        await prisma.user.updateMany({
+          where: { id: { in: deactivatable } },
+          data: { active: false },
+        });
       }
-      return NextResponse.json({ success: true, deleted: deletable.length, skipped });
+      // `deleted` retained in the response shape for any older client; the
+      // value is the same idea (how many rows we acted on).
+      return NextResponse.json({
+        success: true,
+        deactivated: deactivatable.length,
+        deleted: deactivatable.length,
+        skipped,
+      });
+    }
+
+    // ---- reactivate one or more journalists (undo a soft-delete) ----
+    // Inverse of action:"delete". No content checks needed — flipping
+    // `active: true` lets them sign in again; nothing was destroyed.
+    if (action === "activate") {
+      const userIds = body.userIds as string[];
+      if (!Array.isArray(userIds) || userIds.length === 0) {
+        return NextResponse.json({ error: "userIds required" }, { status: 400 });
+      }
+      const result = await prisma.user.updateMany({
+        where: { id: { in: userIds }, role: "REPORTER" },
+        data: { active: true },
+      });
+      return NextResponse.json({ success: true, activated: result.count });
     }
 
     // ---- KYC + password actions (operate on a JournalistProfile) ----
@@ -193,19 +210,48 @@ export async function POST(req: NextRequest) {
         data: { kycStatus: "REJECTED", kycRejectionNote: note || "Documents not clear" },
       });
     } else if (action === "reset-password") {
-      // Generate a new temp password, store its hash, and hand the plaintext
-      // back to the admin once so they can relay it to the reporter.
+      // Two knobs the admin modal can send in addition to `profileId`:
+      //   customPassword — admin typed a specific value; we use it as-is.
+      //                    Falls back to a random temp password when absent
+      //                    or shorter than 8 chars.
+      //   oneTime        — true means "force them to change it at next
+      //                    sign-in" (User.mustChangePassword flag).
+      const customPassword =
+        typeof (body as { customPassword?: unknown }).customPassword === "string"
+          ? ((body as { customPassword: string }).customPassword).trim()
+          : "";
+      const oneTime = (body as { oneTime?: unknown }).oneTime === true;
+
+      if (customPassword && customPassword.length < 8) {
+        return NextResponse.json(
+          { error: "Password must be at least 8 characters" },
+          { status: 400 },
+        );
+      }
+
       const profile = await prisma.journalistProfile.findUnique({
         where: { id: profileId },
         select: { userId: true },
       });
       if (!profile) return NextResponse.json({ error: "Profile not found" }, { status: 404 });
-      const tempPassword = generateTempPassword();
+
+      const password = customPassword || generateTempPassword();
       await prisma.user.update({
         where: { id: profile.userId },
-        data: { passwordHash: await hash(tempPassword, 12) },
+        data: {
+          passwordHash: await hash(password, 12),
+          mustChangePassword: oneTime,
+          // If the admin is bothering to set a new password they want this
+          // account usable — flip it back to active in case it was soft-
+          // deleted earlier (the "Deactivate journalist" menu item only
+          // sets active:false, it doesn't actually delete the row).
+          active: true,
+        },
       });
-      return NextResponse.json({ success: true, tempPassword });
+      // `tempPassword` kept for backward-compat with any older caller; the
+      // new modal reads `password` (plus the oneTime echo so it can show the
+      // right confirmation banner).
+      return NextResponse.json({ success: true, password, tempPassword: password, oneTime });
     } else {
       return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
