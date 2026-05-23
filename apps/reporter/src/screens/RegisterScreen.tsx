@@ -7,12 +7,13 @@ import { useT } from "../i18n";
 import { LanguageToggle } from "../components/LanguageToggle";
 import { FieldError } from "../components/FieldError";
 import { step1Schema, step2Schema, step3Schema, fieldErrors, PAN_RE, PAN_HOLDER_TYPES } from "../lib/validation";
+import { API_URL } from "../api/client";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useRouter, useNavigation } from "expo-router";
 import { constituenciesByDistrict } from "../data/locations";
 import { pincodeToDistrict, pincodeToConstituency } from "../data/pincodes";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || (__DEV__ ? "http://10.0.2.2:3001" : "https://admin.rayalaseemaexpress.com");
+// API_URL is the single source of truth in api/client.ts — imported above.
 
 // fetch() that rejects after `ms` instead of hanging forever — keeps the
 // Submit button from getting stuck on "Submitting..." if the API is unreachable.
@@ -175,9 +176,13 @@ export function RegisterScreen() {
     const formData = new FormData();
     const filename = uri.split("/").pop() || "doc.jpg";
     formData.append("file", { uri, name: filename, type: "image/jpeg" } as any);
-    const res = await fetchWithTimeout(`${API_URL}/api/upload`, { method: "POST", body: formData });
+    // Public upload endpoint — the reporter doesn't have a token yet during
+    // registration, so the admin-auth `/api/upload` and the token-auth
+    // `/api/reporter/upload` would both 401 silently here.
+    const res = await fetchWithTimeout(`${API_URL}/api/upload/register`, { method: "POST", body: formData });
     const data = await res.json();
-    return data.url || "";
+    if (!data.url) throw new Error(data.error || "Upload failed");
+    return data.url;
   };
 
   const handleSubmit = async () => {

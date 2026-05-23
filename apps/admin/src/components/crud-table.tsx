@@ -1,7 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Languages } from "lucide-react";
+
+// English text → URL-safe slug. Lowercase, dashes, alphanumerics only, ≤60 chars.
+const slugify = (s: string) =>
+  String(s)
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .substring(0, 60);
 
 interface Column {
   key: string;
@@ -24,6 +35,13 @@ interface Field {
   placeholder?: string;
   options?: { value: string; label: string }[];
   required?: boolean;
+  // When set, renders a "Translate" button next to the input. Reads the
+  // current value of `translateFromKey` (typically the English field) and
+  // fills this field with the Telugu translation via /api/ai/rewrite.
+  translateFromKey?: string;
+  // When set, this field auto-fills with a slugified version of the source
+  // key as the user types — until the user manually edits the slug.
+  slugFromKey?: string;
 }
 
 export function CrudTable({ title, apiPath, columns, data, fields }: CrudTableProps) {
@@ -33,6 +51,45 @@ export function CrudTable({ title, apiPath, columns, data, fields }: CrudTablePr
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  // Toast: fixed top-right banner that auto-dismisses after 3s.
+  const [toast, setToast] = useState<{ msg: string; type: "error" | "success" } | null>(null);
+  const [translatingKey, setTranslatingKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  // Translate the value of `sourceKey` (English) into Telugu and write it to
+  // `targetKey`. Empty source → toast error.
+  const translateField = async (targetKey: string, sourceKey: string) => {
+    const src = String(formData[sourceKey] || "").trim();
+    if (!src) {
+      setToast({ msg: "Please enter the English name first", type: "error" });
+      return;
+    }
+    setTranslatingKey(targetKey);
+    try {
+      const res = await fetch("/api/ai/rewrite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: src, action: "phrase" }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.result) {
+        setToast({ msg: data.error || "Translation failed", type: "error" });
+      } else {
+        // Trim quotes/whitespace the model occasionally wraps around output.
+        const cleaned = String(data.result).trim().replace(/^["']|["']$/g, "");
+        setFormData((prev) => ({ ...prev, [targetKey]: cleaned }));
+        setToast({ msg: "Translated", type: "success" });
+      }
+    } catch (e: any) {
+      setToast({ msg: e.message || "Translation failed", type: "error" });
+    }
+    setTranslatingKey(null);
+  };
 
   const openCreate = () => {
     setEditId(null);
@@ -80,11 +137,48 @@ export function CrudTable({ title, apiPath, columns, data, fields }: CrudTablePr
   };
 
   const updateField = (key: string, value: any) => {
-    setFormData((prev) => ({ ...prev, [key]: value }));
+    setFormData((prev) => {
+      const next = { ...prev, [key]: value };
+      // Cascade: if another field auto-derives its slug from `key`, refresh it.
+      // Only refresh when the slug field is empty or still matches the slug
+      // we previously derived — preserves manual edits.
+      for (const f of fields) {
+        if (f.slugFromKey === key) {
+          const currentSlug = String(prev[f.key] || "");
+          const previousDerived = slugify(String(prev[key] || ""));
+          if (!currentSlug || currentSlug === previousDerived) {
+            next[f.key] = slugify(String(value || ""));
+          }
+        }
+      }
+      return next;
+    });
   };
 
   return (
     <>
+      {/* Toast — fixed top-right, auto-dismisses */}
+      {toast && (
+        <div
+          style={{
+            position: "fixed",
+            top: 20,
+            right: 20,
+            zIndex: 200,
+            padding: "10px 16px",
+            borderRadius: 8,
+            fontSize: 13,
+            fontWeight: 600,
+            color: "#fff",
+            background: toast.type === "error" ? "#dc2626" : "#16a34a",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+            maxWidth: 320,
+          }}
+        >
+          {toast.msg}
+        </div>
+      )}
+
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
         <div>
@@ -190,6 +284,39 @@ export function CrudTable({ title, apiPath, columns, data, fields }: CrudTablePr
                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                     <input type="color" value={formData[field.key] || "#FF2C2C"} onChange={(e) => updateField(field.key, e.target.value)} style={{ width: 40, height: 32, border: "none", cursor: "pointer" }} />
                     <input type="text" value={formData[field.key] || ""} onChange={(e) => updateField(field.key, e.target.value)} style={{ flex: 1, border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 12px", fontSize: 13, fontFamily: "monospace", outline: "none", boxSizing: "border-box" }} />
+                  </div>
+                ) : field.translateFromKey ? (
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <input
+                      type="text"
+                      value={formData[field.key] || ""}
+                      onChange={(e) => updateField(field.key, e.target.value)}
+                      placeholder={field.placeholder}
+                      style={{ flex: 1, border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 12px", fontSize: 14, outline: "none", boxSizing: "border-box" }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => translateField(field.key, field.translateFromKey!)}
+                      disabled={translatingKey === field.key}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        padding: "0 14px",
+                        background: "#FF2C2C",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: 8,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: translatingKey === field.key ? "not-allowed" : "pointer",
+                        whiteSpace: "nowrap",
+                        opacity: translatingKey === field.key ? 0.6 : 1,
+                      }}
+                    >
+                      <Languages size={14} />
+                      {translatingKey === field.key ? "..." : "Translate"}
+                    </button>
                   </div>
                 ) : (
                   <input

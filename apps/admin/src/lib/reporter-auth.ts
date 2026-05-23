@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { prisma } from "@rayalaseema/db";
 
 // Token auth for the reporter (Expo) app.
 //
@@ -43,9 +44,22 @@ export function verifyReporterToken(token?: string | null): string | null {
   }
 }
 
-// Pulls the bearer token off a request and returns the reporter's user id.
-export function getReporterId(req: Request): string | null {
+// Pulls the bearer token off a request and returns the reporter's user id,
+// OR null if (a) the token is missing/invalid/expired, OR (b) the user has
+// been deactivated in the admin portal since the token was issued.
+//
+// The DB check on (b) is what makes "admin toggles reporter inactive →
+// reporter's Expo app force-logs-out" work: the next API call returns 401,
+// and the app's `api()` clears the stored token and bounces to /login.
+export async function getReporterId(req: Request): Promise<string | null> {
   const header = req.headers.get("authorization") || "";
   const token = header.startsWith("Bearer ") ? header.slice(7).trim() : null;
-  return verifyReporterToken(token);
+  const uid = verifyReporterToken(token);
+  if (!uid) return null;
+  const user = await prisma.user.findUnique({
+    where: { id: uid },
+    select: { active: true },
+  });
+  if (!user || !user.active) return null;
+  return uid;
 }

@@ -602,8 +602,9 @@ export default function EditArticlePage() {
               </button>
             </div>
 
-            {/* View on frontend */}
-            <a href={`http://localhost:3000/article/${slug}`} target="_blank"
+            {/* View on frontend — uses NEXT_PUBLIC_SITE_URL so it points at
+                the real public site in prod, not localhost. */}
+            <a href={`${process.env.NEXT_PUBLIC_SITE_URL || "https://rayalaseemaexpress.com"}/article/${slug}`} target="_blank"
               style={{ display: "block", textAlign: "center", padding: "10px 16px", background: "#f3f4f6", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#555", textDecoration: "none", marginBottom: 12 }}>
               View on Frontend
             </a>

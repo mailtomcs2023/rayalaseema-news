@@ -8,7 +8,7 @@ import { getReporterId } from "@/lib/reporter-auth";
 // check before the password is replaced.
 export async function POST(req: NextRequest) {
   try {
-    const reporterId = getReporterId(req);
+    const reporterId = await getReporterId(req);
     if (!reporterId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

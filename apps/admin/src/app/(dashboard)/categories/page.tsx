@@ -23,9 +23,9 @@ export default async function CategoriesPage() {
             { key: "active", label: "Status", type: "boolean" },
           ]}
           fields={[
-            { key: "name", label: "Name (Telugu)", type: "text", required: true, placeholder: "Category name in Telugu" },
             { key: "nameEn", label: "Name (English)", type: "text", required: true, placeholder: "Category name in English" },
-            { key: "slug", label: "Slug", type: "text", placeholder: "auto-generated from English name" },
+            { key: "name", label: "Name (Telugu)", type: "text", required: true, placeholder: "Category name in Telugu", translateFromKey: "nameEn" },
+            { key: "slug", label: "Slug", type: "text", placeholder: "auto-generated from English name", slugFromKey: "nameEn" },
             { key: "color", label: "Color", type: "color" },
             { key: "description", label: "Description", type: "textarea" },
             { key: "sortOrder", label: "Sort Order", type: "number" },

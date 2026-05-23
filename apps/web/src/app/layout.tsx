@@ -5,6 +5,10 @@ import { WhatsAppFloat } from "@/components/whatsapp-float";
 import { PushNotifications } from "@/components/push-notifications";
 import { DistrictPicker } from "@/components/district-picker";
 import "./globals.css";
+import { Geist } from "next/font/google";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: "రాయలసీమ ఎక్స్‌ప్రెస్ | Rayalaseema Express",
@@ -37,7 +41,7 @@ export default async function RootLayout({
   const adsenseId = config.google_adsense_id;
   const gtmId = config.google_tag_manager_id;
   return (
-    <html lang="te">
+    <html lang="te" className={cn("font-sans", geist.variable)}>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

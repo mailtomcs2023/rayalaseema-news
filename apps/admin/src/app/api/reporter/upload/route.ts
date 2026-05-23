@@ -13,7 +13,7 @@ const EXT_BY_TYPE: Record<string, string> = {
 // Image upload for the reporter app (article photos). Token-protected;
 // uploads the file to Azure Blob and returns its public URL.
 export async function POST(req: NextRequest) {
-  if (!getReporterId(req)) {
+  if (!(await getReporterId(req))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   if (!blobConfigured()) {

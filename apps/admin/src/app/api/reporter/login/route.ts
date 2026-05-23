@@ -18,11 +18,18 @@ export async function POST(req: NextRequest) {
     }
 
     // Case-insensitive lookup so capitalisation typed at login doesn't matter.
+    // journalistProfile is pulled so we can return the reporter's KYC state
+    // along with the token — the Expo app reads it from AsyncStorage and
+    // shows a "KYC under verification" banner / gates Submit + Earnings
+    // until kycStatus === "VERIFIED".
     const user = await prisma.user.findFirst({
       where: { email: { equals: String(email).trim(), mode: "insensitive" } },
       select: {
         id: true, name: true, email: true, role: true, active: true,
         phone: true, avatar: true, passwordHash: true,
+        journalistProfile: {
+          select: { kycStatus: true, kycRejectionNote: true },
+        },
       },
     });
 
@@ -45,6 +52,8 @@ export async function POST(req: NextRequest) {
         role: user.role,
         phone: user.phone,
         avatar: user.avatar,
+        kycStatus: user.journalistProfile?.kycStatus || "PENDING",
+        kycRejectionNote: user.journalistProfile?.kycRejectionNote || null,
       },
     });
   } catch (e: any) {

@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { api } from "../api/client";
 import { useT } from "../i18n";
 import { ScreenHeader } from "../components/ScreenHeader";
+import { KycBanner } from "../components/KycBanner";
 
 // Status accent colors for payment-history rows.
 const statusColors: Record<string, { bg: string; text: string }> = {
@@ -18,12 +19,16 @@ export function EarningsScreen() {
   const [payments, setPayments] = useState<any[]>([]);
   const [summary, setSummary] = useState({ total: 0, paid: 0, pending: 0, thisMonth: 0 });
   const [refreshing, setRefreshing] = useState(false);
+  // Server returns { locked: true } when the reporter's KYC isn't VERIFIED;
+  // we swap the empty list for a KYC-required hint in that case.
+  const [locked, setLocked] = useState(false);
 
   const load = useCallback(async () => {
     try {
       const data = await api("/api/reporter/earnings");
       setPayments(data.payments || []);
       setSummary(data.summary || { total: 0, paid: 0, pending: 0, thisMonth: 0 });
+      setLocked(!!data.locked);
     } catch {}
   }, []);
 
@@ -34,6 +39,7 @@ export function EarningsScreen() {
   return (
     <View style={styles.screen}>
       <ScreenHeader />
+      <KycBanner />
       <FlatList
         data={payments}
         keyExtractor={(item) => item.id}
@@ -94,8 +100,10 @@ export function EarningsScreen() {
         }}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Ionicons name="cash-outline" size={48} color="#d1d5db" />
-            <Text style={styles.emptyText}>{t("earnings.empty")}</Text>
+            <Ionicons name={locked ? "lock-closed-outline" : "cash-outline"} size={48} color="#d1d5db" />
+            <Text style={styles.emptyText}>
+              {locked ? t("kyc.lockedEarnings") : t("earnings.empty")}
+            </Text>
           </View>
         }
       />

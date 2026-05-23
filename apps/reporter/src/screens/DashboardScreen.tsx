@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { api } from "../api/client";
 import { useT } from "../i18n";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { ScreenHeader } from "../components/ScreenHeader";
+import { KycBanner } from "../components/KycBanner";
+import { requireVerifiedKyc } from "../lib/kyc-gate";
 
 const statusColors: Record<string, { bg: string; text: string }> = {
   DRAFT: { bg: "#f3f4f6", text: "#555" },
@@ -21,7 +23,7 @@ export function DashboardScreen() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [articles, setArticles] = useState<any[]>([]);
-  const [stats, setStats] = useState({ total: 0, published: 0, pending: 0, earnings: 0 });
+  const [stats, setStats] = useState({ total: 0, approved: 0, earnings: 0 });
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
@@ -35,14 +37,19 @@ export function DashboardScreen() {
       setArticles(list);
       setStats({
         total: data.total || 0,
-        published: list.filter((a: any) => a.status === "PUBLISHED").length,
-        pending: list.filter((a: any) => ["SUBMITTED", "IN_REVIEW"].includes(a.status)).length,
+        // "Approved" mirrors the chip in the Articles tab — articles that
+        // passed editor review (also counts PUBLISHED since published is the
+        // downstream state of approved).
+        approved: list.filter((a: any) => a.status === "APPROVED" || a.status === "PUBLISHED").length,
         earnings: 0,
       });
     } catch {}
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  // Refetch on every focus so the list/KPIs auto-refresh after submitting a
+  // new article (or any return-from-detail). Native tabs keep screens mounted,
+  // so a one-shot useEffect on mount wouldn't catch this.
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const onRefresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
 
@@ -62,6 +69,7 @@ export function DashboardScreen() {
         }
         ListHeaderComponent={
           <View>
+            <KycBanner />
             <Text style={styles.welcome}>{t("dashboard.greeting", { name })}</Text>
             {/* KPI grid — each card deep-links to the matching tab/filter */}
             <View style={styles.kpiGrid}>
@@ -72,13 +80,8 @@ export function DashboardScreen() {
               />
               <KpiCard
                 icon="checkmark-done-outline" tint="#16a34a"
-                value={stats.published} label={t("dashboard.published")}
-                onPress={() => router.navigate("/articles?status=PUBLISHED")}
-              />
-              <KpiCard
-                icon="time-outline" tint="#f59e0b"
-                value={stats.pending} label={t("dashboard.pending")}
-                onPress={() => router.navigate("/articles?status=SUBMITTED")}
+                value={stats.approved} label={t("dashboard.approved")}
+                onPress={() => router.navigate("/articles?status=APPROVED")}
               />
               <KpiCard
                 icon="wallet-outline" tint="#FF2C2C"
@@ -96,7 +99,7 @@ export function DashboardScreen() {
             <TouchableOpacity
               style={styles.articleCard}
               activeOpacity={0.8}
-              onPress={() => router.push(`/edit-article?id=${item.id}`)}
+              onPress={() => router.push(`/new-article?id=${item.id}`)}
             >
               <View style={styles.articleRow}>
                 <Text style={styles.articleTitle} numberOfLines={2}>{item.title}</Text>
@@ -127,7 +130,9 @@ export function DashboardScreen() {
       {/* New-article action — floating button */}
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => router.push("/new-article")}
+        onPress={async () => {
+          if (await requireVerifiedKyc(t, router)) router.push("/new-article");
+        }}
         accessibilityLabel={t("dashboard.newArticle")}
       >
         <Ionicons name="add" size={28} color="#fff" />
@@ -171,13 +176,14 @@ const styles = StyleSheet.create({
   welcome: { fontSize: 17, lineHeight: 24, fontWeight: "800", color: "#111", paddingHorizontal: 16, paddingTop: 16 },
 
   // KPI grid (2x2)
+  // Three cards in a single row — flex:1 splits the available width evenly.
   kpiGrid: {
-    flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between",
+    flexDirection: "row", gap: 8,
     paddingHorizontal: 14, paddingTop: 10,
   },
   kpiCard: {
-    width: "48.5%", marginBottom: 10,
-    backgroundColor: "#fff", borderRadius: 16, padding: 14,
+    flex: 1,
+    backgroundColor: "#fff", borderRadius: 16, padding: 12,
     shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2,
   },
   kpiTopRow: {

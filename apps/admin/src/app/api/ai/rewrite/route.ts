@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
+import { getReporterId } from "@/lib/reporter-auth";
 
 const ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT;
 const KEY = process.env.AZURE_OPENAI_KEY;
@@ -67,7 +68,15 @@ async function scrapeSource(url: string): Promise<string> {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await requireAuth(["ADMIN"]); if (isAuthError(session)) return session;
+  // Accept either an admin NextAuth session (admin web UI) or a reporter
+  // Bearer token (mobile app's "Translate to Telugu" button). Cookie sessions
+  // and bearer tokens are entirely separate auth schemes, so we try the
+  // mobile path first and fall back to the admin-session check.
+  const reporterId = await getReporterId(req);
+  if (!reporterId) {
+    const session = await requireAuth(["ADMIN"]);
+    if (isAuthError(session)) return session;
+  }
   if (!ENDPOINT || !KEY) {
     return NextResponse.json({ error: "AZURE_OPENAI not configured" }, { status: 503 });
   }
@@ -90,6 +99,9 @@ export async function POST(req: NextRequest) {
 
     const prompts: Record<string, string> = {
       translate: `Translate this English news to standard Telugu. Write a complete newspaper article with headline and paragraphs:\n\n${fullText}`,
+      // Short-text translation — single word / phrase / label. No HTML, no
+      // article structure, no quotes. Just the Telugu equivalent.
+      phrase: `Translate this English text to Telugu. Return ONLY the Telugu translation as plain text — no quotes, no explanation, no English in brackets, no HTML:\n\n${fullText}`,
       rewrite: `Rewrite this as a standard Telugu newspaper article. Clean, professional Telugu:\n\n${fullText}`,
       editorial: `Write a Rayalaseema-style editorial/opinion piece about this topic. Use dialect words in headlines and quotes only:\n\n${fullText}`,
       dialect: `Add slight Rayalaseema dialect flavor to this article. Only change headlines and quotes, keep body in standard Telugu:\n\n${fullText}`,

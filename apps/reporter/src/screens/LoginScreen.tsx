@@ -1,15 +1,17 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, KeyboardAvoidingView, Platform } from "react-native";
+import { DismissKeyboard } from "../components/DismissKeyboard";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useT } from "../i18n";
 import { LanguageToggle } from "../components/LanguageToggle";
 import { FieldError } from "../components/FieldError";
 import { loginSchema, fieldErrors } from "../lib/validation";
+import { API_URL } from "../api/client";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || (__DEV__ ? "http://10.0.2.2:3001" : "https://admin.rayalaseemaexpress.com");
+// API_URL is the single source of truth in api/client.ts — imported above.
 
 export function LoginScreen() {
   const { t } = useT();
@@ -52,6 +54,7 @@ export function LoginScreen() {
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <DismissKeyboard>
       <View style={styles.card}>
         <View style={styles.toggleRow}>
           <LanguageToggle />
@@ -103,6 +106,7 @@ export function LoginScreen() {
           <Text style={styles.registerText}>{t("login.registerPrompt")}<Text style={{ color: "#FF2C2C", fontWeight: "700" }}>{t("login.registerLink")}</Text></Text>
         </TouchableOpacity>
       </View>
+      </DismissKeyboard>
     </KeyboardAvoidingView>
   );
 }

@@ -5,7 +5,7 @@ import { getReporterId } from "@/lib/reporter-auth";
 // Category list for the reporter app's article composer. Token-protected,
 // returns only active categories.
 export async function GET(req: NextRequest) {
-  if (!getReporterId(req)) {
+  if (!(await getReporterId(req))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {
