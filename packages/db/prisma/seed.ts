@@ -60,6 +60,15 @@ async function main() {
     { name: "నవ్యసీమ", nameEn: "Navyaseema", slug: "navyaseema", color: "#E11D48", sortOrder: 20 },
     { name: "రియల్ ఎస్టేట్", nameEn: "Real Estate", slug: "real-estate", color: "#D97706", sortOrder: 21 },
     { name: "సంపాదకీయం", nameEn: "Editorial", slug: "editorial", color: "#374151", sortOrder: 22 },
+    // Categories surfaced from the "మరిన్ని" dropdown in header.tsx — added so the
+    // links don't 404. Geographic + section pages even if we don't curate them yet.
+    { name: "ఆంధ్రప్రదేశ్", nameEn: "Andhra Pradesh", slug: "andhra-pradesh", color: "#0891B2", sortOrder: 23 },
+    { name: "తెలంగాణ", nameEn: "Telangana", slug: "telangana", color: "#DC2626", sortOrder: 24 },
+    { name: "ఫీచర్ పేజీలు", nameEn: "Features", slug: "features", color: "#7C3AED", sortOrder: 25 },
+    { name: "పాఠకుల లేఖలు", nameEn: "Reader Letters", slug: "reader-letters", color: "#475569", sortOrder: 26 },
+    { name: "రాయలసీమ రుచులు", nameEn: "Rayalaseema Ruchulu", slug: "rayalaseema-ruchulu", color: "#D97706", sortOrder: 27 },
+    { name: "ఎట్టెట", nameEn: "Yetteta", slug: "yetteta", color: "#EC4899", sortOrder: 28 },
+    { name: "పజిల్స్", nameEn: "Puzzles", slug: "puzzles", color: "#16A34A", sortOrder: 29 },
   ];
 
   for (const cat of categories) {
