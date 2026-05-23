@@ -11,21 +11,26 @@ export function formatInlineByline(deskName: string | null | undefined): string 
   return deskName.replace(/ - /g, ", ");
 }
 
-/** Telugu relative time. Falls back to absolute date past 30 days. */
+/**
+ * English relative time. User feedback: Telugu transliteration of timestamps
+ * ("1 గంటల క్రితం") read awkwardly with grammar mismatches; English short form
+ * looks cleaner on cards & bylines.
+ * Falls back to absolute date past 30 days.
+ */
 export function formatRelativeTelugu(d: Date | string | null | undefined): string {
   if (!d) return "";
   const date = typeof d === "string" ? new Date(d) : d;
   if (isNaN(date.getTime())) return "";
   const diffMs = Date.now() - date.getTime();
   const sec = Math.floor(diffMs / 1000);
-  if (sec < 60) return "ఇప్పుడే";
+  if (sec < 60) return "Just now";
   const min = Math.floor(sec / 60);
-  if (min < 60) return `${min} ని. క్రితం`;
+  if (min < 60) return `${min} min ago`;
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr} గంటల క్రితం`;
+  if (hr < 24) return hr === 1 ? "1 hour ago" : `${hr} hours ago`;
   const day = Math.floor(hr / 24);
-  if (day < 30) return `${day} రోజుల క్రితం`;
-  return date.toLocaleDateString("te-IN", { day: "numeric", month: "long", year: "numeric" });
+  if (day < 30) return day === 1 ? "1 day ago" : `${day} days ago`;
+  return date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
 /**

@@ -153,8 +153,8 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                     const pub = article.publishedAt ? new Date(article.publishedAt) : null;
                     const upd = article.updatedAt ? new Date(article.updatedAt) : null;
                     const edited = pub && upd && upd.getTime() - pub.getTime() > 5 * 60_000;
-                    if (edited && upd) return `నవీకరించబడింది: ${formatRelativeTelugu(upd)}`;
-                    if (pub) return `ప్రచురించబడింది: ${formatRelativeTelugu(pub)}`;
+                    if (edited && upd) return `Updated · ${formatRelativeTelugu(upd)}`;
+                    if (pub) return `Published · ${formatRelativeTelugu(pub)}`;
                     return "";
                   })()}
                 </p>

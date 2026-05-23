@@ -23,11 +23,12 @@ function timeAgo(d: Date | null): string {
   if (!d) return "";
   const diff = Date.now() - d.getTime();
   const m = Math.floor(diff / 60000);
-  if (m < 1) return "ఇప్పుడే";
-  if (m < 60) return `${m} ని. క్రితం`;
+  if (m < 1) return "Just now";
+  if (m < 60) return `${m} min ago`;
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h} గంటల క్రితం`;
-  return `${Math.floor(h / 24)} రోజుల క్రితం`;
+  if (h < 24) return h === 1 ? "1 hour ago" : `${h} hours ago`;
+  const d2 = Math.floor(h / 24);
+  return d2 === 1 ? "1 day ago" : `${d2} days ago`;
 }
 
 /** Newest of publishedAt vs updatedAt (newspaper convention). */
