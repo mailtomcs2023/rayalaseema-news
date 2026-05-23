@@ -61,13 +61,29 @@ export async function POST(req: NextRequest) {
           ads: {},
         });
 
-        const page = await browser.newPage({ viewport: { width: 1200, height: 2000 } });
+        // Indian broadsheet single-page side ≈ 300×560 mm. Render at 1480×2760 px
+        // (~125 dpi) so headlines stay sharp when readers zoom in.
+        const page = await browser.newPage({ viewport: { width: 1480, height: 2760 } });
         await page.setContent(html, { waitUntil: "networkidle" });
-        // Allow Google Fonts to settle.
-        await page.waitForTimeout(500);
+        // Wait until every <img> has actually decoded (networkidle alone races on
+        // Azure Blob CDN-served featured images), then a 300 ms tick for fonts.
+        await page.evaluate(async () => {
+          await Promise.all(
+            Array.from(document.images).map((img) =>
+              img.complete && img.naturalHeight !== 0
+                ? Promise.resolve()
+                : new Promise<void>((resolve) => {
+                    img.addEventListener("load", () => resolve(), { once: true });
+                    img.addEventListener("error", () => resolve(), { once: true });
+                  })
+            )
+          );
+          if ((document as any).fonts?.ready) await (document as any).fonts.ready;
+        });
+        await page.waitForTimeout(300);
         const pdfBytes = await page.pdf({
-          width: "1200px",
-          height: "2000px",
+          width: "300mm",
+          height: "560mm",
           printBackground: true,
           preferCSSPageSize: false,
           margin: { top: "0", right: "0", bottom: "0", left: "0" },

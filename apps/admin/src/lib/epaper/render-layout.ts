@@ -81,7 +81,11 @@ function blockStyle(b: Block, extra = ""): string {
 
 function imageOrFallback(url: string | null | undefined, className: string): string {
   if (url) {
-    return `<div class="ph ${className}"><img src="${esc(url)}" alt="" /></div>`;
+    // `crossorigin="anonymous"` + `referrerpolicy="no-referrer"` so Azure Blob's
+    // CDN serves the image without an Origin/Referer mismatch when Playwright
+    // hits it from the headless browser. `loading="eager"` since we need ALL
+    // images decoded before the PDF capture.
+    return `<div class="ph ${className}"><img src="${esc(url)}" alt="" loading="eager" crossorigin="anonymous" referrerpolicy="no-referrer" /></div>`;
   }
   return `<div class="ph ${className} noimg">రాయలసీమ ఎక్స్‌ప్రెస్</div>`;
 }
@@ -272,63 +276,65 @@ export async function renderLayoutToHtml(input: RenderInput): Promise<string> {
 <link href="${FONTS_HREF}" rel="stylesheet">
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-  html,body{width:1200px}
+  html,body{width:1480px}
   body{
     font-family:'Noto Serif Telugu',serif;
     background:#FCFAF3;color:#14110b;
-    padding:26px 30px;
+    padding:32px 36px;
   }
+  /* 12-col broadsheet grid. Row height is roomy so 28-row templates fill the
+     full 2760-px viewport — leaves space for 12-18 stories per page. */
   .page {
     display:grid;
     grid-template-columns: repeat(12, 1fr);
-    grid-template-rows: repeat(${maxRow}, 60px);
-    column-gap: 12px;
-    row-gap: 10px;
+    grid-template-rows: repeat(${maxRow}, 92px);
+    column-gap: 14px;
+    row-gap: 12px;
   }
   .block { overflow: hidden; }
   .block .block-inner { width:100%; height:100%; display:flex; flex-direction:column; }
   .block a.story-link { color: inherit; text-decoration: none; display:block; height:100%; }
 
   /* Masthead */
-  .masthead{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #14110b;padding:0 6px;height:100%}
+  .masthead{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #14110b;padding:0 10px;height:100%}
   .mast-mid{text-align:center;flex:1}
-  .mast-logo{font-family:'Ramabhadra',serif;font-size:48px;color:#A50D0D;line-height:1}
-  .mast-tag{font-family:'Noto Sans Telugu',sans-serif;font-size:11px;letter-spacing:5px;color:#6b6155;margin-top:4px}
-  .mast-side{font-family:'Noto Sans Telugu',sans-serif;font-size:10px;line-height:1.4;color:#6b6155;width:130px}
+  .mast-logo{font-family:'Ramabhadra',serif;font-size:64px;color:#A50D0D;line-height:1}
+  .mast-tag{font-family:'Noto Sans Telugu',sans-serif;font-size:13px;letter-spacing:6px;color:#6b6155;margin-top:5px}
+  .mast-side{font-family:'Noto Sans Telugu',sans-serif;font-size:12px;line-height:1.5;color:#6b6155;width:170px}
   .mast-side.r{text-align:right}
 
   /* Section band */
   .secbar{
     display:flex;justify-content:space-between;align-items:center;
-    background:#A50D0D;color:#fff;padding:6px 14px;height:100%;
+    background:#A50D0D;color:#fff;padding:8px 18px;height:100%;
   }
-  .secbar-name{font-family:'Ramabhadra',serif;font-size:28px}
-  .secbar-meta{font-family:'Noto Sans Telugu',sans-serif;font-size:11px}
+  .secbar-name{font-family:'Ramabhadra',serif;font-size:38px}
+  .secbar-meta{font-family:'Noto Sans Telugu',sans-serif;font-size:13px}
 
-  .kicker{font-family:'Noto Sans Telugu',sans-serif;font-size:12px;font-weight:800;color:#A50D0D;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
-  .kicker.sm{font-size:10px;margin:4px 0 2px}
-  .byline{font-family:'Noto Sans Telugu',sans-serif;font-size:11px;font-weight:700;color:#A50D0D;font-style:italic;margin:0 0 6px}
+  .kicker{font-family:'Noto Sans Telugu',sans-serif;font-size:14px;font-weight:800;color:#A50D0D;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+  .kicker.sm{font-size:11px;margin:5px 0 3px}
+  .byline{font-family:'Noto Sans Telugu',sans-serif;font-size:13px;font-weight:700;color:#A50D0D;font-style:italic;margin:0 0 8px}
 
   /* Lead */
-  .lead { padding: 4px 0; border-right: 1px solid #c9c1ad; padding-right: 8px; }
-  .lead-hl{font-family:'Noto Serif Telugu',serif;font-weight:900;font-size:30px;line-height:1.18;margin-bottom:8px}
-  .lead-img{flex:0 0 220px;margin-bottom:8px}
+  .lead { padding: 6px 0; border-right: 1px solid #c9c1ad; padding-right: 12px; }
+  .lead-hl{font-family:'Noto Serif Telugu',serif;font-weight:900;font-size:42px;line-height:1.18;margin-bottom:10px}
+  .lead-img{flex:0 0 300px;margin-bottom:10px}
   .lead-dek{
-    font-size:13px;line-height:1.55;color:#34302a;text-align:justify;
-    column-count:2;column-gap:14px;column-rule:1px solid #d8d0bd;
+    font-size:15px;line-height:1.6;color:#34302a;text-align:justify;
+    column-count:2;column-gap:18px;column-rule:1px solid #d8d0bd;
     flex: 1 1 auto; overflow: hidden;
   }
 
   /* Major */
-  .major { padding: 4px 0; border-bottom: 1px dotted #c9c1ad; }
-  .maj-img{flex:0 0 110px;margin-bottom:6px}
-  .maj-hl{font-family:'Noto Serif Telugu',serif;font-weight:800;font-size:17px;line-height:1.25;margin-bottom:4px}
-  .maj-dek{font-size:11px;line-height:1.45;color:#4a443c;text-align:justify;flex:1 1 auto;overflow:hidden}
+  .major { padding: 6px 0; border-bottom: 1px dotted #c9c1ad; }
+  .maj-img{flex:0 0 160px;margin-bottom:8px}
+  .maj-hl{font-family:'Noto Serif Telugu',serif;font-weight:800;font-size:22px;line-height:1.25;margin-bottom:5px}
+  .maj-dek{font-size:13px;line-height:1.5;color:#4a443c;text-align:justify;flex:1 1 auto;overflow:hidden}
 
   /* Secondary */
-  .secondary { padding: 4px 0; border-right: 1px solid #c9c1ad; padding-right: 8px;}
-  .sec-img{flex:0 0 90px;margin-bottom:5px}
-  .sec-hl{font-family:'Noto Serif Telugu',serif;font-weight:800;font-size:14px;line-height:1.3;flex:1 1 auto;overflow:hidden}
+  .secondary { padding: 6px 0; border-right: 1px solid #c9c1ad; padding-right: 10px;}
+  .sec-img{flex:0 0 130px;margin-bottom:6px}
+  .sec-hl{font-family:'Noto Serif Telugu',serif;font-weight:800;font-size:17px;line-height:1.3;flex:1 1 auto;overflow:hidden}
 
   /* Images */
   .ph{width:100%;overflow:hidden;background:#e9e3d4;border:1px solid #d3cab5;height:100%}
@@ -337,14 +343,14 @@ export async function renderLayoutToHtml(input: RenderInput): Promise<string> {
     font-family:'Ramabhadra',serif;color:#bdb39c;font-size:18px}
 
   /* Briefs */
-  .briefs{ display:flex; flex-direction:column; padding-top:6px; }
-  .briefs-head{font-family:'Ramabhadra',serif;font-size:18px;color:#A50D0D;margin-bottom:6px;
-    border-bottom:2px solid #14110b;padding-bottom:3px}
-  .briefs-cols{column-count:1;column-gap:18px;column-rule:1px solid #d8d0bd;flex:1 1 auto;overflow:hidden}
-  .brief-item{display:flex;gap:7px;padding:4px 0;border-bottom:1px dotted #cdc6b5;break-inside:avoid;
-    font-size:12px;font-weight:600;line-height:1.35}
+  .briefs{ display:flex; flex-direction:column; padding-top:8px; }
+  .briefs-head{font-family:'Ramabhadra',serif;font-size:22px;color:#A50D0D;margin-bottom:8px;
+    border-bottom:2px solid #14110b;padding-bottom:4px}
+  .briefs-cols{column-count:1;column-gap:20px;column-rule:1px solid #d8d0bd;flex:1 1 auto;overflow:hidden}
+  .brief-item{display:flex;gap:8px;padding:5px 0;border-bottom:1px dotted #cdc6b5;break-inside:avoid;
+    font-size:14px;font-weight:600;line-height:1.4}
   .brief-item a{color:inherit;text-decoration:none}
-  .dot{width:5px;height:5px;border-radius:50%;background:#A50D0D;flex-shrink:0;margin-top:6px}
+  .dot{width:6px;height:6px;border-radius:50%;background:#A50D0D;flex-shrink:0;margin-top:7px}
 
   /* Ads */
   .adzone{width:100%;overflow:hidden;border:1px solid #d3cab5;background:#f0ebdd;height:100%}
