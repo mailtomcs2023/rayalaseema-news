@@ -50,6 +50,24 @@ export async function POST(req: NextRequest) {
       }
     );
 
+    // Diagnostic mode (?diag=1) — emits Azure status + headers WITHOUT leaking the key,
+    // so we can debug "200 empty body" cases from the browser.
+    const url = new URL(req.url);
+    if (url.searchParams.get("diag") === "1") {
+      const headersOut: Record<string, string> = {};
+      res.headers.forEach((v, k) => { headersOut[k] = v; });
+      const buf = await res.arrayBuffer();
+      return NextResponse.json({
+        azure_status: res.status,
+        azure_headers: headersOut,
+        azure_body_bytes: buf.byteLength,
+        speech_key_len: SPEECH_KEY?.length ?? 0,
+        speech_region: SPEECH_REGION,
+        voice: VOICE,
+        ssml_len: ssml.length,
+      });
+    }
+
     if (!res.ok) {
       const err = await res.text();
       console.error(`[TTS] Azure ${res.status}: ${err.slice(0, 400)}`);

@@ -16,7 +16,10 @@
       "Bash(curl -sS -i -X POST \"https://rayalaseemaexpress.com/api/tts?nocache=$\\(date +%s\\)\" -H \"Cache-Control: no-cache\" -H \"Pragma: no-cache\" -H \"Content-Type: application/json\" -d '{\"text\":\"నేడు రాయలసీమ ఎక్స్‌ప్రెస్‌లో తాజా వార్తలు అందుబాటులో ఉన్నాయి. ఇది ఒక పరీక్ష.\",\"_t\":1}')",
       "Bash(curl -sS -X POST \"https://rayalaseemaexpress.com/api/tts?nocache=$\\(date +%s%N\\)\" -H \"Content-Type: application/json\" -d '{\"text\":\"నేడు రాయలసీమ ఎక్స్‌ప్రెస్‌లో తాజా వార్తలు అందుబాటులో ఉన్నాయి. ఇది ఒక పరీక్ష పరిస్థితి.\",\"_t\":42}' -o /tmp/tts4.bin -w \"bytes=%{size_download}\\\\n\")",
       "Read(//d/Rayalaseema express/apps/web/**)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(curl -sS -o /tmp/tts_post.bin -w \"HTTP %{http_code} | bytes: %{size_download}\\\\n\" -X POST \"https://rayalaseemaexpress.com/api/tts?nocache=$\\(date +%s%N\\)\" -H \"Content-Type: application/json\" -d '{\"text\":\"నేడు రాయలసీమ ఎక్స్‌ప్రెస్‌లో తాజా వార్తలు అందుబాటులో ఉన్నాయి. ఇది ఒక పరీక్ష.\"}')",
+      "Bash(curl -sS -i -X POST \"https://rayalaseemaexpress.com/api/tts?probe=1&t=$\\(date +%s%N\\)\" -H \"Content-Type: application/json\" -d '{\"text\":\"రాయలసీమ ఎక్స్‌ప్రెస్ పరీక్ష.\"}')",
+      "Bash(git commit -m 'Add TTS diagnostic endpoint \\(?diag=1\\) to surface Azure response details *)"
     ]
   }
 }
