@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 import { autofillTemplate, type BlockSlot } from "@/lib/epaper/autofill";
+import { buildContinuations } from "@/lib/epaper/continuation";
 
 // POST /api/epaper/generate-edition
 // Body: { date: "YYYY-MM-DD" }
@@ -90,11 +91,16 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Post-process: scan the freshly autofilled pages, wire continuation
+    // blocks on later pages for lead/major articles that overflow their slots.
+    const continuationsCreated = await buildContinuations(edition.id);
+
     return NextResponse.json({
       editionId: edition.id,
       date: dateStr,
       pageCount: templates.length,
       usedArticles: usedArticles.size,
+      continuationsCreated,
       pages: summary,
     });
   } catch (e) {

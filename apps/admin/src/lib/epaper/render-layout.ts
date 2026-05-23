@@ -22,6 +22,7 @@ interface Block {
     | "major"
     | "secondary"
     | "brief"
+    | "continuation"   // remainder of an overflow story, lives on a later page
     | "image"
     | "ad"
     | "text"
@@ -36,6 +37,12 @@ interface Block {
   targetPage?: number;
   locked?: boolean;
   style?: Record<string, string>;
+  // Continuation metadata (matches continuation.ts)
+  continuesToPage?: number;
+  continuesToBlockId?: string;
+  continuesFromPage?: number;
+  continuesFromBlockId?: string;
+  bodyStart?: number;
 }
 
 interface ResolvedArticle {
@@ -44,6 +51,7 @@ interface ResolvedArticle {
   title: string;
   summary: string | null;
   featuredImage: string | null;
+  bodyText: string;    // plain-text body for continuation rendering
   categoryName: string;
   deskName: string | null;
 }
@@ -110,26 +118,86 @@ function sectionBand(b: Block, label: string, opts: { dateLabel: string; pageNum
 
 function leadBlock(b: Block, a: ResolvedArticle): string {
   const desk = a.deskName ? `<div class="byline">— ${esc(a.deskName.replace(/ - /g, ", "))}</div>` : "";
+  // If a continuation block exists on a later page, render the dek as plain
+  // body-text truncated at `bodyStart` (set by the continuation post-process)
+  // and append a goto-page jump link. Otherwise fall back to the summary.
+  const dekHtml = (() => {
+    if (b.continuesToPage && b.continuesToBlockId) {
+      const target = b.continuesToPage;
+      // bodyStart is char offset of where the split happens — known only on
+      // the continuation block, but the renderer can re-derive a sensible cut
+      // by trimming summary || bodyText to the same approximate length.
+      const text = a.bodyText || a.summary || "";
+      const splitAt = findApproxSplit(text, 1400);
+      const head = text.slice(0, splitAt).trim();
+      return `<p class="lead-dek">${esc(head)}<a class="jump-link" href="#page=${target}"> &nbsp;→ మిగతా కథనం పేజీ ${target}</a></p>`;
+    }
+    return a.summary ? `<p class="lead-dek">${esc(a.summary)}</p>` : "";
+  })();
   const inner = `
     <div class="block-inner">
       <div class="kicker">${esc(a.categoryName)}</div>
       <h1 class="lead-hl">${esc(a.title)}</h1>
       ${desk}
       ${imageOrFallback(a.featuredImage, "lead-img")}
-      ${a.summary ? `<p class="lead-dek">${esc(a.summary)}</p>` : ""}
+      ${dekHtml}
     </div>`;
   return `<article class="lead block" style="${blockStyle(b)}">${articleLink(a, inner)}</article>`;
 }
 
 function majorBlock(b: Block, a: ResolvedArticle): string {
+  const dekHtml = (() => {
+    if (b.continuesToPage) {
+      const text = a.bodyText || a.summary || "";
+      const splitAt = findApproxSplit(text, 280);
+      const head = text.slice(0, splitAt).trim();
+      return `<p class="maj-dek">${esc(head)}<a class="jump-link" href="#page=${b.continuesToPage}"> →పేజీ ${b.continuesToPage}</a></p>`;
+    }
+    return a.summary ? `<p class="maj-dek">${esc(a.summary)}</p>` : "";
+  })();
   const inner = `
     <div class="block-inner">
       ${imageOrFallback(a.featuredImage, "maj-img")}
       <div class="kicker sm">${esc(a.categoryName)}</div>
       <h2 class="maj-hl">${esc(a.title)}</h2>
-      ${a.summary ? `<p class="maj-dek">${esc(a.summary)}</p>` : ""}
+      ${dekHtml}
     </div>`;
   return `<article class="major block" style="${blockStyle(b)}">${articleLink(a, inner)}</article>`;
+}
+
+/** Splits `text` near `target` chars at the nearest sentence/word boundary. */
+function findApproxSplit(text: string, target: number): number {
+  if (text.length <= target) return text.length;
+  const candidates = [". ", "। ", "? ", "! ", "; "];
+  let best = target;
+  for (const c of candidates) {
+    const i = text.indexOf(c, Math.max(0, target - 200));
+    if (i > 0 && i <= target + 100 && Math.abs(i - target) < Math.abs(best - target)) {
+      best = i + c.length;
+    }
+  }
+  if (best === target) {
+    const sp = text.lastIndexOf(" ", target);
+    if (sp > target - 200) best = sp + 1;
+  }
+  return Math.min(best, text.length);
+}
+
+function continuationBlock(b: Block, a: ResolvedArticle): string {
+  const from = b.continuesFromPage ?? 0;
+  const start = typeof b.bodyStart === "number" ? b.bodyStart : 0;
+  const tail = a.bodyText.slice(start).trim();
+  // Cap at a generous slice — anything longer gets clipped by CSS overflow.
+  const slice = tail.slice(0, 3000);
+  const inner = `
+    <div class="block-inner">
+      <div class="cont-header">
+        <span class="cont-from">← ${from}వ పేజీ తరువాత</span>
+        <span class="cont-hl">${esc(a.title)}</span>
+      </div>
+      <p class="cont-body">${esc(slice)}</p>
+    </div>`;
+  return `<article class="continuation block" style="${blockStyle(b)}">${articleLink(a, inner)}</article>`;
 }
 
 function secondaryBlock(b: Block, a: ResolvedArticle): string {
@@ -178,6 +246,19 @@ function storyJumpBlock(b: Block): string {
   </div>`;
 }
 
+function stripHtml(s: string): string {
+  return s
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, " ")
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 async function resolveArticles(blocks: Block[]): Promise<Map<string, ResolvedArticle>> {
   const ids = Array.from(new Set(blocks.map((b) => b.articleId).filter((x): x is string => !!x)));
   if (ids.length === 0) return new Map();
@@ -188,6 +269,7 @@ async function resolveArticles(blocks: Block[]): Promise<Map<string, ResolvedArt
       slug: true,
       title: true,
       summary: true,
+      body: true,
       featuredImage: true,
       category: { select: { name: true } },
       desk: { select: { name: true } },
@@ -201,6 +283,7 @@ async function resolveArticles(blocks: Block[]): Promise<Map<string, ResolvedArt
       title: r.title,
       summary: r.summary,
       featuredImage: r.featuredImage,
+      bodyText: stripHtml(r.body || ""),
       categoryName: r.category.name,
       deskName: r.desk?.name ?? null,
     });
@@ -245,6 +328,11 @@ export async function renderLayoutToHtml(input: RenderInput): Promise<string> {
       case "secondary":
         if (b.articleId && articles.has(b.articleId)) {
           blockHtml.push(secondaryBlock(b, articles.get(b.articleId)!));
+        }
+        break;
+      case "continuation":
+        if (b.articleId && articles.has(b.articleId)) {
+          blockHtml.push(continuationBlock(b, articles.get(b.articleId)!));
         }
         break;
       case "brief":
@@ -341,6 +429,17 @@ export async function renderLayoutToHtml(input: RenderInput): Promise<string> {
   .ph img{width:100%;height:100%;object-fit:cover;display:block}
   .ph.noimg{display:flex;align-items:center;justify-content:center;
     font-family:'Ramabhadra',serif;color:#bdb39c;font-size:18px}
+
+  /* Continuation (article tail on later page) */
+  .continuation { padding: 6px 0; border-top: 2px solid #14110b; }
+  .cont-header { display: flex; flex-direction: column; gap: 2px; margin-bottom: 6px; }
+  .cont-from { font-family: 'Noto Sans Telugu', sans-serif; font-size: 11px; font-weight: 700; color: #A50D0D; text-transform: uppercase; letter-spacing: 1px; }
+  .cont-hl { font-family: 'Noto Serif Telugu', serif; font-weight: 800; font-size: 18px; line-height: 1.25; color: #14110b; }
+  .cont-body { font-size: 13px; line-height: 1.6; color: #34302a; text-align: justify;
+    column-count: 2; column-gap: 14px; column-rule: 1px solid #d8d0bd; flex: 1 1 auto; overflow: hidden; }
+
+  /* Inline jump link inside lead / major dek */
+  .jump-link { color: #A50D0D; font-weight: 800; text-decoration: none; font-family: 'Noto Sans Telugu', sans-serif; font-size: 0.95em; white-space: nowrap; }
 
   /* Briefs */
   .briefs{ display:flex; flex-direction:column; padding-top:8px; }
