@@ -16,7 +16,10 @@ export async function GET(req: NextRequest) {
     const hasImage = searchParams.get("hasImage") === "1";
     const q = (searchParams.get("q") || "").trim();
 
-    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    // 30-day window so the operator can drop older but still-relevant
+    // material into pages — esp. for sections like Editorial / NRI / Recipes
+    // where the publishing cadence is weekly, not daily.
+    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const where: Record<string, unknown> = {
       status: "PUBLISHED",
       publishedAt: { gte: since },
@@ -33,7 +36,7 @@ export async function GET(req: NextRequest) {
         category: { select: { name: true, slug: true } },
       },
       orderBy: { publishedAt: "desc" },
-      take: 60,
+      take: 100,
     });
 
     return NextResponse.json({ articles });

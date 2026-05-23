@@ -64,8 +64,11 @@ interface ScoredArticle {
 }
 
 async function loadCandidatePool(input: AutofillInput): Promise<ScoredArticle[]> {
-  // Only pull PUBLISHED articles from the last 24h for the daily paper.
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  // PUBLISHED articles from the last 7 days. Earlier the window was 24h but
+  // editorial-light days (no fresh publishes overnight) left every block
+  // empty; 7 days gives the engine real ammunition. The scoring function
+  // still rewards freshness so today's articles win when they exist.
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const where: Record<string, unknown> = {
     status: "PUBLISHED",
     publishedAt: { gte: since },
@@ -96,7 +99,7 @@ async function loadCandidatePool(input: AutofillInput): Promise<ScoredArticle[]>
       constituency: { select: { district: { select: { slug: true } } } },
     },
     orderBy: { publishedAt: "desc" },
-    take: 200,
+    take: 500,
   });
 
   return rows.map((r) => ({

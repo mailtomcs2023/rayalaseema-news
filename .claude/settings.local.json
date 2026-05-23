@@ -34,7 +34,11 @@
       "Bash(git commit -m 'Bake Telugu mandal backfill into deploy *)",
       "Bash(git rm *)",
       "WebFetch(domain:epaperscript.com)",
-      "Bash(git commit -m 'seed: 4 more categories for v2.1 epaper sections \\(vasundhara, hai-bujji, sunday-magazine, obituaries\\) *)"
+      "Bash(git commit -m 'seed: 4 more categories for v2.1 epaper sections \\(vasundhara, hai-bujji, sunday-magazine, obituaries\\) *)",
+      "Bash(cp \"D:/RSE2026M365/assets/masthead/masthead-inverse-nobg.svg\" \"d:/Rayalaseema express/apps/web/public/logo-inverse.svg\" && ls -la \"d:/Rayalaseema express/apps/web/public/logo-inverse.svg\" 2>&1)"
+    ],
+    "additionalDirectories": [
+      "D:\\RSE2026M365\\assets\\masthead"
     ]
   }
 }

@@ -1,21 +1,21 @@
 "use client";
 
-// v2 e-paper editor.
+// v2 e-paper editor with drag-resize via react-grid-layout.
 // Pipeline:
 //   1. operator picks a date + clicks Generate → /api/epaper/generate-edition
-//      auto-fills 13 templates with articles
-//   2. left pane shows page tabs (front / 8 districts / 4 sections)
-//   3. middle pane shows the chosen page's block grid with current article
-//      titles; click a story block to swap its article
-//   4. right pane shows article picker filtered by the slot's filter rules
-//   5. lock toggle per block (autofill skips locked blocks on re-generate)
+//      auto-fills templates with articles
+//   2. left pane shows page tabs
+//   3. middle pane shows the chosen page's block grid — drag any block to
+//      reorder, drag a corner to resize, click a story block to swap article
+//   4. right pane shows article picker filtered by the slot's rules
+//   5. lock toggle per block (autofill skips locked blocks on regenerate)
 //   6. Render button → /api/epaper/render-v2 builds the vector PDF
-//
-// Drag-drop / resize comes in a follow-up — for now operators can't break
-// alignment because the grid is fixed and they only swap article assignments.
 
 import { useState, useEffect, useCallback } from "react";
 import { Sidebar } from "@/components/sidebar";
+import GridLayout, { type Layout as RGLLayout } from "react-grid-layout";
+import "react-grid-layout/css/styles.css";
+import "react-resizable/css/styles.css";
 
 interface Block {
   id: string;
@@ -187,6 +187,21 @@ export default function EpaperEditorPage() {
     });
   };
 
+  // Persists the full block-layout when react-grid-layout finishes a drag/resize.
+  const saveLayout = async (newBlocks: Block[]) => {
+    if (!activePage) return;
+    setEdition((prev) => {
+      if (!prev) return prev;
+      return { ...prev, pages: prev.pages.map((p) =>
+        p.id === activePage.id ? { ...p, layout: { blocks: newBlocks } } : p) };
+    });
+    await fetch(`/api/epaper/page/${activePage.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ blocks: newBlocks }),
+    });
+  };
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
       <Sidebar />
@@ -248,12 +263,13 @@ export default function EpaperEditorPage() {
                 Page {activePage?.pageNumber} · {activePage?.label} · template: <code style={{ fontSize: 11 }}>{activePage?.templateSlug}</code>
               </h3>
               {activePage && (
-                <BlockGrid
+                <DraggableBlockGrid
                   layout={activePage.layout}
                   titles={titles}
                   selectedBlockId={selectedBlockId}
                   onSelect={setSelectedBlockId}
                   onToggleLock={toggleLock}
+                  onLayoutChange={saveLayout}
                 />
               )}
             </section>
@@ -289,58 +305,121 @@ export default function EpaperEditorPage() {
   );
 }
 
-function BlockGrid({
-  layout, titles, selectedBlockId, onSelect, onToggleLock,
+/**
+ * Drag-resize block grid built on react-grid-layout.
+ *  - 12-column grid; row height = 28 px so a 30-row template fits comfortably
+ *    in the editor without dwarfing the article picker
+ *  - Bigger render than the previous read-only version so operators with
+ *    minimal computer skills can actually read the block content
+ *  - Drag a block by its body, resize from the bottom-right corner
+ *  - Click-to-select for story blocks still works (RGL doesn't swallow click
+ *    when the drag never moves past its threshold)
+ *  - Static (non-draggable) treatment for masthead/section-band so DTP staff
+ *    can't accidentally drag the brand band off the page
+ */
+function DraggableBlockGrid({
+  layout, titles, selectedBlockId, onSelect, onToggleLock, onLayoutChange,
 }: {
   layout: { blocks: Block[] };
   titles: Record<string, string>;
   selectedBlockId: string | null;
   onSelect: (id: string) => void;
   onToggleLock: (id: string) => void;
+  onLayoutChange: (newBlocks: Block[]) => void;
 }) {
-  const maxRow = layout.blocks.reduce((m, b) => Math.max(m, b.y + b.h), 0);
+  const COLS = 12;
+  const ROW_H = 28;
+  const GRID_WIDTH = 980;
+
+  // RGL layout items, keyed by block id.
+  const rglLayout: RGLLayout[] = layout.blocks.map((b) => ({
+    i: b.id,
+    x: b.x, y: b.y, w: b.w, h: b.h,
+    static: b.type === "masthead" || b.type === "section-band",
+    minW: 1, minH: 1,
+  }));
+
+  const onChange = (newRGL: RGLLayout[]) => {
+    // Merge RGL coords back into our block model. Skip purely visual updates
+    // (RGL fires on every render of children) by comparing first.
+    const byId = new Map(newRGL.map((it) => [it.i, it]));
+    let dirty = false;
+    const next: Block[] = layout.blocks.map((b) => {
+      const it = byId.get(b.id);
+      if (!it) return b;
+      if (it.x !== b.x || it.y !== b.y || it.w !== b.w || it.h !== b.h) dirty = true;
+      return { ...b, x: it.x, y: it.y, w: it.w, h: it.h };
+    });
+    if (dirty) onLayoutChange(next);
+  };
+
   return (
-    <div style={{
-      display: "grid",
-      gridTemplateColumns: "repeat(12, 1fr)",
-      gridTemplateRows: `repeat(${maxRow}, 24px)`,
-      gap: 4, width: "100%", maxWidth: 900, margin: "0 auto",
-    }}>
-      {layout.blocks.map((b) => {
-        const isStory = STORY_TYPES.has(b.type);
-        const isSelected = b.id === selectedBlockId;
-        const title = b.articleId ? titles[b.articleId] : null;
-        const bg = b.type === "masthead" || b.type === "section-band" ? "#A50D0D"
-                 : b.type === "ad" ? "repeating-linear-gradient(45deg,#fafafa,#fafafa 6px,#e5e7eb 6px,#e5e7eb 12px)"
-                 : b.locked ? "#fef3c7"
-                 : b.articleId ? "#dbeafe" : "#fee2e2";
-        const color = b.type === "masthead" || b.type === "section-band" ? "#fff" : "#111";
-        return (
-          <div key={b.id}
-            onClick={() => isStory && onSelect(b.id)}
-            style={{
-              gridColumn: `${b.x + 1} / span ${b.w}`,
-              gridRow: `${b.y + 1} / span ${b.h}`,
-              background: bg, color,
-              border: isSelected ? "2px solid #4f46e5" : "1px solid #e5e7eb",
-              borderRadius: 4, padding: 6, fontSize: 11, overflow: "hidden",
-              cursor: isStory ? "pointer" : "default",
-              display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 0,
-            }}>
-            <div>
-              <div style={{ fontSize: 10, opacity: 0.7, textTransform: "uppercase", marginBottom: 2 }}>{b.type}</div>
-              {title && <div style={{ fontWeight: 700, lineHeight: 1.3 }}>{title.slice(0, 80)}</div>}
-              {!title && isStory && <div style={{ fontStyle: "italic", opacity: 0.5 }}>empty — click to pick</div>}
+    <div style={{ background: "#fafafa", borderRadius: 6, padding: 8 }}>
+      <GridLayout
+        className="re-epaper-grid"
+        layout={rglLayout}
+        cols={COLS}
+        rowHeight={ROW_H}
+        width={GRID_WIDTH}
+        margin={[6, 6]}
+        compactType={null}
+        preventCollision={true}
+        onDragStop={onChange}
+        onResizeStop={onChange}
+        draggableCancel=".lock-btn"
+      >
+        {layout.blocks.map((b) => {
+          const isStory = STORY_TYPES.has(b.type);
+          const isSelected = b.id === selectedBlockId;
+          const title = b.articleId ? titles[b.articleId] : null;
+          const bg =
+            b.type === "masthead" || b.type === "section-band"
+              ? "#A50D0D"
+              : b.type === "ad"
+              ? "repeating-linear-gradient(45deg,#fafafa,#fafafa 6px,#e5e7eb 6px,#e5e7eb 12px)"
+              : b.locked
+              ? "#fef3c7"
+              : b.articleId
+              ? "#dbeafe"
+              : "#fee2e2";
+          const color = b.type === "masthead" || b.type === "section-band" ? "#fff" : "#111";
+          return (
+            <div key={b.id}
+              onClick={() => isStory && onSelect(b.id)}
+              style={{
+                background: bg, color,
+                border: isSelected ? "2px solid #4f46e5" : "1px solid #e5e7eb",
+                borderRadius: 4, padding: 8, fontSize: 12, overflow: "hidden",
+                cursor: isStory ? "pointer" : "move",
+                display: "flex", flexDirection: "column", justifyContent: "space-between",
+                minHeight: 0, height: "100%",
+              }}>
+              <div style={{ overflow: "hidden" }}>
+                <div style={{ fontSize: 10, opacity: 0.7, textTransform: "uppercase", marginBottom: 3, fontWeight: 700 }}>{b.type}</div>
+                {title && <div style={{ fontWeight: 700, lineHeight: 1.3 }}>{title.slice(0, 120)}</div>}
+                {!title && isStory && <div style={{ fontStyle: "italic", opacity: 0.55 }}>empty — click to pick</div>}
+              </div>
+              {isStory && (
+                <button
+                  className="lock-btn"
+                  onClick={(e) => { e.stopPropagation(); onToggleLock(b.id); }}
+                  style={{
+                    alignSelf: "flex-start", marginTop: 4, fontSize: 10, padding: "2px 6px",
+                    border: "none", borderRadius: 3, cursor: "pointer",
+                    background: b.locked ? "#fbbf24" : "rgba(0,0,0,0.08)",
+                    color: b.locked ? "#fff" : "#555", fontWeight: 700,
+                  }}>
+                  {b.locked ? "🔒 LOCKED" : "🔓 free"}
+                </button>
+              )}
             </div>
-            {isStory && (
-              <button onClick={(e) => { e.stopPropagation(); onToggleLock(b.id); }}
-                style={{ alignSelf: "flex-start", marginTop: 4, fontSize: 10, padding: "2px 6px", border: "none", borderRadius: 3, cursor: "pointer", background: b.locked ? "#fbbf24" : "rgba(0,0,0,0.08)", color: b.locked ? "#fff" : "#555", fontWeight: 700 }}>
-                {b.locked ? "🔒 LOCKED" : "🔓 free"}
-              </button>
-            )}
-          </div>
-        );
-      })}
+          );
+        })}
+      </GridLayout>
+      <style>{`
+        .re-epaper-grid .react-grid-item.react-grid-placeholder { background: #4f46e5; opacity: 0.18; border-radius: 4px; }
+        .re-epaper-grid .react-resizable-handle { z-index: 5; }
+      `}</style>
     </div>
   );
 }

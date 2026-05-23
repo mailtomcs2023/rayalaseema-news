@@ -88,13 +88,19 @@ export async function POST(req: NextRequest) {
           preferCSSPageSize: false,
           margin: { top: "0", right: "0", bottom: "0", left: "0" },
         });
+
+        // Also capture a PNG. The web ePaper viewer renders this directly as
+        // <img>; the PDF is the download/print artifact. Saving both gives us
+        // instant on-screen pages plus crisp print output.
+        const pngBytes = await page.screenshot({ type: "png", fullPage: false });
         await page.close();
 
-        // Upload per-page PDF artifact (for in-app preview).
+        // Upload per-page PDF + PNG artifacts.
         const pageUrl = await uploadBuffer(Buffer.from(pdfBytes), "pdf", "application/pdf");
+        const imageUrl = await uploadBuffer(Buffer.from(pngBytes), "png", "image/png");
         await prisma.epaperPage.update({
           where: { id: ep.id },
-          data: { pdfUrl: pageUrl },
+          data: { pdfUrl: pageUrl, imageUrl },
         });
 
         const merged = await PDFDocument.load(pdfBytes);
