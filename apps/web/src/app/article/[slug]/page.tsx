@@ -8,6 +8,7 @@ import { CommentsSection } from "@/components/comments-section";
 import { ScrollShareNudge } from "@/components/scroll-share-nudge";
 import { ShareBar } from "@/components/share-bar";
 import { getArticleBySlug, getTrendingArticles, getArticlesByCategory, incrementViewCount } from "@/lib/db-queries";
+import { injectInlineByline, formatRelativeTelugu } from "@/lib/byline";
 import type { Metadata } from "next";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -139,16 +140,23 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               {article.title}
             </h1>
 
-            {/* Byline — desk name (Telugu) is primary; English subtitle + date below.
-                Falls back to author for old articles that pre-date the desk system. */}
+            {/* Byline strip — desk name + (published / updated) timestamps.
+                If updatedAt is materially later than publishedAt we surface "నవీకరించబడింది" so
+                readers see when the article was last edited (Sakshi/Eenadu convention). */}
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 12, paddingBottom: 12, borderBottom: "1px solid #eee" }}>
               <div>
                 <div style={{ fontFamily: "var(--font-telugu-heading), serif", fontSize: 15, fontWeight: 800, color: "#1a1a1a" }}>
                   {article.desk?.name ?? article.author.name}
                 </div>
                 <p style={{ fontSize: 12, color: "#888", marginTop: 2 }}>
-                  {article.desk?.nameEn && <span>{article.desk.nameEn} · </span>}
-                  {article.publishedAt ? new Date(article.publishedAt).toLocaleDateString("te-IN", { day: "numeric", month: "long", year: "numeric" }) : ""}
+                  {(() => {
+                    const pub = article.publishedAt ? new Date(article.publishedAt) : null;
+                    const upd = article.updatedAt ? new Date(article.updatedAt) : null;
+                    const edited = pub && upd && upd.getTime() - pub.getTime() > 5 * 60_000;
+                    if (edited && upd) return `నవీకరించబడింది: ${formatRelativeTelugu(upd)}`;
+                    if (pub) return `ప్రచురించబడింది: ${formatRelativeTelugu(pub)}`;
+                    return "";
+                  })()}
                 </p>
               </div>
               <div style={{ marginLeft: "auto", fontSize: 12, color: "#888" }}>
@@ -177,11 +185,14 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               </div>
             )}
 
-            {/* Article Body */}
+            {/* Article Body — first paragraph gets an inline newspaper-style byline:
+                "రాయలసీమ ఎక్స్‌ప్రెస్, బనగానపల్లె: <body>" */}
             <div
               className="article-body"
               style={{ marginTop: 24 }}
-              dangerouslySetInnerHTML={{ __html: sanitizeHtml(article.body) }}
+              dangerouslySetInnerHTML={{
+                __html: injectInlineByline(sanitizeHtml(article.body), article.desk?.name),
+              }}
             />
 
             {/* Tags */}

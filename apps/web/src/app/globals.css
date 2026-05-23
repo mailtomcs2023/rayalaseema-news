@@ -233,6 +233,12 @@
   .article-body img { @apply rounded-lg my-6 w-full; }
   .article-body h2 { font-size: var(--t-xl); font-weight: var(--w-head); @apply mt-8 mb-4; }
   .article-body blockquote { @apply border-l-4 pl-4 italic my-6; border-color: var(--brand); color: var(--n-700); }
+  .article-body .re-byline {
+    font-family: var(--font-telugu-heading);
+    font-weight: 800;
+    color: var(--n-900);
+    margin-right: 4px;
+  }
 
   /* Editorial headline serif — article title only */
   article > h1, .article-title, .article-body h1 {

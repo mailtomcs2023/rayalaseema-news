@@ -8,7 +8,9 @@ interface Article {
   summary: string;
   featuredImage: string | null;
   publishedAt: string;
+  updatedAt?: string;
   viewCount?: number;
+  desk?: { name: string } | null;
 }
 
 interface CategorySectionProps {
@@ -23,6 +25,23 @@ function formatTimeAgo(dateString: string) {
   if (hours < 1) return `${Math.floor(diff / 60000)} ని. క్రితం`;
   if (hours < 24) return `${hours} గంటల క్రితం`;
   return `${Math.floor(hours / 24)} రోజుల క్రితం`;
+}
+
+/** Newest of publishedAt vs updatedAt — newspaper convention: card shows
+ *  whichever was most recent so readers can spot freshly-edited stories. */
+function effectiveTime(a: Article): string {
+  if (a.updatedAt && a.publishedAt) {
+    return new Date(a.updatedAt).getTime() > new Date(a.publishedAt).getTime()
+      ? a.updatedAt
+      : a.publishedAt;
+  }
+  return a.publishedAt || a.updatedAt || "";
+}
+
+/** Compact byline: shows desk name + relative timestamp (with Telugu dot separator). */
+function byline(a: Article): string {
+  const t = formatTimeAgo(effectiveTime(a));
+  return a.desk?.name ? `${a.desk.name} · ${t}` : t;
 }
 
 function ArticleCardLarge({ article, color }: { article: Article; color: string }) {
@@ -49,8 +68,8 @@ function ArticleCardLarge({ article, color }: { article: Article; color: string 
       <p className="text-telugu-sm text-gray-500 font-telugu line-clamp-2 mt-1.5">
         {article.summary}
       </p>
-      <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
-        <span>{formatTimeAgo(article.publishedAt)}</span>
+      <div className="flex items-center gap-2 mt-2 text-xs text-gray-400 font-telugu">
+        <span>{byline(article)}</span>
         {article.viewCount && (
           <>
             <span>•</span>
@@ -85,8 +104,8 @@ function ArticleCardSmall({ article, color }: { article: Article; color: string 
       <p className="text-telugu-sm text-gray-500 font-telugu line-clamp-2 mt-1">
         {article.summary}
       </p>
-      <span className="text-xs text-gray-400 mt-1.5 block">
-        {formatTimeAgo(article.publishedAt)}
+      <span className="text-xs text-gray-400 mt-1.5 block font-telugu">
+        {byline(article)}
       </span>
     </Link>
   );
@@ -119,8 +138,8 @@ function ArticleCardList({ article, color }: { article: Article; color: string }
         <p className="text-telugu-sm text-gray-500 font-telugu line-clamp-1 mt-1">
           {article.summary}
         </p>
-        <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-400">
-          <span>{formatTimeAgo(article.publishedAt)}</span>
+        <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-400 font-telugu">
+          <span>{byline(article)}</span>
           {article.viewCount && (
             <>
               <span>•</span>
