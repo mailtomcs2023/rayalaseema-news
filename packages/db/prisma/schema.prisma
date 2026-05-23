@@ -429,11 +429,13 @@ model District {
   @@map("districts")
 }
 
+/// Assembly Constituency (AC). acNumber = official ECI delimitation number (e.g. 137 = Kurnool).
 model Constituency {
   id          String   @id @default(cuid())
   name        String   // Telugu name
   nameEn      String   // English name
   slug        String   @unique
+  acNumber    Int?     @unique  // Official ECI AC number (120..175 for Rayalaseema)
   type        String   @default("ASSEMBLY") // ASSEMBLY or LOKSABHA
   districtId  String
   district    District @relation(fields: [districtId], references: [id])
@@ -453,6 +455,7 @@ model Mandal {
   name            String       // Telugu name
   nameEn          String       // English name
   slug            String       @unique
+  code            Int?         @unique  // Official AP mandal code (e.g. 5259 = Kurnool)
   constituencyId  String
   constituency    Constituency @relation(fields: [constituencyId], references: [id])
   articles        Article[]    @relation("ArticleMandal")
