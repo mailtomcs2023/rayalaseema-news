@@ -1231,8 +1231,15 @@ function DraggableBlockGrid({
     if (dirty) onLayoutChange(next);
   };
 
+  // Visual snap guides — vertical lines at each column boundary, horizontal
+  // lines at each row. Pure CSS background so it doesn't interact with RGL's
+  // own drag/resize.
+  const colPx = (GRID_WIDTH - 16) / COLS;
+  const guideBg = `repeating-linear-gradient(to right, rgba(79,70,229,0.08) 0, rgba(79,70,229,0.08) 1px, transparent 1px, transparent ${colPx}px),`
+                + ` repeating-linear-gradient(to bottom, rgba(79,70,229,0.06) 0, rgba(79,70,229,0.06) 1px, transparent 1px, transparent ${ROW_H}px)`;
+
   return (
-    <div style={{ background: "#fafafa", borderRadius: 6, padding: 8 }}>
+    <div style={{ background: "#fafafa", borderRadius: 6, padding: 8, backgroundImage: guideBg, backgroundSize: `${colPx}px ${ROW_H}px`, backgroundPosition: "8px 8px" }}>
       <GridLayout
         className="re-epaper-grid"
         layout={rglLayout}
