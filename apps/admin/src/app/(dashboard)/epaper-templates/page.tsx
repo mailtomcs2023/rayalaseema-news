@@ -103,6 +103,17 @@ export default function TemplatesPage() {
         <div style={{ display: "flex", gap: 16 }}>
           {/* List */}
           <aside style={{ width: 300, background: "#fff", borderRadius: 8, padding: 12, maxHeight: "78vh", overflowY: "auto" }}>
+            {templates.length === 0 && !busy && (
+              <div style={{ textAlign: "center", padding: 24, color: "#6b7280" }}>
+                <div style={{ fontSize: 36, marginBottom: 8 }}>📄</div>
+                <p style={{ fontSize: 13, fontWeight: 700, color: "#111", marginBottom: 6 }}>No templates yet</p>
+                <p style={{ fontSize: 12, marginBottom: 12 }}>Seed the 31 default broadsheet templates with one click:</p>
+                <a href="https://github.com/mailtomcs2023/rayalaseema-express/blob/main/packages/db/scripts/seed-epaper-templates.ts" target="_blank" rel="noopener"
+                  style={{ fontSize: 11, color: "#4f46e5", textDecoration: "underline" }}>
+                  How to seed
+                </a>
+              </div>
+            )}
             {templates.map((t) => (
               <button key={t.id} onClick={() => setSelected(t)}
                 style={{

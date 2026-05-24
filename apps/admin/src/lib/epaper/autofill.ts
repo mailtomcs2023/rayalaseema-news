@@ -63,6 +63,33 @@ interface ScoredArticle {
   viewCount: number;
 }
 
+/**
+ * Reader-pull heatmap: 7-day view-count share per category, normalized to
+ * [0..1]. Categories pulling the most reader attention get a soft bonus in
+ * scoreFit so the next day's paper auto-leads toward what the audience
+ * actually consumes. Cached in-memory per request via the closure (one
+ * compute per autofill run).
+ */
+async function categoryHeatMap(): Promise<Record<string, number>> {
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const rows = await prisma.article.findMany({
+    where: { status: "PUBLISHED", publishedAt: { gte: since } },
+    select: { viewCount: true, category: { select: { slug: true } } },
+  });
+  const sumBySlug: Record<string, number> = {};
+  let total = 0;
+  for (const r of rows) {
+    sumBySlug[r.category.slug] = (sumBySlug[r.category.slug] || 0) + r.viewCount;
+    total += r.viewCount;
+  }
+  if (total === 0) return {};
+  const heat: Record<string, number> = {};
+  for (const [slug, v] of Object.entries(sumBySlug)) {
+    heat[slug] = v / total;
+  }
+  return heat;
+}
+
 async function loadCandidatePool(input: AutofillInput): Promise<ScoredArticle[]> {
   // PUBLISHED articles from the last 7 days. Earlier the window was 24h but
   // editorial-light days (no fresh publishes overnight) left every block
@@ -120,8 +147,12 @@ async function loadCandidatePool(input: AutofillInput): Promise<ScoredArticle[]>
 /**
  * Score how well an article fits a slot. Higher = better. Negative = disqualified.
  * Hard filters are checked first; soft preferences add to score.
+ *
+ * `heat` is an optional category → 7-day view-share map (0..1). When supplied,
+ * adds up to +15 to popular categories so the auto-fill steers toward what
+ * readers actually consume.
  */
-function scoreFit(slot: BlockSlot, a: ScoredArticle): number {
+function scoreFit(slot: BlockSlot, a: ScoredArticle, heat?: Record<string, number>): number {
   const f = slot.slotFilter || {};
 
   // Hard disqualifiers
@@ -161,6 +192,11 @@ function scoreFit(slot: BlockSlot, a: ScoredArticle): number {
     const hoursOld = (Date.now() - a.publishedAt.getTime()) / 3600_000;
     s += Math.max(0, 10 - hoursOld);       // freshness bonus, decays over 10h
   }
+  // Reader-pull heatmap nudge: 7-day view-share for this article's category.
+  // Boosts categories the audience is actually consuming.
+  if (heat && heat[a.categorySlug]) {
+    s += heat[a.categorySlug] * 15;
+  }
 
   return s;
 }
@@ -179,7 +215,7 @@ export interface AutofillResult {
  *  - Other block types pass through unchanged.
  */
 export async function autofillTemplate(input: AutofillInput): Promise<AutofillResult> {
-  const pool = await loadCandidatePool(input);
+  const [pool, heat] = await Promise.all([loadCandidatePool(input), categoryHeatMap()]);
   const used = new Set<string>(input.excludeArticleIds || []);
   // Preserve any already-locked assignments
   for (const b of input.templateLayout.blocks) {
@@ -199,7 +235,7 @@ export async function autofillTemplate(input: AutofillInput): Promise<AutofillRe
     let bestScore = -1;
     for (const a of pool) {
       if (used.has(a.id)) continue;
-      const score = scoreFit(slot, a);
+      const score = scoreFit(slot, a, heat);
       if (score > bestScore) {
         bestScore = score;
         bestArticle = a;

@@ -32,6 +32,7 @@ interface Block {
   w: number;
   h: number;
   articleId?: string;
+  adAssetId?: string;     // ad block reference into EpaperAdAsset library
   content?: string;
   href?: string;
   targetPage?: number;
@@ -226,6 +227,11 @@ function imageBlock(b: Block): string {
 }
 
 function adBlock(b: Block, ads: RenderInput["ads"]): string {
+  // Two paths:
+  //   1. v2: block.adAssetId points at a library row → resolved server-side
+  //      and passed in `ads[b.id]` by the caller
+  //   2. legacy: editor-level EpaperAd records keyed by slot, still passed
+  //      via `ads[b.id]`. The caller maps both into the same shape.
   const ad = ads?.[b.id];
   if (!ad) return `<div class="adzone block empty" style="${blockStyle(b)}"></div>`;
   const link = ad.href ? `<a href="${esc(ad.href)}">${imageOrFallback(ad.imageUrl, "ad-img")}</a>` : imageOrFallback(ad.imageUrl, "ad-img");
@@ -475,16 +481,33 @@ export async function renderEpaperPageById(pageId: string): Promise<string> {
   });
   if (!page) throw new Error(`EpaperPage ${pageId} not found`);
 
-  const ads = await prisma.epaperAd.findMany({
+  // 1. Legacy per-edition ads (EpaperAd) keyed by slot.
+  const legacyAds = await prisma.epaperAd.findMany({
     where: { editionId: page.editionId, pageNumber: page.pageNumber },
   });
-  // Legacy ads keyed by slot ("top"/"bottom") — map them by block id heuristic
-  // (block id contains "ad-top" / "ad-bot" / "ad-1" / etc.). New v2 ads should
-  // be keyed directly by block id; we'll migrate the schema later.
   const adsByBlockId: Record<string, { imageUrl: string; href?: string | null }> = {};
-  for (const a of ads) {
+  for (const a of legacyAds) {
     const key = a.slot.startsWith("ad-") ? a.slot : `ad-${a.slot === "top" ? "top" : "bot"}`;
     adsByBlockId[key] = { imageUrl: a.imageUrl, href: a.linkUrl };
+  }
+
+  // 2. v2 ads: layout block's adAssetId → EpaperAdAsset library.
+  const layout = (page.layout as unknown as { blocks: Block[] }) ?? { blocks: [] };
+  const adAssetIds = Array.from(new Set(
+    layout.blocks.filter((b) => b.type === "ad" && b.adAssetId).map((b) => b.adAssetId!)
+  ));
+  if (adAssetIds.length > 0) {
+    const assets = await prisma.epaperAdAsset.findMany({
+      where: { id: { in: adAssetIds } },
+      select: { id: true, imageUrl: true, linkUrl: true },
+    });
+    const assetById = new Map(assets.map((a) => [a.id, a]));
+    for (const b of layout.blocks) {
+      if (b.type === "ad" && b.adAssetId && assetById.has(b.adAssetId)) {
+        const a = assetById.get(b.adAssetId)!;
+        adsByBlockId[b.id] = { imageUrl: a.imageUrl, href: a.linkUrl };
+      }
+    }
   }
 
   const pageCount = await prisma.epaperPage.count({ where: { editionId: page.editionId } });

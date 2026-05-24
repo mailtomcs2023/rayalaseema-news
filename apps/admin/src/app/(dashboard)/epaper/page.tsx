@@ -13,6 +13,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Sidebar } from "@/components/sidebar";
+import { ToastViewport, useToasts } from "@/components/toast";
 import GridLayout, { type Layout as RGLLayout } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 
@@ -95,6 +96,8 @@ export default function EpaperEditorPage() {
   const [pickerFilters, setPickerFilters] = useState<PickerFilters>(DEFAULT_FILTERS);
   const [pickerTotal, setPickerTotal] = useState(0);  // total in window before chip filters — for empty-state hints
 
+  const { toasts, push: toast, dismiss: dismissToast } = useToasts();
+
   const [titles, setTitles] = useState<Record<string, string>>({});
 
   const loadEdition = useCallback(async (d: string) => {
@@ -156,6 +159,13 @@ export default function EpaperEditorPage() {
       }
       const data = await res.json();
       await loadEdition(date);
+      toast("success", `PDF rendered — ${data.pageCount} pages`);
+      // Continuity gate: warn if any article appears on more than one page.
+      if (Array.isArray(data.duplicates) && data.duplicates.length > 0) {
+        for (const d of data.duplicates.slice(0, 3)) {
+          toast("warn", `Duplicate: "${d.title.slice(0, 50)}" on pages ${d.placements.map((p: any) => p.pageNumber).join(", ")}`);
+        }
+      }
       if (data.pdfUrl) window.open(data.pdfUrl, "_blank", "noopener,noreferrer");
     } catch (e: any) { setError(e.message); }
     finally { setBusy(null); }
@@ -272,6 +282,20 @@ export default function EpaperEditorPage() {
     await loadEdition(date);
   };
 
+  // Dark mode toggle for night-shift operators. Persists to localStorage;
+  // canvas itself stays light because it represents the printed paper.
+  const [darkMode, setDarkMode] = useState(false);
+  useEffect(() => {
+    const stored = typeof window !== "undefined" ? localStorage.getItem("re-epaper-dark") : null;
+    if (stored === "1") { setDarkMode(true); document.documentElement.dataset.reEpaperDark = "1"; }
+  }, []);
+  const toggleDark = () => {
+    const next = !darkMode;
+    setDarkMode(next);
+    if (next) { document.documentElement.dataset.reEpaperDark = "1"; localStorage.setItem("re-epaper-dark", "1"); }
+    else { delete document.documentElement.dataset.reEpaperDark; localStorage.removeItem("re-epaper-dark"); }
+  };
+
   // View mode: edit canvas / split (canvas + preview iframe) / preview-only.
   // Live preview hits /api/epaper/page/[id]/preview which reuses
   // renderLayoutToHtml — no Playwright in the hot path so it's near-instant.
@@ -347,17 +371,18 @@ export default function EpaperEditorPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ editionId: edition.id, note: snapshotNote.trim() || undefined }),
     });
-    if (r.ok) { setSnapshotNote(""); await loadSnapshots(); }
-    else setError("Failed to snapshot");
+    if (r.ok) { setSnapshotNote(""); await loadSnapshots(); toast("success", "Snapshot saved"); }
+    else toast("error", "Failed to snapshot");
   };
 
   const restoreSnap = async (id: string) => {
     if (!edition) return;
     if (!confirm("Restore this snapshot? Your current layout will be auto-snapshotted first so you can undo the restore from the History panel.")) return;
     const r = await fetch(`/api/epaper/snapshots/${id}/restore`, { method: "POST" });
-    if (!r.ok) { setError("Restore failed"); return; }
+    if (!r.ok) { toast("error", "Restore failed"); return; }
     await loadEdition(date);
     await loadSnapshots();
+    toast("success", "Restored from snapshot");
   };
 
   // Central PATCH helper. Stamps `expectedVersion` from the current state and
@@ -484,8 +509,11 @@ export default function EpaperEditorPage() {
     await patchPage({ blocks: next });
   }, [activePage, redoStacks]);
 
-  // Wire Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y to undo/redo. Skip when focus is in
-  // an input/textarea so the operator's own typing isn't hijacked.
+  // Help overlay (? key) listing every keyboard shortcut.
+  const [helpOpen, setHelpOpen] = useState(false);
+
+  // Wire Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y to undo/redo, ? for help, Esc to dismiss.
+  // Skip when focus is in an input/textarea so the operator's typing isn't hijacked.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const inField = (e.target as HTMLElement | null)?.tagName === "INPUT"
@@ -495,6 +523,10 @@ export default function EpaperEditorPage() {
         e.preventDefault(); undo();
       } else if ((e.ctrlKey || e.metaKey) && (e.shiftKey && e.key.toLowerCase() === "z" || e.key.toLowerCase() === "y")) {
         e.preventDefault(); redo();
+      } else if (e.key === "?" || (e.shiftKey && e.key === "/")) {
+        e.preventDefault(); setHelpOpen(true);
+      } else if (e.key === "Escape") {
+        setHelpOpen(false); setConflict(null); setInsertOpen(false); setHistoryOpen(false);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -504,6 +536,41 @@ export default function EpaperEditorPage() {
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
       <Sidebar />
+      <ToastViewport toasts={toasts} onDismiss={dismissToast} />
+      {helpOpen && (
+        <div onClick={() => setHelpOpen(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1500, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()}
+            style={{ background: "#fff", borderRadius: 10, padding: 24, maxWidth: 480, width: "100%", boxShadow: "0 10px 40px rgba(0,0,0,0.4)" }}>
+            <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>Keyboard shortcuts</h2>
+            <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
+              <tbody>
+                {[
+                  ["Ctrl + Z", "Undo last block change"],
+                  ["Ctrl + Shift + Z  /  Ctrl + Y", "Redo"],
+                  ["?", "Open this help"],
+                  ["Esc", "Close any open modal / drawer"],
+                ].map(([k, v]) => (
+                  <tr key={k} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                    <td style={{ padding: "8px 12px 8px 0", fontFamily: "monospace", color: "#4f46e5", fontWeight: 700 }}>{k}</td>
+                    <td style={{ padding: "8px 0", color: "#374151" }}>{v}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p style={{ fontSize: 11, color: "#888", marginTop: 14 }}>Drag blocks by their body; resize from the bottom-right corner. Click a story block to swap article.</p>
+          </div>
+        </div>
+      )}
+      {/* Night-shift dark mode — chrome only, page canvas stays light. */}
+      <style>{`
+        html[data-re-epaper-dark="1"] main { background: #0f172a !important; }
+        html[data-re-epaper-dark="1"] aside,
+        html[data-re-epaper-dark="1"] section { background: #1e293b !important; color: #e5e7eb !important; }
+        html[data-re-epaper-dark="1"] h1,
+        html[data-re-epaper-dark="1"] h2,
+        html[data-re-epaper-dark="1"] h3 { color: #f1f5f9 !important; }
+      `}</style>
       {/* Conflict modal — shown when the server returns 409 (another editor
           touched this page). Reload reloads the whole edition (loses local
           unsaved changes); Cancel just dismisses (next save will 409 again). */}
@@ -634,6 +701,10 @@ export default function EpaperEditorPage() {
               ↩ History
             </button>
           )}
+          <button onClick={toggleDark} title="Toggle dark mode"
+            style={{ padding: "6px 10px", background: "transparent", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 13, cursor: "pointer" }}>
+            {darkMode ? "☀️" : "🌙"}
+          </button>
           {activePage && (
             <div style={{ display: "inline-flex", border: "1px solid #d1d5db", borderRadius: 8, overflow: "hidden" }}>
               {(["edit", "split", "preview"] as const).map((m) => (
@@ -689,6 +760,12 @@ export default function EpaperEditorPage() {
               <h3 style={{ fontSize: 13, fontWeight: 800, color: "#555", marginBottom: 8 }}>PAGES</h3>
               {edition.pages.map((p, i) => {
                 const isActive = i === activePageIdx;
+                // Compute per-page health: how many story slots empty vs filled,
+                // and whether any block is locked. Operator can scan the list
+                // at a glance.
+                const storyBlocks = p.layout.blocks.filter((b) => STORY_TYPES.has(b.type));
+                const emptyCount = storyBlocks.filter((b) => !b.articleId).length;
+                const lockedCount = p.layout.blocks.filter((b) => b.locked).length;
                 return (
                   <div key={p.id} style={{ display: "flex", gap: 4, marginBottom: 4 }}>
                     <button onClick={() => { setActivePageIdx(i); setSelectedBlockId(null); }}
@@ -699,7 +776,15 @@ export default function EpaperEditorPage() {
                         color: isActive ? "#fff" : "#111",
                         fontSize: 12, fontWeight: 600, minWidth: 0,
                       }}>
-                      {p.pageNumber}. {p.label}
+                      <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {p.pageNumber}. {p.label}
+                      </div>
+                      <div style={{ display: "flex", gap: 6, fontSize: 10, marginTop: 3, color: isActive ? "rgba(255,255,255,0.85)" : "#6b7280" }}>
+                        {emptyCount > 0
+                          ? <span title={`${emptyCount} empty story block${emptyCount > 1 ? "s" : ""}`}>⚠ {emptyCount}</span>
+                          : <span title="All story blocks filled">✓</span>}
+                        {lockedCount > 0 && <span title={`${lockedCount} locked block${lockedCount > 1 ? "s" : ""}`}>🔒 {lockedCount}</span>}
+                      </div>
                     </button>
                     <button onClick={() => duplicatePage(p.id)} title="Duplicate page"
                       style={{ padding: "4px 6px", background: "transparent", border: "none", cursor: "pointer", color: isActive ? "#fff" : "#9ca3af", fontSize: 13 }}>⎘</button>

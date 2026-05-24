@@ -366,6 +366,26 @@ model EpaperAd {
   @@map("epaper_ads")
 }
 
+/// Reusable ad asset library. Each `ad` block in an EpaperPage layout
+/// references one of these by id. Separate from per-edition placement so the
+/// same creative can run across multiple editions without re-upload.
+model EpaperAdAsset {
+  id          String   @id @default(cuid())
+  advertiser  String   // e.g. "Heritage Foods", for ops + reporting
+  imageUrl    String   // Azure Blob URL
+  linkUrl     String?  // click-through (rendered as <a href>)
+  validFrom   DateTime?
+  validTo     DateTime?
+  active      Boolean  @default(true)
+  price       Int?     // monthly run price in paise; informational
+  notes       String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([active, validFrom, validTo])
+  @@map("epaper_ad_assets")
+}
+
 model EpaperPage {
   id          String         @id @default(cuid())
   editionId   String

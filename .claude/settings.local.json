@@ -43,7 +43,8 @@
       "Bash(curl -sS -o /dev/null -w \"logo.svg: HTTP %{http_code} | bytes: %{size_download}\\\\n\" \"https://rayalaseemaexpress.com/logo.svg?t=$\\(date +%s\\)\")",
       "Bash(curl -sS -o /dev/null -w \"logo-transparent.svg: HTTP %{http_code} | bytes: %{size_download}\\\\n\" \"https://rayalaseemaexpress.com/logo-transparent.svg?t=$\\(date +%s\\)\")",
       "Bash(curl -sS -o /dev/null -w \"icon-192.png: HTTP %{http_code} | bytes: %{size_download}\\\\n\" \"https://rayalaseemaexpress.com/icon-192.png?t=$\\(date +%s\\)\")",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(git push *)"
     ],
     "additionalDirectories": [
       "D:\\RSE2026M365\\assets\\masthead",
