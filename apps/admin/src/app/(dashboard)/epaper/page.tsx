@@ -723,19 +723,35 @@ export default function EpaperEditorPage() {
                 }} />
               )}
             </div>
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}>
-              <button onClick={() => { setCropRect({ x: 0, y: 0, w: 1, h: 1 }); }}
-                style={{ padding: "8px 16px", background: "#fff", color: "#374151", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-                Reset
+            <div style={{ display: "flex", gap: 8, justifyContent: "space-between", marginTop: 14, flexWrap: "wrap" }}>
+              <button onClick={async () => {
+                  const r = await fetch("/api/epaper/smart-crop", {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ imageUrl: cropImgUrl }),
+                  });
+                  if (r.status === 503) { toast("warn", "Smart-crop disabled — Azure Vision key not set"); return; }
+                  if (!r.ok) { toast("error", "Smart-crop failed"); return; }
+                  const data = await r.json();
+                  setCropRect(data.crop);
+                  toast("success", "Auto-cropped to subject");
+                }}
+                style={{ padding: "8px 14px", background: "#ecfdf5", color: "#047857", border: "1px solid #6ee7b7", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                🤖 Auto-crop
               </button>
-              <button onClick={() => setCropBlockId(null)}
-                style={{ padding: "8px 16px", background: "#e5e7eb", color: "#374151", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-                Cancel
-              </button>
-              <button onClick={saveCrop}
-                style={{ padding: "8px 16px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-                Save crop
-              </button>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => { setCropRect({ x: 0, y: 0, w: 1, h: 1 }); }}
+                  style={{ padding: "8px 16px", background: "#fff", color: "#374151", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                  Reset
+                </button>
+                <button onClick={() => setCropBlockId(null)}
+                  style={{ padding: "8px 16px", background: "#e5e7eb", color: "#374151", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                  Cancel
+                </button>
+                <button onClick={saveCrop}
+                  style={{ padding: "8px 16px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                  Save crop
+                </button>
+              </div>
             </div>
           </div>
         </div>
