@@ -35,6 +35,7 @@ interface Block {
   adAssetId?: string;     // ad block reference into EpaperAdAsset library
   overrideTitle?: string; // per-placement headline override; falls back to article.title
   overrideDek?: string;   // per-placement summary override; falls back to article.summary
+  imageCrop?: { x: number; y: number; w: number; h: number }; // 0..1 fractional crop on featured image
   content?: string;
   href?: string;
   targetPage?: number;
@@ -90,13 +91,20 @@ function blockStyle(b: Block, extra = ""): string {
   return `grid-column: ${b.x + 1} / span ${b.w}; grid-row: ${b.y + 1} / span ${b.h}; ${extra}`;
 }
 
-function imageOrFallback(url: string | null | undefined, className: string): string {
+function imageOrFallback(url: string | null | undefined, className: string, crop?: { x: number; y: number; w: number; h: number }): string {
   if (url) {
-    // `crossorigin="anonymous"` + `referrerpolicy="no-referrer"` so Azure Blob's
-    // CDN serves the image without an Origin/Referer mismatch when Playwright
-    // hits it from the headless browser. `loading="eager"` since we need ALL
-    // images decoded before the PDF capture.
-    return `<div class="ph ${className}"><img src="${esc(url)}" alt="" loading="eager" crossorigin="anonymous" referrerpolicy="no-referrer" /></div>`;
+    // When an imageCrop is set, scale the image so the crop rect fills the
+    // container, then offset so the crop window starts at (0,0). Simple
+    // transform — works in PDF render because Playwright honors CSS transforms.
+    let imgStyle = "";
+    if (crop && crop.w > 0 && crop.h > 0) {
+      const scaleX = 1 / crop.w;
+      const scaleY = 1 / crop.h;
+      const offsetX = -crop.x * 100 * scaleX;
+      const offsetY = -crop.y * 100 * scaleY;
+      imgStyle = ` style="transform: translate(${offsetX}%, ${offsetY}%) scale(${scaleX}, ${scaleY}); transform-origin: 0 0;"`;
+    }
+    return `<div class="ph ${className}"><img src="${esc(url)}" alt="" loading="eager" crossorigin="anonymous" referrerpolicy="no-referrer"${imgStyle} /></div>`;
   }
   return `<div class="ph ${className} noimg">రాయలసీమ ఎక్స్‌ప్రెస్</div>`;
 }
@@ -144,7 +152,7 @@ function leadBlock(b: Block, a: ResolvedArticle): string {
       <div class="kicker">${esc(a.categoryName)}</div>
       <h1 class="lead-hl">${esc(displayTitle)}</h1>
       ${desk}
-      ${imageOrFallback(a.featuredImage, "lead-img")}
+      ${imageOrFallback(a.featuredImage, "lead-img", b.imageCrop)}
       ${dekHtml}
     </div>`;
   return `<article class="lead block" style="${blockStyle(b)}">${articleLink(a, inner)}</article>`;
@@ -164,7 +172,7 @@ function majorBlock(b: Block, a: ResolvedArticle): string {
   })();
   const inner = `
     <div class="block-inner">
-      ${imageOrFallback(a.featuredImage, "maj-img")}
+      ${imageOrFallback(a.featuredImage, "maj-img", b.imageCrop)}
       <div class="kicker sm">${esc(a.categoryName)}</div>
       <h2 class="maj-hl">${esc(displayTitle)}</h2>
       ${dekHtml}
@@ -211,7 +219,7 @@ function secondaryBlock(b: Block, a: ResolvedArticle): string {
   const displayTitle = b.overrideTitle?.trim() || a.title;
   const inner = `
     <div class="block-inner">
-      ${imageOrFallback(a.featuredImage, "sec-img")}
+      ${imageOrFallback(a.featuredImage, "sec-img", b.imageCrop)}
       <h3 class="sec-hl">${esc(displayTitle)}</h3>
     </div>`;
   return `<article class="secondary block" style="${blockStyle(b)}">${articleLink(a, inner)}</article>`;

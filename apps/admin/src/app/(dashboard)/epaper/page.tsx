@@ -513,6 +513,63 @@ export default function EpaperEditorPage() {
     await patchPage({ blocks: next });
   }, [activePage, redoStacks]);
 
+  // Image crop modal — per-block fractional crop on the article's featured image.
+  const [cropBlockId, setCropBlockId] = useState<string | null>(null);
+  const [cropImgUrl, setCropImgUrl] = useState<string | null>(null);
+  const [cropRect, setCropRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const cropImgRef = useRef<HTMLImageElement>(null);
+  const cropDragStart = useRef<{ x: number; y: number } | null>(null);
+  const openCrop = async (blockId: string) => {
+    const b = activePage?.layout.blocks.find((x) => x.id === blockId);
+    if (!b?.articleId) { toast("warn", "Block has no article — pick one first"); return; }
+    // Look up the article's featured image; fall back to a re-fetch if not cached.
+    let img: string | null = null;
+    const r = await fetch(`/api/articles/${b.articleId}`);
+    if (r.ok) {
+      const data = await r.json();
+      img = data.featuredImage || null;
+    }
+    if (!img) { toast("warn", "Article has no featured image"); return; }
+    setCropBlockId(blockId);
+    setCropImgUrl(img);
+    setCropRect(b.imageCrop || { x: 0, y: 0, w: 1, h: 1 });
+  };
+  const cropOnDown = (e: React.MouseEvent) => {
+    const r = cropImgRef.current?.getBoundingClientRect();
+    if (!r) return;
+    const x = (e.clientX - r.left) / r.width;
+    const y = (e.clientY - r.top) / r.height;
+    cropDragStart.current = { x, y };
+    setCropRect({ x, y, w: 0, h: 0 });
+  };
+  const cropOnMove = (e: React.MouseEvent) => {
+    if (!cropDragStart.current) return;
+    const r = cropImgRef.current?.getBoundingClientRect();
+    if (!r) return;
+    const cx = (e.clientX - r.left) / r.width;
+    const cy = (e.clientY - r.top) / r.height;
+    setCropRect({
+      x: Math.min(cropDragStart.current.x, cx),
+      y: Math.min(cropDragStart.current.y, cy),
+      w: Math.abs(cx - cropDragStart.current.x),
+      h: Math.abs(cy - cropDragStart.current.y),
+    });
+  };
+  const cropOnUp = () => { cropDragStart.current = null; };
+  const saveCrop = async () => {
+    if (!activePage || !cropBlockId || !cropRect) return;
+    // Clamp values; if rectangle ~ full image, treat as "no crop" (remove field)
+    const useCrop = cropRect.w > 0.05 && cropRect.h > 0.05;
+    const blocks = activePage.layout.blocks.map((b) =>
+      b.id === cropBlockId ? { ...b, imageCrop: useCrop ? cropRect : undefined } : b
+    );
+    pushUndo(activePage.id, activePage.layout.blocks);
+    setEdition((prev) => prev ? { ...prev, pages: prev.pages.map((p) => p.id === activePage.id ? { ...p, layout: { blocks } } : p) } : prev);
+    await patchPage({ blocks });
+    setCropBlockId(null);
+    toast("success", useCrop ? "Crop saved" : "Crop removed");
+  };
+
   // Per-placement headline / dek override. Lets operator trim a CMS title
   // that's too long for a lead slot without editing the source article.
   const [overrideBlockId, setOverrideBlockId] = useState<string | null>(null);
@@ -610,6 +667,48 @@ export default function EpaperEditorPage() {
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
       <Sidebar />
       <ToastViewport toasts={toasts} onDismiss={dismissToast} />
+      {/* Image crop modal */}
+      {cropBlockId && cropImgUrl && (
+        <div onClick={() => setCropBlockId(null)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 1200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()}
+            style={{ background: "#fff", borderRadius: 10, padding: 22, maxWidth: 720, width: "100%" }}>
+            <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 6 }}>✂ Crop image</h2>
+            <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 12 }}>
+              Drag a rectangle on the image to define the crop. The block will fill itself with this region.
+            </p>
+            <div style={{ position: "relative", display: "inline-block", maxWidth: "100%" }}>
+              <img ref={cropImgRef} src={cropImgUrl} alt=""
+                onMouseDown={cropOnDown} onMouseMove={cropOnMove} onMouseUp={cropOnUp}
+                draggable={false}
+                style={{ maxWidth: "100%", maxHeight: "60vh", cursor: "crosshair", userSelect: "none", display: "block" }} />
+              {cropRect && cropImgRef.current && (
+                <div style={{
+                  position: "absolute",
+                  left: `${cropRect.x * 100}%`, top: `${cropRect.y * 100}%`,
+                  width: `${cropRect.w * 100}%`, height: `${cropRect.h * 100}%`,
+                  border: "2px dashed #FFD400", background: "rgba(255,212,0,0.2)",
+                  pointerEvents: "none",
+                }} />
+              )}
+            </div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}>
+              <button onClick={() => { setCropRect({ x: 0, y: 0, w: 1, h: 1 }); }}
+                style={{ padding: "8px 16px", background: "#fff", color: "#374151", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                Reset
+              </button>
+              <button onClick={() => setCropBlockId(null)}
+                style={{ padding: "8px 16px", background: "#e5e7eb", color: "#374151", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                Cancel
+              </button>
+              <button onClick={saveCrop}
+                style={{ padding: "8px 16px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                Save crop
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Headline / dek override modal */}
       {overrideBlockId && (
         <div onClick={() => setOverrideBlockId(null)}
@@ -1137,7 +1236,12 @@ export default function EpaperEditorPage() {
                     <button onClick={() => selectedBlockId && openOverride(selectedBlockId)}
                       disabled={!selectedBlockId}
                       style={{ flex: 1, padding: "8px 8px", background: "#fef3c7", color: "#92400e", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: selectedBlockId ? "pointer" : "not-allowed" }}>
-                      ✎ Override
+                      ✎ Text
+                    </button>
+                    <button onClick={() => selectedBlockId && openCrop(selectedBlockId)}
+                      disabled={!selectedBlockId}
+                      style={{ flex: 1, padding: "8px 8px", background: "#dbeafe", color: "#1e40af", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: selectedBlockId ? "pointer" : "not-allowed" }}>
+                      ✂ Crop
                     </button>
                     <button onClick={() => setPickerFilters({ ...DEFAULT_FILTERS, windowDays: pickerFilters.windowDays, sort: pickerFilters.sort })}
                       style={{ flex: 1, padding: "8px 8px", background: "#e5e7eb", color: "#374151", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
