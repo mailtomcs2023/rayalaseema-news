@@ -3,6 +3,7 @@ import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 import { autofillTemplate, type BlockSlot } from "@/lib/epaper/autofill";
 import { buildContinuations } from "@/lib/epaper/continuation";
+import { createSnapshot } from "@/lib/epaper/snapshots";
 
 // POST /api/epaper/generate-edition
 // Body: { date: "YYYY-MM-DD" }
@@ -51,6 +52,13 @@ export async function POST(req: NextRequest) {
         title: `${dateStr} Edition`,
       },
     });
+
+    // If pages already exist, snapshot before wiping so a re-generate is
+    // reversible from the History panel.
+    const existingPageCount = await prisma.epaperPage.count({ where: { editionId: edition.id } });
+    if (existingPageCount > 0) {
+      await createSnapshot(edition.id, "pre-regenerate", { snappedById: session.user.id });
+    }
 
     // Wipe any existing pages from a previous generate run.
     await prisma.epaperPage.deleteMany({ where: { editionId: edition.id } });

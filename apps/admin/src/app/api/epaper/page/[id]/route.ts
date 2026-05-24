@@ -18,9 +18,17 @@ interface Block {
 
 // PATCH /api/epaper/page/[id]
 // Body shapes accepted:
-//   - { blocks: Block[] }                   replace whole layout
-//   - { setArticle: { blockId, articleId } }   swap a single block's article
-//   - { setLocked:  { blockId, locked } }      flip lock flag
+//   - { blocks: Block[] }                           replace whole layout
+//   - { setArticle: { blockId, articleId } }        swap a single block's article
+//   - { setLocked:  { blockId, locked } }           flip lock flag
+//
+// All shapes accept an optional `expectedVersion: number` field. When present,
+// the server compares it to the page's current `version` and returns 409 with
+// the current version if they disagree — that's the conflict signal the
+// editor uses to prompt a reload.
+//
+// On a successful write the response always includes the NEW `version` so the
+// client can keep tracking it.
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR", "SUB_EDITOR"]);
   if (isAuthError(session)) return session;
@@ -30,6 +38,22 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     const page = await prisma.epaperPage.findUnique({ where: { id } });
     if (!page) return NextResponse.json({ error: "Page not found" }, { status: 404 });
+
+    // Optimistic concurrency check. If the client passes `expectedVersion` and
+    // it doesn't match the current row, refuse the write — somebody else has
+    // edited the page since this client last read it.
+    if (typeof body?.expectedVersion === "number" && body.expectedVersion !== page.version) {
+      return NextResponse.json(
+        {
+          error: "Conflict",
+          code: "STALE_VERSION",
+          message: `Page was edited by another user. Your version: ${body.expectedVersion}, current: ${page.version}.`,
+          currentVersion: page.version,
+        },
+        { status: 409 },
+      );
+    }
+
     const layout = (page.layout as unknown as { blocks: Block[] }) ?? { blocks: [] };
 
     if (Array.isArray(body?.blocks)) {
@@ -48,9 +72,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ error: "Provide blocks | setArticle | setLocked" }, { status: 400 });
     }
 
+    // Bump version atomically with the layout write. Using `increment` keeps it
+    // race-safe even if two writes get here at the same moment — one will see
+    // the bumped version and (if it passed expectedVersion) succeed, the
+    // other's expectedVersion will now be stale on the NEXT request.
     const updated = await prisma.epaperPage.update({
       where: { id },
-      data: { layout: layout as any },
+      data: {
+        layout: layout as any,
+        version: { increment: 1 },
+      },
     });
     return NextResponse.json(updated);
   } catch (e) {

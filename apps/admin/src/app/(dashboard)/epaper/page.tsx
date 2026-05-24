@@ -35,11 +35,14 @@ interface PageRow {
   templateSlug: string | null;
   layout: { blocks: Block[] };
   pdfUrl: string | null;
+  version: number;     // optimistic-concurrency token; bumps on every PATCH
 }
 interface Edition {
   id: string;
   date: string;
   status: string;
+  workflowState: "DRAFT" | "SUB_REVIEW" | "CHIEF_REVIEW" | "APPROVED" | "PUBLISHED" | "REJECTED";
+  workflowNote: string | null;
   pdfUrl: string | null;
   pages: PageRow[];
 }
@@ -195,13 +198,212 @@ export default function EpaperEditorPage() {
       .then((data) => { setPickerArticles(data.articles || []); setPickerTotal(data.totalInWindow ?? 0); });
   }, [selectedBlockId, pickerQuery, pickerFilters, activePage]);
 
-  const setBlockArticle = async (articleId: string | null) => {
-    if (!activePage || !selectedBlockId) return;
-    await fetch(`/api/epaper/page/${activePage.id}`, {
+  // Workflow transitions — what's available depends on the current state.
+  // The full transitions table lives server-side; here we just hit the API
+  // and let it 403 if the role doesn't match. We pre-compute label/style.
+  const WORKFLOW_LABEL: Record<string, string> = {
+    DRAFT: "📝 Draft", SUB_REVIEW: "👀 Sub-editor review",
+    CHIEF_REVIEW: "🧐 Chief review", APPROVED: "✅ Approved",
+    PUBLISHED: "📰 Published", REJECTED: "↩ Rejected",
+  };
+  const WORKFLOW_COLOR: Record<string, string> = {
+    DRAFT: "#6b7280", SUB_REVIEW: "#f59e0b", CHIEF_REVIEW: "#0ea5e9",
+    APPROVED: "#16a34a", PUBLISHED: "#7c3aed", REJECTED: "#dc2626",
+  };
+  // Next-state buttons per source state. Mirrors workflow.ts TRANSITIONS for UX —
+  // the server is the source of truth and will 403 unauthorized clicks.
+  const NEXT_STATES: Record<string, Array<{ to: string; label: string; needNote?: boolean; danger?: boolean }>> = {
+    DRAFT: [{ to: "SUB_REVIEW", label: "Submit for review" }],
+    SUB_REVIEW: [
+      { to: "CHIEF_REVIEW", label: "Pass to chief" },
+      { to: "REJECTED", label: "Reject", needNote: true, danger: true },
+    ],
+    CHIEF_REVIEW: [
+      { to: "APPROVED", label: "Approve" },
+      { to: "REJECTED", label: "Reject", needNote: true, danger: true },
+    ],
+    APPROVED: [{ to: "PUBLISHED", label: "Publish" }],
+    PUBLISHED: [{ to: "DRAFT", label: "Unpublish", danger: true }],
+    REJECTED: [{ to: "DRAFT", label: "Reopen as draft" }],
+  };
+  const transitionTo = async (to: string, label: string, needNote: boolean) => {
+    if (!edition) return;
+    const note = needNote ? prompt(`${label} — reason note (required):`) : null;
+    if (needNote && !note) return;
+    const r = await fetch(`/api/epaper/edition/${edition.id}/transition`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ to, note }),
+    });
+    if (!r.ok) { const d = await r.json().catch(() => ({})); setError(d.error || "Transition failed"); return; }
+    await loadEdition(date);
+  };
+
+  // Page CRUD state: modal for inserting a new page from a template.
+  const [insertOpen, setInsertOpen] = useState(false);
+  const [templateOptions, setTemplateOptions] = useState<Array<{ slug: string; name: string; type: string }>>([]);
+  const [insertTemplate, setInsertTemplate] = useState("");
+  const loadTemplateOptions = async () => {
+    if (templateOptions.length > 0) return;
+    const r = await fetch("/api/epaper/templates");
+    const data = await r.json();
+    setTemplateOptions(data.filter((t: any) => t.active).map((t: any) => ({ slug: t.slug, name: t.name, type: t.type })));
+  };
+  const insertPage = async () => {
+    if (!edition || !insertTemplate) return;
+    const insertAfter = activePage?.pageNumber ?? edition.pages.length;
+    const r = await fetch("/api/epaper/pages", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ editionId: edition.id, templateSlug: insertTemplate, insertAfter }),
+    });
+    if (!r.ok) { setError("Insert failed"); return; }
+    setInsertOpen(false);
+    setInsertTemplate("");
+    await loadEdition(date);
+  };
+  const duplicatePage = async (pageId: string) => {
+    const r = await fetch(`/api/epaper/pages/${pageId}`, { method: "POST" });
+    if (!r.ok) { setError("Duplicate failed"); return; }
+    await loadEdition(date);
+  };
+  const deletePage = async (pageId: string, label: string) => {
+    if (!confirm(`Delete page "${label}"? A snapshot will be auto-saved so you can restore from History.`)) return;
+    const r = await fetch(`/api/epaper/pages/${pageId}`, { method: "DELETE" });
+    if (!r.ok) { setError("Delete failed"); return; }
+    await loadEdition(date);
+  };
+
+  // View mode: edit canvas / split (canvas + preview iframe) / preview-only.
+  // Live preview hits /api/epaper/page/[id]/preview which reuses
+  // renderLayoutToHtml — no Playwright in the hot path so it's near-instant.
+  const [viewMode, setViewMode] = useState<"edit" | "split" | "preview">("edit");
+
+  // Save-status indicator: tracks every PATCH so the operator can see whether
+  // their last action persisted. Three states: saving | saved | failed.
+  // The HUD ticks every 30s to refresh the "Saved Xs ago" relative timestamp.
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "failed">("idle");
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const [saveTick, setSaveTick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setSaveTick((n) => n + 1), 30_000);
+    return () => clearInterval(t);
+  }, []);
+  // Block tab/close while a save is in flight — prevents data loss on
+  // navigation mid-write.
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (saveState === "saving") { e.preventDefault(); e.returnValue = ""; }
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [saveState]);
+
+  // Undo/redo: per-page stack of prior layout snapshots. Pushed BEFORE each
+  // mutation; popping pushes the popped state onto the redo stack. Capped at
+  // UNDO_LIMIT entries per page to keep memory bounded.
+  const UNDO_LIMIT = 50;
+  const [undoStacks, setUndoStacks] = useState<Record<string, Block[][]>>({});
+  const [redoStacks, setRedoStacks] = useState<Record<string, Block[][]>>({});
+
+  const pushUndo = useCallback((pageId: string, blocks: Block[]) => {
+    setUndoStacks((prev) => {
+      const stack = prev[pageId] ? [...prev[pageId]] : [];
+      stack.push(JSON.parse(JSON.stringify(blocks)));
+      if (stack.length > UNDO_LIMIT) stack.shift();
+      return { ...prev, [pageId]: stack };
+    });
+    // New action invalidates the redo timeline.
+    setRedoStacks((prev) => ({ ...prev, [pageId]: [] }));
+  }, []);
+
+  // Optimistic-concurrency: when the server says 409 we surface a blocking
+  // modal so the operator either reloads (losing local changes) or knows
+  // their next save will fail too.
+  const [conflict, setConflict] = useState<{ pageId: string; pageLabel: string; currentVersion: number } | null>(null);
+
+  // Snapshot/History panel — operator opens to see point-in-time captures
+  // (auto-saved before each Render / Regenerate + any manual snapshots) and
+  // restore any of them. Restoring writes a pre-restore snapshot first so it's
+  // itself undoable.
+  interface Snapshot { id: string; reason: string; note: string | null; createdAt: string; snappedBy?: { id: string; name: string } | null }
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
+  const [snapshotsLoading, setSnapshotsLoading] = useState(false);
+  const [snapshotNote, setSnapshotNote] = useState("");
+
+  const loadSnapshots = async () => {
+    if (!edition) return;
+    setSnapshotsLoading(true);
+    try {
+      const r = await fetch(`/api/epaper/snapshots?editionId=${edition.id}`);
+      const data = await r.json();
+      setSnapshots(data.snapshots || []);
+    } finally { setSnapshotsLoading(false); }
+  };
+
+  const takeSnapshot = async () => {
+    if (!edition) return;
+    const r = await fetch(`/api/epaper/snapshots`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ editionId: edition.id, note: snapshotNote.trim() || undefined }),
+    });
+    if (r.ok) { setSnapshotNote(""); await loadSnapshots(); }
+    else setError("Failed to snapshot");
+  };
+
+  const restoreSnap = async (id: string) => {
+    if (!edition) return;
+    if (!confirm("Restore this snapshot? Your current layout will be auto-snapshotted first so you can undo the restore from the History panel.")) return;
+    const r = await fetch(`/api/epaper/snapshots/${id}/restore`, { method: "POST" });
+    if (!r.ok) { setError("Restore failed"); return; }
+    await loadEdition(date);
+    await loadSnapshots();
+  };
+
+  // Central PATCH helper. Stamps `expectedVersion` from the current state and
+  // either bumps the cached version on success or raises the conflict modal
+  // on 409. Every editor mutation goes through this so we never hand-roll a
+  // fetch without the concurrency token again.
+  const patchPage = async (payload: object) => {
+    if (!activePage) return null;
+    setSaveState("saving");
+    const res = await fetch(`/api/epaper/page/${activePage.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ setArticle: { blockId: selectedBlockId, articleId } }),
-    });
+      body: JSON.stringify({ ...payload, expectedVersion: activePage.version }),
+    }).catch((e) => { setSaveState("failed"); throw e; });
+    if (res.status === 409) {
+      const data = await res.json().catch(() => ({}));
+      setConflict({ pageId: activePage.id, pageLabel: activePage.label, currentVersion: data.currentVersion ?? -1 });
+      setSaveState("failed");
+      return null;
+    }
+    if (!res.ok) {
+      setError(`Save failed (${res.status})`);
+      setSaveState("failed");
+      return null;
+    }
+    const updated = await res.json();
+    setSaveState("saved");
+    setLastSavedAt(Date.now());
+    // Stamp the bumped version onto the local page so the next PATCH passes.
+    // Defensive: only overwrite when the server actually returned a numeric
+    // version — a missing field would silently disable concurrency checks.
+    if (typeof updated?.version === "number") {
+      setEdition((prev) => {
+        if (!prev) return prev;
+        return { ...prev, pages: prev.pages.map((p) =>
+          p.id === activePage.id ? { ...p, version: updated.version } : p) };
+      });
+    }
+    return updated;
+  };
+
+  const setBlockArticle = async (articleId: string | null) => {
+    if (!activePage || !selectedBlockId) return;
+    pushUndo(activePage.id, activePage.layout.blocks);
+    const ok = await patchPage({ setArticle: { blockId: selectedBlockId, articleId } });
+    if (!ok) return;
     setEdition((prev) => {
       if (!prev) return prev;
       return { ...prev, pages: prev.pages.map((p) => p.id === activePage.id ? {
@@ -219,11 +421,9 @@ export default function EpaperEditorPage() {
     const block = activePage.layout.blocks.find((b) => b.id === blockId);
     if (!block) return;
     const newLocked = !block.locked;
-    await fetch(`/api/epaper/page/${activePage.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ setLocked: { blockId, locked: newLocked } }),
-    });
+    pushUndo(activePage.id, activePage.layout.blocks);
+    const ok = await patchPage({ setLocked: { blockId, locked: newLocked } });
+    if (!ok) return;
     setEdition((prev) => {
       if (!prev) return prev;
       return { ...prev, pages: prev.pages.map((p) => p.id === activePage.id ? {
@@ -235,21 +435,177 @@ export default function EpaperEditorPage() {
   // Persists the full block-layout when react-grid-layout finishes a drag/resize.
   const saveLayout = async (newBlocks: Block[]) => {
     if (!activePage) return;
+    pushUndo(activePage.id, activePage.layout.blocks);
     setEdition((prev) => {
       if (!prev) return prev;
       return { ...prev, pages: prev.pages.map((p) =>
         p.id === activePage.id ? { ...p, layout: { blocks: newBlocks } } : p) };
     });
-    await fetch(`/api/epaper/page/${activePage.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ blocks: newBlocks }),
-    });
+    await patchPage({ blocks: newBlocks });
   };
+
+  const undo = useCallback(async () => {
+    if (!activePage) return;
+    const stack = undoStacks[activePage.id];
+    if (!stack || stack.length === 0) return;
+    const last = stack[stack.length - 1];
+    setUndoStacks((prev) => ({ ...prev, [activePage.id]: stack.slice(0, -1) }));
+    setRedoStacks((prev) => {
+      const r = prev[activePage.id] ? [...prev[activePage.id]] : [];
+      r.push(JSON.parse(JSON.stringify(activePage.layout.blocks)));
+      if (r.length > UNDO_LIMIT) r.shift();
+      return { ...prev, [activePage.id]: r };
+    });
+    setEdition((prev) => {
+      if (!prev) return prev;
+      return { ...prev, pages: prev.pages.map((p) =>
+        p.id === activePage.id ? { ...p, layout: { blocks: last } } : p) };
+    });
+    await patchPage({ blocks: last });
+  }, [activePage, undoStacks]);
+
+  const redo = useCallback(async () => {
+    if (!activePage) return;
+    const stack = redoStacks[activePage.id];
+    if (!stack || stack.length === 0) return;
+    const next = stack[stack.length - 1];
+    setRedoStacks((prev) => ({ ...prev, [activePage.id]: stack.slice(0, -1) }));
+    setUndoStacks((prev) => {
+      const u = prev[activePage.id] ? [...prev[activePage.id]] : [];
+      u.push(JSON.parse(JSON.stringify(activePage.layout.blocks)));
+      if (u.length > UNDO_LIMIT) u.shift();
+      return { ...prev, [activePage.id]: u };
+    });
+    setEdition((prev) => {
+      if (!prev) return prev;
+      return { ...prev, pages: prev.pages.map((p) =>
+        p.id === activePage.id ? { ...p, layout: { blocks: next } } : p) };
+    });
+    await patchPage({ blocks: next });
+  }, [activePage, redoStacks]);
+
+  // Wire Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y to undo/redo. Skip when focus is in
+  // an input/textarea so the operator's own typing isn't hijacked.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const inField = (e.target as HTMLElement | null)?.tagName === "INPUT"
+        || (e.target as HTMLElement | null)?.tagName === "TEXTAREA";
+      if (inField) return;
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "z") {
+        e.preventDefault(); undo();
+      } else if ((e.ctrlKey || e.metaKey) && (e.shiftKey && e.key.toLowerCase() === "z" || e.key.toLowerCase() === "y")) {
+        e.preventDefault(); redo();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [undo, redo]);
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
       <Sidebar />
+      {/* Conflict modal — shown when the server returns 409 (another editor
+          touched this page). Reload reloads the whole edition (loses local
+          unsaved changes); Cancel just dismisses (next save will 409 again). */}
+      {/* Insert new page modal */}
+      {insertOpen && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+          onClick={() => setInsertOpen(false)}>
+          <div onClick={(e) => e.stopPropagation()}
+            style={{ background: "#fff", borderRadius: 10, padding: 22, maxWidth: 480, width: "100%" }}>
+            <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>Insert new page</h2>
+            <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 8 }}>
+              Will be inserted after page {activePage?.pageNumber ?? "(end)"}.
+            </p>
+            <select value={insertTemplate} onChange={(e) => setInsertTemplate(e.target.value)}
+              style={{ width: "100%", padding: "8px 10px", border: "1px solid #ddd", borderRadius: 6, fontSize: 13, marginBottom: 12, boxSizing: "border-box" }}>
+              <option value="">Pick a template…</option>
+              {templateOptions.map((t) => (
+                <option key={t.slug} value={t.slug}>{t.type} — {t.name}</option>
+              ))}
+            </select>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <button onClick={() => setInsertOpen(false)}
+                style={{ padding: "8px 16px", background: "#e5e7eb", color: "#374151", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                Cancel
+              </button>
+              <button onClick={insertPage} disabled={!insertTemplate}
+                style={{ padding: "8px 16px", background: insertTemplate ? "#4f46e5" : "#c7d2fe", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: insertTemplate ? "pointer" : "not-allowed" }}>
+                Insert
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* History drawer — sliding panel on the right with snapshot list. */}
+      {historyOpen && edition && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 999 }}
+          onClick={() => setHistoryOpen(false)}>
+          <div onClick={(e) => e.stopPropagation()}
+            style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: 420, background: "#fff", padding: 20, overflowY: "auto", boxShadow: "-4px 0 24px rgba(0,0,0,0.2)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <h2 style={{ fontSize: 16, fontWeight: 800, color: "#111" }}>Snapshots / History</h2>
+              <button onClick={() => setHistoryOpen(false)}
+                style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#6b7280" }}>✕</button>
+            </div>
+            <div style={{ background: "#f9fafb", padding: 12, borderRadius: 8, marginBottom: 14 }}>
+              <input value={snapshotNote} onChange={(e) => setSnapshotNote(e.target.value)}
+                placeholder='Optional note: "before homepage swap"'
+                style={{ width: "100%", padding: "8px 10px", border: "1px solid #ddd", borderRadius: 6, fontSize: 13, marginBottom: 8, boxSizing: "border-box" }} />
+              <button onClick={takeSnapshot}
+                style={{ width: "100%", padding: "8px 12px", background: "#7c3aed", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                📷 Snapshot now
+              </button>
+            </div>
+            {snapshotsLoading && <p style={{ fontSize: 12, color: "#888" }}>Loading…</p>}
+            {!snapshotsLoading && snapshots.length === 0 && (
+              <p style={{ fontSize: 12, color: "#888" }}>No snapshots yet. One will be auto-created next time you Render or Regenerate.</p>
+            )}
+            {snapshots.map((s) => (
+              <div key={s.id} style={{ border: "1px solid #e5e7eb", borderRadius: 6, padding: 10, marginBottom: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>
+                      {reasonLabel(s.reason)}
+                    </div>
+                    <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>
+                      {new Date(s.createdAt).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}
+                      {s.snappedBy?.name && ` · ${s.snappedBy.name}`}
+                    </div>
+                    {s.note && <div style={{ fontSize: 12, color: "#374151", marginTop: 4, fontStyle: "italic" }}>"{s.note}"</div>}
+                  </div>
+                  <button onClick={() => restoreSnap(s.id)}
+                    style={{ padding: "5px 10px", background: "#fff", color: "#dc2626", border: "1px solid #dc2626", borderRadius: 4, fontSize: 11, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>
+                    Restore
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {conflict && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ background: "#fff", borderRadius: 10, padding: 24, maxWidth: 460, width: "100%", boxShadow: "0 10px 40px rgba(0,0,0,0.3)" }}>
+            <h2 style={{ fontSize: 18, fontWeight: 800, color: "#dc2626", marginBottom: 10 }}>⚠ Page changed by another editor</h2>
+            <p style={{ fontSize: 14, color: "#374151", lineHeight: 1.5, marginBottom: 16 }}>
+              <b>{conflict.pageLabel}</b> was saved by someone else after you loaded it.
+              Your last save was rejected to prevent overwriting their changes.
+              Reload to see the latest version (you will lose any unsaved edits on this page).
+            </p>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button onClick={() => setConflict(null)}
+                style={{ padding: "8px 16px", background: "#e5e7eb", color: "#374151", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                Keep editing (next save will fail)
+              </button>
+              <button onClick={async () => { setConflict(null); await loadEdition(date); }}
+                style={{ padding: "8px 16px", background: "#dc2626", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                Reload page
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <main style={{ marginLeft: 240, flex: 1, padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
         {/* Top bar */}
         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
@@ -272,7 +628,50 @@ export default function EpaperEditorPage() {
               Open last PDF ↗
             </a>
           )}
-          <span style={{ fontSize: 12, color: "#888" }}>Status: <b>{edition?.status || "—"}</b></span>
+          {edition && (
+            <button onClick={() => { setHistoryOpen(true); loadSnapshots(); }}
+              style={{ padding: "8px 16px", background: "#fff", color: "#7c3aed", border: "1px solid #7c3aed", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+              ↩ History
+            </button>
+          )}
+          {activePage && (
+            <div style={{ display: "inline-flex", border: "1px solid #d1d5db", borderRadius: 8, overflow: "hidden" }}>
+              {(["edit", "split", "preview"] as const).map((m) => (
+                <button key={m} onClick={() => setViewMode(m)}
+                  style={{ padding: "6px 12px", background: viewMode === m ? "#4f46e5" : "#fff", color: viewMode === m ? "#fff" : "#374151", border: "none", borderRight: m !== "preview" ? "1px solid #d1d5db" : "none", fontSize: 12, fontWeight: 700, cursor: "pointer", textTransform: "capitalize" }}>
+                  {m}
+                </button>
+              ))}
+            </div>
+          )}
+          {activePage && (
+            <>
+              <button onClick={undo} disabled={!undoStacks[activePage.id]?.length}
+                title="Undo (Ctrl+Z)"
+                style={{ padding: "8px 12px", background: undoStacks[activePage.id]?.length ? "#fff" : "#f3f4f6", color: undoStacks[activePage.id]?.length ? "#111" : "#9ca3af", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: undoStacks[activePage.id]?.length ? "pointer" : "not-allowed" }}>
+                ↶ Undo {undoStacks[activePage.id]?.length ? `(${undoStacks[activePage.id].length})` : ""}
+              </button>
+              <button onClick={redo} disabled={!redoStacks[activePage.id]?.length}
+                title="Redo (Ctrl+Shift+Z)"
+                style={{ padding: "8px 12px", background: redoStacks[activePage.id]?.length ? "#fff" : "#f3f4f6", color: redoStacks[activePage.id]?.length ? "#111" : "#9ca3af", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: redoStacks[activePage.id]?.length ? "pointer" : "not-allowed" }}>
+                ↷ Redo {redoStacks[activePage.id]?.length ? `(${redoStacks[activePage.id].length})` : ""}
+              </button>
+            </>
+          )}
+          {edition && (
+            <span title={edition.workflowNote ? `Last note: ${edition.workflowNote}` : ""}
+              style={{ fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 6, background: WORKFLOW_COLOR[edition.workflowState] + "22", color: WORKFLOW_COLOR[edition.workflowState] }}>
+              {WORKFLOW_LABEL[edition.workflowState]}
+            </span>
+          )}
+          {edition && (NEXT_STATES[edition.workflowState] || []).map((opt) => (
+            <button key={opt.to} onClick={() => transitionTo(opt.to, opt.label, !!opt.needNote)}
+              style={{ padding: "6px 12px", background: opt.danger ? "#fee2e2" : "#ede9fe", color: opt.danger ? "#991b1b" : "#5b21b6", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+              {opt.label}
+            </button>
+          ))}
+          <span style={{ fontSize: 12, color: "#888" }}>Render: <b>{edition?.status || "—"}</b></span>
+          <SaveBadge state={saveState} lastSavedAt={lastSavedAt} tick={saveTick} />
           {error && <span style={{ color: "#dc2626", fontSize: 12 }}>{error}</span>}
         </div>
 
@@ -286,36 +685,64 @@ export default function EpaperEditorPage() {
         {edition && (
           <div style={{ display: "flex", gap: 16, flex: 1, minHeight: 0 }}>
             {/* Page tabs */}
-            <aside style={{ width: 220, background: "#fff", borderRadius: 8, padding: 12, overflowY: "auto" }}>
+            <aside style={{ width: 240, background: "#fff", borderRadius: 8, padding: 12, overflowY: "auto" }}>
               <h3 style={{ fontSize: 13, fontWeight: 800, color: "#555", marginBottom: 8 }}>PAGES</h3>
-              {edition.pages.map((p, i) => (
-                <button key={p.id} onClick={() => { setActivePageIdx(i); setSelectedBlockId(null); }}
-                  style={{
-                    width: "100%", textAlign: "left", padding: "8px 10px", marginBottom: 4,
-                    border: "none", borderRadius: 6, cursor: "pointer",
-                    background: i === activePageIdx ? "#4f46e5" : "transparent",
-                    color: i === activePageIdx ? "#fff" : "#111",
-                    fontSize: 12, fontWeight: 600,
-                  }}>
-                  {p.pageNumber}. {p.label}
-                </button>
-              ))}
+              {edition.pages.map((p, i) => {
+                const isActive = i === activePageIdx;
+                return (
+                  <div key={p.id} style={{ display: "flex", gap: 4, marginBottom: 4 }}>
+                    <button onClick={() => { setActivePageIdx(i); setSelectedBlockId(null); }}
+                      style={{
+                        flex: 1, textAlign: "left", padding: "8px 10px",
+                        border: "none", borderRadius: 6, cursor: "pointer",
+                        background: isActive ? "#4f46e5" : "transparent",
+                        color: isActive ? "#fff" : "#111",
+                        fontSize: 12, fontWeight: 600, minWidth: 0,
+                      }}>
+                      {p.pageNumber}. {p.label}
+                    </button>
+                    <button onClick={() => duplicatePage(p.id)} title="Duplicate page"
+                      style={{ padding: "4px 6px", background: "transparent", border: "none", cursor: "pointer", color: isActive ? "#fff" : "#9ca3af", fontSize: 13 }}>⎘</button>
+                    <button onClick={() => deletePage(p.id, p.label)} title="Delete page"
+                      style={{ padding: "4px 6px", background: "transparent", border: "none", cursor: "pointer", color: isActive ? "#fff" : "#9ca3af", fontSize: 13 }}>🗑</button>
+                  </div>
+                );
+              })}
+              <button onClick={() => { setInsertOpen(true); loadTemplateOptions(); }}
+                style={{ width: "100%", marginTop: 8, padding: "8px 10px", background: "#fff", color: "#4f46e5", border: "1px dashed #4f46e5", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                + New Page
+              </button>
             </aside>
 
-            {/* Page canvas */}
-            <section style={{ flex: 1, background: "#fff", borderRadius: 8, padding: 16, overflow: "auto" }}>
+            {/* Page canvas + (optionally) live preview iframe */}
+            <section style={{ flex: 1, background: "#fff", borderRadius: 8, padding: 16, overflow: "auto", display: "flex", flexDirection: "column", minWidth: 0 }}>
               <h3 style={{ fontSize: 13, fontWeight: 800, color: "#555", marginBottom: 10 }}>
                 Page {activePage?.pageNumber} · {activePage?.label} · template: <code style={{ fontSize: 11 }}>{activePage?.templateSlug}</code>
               </h3>
               {activePage && (
-                <DraggableBlockGrid
-                  layout={activePage.layout}
-                  titles={titles}
-                  selectedBlockId={selectedBlockId}
-                  onSelect={setSelectedBlockId}
-                  onToggleLock={toggleLock}
-                  onLayoutChange={saveLayout}
-                />
+                <div style={{ display: "flex", gap: 12, flex: 1, minHeight: 0 }}>
+                  {(viewMode === "edit" || viewMode === "split") && (
+                    <div style={{ flex: 1, minWidth: 0, overflow: "auto" }}>
+                      <DraggableBlockGrid
+                        layout={activePage.layout}
+                        titles={titles}
+                        selectedBlockId={selectedBlockId}
+                        onSelect={setSelectedBlockId}
+                        onToggleLock={toggleLock}
+                        onLayoutChange={saveLayout}
+                      />
+                    </div>
+                  )}
+                  {(viewMode === "split" || viewMode === "preview") && (
+                    <div style={{ flex: 1, minWidth: 0, border: "1px solid #e5e7eb", borderRadius: 6, background: "#FCFAF3", overflow: "hidden" }}>
+                      <iframe
+                        title="Live preview"
+                        src={`/api/epaper/page/${activePage.id}/preview?v=${activePage.version}`}
+                        style={{ width: "100%", height: "100%", border: "none", background: "#FCFAF3" }}
+                      />
+                    </div>
+                  )}
+                </div>
               )}
             </section>
 
@@ -440,6 +867,37 @@ export default function EpaperEditorPage() {
       </main>
     </div>
   );
+}
+
+function reasonLabel(r: string): string {
+  switch (r) {
+    case "manual": return "📷 Manual snapshot";
+    case "pre-render": return "🖨 Before PDF render";
+    case "pre-regenerate": return "♻ Before regenerate";
+    case "pre-restore": return "↩ Before previous restore";
+    default: return r;
+  }
+}
+
+/** Top-bar save status. The `tick` prop forces a re-render every 30s so the
+ *  "Saved Xs ago" timestamp stays fresh without a per-second timer. */
+function SaveBadge({ state, lastSavedAt, tick: _tick }: { state: "idle" | "saving" | "saved" | "failed"; lastSavedAt: number | null; tick: number }) {
+  if (state === "idle" && !lastSavedAt) return null;
+  const base: React.CSSProperties = { fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 6 };
+  if (state === "saving") return <span style={{ ...base, background: "#dbeafe", color: "#1e40af" }}>⚪ Saving…</span>;
+  if (state === "failed") return <span style={{ ...base, background: "#fee2e2", color: "#991b1b" }}>⚠ Save failed</span>;
+  // saved or idle-with-prior-save
+  return <span style={{ ...base, background: "#dcfce7", color: "#166534" }}>✓ Saved {lastSavedAt ? relTime(lastSavedAt) : ""}</span>;
+}
+
+function relTime(t: number): string {
+  const sec = Math.floor((Date.now() - t) / 1000);
+  if (sec < 5) return "now";
+  if (sec < 60) return `${sec}s ago`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  return `${hr}h ago`;
 }
 
 function ChipRow({ label, children }: { label: string; children: React.ReactNode }) {

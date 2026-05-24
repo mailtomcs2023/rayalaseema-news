@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 import { renderLayoutToHtml } from "@/lib/epaper/render-layout";
+import { createSnapshot } from "@/lib/epaper/snapshots";
 import { uploadBuffer } from "@/lib/blob";
 import { chromium } from "playwright";
 import { PDFDocument, PDFName, PDFArray, PDFDict, type PDFRef } from "pdf-lib";
@@ -43,6 +44,10 @@ export async function POST(req: NextRequest) {
     if (edition.pages.length === 0) {
       return NextResponse.json({ error: "Edition has no pages — call generate-edition first" }, { status: 400 });
     }
+
+    // Snapshot before render so the operator can rollback to the exact
+    // layout that produced the previous PDF if the new render goes wrong.
+    await createSnapshot(edition.id, "pre-render", { snappedById: session.user.id });
 
     await prisma.epaperEdition.update({ where: { id: edition.id }, data: { status: "generating" } });
 

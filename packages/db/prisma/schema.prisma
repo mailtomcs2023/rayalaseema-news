@@ -46,6 +46,9 @@ model User {
   // Article revisions authored by this user
   articleRevisions ArticleRevision[]
 
+  // ePaper edition snapshots created by this user
+  epaperSnapshots EpaperEditionSnapshot[]
+
   // Audit log entries (actions performed by this user)
   auditLogs        AuditLog[]
 
@@ -316,6 +319,15 @@ model Media {
 
 // ============ ePAPER ============
 
+enum EpaperWorkflowState {
+  DRAFT             // operator is laying out
+  SUB_REVIEW        // sub-editor needs to read it
+  CHIEF_REVIEW      // chief editor needs final say
+  APPROVED          // ready to publish; render + push runs
+  PUBLISHED         // out to readers
+  REJECTED          // sent back with a note
+}
+
 model EpaperEdition {
   id          String   @id @default(cuid())
   date        DateTime @db.Date
@@ -325,10 +337,13 @@ model EpaperEdition {
   thumbnailUrl String?
   pageCount   Int      @default(0)
   layout      Json?    // editable plan — [{label,isFront,slots:{lead,majors[],secondary[],briefs[]}}]
-  status      String   @default("pending") // pending | draft | generating | ready | failed
+  status      String   @default("pending") // RENDER lifecycle: pending | draft | generating | ready | failed
+  workflowState EpaperWorkflowState @default(DRAFT) // EDITORIAL approval workflow
+  workflowNote  String? // last transition's note (rejection reason etc.)
   active      Boolean  @default(true)
   pages       EpaperPage[]
   ads         EpaperAd[]
+  snapshots   EpaperEditionSnapshot[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -369,11 +384,38 @@ model EpaperPage {
   imageUrl    String         // rendered broadsheet page PNG on Azure Blob (legacy raster path)
   pdfUrl      String?        // per-page vector PDF (new v2 render path)
   hotspots    Json?          // [{slug,x,y,w,h}] — legacy raster overlay click regions
+  // Optimistic concurrency token. Bumps on every successful PATCH; client must
+  // send the version it last fetched so two editors can't silently overwrite
+  // each other. Server returns 409 if expected != current.
+  version     Int            @default(1)
   createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @default(now()) @updatedAt
 
   @@unique([editionId, pageNumber])
   @@index([editionId])
   @@map("epaper_pages")
+}
+
+/// Point-in-time snapshot of an edition's per-page layouts. Created
+/// automatically before each Render and on demand from the "History" panel
+/// in the /epaper editor. Restoring an edition writes a fresh snapshot of
+/// the current state first, then overwrites all pages from the chosen
+/// snapshot — so rollback is itself undoable.
+model EpaperEditionSnapshot {
+  id          String         @id @default(cuid())
+  editionId   String
+  edition     EpaperEdition  @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  // [{ pageNumber, label, templateSlug, layout, version }] — one entry per
+  // EpaperPage at the moment of capture.
+  pages       Json
+  reason      String         // "pre-render" | "manual" | "pre-regenerate" | "pre-restore"
+  note        String?        // operator-supplied label, e.g. "before homepage swap"
+  snappedById String?
+  snappedBy   User?          @relation(fields: [snappedById], references: [id])
+  createdAt   DateTime       @default(now())
+
+  @@index([editionId, createdAt])
+  @@map("epaper_edition_snapshots")
 }
 
 enum EpaperTemplateType {

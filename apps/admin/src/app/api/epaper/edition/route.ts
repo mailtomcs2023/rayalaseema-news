@@ -25,6 +25,8 @@ export async function GET(req: NextRequest) {
       id: edition.id,
       date: dateStr,
       status: edition.status,
+      workflowState: edition.workflowState,
+      workflowNote: edition.workflowNote,
       pdfUrl: edition.pdfUrl,
       pageCount: edition.pageCount,
       pages: edition.pages,
