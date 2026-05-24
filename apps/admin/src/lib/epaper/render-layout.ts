@@ -33,6 +33,8 @@ interface Block {
   h: number;
   articleId?: string;
   adAssetId?: string;     // ad block reference into EpaperAdAsset library
+  overrideTitle?: string; // per-placement headline override; falls back to article.title
+  overrideDek?: string;   // per-placement summary override; falls back to article.summary
   content?: string;
   href?: string;
   targetPage?: number;
@@ -119,6 +121,8 @@ function sectionBand(b: Block, label: string, opts: { dateLabel: string; pageNum
 
 function leadBlock(b: Block, a: ResolvedArticle): string {
   const desk = a.deskName ? `<div class="byline">— ${esc(a.deskName.replace(/ - /g, ", "))}</div>` : "";
+  const displayTitle = b.overrideTitle?.trim() || a.title;
+  const displaySummary = b.overrideDek?.trim() || a.summary || "";
   // If a continuation block exists on a later page, render the dek as plain
   // body-text truncated at `bodyStart` (set by the continuation post-process)
   // and append a goto-page jump link. Otherwise fall back to the summary.
@@ -133,12 +137,12 @@ function leadBlock(b: Block, a: ResolvedArticle): string {
       const head = text.slice(0, splitAt).trim();
       return `<p class="lead-dek">${esc(head)}<a class="jump-link" href="#page=${target}"> &nbsp;→ మిగతా కథనం పేజీ ${target}</a></p>`;
     }
-    return a.summary ? `<p class="lead-dek">${esc(a.summary)}</p>` : "";
+    return displaySummary ? `<p class="lead-dek">${esc(displaySummary)}</p>` : "";
   })();
   const inner = `
     <div class="block-inner">
       <div class="kicker">${esc(a.categoryName)}</div>
-      <h1 class="lead-hl">${esc(a.title)}</h1>
+      <h1 class="lead-hl">${esc(displayTitle)}</h1>
       ${desk}
       ${imageOrFallback(a.featuredImage, "lead-img")}
       ${dekHtml}
@@ -147,6 +151,8 @@ function leadBlock(b: Block, a: ResolvedArticle): string {
 }
 
 function majorBlock(b: Block, a: ResolvedArticle): string {
+  const displayTitle = b.overrideTitle?.trim() || a.title;
+  const displaySummary = b.overrideDek?.trim() || a.summary || "";
   const dekHtml = (() => {
     if (b.continuesToPage) {
       const text = a.bodyText || a.summary || "";
@@ -154,13 +160,13 @@ function majorBlock(b: Block, a: ResolvedArticle): string {
       const head = text.slice(0, splitAt).trim();
       return `<p class="maj-dek">${esc(head)}<a class="jump-link" href="#page=${b.continuesToPage}"> →పేజీ ${b.continuesToPage}</a></p>`;
     }
-    return a.summary ? `<p class="maj-dek">${esc(a.summary)}</p>` : "";
+    return displaySummary ? `<p class="maj-dek">${esc(displaySummary)}</p>` : "";
   })();
   const inner = `
     <div class="block-inner">
       ${imageOrFallback(a.featuredImage, "maj-img")}
       <div class="kicker sm">${esc(a.categoryName)}</div>
-      <h2 class="maj-hl">${esc(a.title)}</h2>
+      <h2 class="maj-hl">${esc(displayTitle)}</h2>
       ${dekHtml}
     </div>`;
   return `<article class="major block" style="${blockStyle(b)}">${articleLink(a, inner)}</article>`;
@@ -202,10 +208,11 @@ function continuationBlock(b: Block, a: ResolvedArticle): string {
 }
 
 function secondaryBlock(b: Block, a: ResolvedArticle): string {
+  const displayTitle = b.overrideTitle?.trim() || a.title;
   const inner = `
     <div class="block-inner">
       ${imageOrFallback(a.featuredImage, "sec-img")}
-      <h3 class="sec-hl">${esc(a.title)}</h3>
+      <h3 class="sec-hl">${esc(displayTitle)}</h3>
     </div>`;
   return `<article class="secondary block" style="${blockStyle(b)}">${articleLink(a, inner)}</article>`;
 }

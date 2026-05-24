@@ -47,7 +47,8 @@
       "Bash(git push *)",
       "Bash(git add *)",
       "Bash(git commit -m 'Closes #55: ePaper editor multi-select + group ops *)",
-      "Bash(git commit -m 'Closes #56: ePaper editor snap-to-grid visual guides *)"
+      "Bash(git commit -m 'Closes #56: ePaper editor snap-to-grid visual guides *)",
+      "Bash(git commit -m 'Closes #60: ePaper per-placement headline / dek override *)"
     ],
     "additionalDirectories": [
       "D:\\RSE2026M365\\assets\\masthead",

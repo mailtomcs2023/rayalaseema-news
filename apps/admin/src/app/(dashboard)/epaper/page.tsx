@@ -513,6 +513,30 @@ export default function EpaperEditorPage() {
     await patchPage({ blocks: next });
   }, [activePage, redoStacks]);
 
+  // Per-placement headline / dek override. Lets operator trim a CMS title
+  // that's too long for a lead slot without editing the source article.
+  const [overrideBlockId, setOverrideBlockId] = useState<string | null>(null);
+  const [overrideTitle, setOverrideTitle] = useState("");
+  const [overrideDek, setOverrideDek] = useState("");
+  const openOverride = (blockId: string) => {
+    const b = activePage?.layout.blocks.find((x) => x.id === blockId);
+    if (!b) return;
+    setOverrideBlockId(blockId);
+    setOverrideTitle(b.overrideTitle || "");
+    setOverrideDek(b.overrideDek || "");
+  };
+  const saveOverride = async () => {
+    if (!activePage || !overrideBlockId) return;
+    const blocks = activePage.layout.blocks.map((b) =>
+      b.id === overrideBlockId ? { ...b, overrideTitle: overrideTitle.trim() || undefined, overrideDek: overrideDek.trim() || undefined } : b
+    );
+    pushUndo(activePage.id, activePage.layout.blocks);
+    setEdition((prev) => prev ? { ...prev, pages: prev.pages.map((p) => p.id === activePage.id ? { ...p, layout: { blocks } } : p) } : prev);
+    await patchPage({ blocks });
+    setOverrideBlockId(null);
+    toast("success", "Override saved");
+  };
+
   // Help overlay (? key) listing every keyboard shortcut.
   const [helpOpen, setHelpOpen] = useState(false);
 
@@ -586,6 +610,39 @@ export default function EpaperEditorPage() {
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
       <Sidebar />
       <ToastViewport toasts={toasts} onDismiss={dismissToast} />
+      {/* Headline / dek override modal */}
+      {overrideBlockId && (
+        <div onClick={() => setOverrideBlockId(null)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 1200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()}
+            style={{ background: "#fff", borderRadius: 10, padding: 22, maxWidth: 540, width: "100%" }}>
+            <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 6 }}>✎ Override headline / dek</h2>
+            <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 12 }}>
+              Only this e-paper placement uses these texts; the source article is untouched.
+              Leave blank to fall back to article.title / article.summary.
+            </p>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Override headline</label>
+            <input value={overrideTitle} onChange={(e) => setOverrideTitle(e.target.value)}
+              placeholder="(falls back to article title)"
+              style={{ width: "100%", padding: "8px 10px", border: "1px solid #ddd", borderRadius: 6, fontSize: 13, marginBottom: 12, boxSizing: "border-box" }} />
+            <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Override dek / summary</label>
+            <textarea value={overrideDek} onChange={(e) => setOverrideDek(e.target.value)}
+              rows={4}
+              placeholder="(falls back to article summary)"
+              style={{ width: "100%", padding: "8px 10px", border: "1px solid #ddd", borderRadius: 6, fontSize: 13, marginBottom: 16, boxSizing: "border-box", resize: "vertical" }} />
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button onClick={() => setOverrideBlockId(null)}
+                style={{ padding: "8px 16px", background: "#e5e7eb", color: "#374151", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                Cancel
+              </button>
+              <button onClick={saveOverride}
+                style={{ padding: "8px 16px", background: "#f59e0b", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                Save override
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {helpOpen && (
         <div onClick={() => setHelpOpen(false)}
           style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1500, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
@@ -1075,11 +1132,16 @@ export default function EpaperEditorPage() {
                   <div style={{ display: "flex", gap: 6 }}>
                     <button onClick={() => setBlockArticle(null)}
                       style={{ flex: 1, padding: "8px 8px", background: "#fee2e2", color: "#991b1b", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                      Clear assignment
+                      Clear
+                    </button>
+                    <button onClick={() => selectedBlockId && openOverride(selectedBlockId)}
+                      disabled={!selectedBlockId}
+                      style={{ flex: 1, padding: "8px 8px", background: "#fef3c7", color: "#92400e", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: selectedBlockId ? "pointer" : "not-allowed" }}>
+                      ✎ Override
                     </button>
                     <button onClick={() => setPickerFilters({ ...DEFAULT_FILTERS, windowDays: pickerFilters.windowDays, sort: pickerFilters.sort })}
                       style={{ flex: 1, padding: "8px 8px", background: "#e5e7eb", color: "#374151", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                      Reset filters
+                      Reset
                     </button>
                   </div>
 
