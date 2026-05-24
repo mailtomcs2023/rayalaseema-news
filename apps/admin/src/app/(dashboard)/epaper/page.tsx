@@ -286,6 +286,28 @@ export default function EpaperEditorPage() {
     await loadEdition(date);
   };
 
+  // First-time walkthrough tour — fires once per browser, persists dismissal.
+  const TOUR_STEPS = [
+    { title: "Welcome to ePaper v3", body: "Quick 6-step tour to get you publishing. Press Esc anytime to dismiss." },
+    { title: "1. Generate today's edition", body: "Pick a date and hit Generate. The auto-fill engine assigns recent articles to all 30+ page templates." },
+    { title: "2. Switch between pages", body: "Use the left page list — each tab shows ⚠ empty / 🔒 locked / 💬 comment counts at a glance." },
+    { title: "3. Swap stories", body: "Click any story block on the canvas. The right panel lets you pick a different article (with chip filters)." },
+    { title: "4. Lock + comment", body: "Lock blocks the auto-fill shouldn't touch. Leave 💬 Comments for the chief editor on specific blocks." },
+    { title: "5. Render PDF", body: "When happy, Render PDF → vector output with real text + working hyperlinks + cross-page jumps." },
+    { title: "6. Snapshots + workflow", body: "Use ↩ History to restore any prior state. Send through the workflow (Draft → Sub → Chief → Published)." },
+  ];
+  const [tourOpen, setTourOpen] = useState(false);
+  const [tourStep, setTourStep] = useState(0);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (localStorage.getItem("re-epaper-tour-seen") === "1") return;
+    setTourOpen(true);
+  }, []);
+  const dismissTour = () => {
+    setTourOpen(false);
+    localStorage.setItem("re-epaper-tour-seen", "1");
+  };
+
   // Dark mode toggle for night-shift operators. Persists to localStorage;
   // canvas itself stays light because it represents the printed paper.
   const [darkMode, setDarkMode] = useState(false);
@@ -738,6 +760,41 @@ export default function EpaperEditorPage() {
                 style={{ padding: "8px 16px", background: "#f59e0b", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
                 Save override
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* First-time walkthrough tour */}
+      {tourOpen && (
+        <div onClick={dismissTour}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()}
+            style={{ background: "#fff", borderRadius: 12, padding: 28, maxWidth: 520, width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.45)" }}>
+            <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 6 }}>Step {tourStep + 1} / {TOUR_STEPS.length}</div>
+            <h2 style={{ fontSize: 22, fontWeight: 800, color: "#4f46e5", marginBottom: 10 }}>{TOUR_STEPS[tourStep].title}</h2>
+            <p style={{ fontSize: 14, color: "#374151", lineHeight: 1.55, marginBottom: 24 }}>{TOUR_STEPS[tourStep].body}</p>
+            <div style={{ display: "flex", gap: 8, justifyContent: "space-between" }}>
+              <button onClick={dismissTour}
+                style={{ padding: "8px 14px", background: "transparent", color: "#6b7280", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                Skip tour
+              </button>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button onClick={() => setTourStep((s) => Math.max(0, s - 1))} disabled={tourStep === 0}
+                  style={{ padding: "8px 14px", background: "#e5e7eb", color: "#374151", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: tourStep === 0 ? "not-allowed" : "pointer", opacity: tourStep === 0 ? 0.4 : 1 }}>
+                  ← Back
+                </button>
+                {tourStep < TOUR_STEPS.length - 1 ? (
+                  <button onClick={() => setTourStep((s) => s + 1)}
+                    style={{ padding: "8px 18px", background: "#4f46e5", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                    Next →
+                  </button>
+                ) : (
+                  <button onClick={dismissTour}
+                    style={{ padding: "8px 18px", background: "#16a34a", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                    Got it ✓
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
