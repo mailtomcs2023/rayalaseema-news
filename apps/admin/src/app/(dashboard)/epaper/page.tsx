@@ -291,6 +291,32 @@ export default function EpaperEditorPage() {
     await loadEdition(date);
   };
 
+  // Add a new block to the currently-active page. Type picked from a tiny
+  // inline menu; block stacks below existing content.
+  const [addBlockOpen, setAddBlockOpen] = useState(false);
+  const addBlock = async (type: string) => {
+    if (!activePage) return;
+    const defaults: Record<string, { w: number; h: number }> = {
+      lead: { w: 8, h: 12 }, major: { w: 4, h: 6 }, secondary: { w: 3, h: 5 },
+      brief: { w: 6, h: 2 }, image: { w: 4, h: 4 }, ad: { w: 12, h: 3 },
+      text: { w: 6, h: 2 }, masthead: { w: 12, h: 3 }, "section-band": { w: 12, h: 2 },
+      "story-jump": { w: 4, h: 1 },
+    };
+    const d = defaults[type] || { w: 4, h: 4 };
+    const maxY = activePage.layout.blocks.reduce((m, b) => Math.max(m, b.y + b.h), 0);
+    const newBlock: Block = {
+      id: `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+      type, x: 0, y: maxY, w: d.w, h: d.h,
+    };
+    const blocks = [...activePage.layout.blocks, newBlock];
+    pushUndo(activePage.id, activePage.layout.blocks);
+    setEdition((prev) => prev ? { ...prev, pages: prev.pages.map((p) =>
+      p.id === activePage.id ? { ...p, layout: { blocks } } : p) } : prev);
+    await patchPage({ blocks });
+    setAddBlockOpen(false);
+    toast("success", `Added ${type} block — drag to reposition`);
+  };
+
   // Page CRUD state: modal for inserting a new page from a template.
   const [insertOpen, setInsertOpen] = useState(false);
   const [templateOptions, setTemplateOptions] = useState<Array<{ slug: string; name: string; type: string }>>([]);
@@ -1257,11 +1283,20 @@ export default function EpaperEditorPage() {
               {busy === "rendering" ? "Rendering…" : "Render PDF"}
             </button>
           )}
-          {edition?.pdfUrl && (
-            <a href={edition.pdfUrl} target="_blank" rel="noopener noreferrer"
-              style={{ padding: "8px 16px", background: "#fff", color: "#4f46e5", border: "1px solid #4f46e5", borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
-              Open last PDF ↗
-            </a>
+          {edition && (
+            edition.pdfUrl ? (
+              <a href={edition.pdfUrl} target="_blank" rel="noopener noreferrer"
+                title="Open the most recently rendered PDF in a new tab"
+                style={{ padding: "8px 16px", background: "#fff", color: "#4f46e5", border: "1px solid #4f46e5", borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
+                📄 Preview PDF ↗
+              </a>
+            ) : (
+              <button onClick={renderEdition} disabled={busy === "rendering"}
+                title="No PDF yet — click to render now"
+                style={{ padding: "8px 16px", background: "#fff", color: "#4f46e5", border: "1px dashed #4f46e5", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                📄 Preview PDF (renders now)
+              </button>
+            )
           )}
           {edition && (
             <button onClick={() => { setHistoryOpen(true); loadSnapshots(); }}
@@ -1301,6 +1336,36 @@ export default function EpaperEditorPage() {
                 style={{ padding: "8px 12px", background: redoStacks[activePage.id]?.length ? "#fff" : "#f3f4f6", color: redoStacks[activePage.id]?.length ? "#111" : "#9ca3af", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: redoStacks[activePage.id]?.length ? "pointer" : "not-allowed" }}>
                 ↷ Redo {redoStacks[activePage.id]?.length ? `(${redoStacks[activePage.id].length})` : ""}
               </button>
+              <div style={{ position: "relative" }}>
+                <button onClick={() => setAddBlockOpen((o) => !o)}
+                  title="Add a new block to this page"
+                  style={{ padding: "8px 12px", background: "#4f46e5", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                  + Add Block ▾
+                </button>
+                {addBlockOpen && (
+                  <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, background: "#fff", border: "1px solid #d1d5db", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 100, minWidth: 220, padding: 6 }}>
+                    {[
+                      { t: "lead", lbl: "Lead story", hint: "8×12 — big headline + image" },
+                      { t: "major", lbl: "Major", hint: "4×6 — secondary story" },
+                      { t: "secondary", lbl: "Secondary", hint: "3×5 — sidebar story" },
+                      { t: "brief", lbl: "Brief", hint: "6×2 — short item" },
+                      { t: "image", lbl: "Image only", hint: "4×4" },
+                      { t: "text", lbl: "Text only", hint: "6×2" },
+                      { t: "ad", lbl: "Ad slot", hint: "12×3 full-width" },
+                      { t: "section-band", lbl: "Section band", hint: "12×2 colored header" },
+                      { t: "story-jump", lbl: "Story jump", hint: "4×1 continuation pointer" },
+                    ].map((it) => (
+                      <button key={it.t} onClick={() => addBlock(it.t)}
+                        style={{ display: "block", width: "100%", textAlign: "left", padding: "8px 10px", background: "transparent", border: "none", borderRadius: 4, cursor: "pointer", fontSize: 13 }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = "#f3f4f6")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                        <div style={{ fontWeight: 700, color: "#111" }}>{it.lbl}</div>
+                        <div style={{ fontSize: 11, color: "#6b7280" }}>{it.hint}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </>
           )}
           {edition && (
@@ -1762,7 +1827,7 @@ function DraggableBlockGrid({
         width={GRID_WIDTH}
         margin={[6, 6]}
         compactType={null}
-        preventCollision={true}
+        preventCollision={false}
         onDragStop={onChange}
         onResizeStop={onChange}
         draggableCancel=".lock-btn"
@@ -1795,7 +1860,8 @@ function DraggableBlockGrid({
                   ? "3px dashed #d97706"
                   : isMulti ? "3px solid #4f46e5" : isSelected ? "2px solid #4f46e5" : "1px solid #e5e7eb",
                 borderRadius: 4, padding: 8, fontSize: 12, overflow: "hidden",
-                cursor: isStory ? "pointer" : "move",
+                // grab cursor makes drag-to-rearrange (RGL) discoverable; grabbing on active drag
+                cursor: isStory ? "grab" : "move",
                 display: "flex", flexDirection: "column", justifyContent: "space-between",
                 minHeight: 0, height: "100%",
               }}>

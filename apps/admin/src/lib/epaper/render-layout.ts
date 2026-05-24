@@ -178,10 +178,11 @@ function leadBlock(b: Block, a: ResolvedArticle): string {
   const imgSize = b.style?.imageSize ?? 40;
   const cols = b.style?.textColumns ?? 2;
   const img = imgPos === "none" ? "" : imageOrFallback(a.featuredImage, "lead-img", b.imageCrop);
+  const useFlex = imgPos === "left" || imgPos === "right";
   const wrapClass = imgPos === "left" ? "lead-flex-row"
                   : imgPos === "right" ? "lead-flex-row-rev"
-                  : "lead-stack";
-  const imgWrapStyle = (imgPos === "left" || imgPos === "right") ? ` style="flex:0 0 ${imgSize}%"` : "";
+                  : ""; // default top = no extra wrapper class, render image inline
+  const imgWrapStyle = useFlex ? ` style="flex:0 0 ${imgSize}%"` : "";
   const hlStyle = hlInlineStyle(b.style, 42);
   const dekStyle = ` style="column-count:${cols}${b.style?.textColor ? `;color:${b.style.textColor}` : ""}"`;
   // If a continuation block exists on a later page, render the dek as plain
@@ -200,6 +201,14 @@ function leadBlock(b: Block, a: ResolvedArticle): string {
     }
     return displaySummary ? `<p class="lead-dek"${dekStyle}>${esc(displaySummary)}</p>` : "";
   })();
+  // For default top-position render the image as a direct child of block-inner
+  // so the `.lead-img { flex:0 0 300px }` rule keeps its height contract.
+  // For left/right (flex-row), the wrapper holds the imgSize% basis.
+  const imgHtml = img
+    ? (useFlex
+        ? `<div class="lead-image-wrap"${imgWrapStyle}>${img}</div>`
+        : img)
+    : "";
   const inner = `
     <div class="block-inner ${wrapClass}">
       <div class="lead-text">
@@ -208,7 +217,7 @@ function leadBlock(b: Block, a: ResolvedArticle): string {
         ${desk}
         ${dekHtml}
       </div>
-      ${img ? `<div class="lead-image-wrap"${imgWrapStyle}>${img}</div>` : ""}
+      ${imgHtml}
     </div>`;
   return `<article class="lead block" style="${blockStyle(b)}">${articleLink(a, inner)}</article>`;
 }
