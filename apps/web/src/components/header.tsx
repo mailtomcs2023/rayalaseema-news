@@ -160,11 +160,20 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
           {/* Left: Logo + Date */}
           <div className="shrink-0 flex items-center gap-4">
             <Link href="/" className="block">
-              <img
-                src="/logo.svg"
-                alt="రాయలసీమ ఎక్స్‌ప్రెస్"
-                className="h-12 md:h-16 w-auto"
-              />
+              {/* PNGs are tiny (165–211 KB) vs the 2.2 MB SVG masthead. Mobile
+                  showed the old logo because the heavy SVG either failed to
+                  decode or was served from a stale browser cache. The PNG fix
+                  guarantees a fresh, light asset; responsive `<picture>` swaps
+                  the icon-only square on phones for the full wordmark on
+                  tablets+. */}
+              <picture>
+                <source media="(min-width: 768px)" srcSet="/logo.png" />
+                <img
+                  src="/logo-icon.png"
+                  alt="రాయలసీమ ఎక్స్‌ప్రెస్"
+                  className="h-12 md:h-16 w-auto"
+                />
+              </picture>
             </Link>
             <div className="hidden md:block border-l border-gray-200 pl-4">
               <p className="text-sm font-bold text-gray-700 font-telugu">

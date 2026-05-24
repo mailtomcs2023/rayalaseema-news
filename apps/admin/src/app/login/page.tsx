@@ -48,7 +48,7 @@ export default function LoginPage() {
       <div style={{ width: "100%", maxWidth: 400, background: "#fff", borderRadius: 12, boxShadow: "0 4px 24px rgba(0,0,0,0.1)", padding: "clamp(24px, 6vw, 40px)" }}>
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <img src="/logo.svg" alt="Rayalaseema Express" style={{ height: 48, margin: "0 auto" }} />
+          <img src="/logo.png" alt="Rayalaseema Express" style={{ height: 48, margin: "0 auto" }} />
           <h1 style={{ fontSize: 20, fontWeight: 800, color: "#333", marginTop: 12 }}>Admin CMS</h1>
           <p style={{ fontSize: 13, color: "#888", marginTop: 4 }}>Sign in to manage content</p>
         </div>

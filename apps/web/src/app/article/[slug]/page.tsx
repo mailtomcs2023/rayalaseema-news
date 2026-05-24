@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   // Per-article SEO overrides w/ sensible fallbacks
   const metaTitle = (article as any).metaTitle || article.title;
   const metaDescription = (article as any).metaDescription || article.summary || article.title;
-  const ogImage = (article as any).ogImage || article.featuredImage || `${siteUrl}/logo.svg`;
+  const ogImage = (article as any).ogImage || article.featuredImage || `${siteUrl}/logo.png`;
   const canonical = `${siteUrl}/article/${slug}`;
   const noindex = article.status !== "PUBLISHED";
   return {
@@ -95,7 +95,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     publisher: {
       "@type": "Organization",
       name: "Rayalaseema Express",
-      logo: { "@type": "ImageObject", url: `${siteUrl}/logo.svg` },
+      logo: { "@type": "ImageObject", url: `${siteUrl}/logo.png` },
     },
     mainEntityOfPage: { "@type": "WebPage", "@id": `${siteUrl}/article/${slug}` },
     articleSection: article.category.nameEn,

@@ -26,7 +26,7 @@ export function Footer({ config: initialConfig = {} }: FooterProps) {
               {/* Footer sits on bg-gray-900; the inverse masthead (white wordmark
                   on transparent) reads cleanly without a white card around it. */}
               <img
-                src="/logo-inverse.svg"
+                src="/logo-inverse.png"
                 alt="రాయలసీమ ఎక్స్‌ప్రెస్"
                 className="h-12 w-auto"
               />
