@@ -90,6 +90,8 @@ export default function EpaperEditorPage() {
 
   const [activePageIdx, setActivePageIdx] = useState(0);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  // Multi-select set (per-page). Shift-click adds/removes; plain click clears.
+  const [selectedBlockIds, setSelectedBlockIds] = useState<Set<string>>(new Set());
 
   const [pickerArticles, setPickerArticles] = useState<ArticleSummary[]>([]);
   const [pickerQuery, setPickerQuery] = useState("");
@@ -921,11 +923,69 @@ export default function EpaperEditorPage() {
                 <div style={{ display: "flex", gap: 12, flex: 1, minHeight: 0 }}>
                   {(viewMode === "edit" || viewMode === "split") && (
                     <div style={{ flex: 1, minWidth: 0, overflow: "auto" }}>
+                      {selectedBlockIds.size > 1 && (
+                        <div style={{ background: "#eef2ff", padding: 8, borderRadius: 6, marginBottom: 8, display: "flex", gap: 6, alignItems: "center", fontSize: 12 }}>
+                          <span style={{ fontWeight: 700, color: "#3730a3" }}>{selectedBlockIds.size} blocks selected</span>
+                          <div style={{ flex: 1 }} />
+                          <button onClick={async () => {
+                              const ids = Array.from(selectedBlockIds);
+                              for (const id of ids) {
+                                const b = activePage.layout.blocks.find((x) => x.id === id);
+                                if (b && !b.locked) await toggleLock(id);
+                              }
+                              toast("success", `Locked ${ids.length} blocks`);
+                            }}
+                            style={{ padding: "4px 10px", background: "#fbbf24", color: "#fff", border: "none", borderRadius: 4, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                            🔒 Lock all
+                          </button>
+                          <button onClick={async () => {
+                              const ids = Array.from(selectedBlockIds);
+                              for (const id of ids) {
+                                const b = activePage.layout.blocks.find((x) => x.id === id);
+                                if (b && b.locked) await toggleLock(id);
+                              }
+                              toast("success", `Unlocked ${ids.length} blocks`);
+                            }}
+                            style={{ padding: "4px 10px", background: "#e5e7eb", color: "#374151", border: "none", borderRadius: 4, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                            🔓 Unlock all
+                          </button>
+                          <button onClick={async () => {
+                              const ids = Array.from(selectedBlockIds);
+                              for (const id of ids) {
+                                setSelectedBlockId(id);
+                                await new Promise((r) => setTimeout(r, 20));
+                                await setBlockArticle(null);
+                              }
+                              toast("success", `Cleared ${ids.length} blocks`);
+                              setSelectedBlockIds(new Set());
+                            }}
+                            style={{ padding: "4px 10px", background: "#fee2e2", color: "#991b1b", border: "none", borderRadius: 4, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                            ✕ Clear articles
+                          </button>
+                          <button onClick={() => setSelectedBlockIds(new Set())}
+                            style={{ padding: "4px 10px", background: "transparent", color: "#3730a3", border: "1px solid #c7d2fe", borderRadius: 4, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                            Deselect
+                          </button>
+                        </div>
+                      )}
                       <DraggableBlockGrid
                         layout={activePage.layout}
                         titles={titles}
                         selectedBlockId={selectedBlockId}
-                        onSelect={setSelectedBlockId}
+                        multiSelected={selectedBlockIds}
+                        onSelect={(id, e) => {
+                          if (e?.shiftKey) {
+                            setSelectedBlockIds((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(id)) next.delete(id);
+                              else next.add(id);
+                              return next;
+                            });
+                          } else {
+                            setSelectedBlockId(id);
+                            setSelectedBlockIds(new Set([id]));
+                          }
+                        }}
                         onToggleLock={toggleLock}
                         onLayoutChange={saveLayout}
                       />
@@ -1135,12 +1195,13 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
  *    can't accidentally drag the brand band off the page
  */
 function DraggableBlockGrid({
-  layout, titles, selectedBlockId, onSelect, onToggleLock, onLayoutChange,
+  layout, titles, selectedBlockId, multiSelected, onSelect, onToggleLock, onLayoutChange,
 }: {
   layout: { blocks: Block[] };
   titles: Record<string, string>;
   selectedBlockId: string | null;
-  onSelect: (id: string) => void;
+  multiSelected?: Set<string>;
+  onSelect: (id: string, e?: React.MouseEvent) => void;
   onToggleLock: (id: string) => void;
   onLayoutChange: (newBlocks: Block[]) => void;
 }) {
@@ -1188,6 +1249,7 @@ function DraggableBlockGrid({
         {layout.blocks.map((b) => {
           const isStory = STORY_TYPES.has(b.type);
           const isSelected = b.id === selectedBlockId;
+          const isMulti = !!multiSelected?.has(b.id);
           const title = b.articleId ? titles[b.articleId] : null;
           const bg =
             b.type === "masthead" || b.type === "section-band"
@@ -1202,10 +1264,10 @@ function DraggableBlockGrid({
           const color = b.type === "masthead" || b.type === "section-band" ? "#fff" : "#111";
           return (
             <div key={b.id}
-              onClick={() => isStory && onSelect(b.id)}
+              onClick={(e) => isStory && onSelect(b.id, e)}
               style={{
                 background: bg, color,
-                border: isSelected ? "2px solid #4f46e5" : "1px solid #e5e7eb",
+                border: isMulti ? "3px solid #4f46e5" : isSelected ? "2px solid #4f46e5" : "1px solid #e5e7eb",
                 borderRadius: 4, padding: 8, fontSize: 12, overflow: "hidden",
                 cursor: isStory ? "pointer" : "move",
                 display: "flex", flexDirection: "column", justifyContent: "space-between",
