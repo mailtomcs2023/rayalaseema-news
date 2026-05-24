@@ -55,7 +55,8 @@
       "Bash(git commit -m 'Closes #69: ePaper render-time quality warnings \\(spell-check-lite\\) *)",
       "Bash(git commit -m 'Closes #74: ePaper auto-crop via Azure Computer Vision areaOfInterest *)",
       "Bash(git commit -m 'Closes #64: ePaper real-time presence \\(SSE-based, single-process\\) *)",
-      "Bash(git commit -m 'Block style controls: image position, text columns, headline scale *)"
+      "Bash(git commit -m 'Block style controls: image position, text columns, headline scale *)",
+      "WebFetch(domain:epaperdesigner.in)"
     ],
     "additionalDirectories": [
       "D:\\RSE2026M365\\assets\\masthead",

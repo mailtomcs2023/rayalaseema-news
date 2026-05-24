@@ -11,7 +11,7 @@
 //   5. lock toggle per block (autofill skips locked blocks on regenerate)
 //   6. Render button → /api/epaper/render-v2 builds the vector PDF
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Sidebar } from "@/components/sidebar";
 import { ToastViewport, useToasts } from "@/components/toast";
 import GridLayout, { type Layout as RGLLayout } from "react-grid-layout";
@@ -128,8 +128,8 @@ export default function EpaperEditorPage() {
   }, []);
 
   useEffect(() => { loadEdition(date); }, [date, loadEdition]);
-  // Reload comments whenever the edition reloads so the badge stays fresh.
-  useEffect(() => { if (edition) loadComments(); }, [edition, loadComments]);
+  // Note: comments badge reload moved below `loadComments` definition to dodge
+  // a temporal-dead-zone error in the Next.js prerender.
 
   const generate = async () => {
     setBusy("generating"); setError("");
@@ -568,23 +568,47 @@ export default function EpaperEditorPage() {
     await patchPage({ blocks: next });
   }, [activePage, redoStacks]);
 
-  // Per-block style panel — image position, text columns, headline scale.
+  // Per-block style panel — image position/size, text columns, headline scale,
+  // colors (text/headline/headline-bg/block-bg), padding, margin.
   const [styleBlockId, setStyleBlockId] = useState<string | null>(null);
   const [styleImgPos, setStyleImgPos] = useState<"top" | "left" | "right" | "none">("top");
+  const [styleImgSize, setStyleImgSize] = useState(40);
   const [styleCols, setStyleCols] = useState<1 | 2 | 3>(2);
   const [styleHlScale, setStyleHlScale] = useState(1);
+  const [styleHlColor, setStyleHlColor] = useState("#14110b");
+  const [styleHlBgColor, setStyleHlBgColor] = useState("");
+  const [styleBlockBgColor, setStyleBlockBgColor] = useState("");
+  const [styleTextColor, setStyleTextColor] = useState("#34302a");
+  const [stylePadding, setStylePadding] = useState(6);
+  const [styleMargin, setStyleMargin] = useState(0);
   const openStyle = (blockId: string) => {
     const b = activePage?.layout.blocks.find((x) => x.id === blockId);
     if (!b) return;
     setStyleBlockId(blockId);
     setStyleImgPos(b.style?.imagePosition ?? "top");
+    setStyleImgSize(b.style?.imageSize ?? 40);
     setStyleCols((b.style?.textColumns ?? 2) as 1 | 2 | 3);
     setStyleHlScale(b.style?.hlScale ?? 1);
+    setStyleHlColor(b.style?.hlColor ?? "#14110b");
+    setStyleHlBgColor(b.style?.hlBgColor ?? "");
+    setStyleBlockBgColor(b.style?.blockBgColor ?? "");
+    setStyleTextColor(b.style?.textColor ?? "#34302a");
+    setStylePadding(b.style?.padding ?? 6);
+    setStyleMargin(b.style?.margin ?? 0);
   };
   const saveStyle = async () => {
     if (!activePage || !styleBlockId) return;
+    const style: any = {
+      imagePosition: styleImgPos, imageSize: styleImgSize,
+      textColumns: styleCols, hlScale: styleHlScale,
+      padding: stylePadding, margin: styleMargin,
+    };
+    if (styleHlColor && styleHlColor !== "#14110b") style.hlColor = styleHlColor;
+    if (styleHlBgColor) style.hlBgColor = styleHlBgColor;
+    if (styleBlockBgColor) style.blockBgColor = styleBlockBgColor;
+    if (styleTextColor && styleTextColor !== "#34302a") style.textColor = styleTextColor;
     const blocks = activePage.layout.blocks.map((b) =>
-      b.id === styleBlockId ? { ...b, style: { imagePosition: styleImgPos, textColumns: styleCols, hlScale: styleHlScale } } : b
+      b.id === styleBlockId ? { ...b, style } : b
     );
     pushUndo(activePage.id, activePage.layout.blocks);
     setEdition((prev) => prev ? { ...prev, pages: prev.pages.map((p) => p.id === activePage.id ? { ...p, layout: { blocks } } : p) } : prev);
@@ -747,16 +771,16 @@ export default function EpaperEditorPage() {
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
       <Sidebar />
       <ToastViewport toasts={toasts} onDismiss={dismissToast} />
-      {/* Block style panel — image position, text columns, headline scale */}
+      {/* Block style panel — image + columns + headline + colors + spacing */}
       {styleBlockId && (
         <div onClick={() => setStyleBlockId(null)}
           style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 1200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div onClick={(e) => e.stopPropagation()}
-            style={{ background: "#fff", borderRadius: 10, padding: 22, maxWidth: 460, width: "100%" }}>
+            style={{ background: "#fff", borderRadius: 10, padding: 22, maxWidth: 560, width: "100%", maxHeight: "90vh", overflowY: "auto" }}>
             <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>🎨 Block style</h2>
 
             <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Image position</label>
-            <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+            <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
               {(["top", "left", "right", "none"] as const).map((p) => (
                 <button key={p} onClick={() => setStyleImgPos(p)}
                   style={{ flex: 1, padding: "8px", background: styleImgPos === p ? "#7c3aed" : "#f3f4f6", color: styleImgPos === p ? "#fff" : "#374151", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer", textTransform: "capitalize" }}>
@@ -765,8 +789,17 @@ export default function EpaperEditorPage() {
               ))}
             </div>
 
+            {(styleImgPos === "left" || styleImgPos === "right") && (
+              <>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Image size: {styleImgSize}% of block width</label>
+                <input type="range" min="10" max="70" step="5" value={styleImgSize}
+                  onChange={(e) => setStyleImgSize(parseInt(e.target.value, 10))}
+                  style={{ width: "100%", marginBottom: 12 }} />
+              </>
+            )}
+
             <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Text columns</label>
-            <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+            <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
               {([1, 2, 3] as const).map((c) => (
                 <button key={c} onClick={() => setStyleCols(c)}
                   style={{ flex: 1, padding: "8px", background: styleCols === c ? "#7c3aed" : "#f3f4f6", color: styleCols === c ? "#fff" : "#374151", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
@@ -778,7 +811,43 @@ export default function EpaperEditorPage() {
             <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Headline scale: {styleHlScale.toFixed(2)}×</label>
             <input type="range" min="0.75" max="2" step="0.05" value={styleHlScale}
               onChange={(e) => setStyleHlScale(parseFloat(e.target.value))}
-              style={{ width: "100%", marginBottom: 18 }} />
+              style={{ width: "100%", marginBottom: 12 }} />
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Headline text color</label>
+                <input type="color" value={styleHlColor} onChange={(e) => setStyleHlColor(e.target.value)} style={{ width: "100%", height: 32, border: "1px solid #ddd", borderRadius: 4 }} />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Headline panel bg</label>
+                <div style={{ display: "flex", gap: 4 }}>
+                  <input type="color" value={styleHlBgColor || "#ffffff"} onChange={(e) => setStyleHlBgColor(e.target.value)} style={{ flex: 1, height: 32, border: "1px solid #ddd", borderRadius: 4 }} />
+                  <button onClick={() => setStyleHlBgColor("")} title="Clear" style={{ padding: "0 8px", background: "#fee2e2", color: "#991b1b", border: "none", borderRadius: 4, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>✕</button>
+                </div>
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Body text color</label>
+                <input type="color" value={styleTextColor} onChange={(e) => setStyleTextColor(e.target.value)} style={{ width: "100%", height: 32, border: "1px solid #ddd", borderRadius: 4 }} />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Block background</label>
+                <div style={{ display: "flex", gap: 4 }}>
+                  <input type="color" value={styleBlockBgColor || "#ffffff"} onChange={(e) => setStyleBlockBgColor(e.target.value)} style={{ flex: 1, height: 32, border: "1px solid #ddd", borderRadius: 4 }} />
+                  <button onClick={() => setStyleBlockBgColor("")} title="Clear" style={{ padding: "0 8px", background: "#fee2e2", color: "#991b1b", border: "none", borderRadius: 4, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>✕</button>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 18 }}>
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Padding (px): {stylePadding}</label>
+                <input type="range" min="0" max="40" step="2" value={stylePadding} onChange={(e) => setStylePadding(parseInt(e.target.value, 10))} style={{ width: "100%" }} />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Margin (px): {styleMargin}</label>
+                <input type="range" min="0" max="40" step="2" value={styleMargin} onChange={(e) => setStyleMargin(parseInt(e.target.value, 10))} style={{ width: "100%" }} />
+              </div>
+            </div>
 
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
               <button onClick={() => setStyleBlockId(null)}

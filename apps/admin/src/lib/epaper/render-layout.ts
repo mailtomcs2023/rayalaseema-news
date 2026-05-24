@@ -40,14 +40,28 @@ interface Block {
   href?: string;
   targetPage?: number;
   locked?: boolean;
-  /** Per-block style overrides — picked from the editor's style panel.
+  /** Per-block style overrides — picked from the editor's 🎨 Style panel.
    *  imagePosition: top (default), left, right, none.
+   *  imageSize: percent of block width when position=left/right (10..70, default 40).
    *  textColumns: 1 | 2 | 3 (default 2 on lead, 1 elsewhere).
-   *  hlScale: 0.75..2 — multiplier on default headline font-size. */
+   *  hlScale: 0.75..2 — multiplier on default headline font-size.
+   *  hlColor: hex headline text color.
+   *  hlBgColor: hex headline panel background (Eenadu-style red banner).
+   *  blockBgColor: hex whole-block bg (left-rail bullet panels, etc).
+   *  textColor: hex body-text color override.
+   *  padding: px inside-block padding (default 6).
+   *  margin: px outside-block extra margin (default 0). */
   style?: {
     imagePosition?: "top" | "left" | "right" | "none";
+    imageSize?: number;       // percent 10..70
     textColumns?: 1 | 2 | 3;
     hlScale?: number;
+    hlColor?: string;
+    hlBgColor?: string;
+    blockBgColor?: string;
+    textColor?: string;
+    padding?: number;
+    margin?: number;
   };
   // Continuation metadata (matches continuation.ts)
   continuesToPage?: number;
@@ -96,7 +110,27 @@ function articleLink(a: ResolvedArticle, inner: string): string {
 }
 
 function blockStyle(b: Block, extra = ""): string {
-  return `grid-column: ${b.x + 1} / span ${b.w}; grid-row: ${b.y + 1} / span ${b.h}; ${extra}`;
+  // Merge user style overrides for the block's outer wrapper.
+  const s = b.style ?? {};
+  const parts: string[] = [
+    `grid-column: ${b.x + 1} / span ${b.w}`,
+    `grid-row: ${b.y + 1} / span ${b.h}`,
+  ];
+  if (s.blockBgColor) parts.push(`background-color: ${s.blockBgColor}`);
+  if (s.textColor) parts.push(`color: ${s.textColor}`);
+  if (typeof s.padding === "number") parts.push(`padding: ${s.padding}px`);
+  if (typeof s.margin === "number") parts.push(`margin: ${s.margin}px`);
+  if (extra) parts.push(extra);
+  return parts.join("; ");
+}
+
+function hlInlineStyle(s: Block["style"] | undefined, basePx: number): string {
+  const out: string[] = [];
+  if (s?.hlScale && s.hlScale !== 1) out.push(`font-size:${(basePx * s.hlScale).toFixed(0)}px`);
+  if (s?.hlColor) out.push(`color:${s.hlColor}`);
+  if (s?.hlBgColor) out.push(`background:${s.hlBgColor}`);
+  if (s?.hlBgColor) out.push(`padding:6px 12px`);
+  return out.length ? ` style="${out.join(";")}"` : "";
 }
 
 function imageOrFallback(url: string | null | undefined, className: string, crop?: { x: number; y: number; w: number; h: number }): string {
@@ -141,14 +175,15 @@ function leadBlock(b: Block, a: ResolvedArticle): string {
   const displaySummary = b.overrideDek?.trim() || a.summary || "";
 
   const imgPos = b.style?.imagePosition ?? "top";
+  const imgSize = b.style?.imageSize ?? 40;
   const cols = b.style?.textColumns ?? 2;
-  const hlScale = b.style?.hlScale ?? 1;
   const img = imgPos === "none" ? "" : imageOrFallback(a.featuredImage, "lead-img", b.imageCrop);
   const wrapClass = imgPos === "left" ? "lead-flex-row"
                   : imgPos === "right" ? "lead-flex-row-rev"
                   : "lead-stack";
-  const hlStyle = hlScale !== 1 ? ` style="font-size:${(42 * hlScale).toFixed(0)}px"` : "";
-  const dekStyle = ` style="column-count:${cols}"`;
+  const imgWrapStyle = (imgPos === "left" || imgPos === "right") ? ` style="flex:0 0 ${imgSize}%"` : "";
+  const hlStyle = hlInlineStyle(b.style, 42);
+  const dekStyle = ` style="column-count:${cols}${b.style?.textColor ? `;color:${b.style.textColor}` : ""}"`;
   // If a continuation block exists on a later page, render the dek as plain
   // body-text truncated at `bodyStart` (set by the continuation post-process)
   // and append a goto-page jump link. Otherwise fall back to the summary.
@@ -173,7 +208,7 @@ function leadBlock(b: Block, a: ResolvedArticle): string {
         ${desk}
         ${dekHtml}
       </div>
-      ${img ? `<div class="lead-image-wrap">${img}</div>` : ""}
+      ${img ? `<div class="lead-image-wrap"${imgWrapStyle}>${img}</div>` : ""}
     </div>`;
   return `<article class="lead block" style="${blockStyle(b)}">${articleLink(a, inner)}</article>`;
 }
@@ -190,11 +225,12 @@ function majorBlock(b: Block, a: ResolvedArticle): string {
     }
     return displaySummary ? `<p class="maj-dek">${esc(displaySummary)}</p>` : "";
   })();
+  const hlStyle = hlInlineStyle(b.style, 22);
   const inner = `
     <div class="block-inner">
       ${imageOrFallback(a.featuredImage, "maj-img", b.imageCrop)}
       <div class="kicker sm">${esc(a.categoryName)}</div>
-      <h2 class="maj-hl">${esc(displayTitle)}</h2>
+      <h2 class="maj-hl"${hlStyle}>${esc(displayTitle)}</h2>
       ${dekHtml}
     </div>`;
   return `<article class="major block" style="${blockStyle(b)}">${articleLink(a, inner)}</article>`;
@@ -237,10 +273,11 @@ function continuationBlock(b: Block, a: ResolvedArticle): string {
 
 function secondaryBlock(b: Block, a: ResolvedArticle): string {
   const displayTitle = b.overrideTitle?.trim() || a.title;
+  const hlStyle = hlInlineStyle(b.style, 17);
   const inner = `
     <div class="block-inner">
       ${imageOrFallback(a.featuredImage, "sec-img", b.imageCrop)}
-      <h3 class="sec-hl">${esc(displayTitle)}</h3>
+      <h3 class="sec-hl"${hlStyle}>${esc(displayTitle)}</h3>
     </div>`;
   return `<article class="secondary block" style="${blockStyle(b)}">${articleLink(a, inner)}</article>`;
 }
