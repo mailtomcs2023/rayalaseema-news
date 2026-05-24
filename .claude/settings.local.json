@@ -36,7 +36,10 @@
       "WebFetch(domain:epaperscript.com)",
       "Bash(git commit -m 'seed: 4 more categories for v2.1 epaper sections \\(vasundhara, hai-bujji, sunday-magazine, obituaries\\) *)",
       "Bash(cp \"D:/RSE2026M365/assets/masthead/masthead-inverse-nobg.svg\" \"d:/Rayalaseema express/apps/web/public/logo-inverse.svg\" && ls -la \"d:/Rayalaseema express/apps/web/public/logo-inverse.svg\" 2>&1)",
-      "Bash(git commit -m 'Fix build: drop unused react-resizable CSS import \\(RGL pulls its own\\) *)"
+      "Bash(git commit -m 'Fix build: drop unused react-resizable CSS import \\(RGL pulls its own\\) *)",
+      "Bash(git fetch *)",
+      "Bash(gh pr *)",
+      "Bash(git checkout *)"
     ],
     "additionalDirectories": [
       "D:\\RSE2026M365\\assets\\masthead"

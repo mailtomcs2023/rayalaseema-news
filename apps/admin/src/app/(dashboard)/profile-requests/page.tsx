@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Sidebar } from "@/components/sidebar";
@@ -83,7 +83,19 @@ function formatStoredValue(field: string, stored: string | null): string {
   return stored;
 }
 
+// Next.js 16 requires every component reading `useSearchParams()` to live
+// inside a <Suspense> boundary, otherwise the static prerender phase fails
+// with "missing-suspense-with-csr-bailout". Default export wraps the real
+// page body so the rest of the file stays the same.
 export default function ProfileRequestsPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 24 }}>Loading…</div>}>
+      <ProfileRequestsPageBody />
+    </Suspense>
+  );
+}
+
+function ProfileRequestsPageBody() {
   const searchParams = useSearchParams();
   const journalistId = searchParams.get("journalistId");
   const initialStatus = searchParams.get("status") === "ALL" ? "ALL" : "PENDING";
