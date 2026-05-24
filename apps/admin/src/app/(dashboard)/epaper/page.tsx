@@ -245,7 +245,7 @@ export default function EpaperEditorPage() {
       { to: "APPROVED", label: "Approve" },
       { to: "REJECTED", label: "Reject", needNote: true, danger: true },
     ],
-    APPROVED: [{ to: "PUBLISHED", label: "Publish" }],
+    APPROVED: [{ to: "PUBLISHED", label: "Publish to web + WhatsApp + push" }],
     PUBLISHED: [{ to: "DRAFT", label: "Unpublish", danger: true }],
     REJECTED: [{ to: "DRAFT", label: "Reopen as draft" }],
   };
