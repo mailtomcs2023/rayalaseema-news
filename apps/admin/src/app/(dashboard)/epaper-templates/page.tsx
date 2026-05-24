@@ -173,10 +173,47 @@ export default function TemplatesPage() {
                 </Field>
 
                 <Field label="Layout JSON  (12-col grid; blocks: lead | major | secondary | brief | image | ad | text | masthead | section-band | story-jump)">
+                  <div style={{ display: "flex", gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
+                    {(["lead", "major", "secondary", "brief", "image", "ad", "text", "masthead", "section-band", "story-jump"] as const).map((bt) => (
+                      <button key={bt} type="button"
+                        onClick={() => {
+                          // Parse current layout, append a new block of this type
+                          // with sensible default size + nudged position.
+                          let layoutObj: { blocks: any[] };
+                          try {
+                            layoutObj = typeof selected.layout === "string"
+                              ? JSON.parse(selected.layout as string)
+                              : (selected.layout as { blocks: any[] }) ?? { blocks: [] };
+                          } catch { return; }
+                          const blocks = layoutObj.blocks || [];
+                          const defaults: Record<string, { w: number; h: number }> = {
+                            lead: { w: 8, h: 12 }, major: { w: 4, h: 6 }, secondary: { w: 3, h: 5 },
+                            brief: { w: 6, h: 2 }, image: { w: 4, h: 4 }, ad: { w: 12, h: 3 },
+                            text: { w: 6, h: 2 }, masthead: { w: 12, h: 3 }, "section-band": { w: 12, h: 2 },
+                            "story-jump": { w: 4, h: 1 },
+                          };
+                          const d = defaults[bt] || { w: 4, h: 4 };
+                          const maxY = blocks.reduce((m, b) => Math.max(m, b.y + b.h), 0);
+                          const newBlock = {
+                            id: `${bt}-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+                            type: bt, x: 0, y: maxY, w: d.w, h: d.h,
+                          };
+                          const next = { ...layoutObj, blocks: [...blocks, newBlock] };
+                          setSelected({ ...selected, layout: next as any });
+                        }}
+                        style={{ padding: "4px 10px", background: "#eef2ff", color: "#3730a3", border: "1px solid #c7d2fe", borderRadius: 4, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                        + {bt}
+                      </button>
+                    ))}
+                  </div>
                   <textarea rows={22}
                     value={typeof selected.layout === "string" ? selected.layout : JSON.stringify(selected.layout, null, 2)}
                     onChange={(e) => setSelected({ ...selected, layout: e.target.value as any })}
                     style={{ ...inputStyle, fontFamily: "monospace", fontSize: 11 }} />
+                  <p style={{ fontSize: 10, color: "#888", marginTop: 4 }}>
+                    Tip: use the "+ &lt;type&gt;" buttons to append a block at the bottom of the page.
+                    Fine-tune position + size in the /epaper editor where RGL gives drag-resize.
+                  </p>
                 </Field>
 
                 <div style={{ display: "flex", gap: 8 }}>

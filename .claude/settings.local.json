@@ -49,7 +49,8 @@
       "Bash(git commit -m 'Closes #55: ePaper editor multi-select + group ops *)",
       "Bash(git commit -m 'Closes #56: ePaper editor snap-to-grid visual guides *)",
       "Bash(git commit -m 'Closes #60: ePaper per-placement headline / dek override *)",
-      "Bash(git commit -m 'Closes #61: ePaper image crop inside block *)"
+      "Bash(git commit -m 'Closes #61: ePaper image crop inside block *)",
+      "Bash(git commit -m 'Closes #63: ePaper template builder — quick + add-block buttons *)"
     ],
     "additionalDirectories": [
       "D:\\RSE2026M365\\assets\\masthead",
