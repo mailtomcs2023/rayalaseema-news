@@ -48,6 +48,8 @@ model User {
 
   // ePaper edition snapshots created by this user
   epaperSnapshots EpaperEditionSnapshot[]
+  // ePaper comments authored by this user
+  epaperComments  EpaperComment[]
 
   // Audit log entries (actions performed by this user)
   auditLogs        AuditLog[]
@@ -344,6 +346,7 @@ model EpaperEdition {
   pages       EpaperPage[]
   ads         EpaperAd[]
   snapshots   EpaperEditionSnapshot[]
+  comments    EpaperComment[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -404,6 +407,7 @@ model EpaperPage {
   imageUrl    String         // rendered broadsheet page PNG on Azure Blob (legacy raster path)
   pdfUrl      String?        // per-page vector PDF (new v2 render path)
   hotspots    Json?          // [{slug,x,y,w,h}] — legacy raster overlay click regions
+  comments    EpaperComment[]
   // Optimistic concurrency token. Bumps on every successful PATCH; client must
   // send the version it last fetched so two editors can't silently overwrite
   // each other. Server returns 409 if expected != current.
@@ -414,6 +418,28 @@ model EpaperPage {
   @@unique([editionId, pageNumber])
   @@index([editionId])
   @@map("epaper_pages")
+}
+
+/// Editorial comments on an e-paper edition. Scoped to a specific block (when
+/// `blockId` is set) or to a whole page (when `blockId` is null). Used by the
+/// chief editor to leave notes like "swap this lead" without WhatsApp ping.
+model EpaperComment {
+  id          String         @id @default(cuid())
+  editionId   String
+  edition     EpaperEdition  @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  pageId      String
+  page        EpaperPage     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  blockId     String?        // null = applies to whole page; set = applies to that block
+  text        String         @db.Text
+  resolved    Boolean        @default(false)
+  authorId    String
+  author      User           @relation(fields: [authorId], references: [id])
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([editionId, resolved])
+  @@index([pageId])
+  @@map("epaper_comments")
 }
 
 /// Point-in-time snapshot of an edition's per-page layouts. Created

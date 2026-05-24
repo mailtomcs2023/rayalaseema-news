@@ -126,6 +126,8 @@ export default function EpaperEditorPage() {
   }, []);
 
   useEffect(() => { loadEdition(date); }, [date, loadEdition]);
+  // Reload comments whenever the edition reloads so the badge stays fresh.
+  useEffect(() => { if (edition) loadComments(); }, [edition, loadComments]);
 
   const generate = async () => {
     setBusy("generating"); setError("");
@@ -512,6 +514,51 @@ export default function EpaperEditorPage() {
   // Help overlay (? key) listing every keyboard shortcut.
   const [helpOpen, setHelpOpen] = useState(false);
 
+  // Comments drawer — chief editor leaves notes per page or per block.
+  interface Comment { id: string; blockId: string | null; text: string; resolved: boolean; createdAt: string; author: { id: string; name: string }; pageId: string }
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [commentDraft, setCommentDraft] = useState("");
+  const [commentScope, setCommentScope] = useState<"page" | "block">("page");
+  const loadComments = useCallback(async () => {
+    if (!edition) return;
+    const r = await fetch(`/api/epaper/comments?editionId=${edition.id}`);
+    const data = await r.json();
+    setComments(data.comments || []);
+  }, [edition]);
+  useEffect(() => { if (commentsOpen) loadComments(); }, [commentsOpen, loadComments]);
+  const postComment = async () => {
+    if (!edition || !activePage || !commentDraft.trim()) return;
+    const r = await fetch("/api/epaper/comments", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        editionId: edition.id,
+        pageId: activePage.id,
+        blockId: commentScope === "block" ? selectedBlockId : null,
+        text: commentDraft,
+      }),
+    });
+    if (r.ok) { setCommentDraft(""); await loadComments(); toast("success", "Comment posted"); }
+    else toast("error", "Comment failed");
+  };
+  const toggleResolved = async (id: string, resolved: boolean) => {
+    const r = await fetch(`/api/epaper/comments/${id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ resolved }),
+    });
+    if (r.ok) await loadComments();
+  };
+  const deleteComment = async (id: string) => {
+    const r = await fetch(`/api/epaper/comments/${id}`, { method: "DELETE" });
+    if (r.ok) await loadComments();
+  };
+
+  // For the page-tab badge: count unresolved comments per page.
+  const commentsByPage = comments.reduce<Record<string, number>>((acc, c) => {
+    if (!c.resolved) acc[c.pageId] = (acc[c.pageId] || 0) + 1;
+    return acc;
+  }, {});
+
   // Wire Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y to undo/redo, ? for help, Esc to dismiss.
   // Skip when focus is in an input/textarea so the operator's typing isn't hijacked.
   useEffect(() => {
@@ -601,6 +648,65 @@ export default function EpaperEditorPage() {
                 Insert
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Comments drawer */}
+      {commentsOpen && edition && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 999 }}
+          onClick={() => setCommentsOpen(false)}>
+          <div onClick={(e) => e.stopPropagation()}
+            style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: 440, background: "#fff", padding: 20, overflowY: "auto", boxShadow: "-4px 0 24px rgba(0,0,0,0.2)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <h2 style={{ fontSize: 16, fontWeight: 800, color: "#111" }}>💬 Comments</h2>
+              <button onClick={() => setCommentsOpen(false)} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#6b7280" }}>✕</button>
+            </div>
+            <div style={{ background: "#f9fafb", padding: 12, borderRadius: 8, marginBottom: 14 }}>
+              <div style={{ display: "flex", gap: 6, marginBottom: 6, fontSize: 11 }}>
+                <button onClick={() => setCommentScope("page")}
+                  style={{ flex: 1, padding: "5px 8px", borderRadius: 4, border: "none", background: commentScope === "page" ? "#0891b2" : "#e5e7eb", color: commentScope === "page" ? "#fff" : "#374151", cursor: "pointer", fontWeight: 700 }}>
+                  This page
+                </button>
+                <button onClick={() => setCommentScope("block")} disabled={!selectedBlockId}
+                  style={{ flex: 1, padding: "5px 8px", borderRadius: 4, border: "none", background: commentScope === "block" ? "#0891b2" : selectedBlockId ? "#e5e7eb" : "#f3f4f6", color: commentScope === "block" ? "#fff" : selectedBlockId ? "#374151" : "#9ca3af", cursor: selectedBlockId ? "pointer" : "not-allowed", fontWeight: 700 }}>
+                  Selected block {selectedBlockId ? "" : "(none)"}
+                </button>
+              </div>
+              <textarea value={commentDraft} onChange={(e) => setCommentDraft(e.target.value)}
+                placeholder="Add a comment…"
+                rows={3}
+                style={{ width: "100%", padding: "8px 10px", border: "1px solid #ddd", borderRadius: 6, fontSize: 13, marginBottom: 8, boxSizing: "border-box", resize: "vertical" }} />
+              <button onClick={postComment} disabled={!commentDraft.trim()}
+                style={{ width: "100%", padding: "8px 12px", background: commentDraft.trim() ? "#0891b2" : "#bae6fd", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: commentDraft.trim() ? "pointer" : "not-allowed" }}>
+                Post
+              </button>
+            </div>
+            {comments.length === 0 && (
+              <p style={{ fontSize: 12, color: "#888" }}>No comments yet. Add one above.</p>
+            )}
+            {comments.map((c) => {
+              const onPage = edition.pages.find((p) => p.id === c.pageId);
+              return (
+                <div key={c.id} style={{ border: "1px solid #e5e7eb", borderRadius: 6, padding: 10, marginBottom: 8, opacity: c.resolved ? 0.5 : 1 }}>
+                  <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 4 }}>
+                    <b style={{ color: "#111" }}>{c.author.name}</b> · {new Date(c.createdAt).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })} ·
+                    {onPage ? ` page ${onPage.pageNumber}` : " page ?"}
+                    {c.blockId && ` · block ${c.blockId}`}
+                  </div>
+                  <div style={{ fontSize: 13, color: "#111", marginBottom: 6, whiteSpace: "pre-wrap" }}>{c.text}</div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button onClick={() => toggleResolved(c.id, !c.resolved)}
+                      style={{ padding: "4px 8px", background: c.resolved ? "#fff" : "#dcfce7", color: c.resolved ? "#6b7280" : "#166534", border: "1px solid #d1d5db", borderRadius: 4, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                      {c.resolved ? "Reopen" : "✓ Resolve"}
+                    </button>
+                    <button onClick={() => deleteComment(c.id)}
+                      style={{ padding: "4px 8px", background: "#fff", color: "#dc2626", border: "1px solid #fca5a5", borderRadius: 4, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -701,6 +807,12 @@ export default function EpaperEditorPage() {
               ↩ History
             </button>
           )}
+          {edition && (
+            <button onClick={() => setCommentsOpen(true)}
+              style={{ padding: "8px 16px", background: "#fff", color: "#0891b2", border: "1px solid #0891b2", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+              💬 Comments {comments.filter((c) => !c.resolved).length > 0 ? `(${comments.filter((c) => !c.resolved).length})` : ""}
+            </button>
+          )}
           <button onClick={toggleDark} title="Toggle dark mode"
             style={{ padding: "6px 10px", background: "transparent", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 13, cursor: "pointer" }}>
             {darkMode ? "☀️" : "🌙"}
@@ -784,6 +896,7 @@ export default function EpaperEditorPage() {
                           ? <span title={`${emptyCount} empty story block${emptyCount > 1 ? "s" : ""}`}>⚠ {emptyCount}</span>
                           : <span title="All story blocks filled">✓</span>}
                         {lockedCount > 0 && <span title={`${lockedCount} locked block${lockedCount > 1 ? "s" : ""}`}>🔒 {lockedCount}</span>}
+                        {commentsByPage[p.id] > 0 && <span title={`${commentsByPage[p.id]} open comments`}>💬 {commentsByPage[p.id]}</span>}
                       </div>
                     </button>
                     <button onClick={() => duplicatePage(p.id)} title="Duplicate page"
