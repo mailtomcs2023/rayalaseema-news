@@ -40,7 +40,15 @@ interface Block {
   href?: string;
   targetPage?: number;
   locked?: boolean;
-  style?: Record<string, string>;
+  /** Per-block style overrides — picked from the editor's style panel.
+   *  imagePosition: top (default), left, right, none.
+   *  textColumns: 1 | 2 | 3 (default 2 on lead, 1 elsewhere).
+   *  hlScale: 0.75..2 — multiplier on default headline font-size. */
+  style?: {
+    imagePosition?: "top" | "left" | "right" | "none";
+    textColumns?: 1 | 2 | 3;
+    hlScale?: number;
+  };
   // Continuation metadata (matches continuation.ts)
   continuesToPage?: number;
   continuesToBlockId?: string;
@@ -131,6 +139,16 @@ function leadBlock(b: Block, a: ResolvedArticle): string {
   const desk = a.deskName ? `<div class="byline">— ${esc(a.deskName.replace(/ - /g, ", "))}</div>` : "";
   const displayTitle = b.overrideTitle?.trim() || a.title;
   const displaySummary = b.overrideDek?.trim() || a.summary || "";
+
+  const imgPos = b.style?.imagePosition ?? "top";
+  const cols = b.style?.textColumns ?? 2;
+  const hlScale = b.style?.hlScale ?? 1;
+  const img = imgPos === "none" ? "" : imageOrFallback(a.featuredImage, "lead-img", b.imageCrop);
+  const wrapClass = imgPos === "left" ? "lead-flex-row"
+                  : imgPos === "right" ? "lead-flex-row-rev"
+                  : "lead-stack";
+  const hlStyle = hlScale !== 1 ? ` style="font-size:${(42 * hlScale).toFixed(0)}px"` : "";
+  const dekStyle = ` style="column-count:${cols}"`;
   // If a continuation block exists on a later page, render the dek as plain
   // body-text truncated at `bodyStart` (set by the continuation post-process)
   // and append a goto-page jump link. Otherwise fall back to the summary.
@@ -143,17 +161,19 @@ function leadBlock(b: Block, a: ResolvedArticle): string {
       const text = a.bodyText || a.summary || "";
       const splitAt = findApproxSplit(text, 1400);
       const head = text.slice(0, splitAt).trim();
-      return `<p class="lead-dek">${esc(head)}<a class="jump-link" href="#page=${target}"> &nbsp;→ మిగతా కథనం పేజీ ${target}</a></p>`;
+      return `<p class="lead-dek"${dekStyle}>${esc(head)}<a class="jump-link" href="#page=${target}"> &nbsp;→ మిగతా కథనం పేజీ ${target}</a></p>`;
     }
-    return displaySummary ? `<p class="lead-dek">${esc(displaySummary)}</p>` : "";
+    return displaySummary ? `<p class="lead-dek"${dekStyle}>${esc(displaySummary)}</p>` : "";
   })();
   const inner = `
-    <div class="block-inner">
-      <div class="kicker">${esc(a.categoryName)}</div>
-      <h1 class="lead-hl">${esc(displayTitle)}</h1>
-      ${desk}
-      ${imageOrFallback(a.featuredImage, "lead-img", b.imageCrop)}
-      ${dekHtml}
+    <div class="block-inner ${wrapClass}">
+      <div class="lead-text">
+        <div class="kicker">${esc(a.categoryName)}</div>
+        <h1 class="lead-hl"${hlStyle}>${esc(displayTitle)}</h1>
+        ${desk}
+        ${dekHtml}
+      </div>
+      ${img ? `<div class="lead-image-wrap">${img}</div>` : ""}
     </div>`;
   return `<article class="lead block" style="${blockStyle(b)}">${articleLink(a, inner)}</article>`;
 }
@@ -446,7 +466,15 @@ export async function renderLayoutToHtml(input: RenderInput): Promise<string> {
   .kicker.sm{font-size:11px;margin:5px 0 3px}
   .byline{font-family:'Noto Sans Telugu',sans-serif;font-size:13px;font-weight:700;color:#A50D0D;font-style:italic;margin:0 0 8px}
 
-  /* Lead */
+  /* Lead — block-inner layout variants for image-position style */
+  .lead-stack { display: flex; flex-direction: column; }
+  .lead-flex-row { display: flex; flex-direction: row; gap: 12px; }
+  .lead-flex-row-rev { display: flex; flex-direction: row-reverse; gap: 12px; }
+  .lead-flex-row > .lead-image-wrap,
+  .lead-flex-row-rev > .lead-image-wrap { flex: 0 0 40%; }
+  .lead-flex-row > .lead-text,
+  .lead-flex-row-rev > .lead-text { flex: 1 1 auto; min-width: 0; }
+  .lead-text { display: flex; flex-direction: column; min-width: 0; }
   .lead { padding: 6px 0; border-right: 1px solid #c9c1ad; padding-right: 12px; }
   .lead-hl{font-family:'Noto Serif Telugu',serif;font-weight:900;font-size:42px;line-height:1.18;margin-bottom:10px}
   .lead-img{flex:0 0 300px;margin-bottom:10px}

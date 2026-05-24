@@ -568,6 +568,31 @@ export default function EpaperEditorPage() {
     await patchPage({ blocks: next });
   }, [activePage, redoStacks]);
 
+  // Per-block style panel — image position, text columns, headline scale.
+  const [styleBlockId, setStyleBlockId] = useState<string | null>(null);
+  const [styleImgPos, setStyleImgPos] = useState<"top" | "left" | "right" | "none">("top");
+  const [styleCols, setStyleCols] = useState<1 | 2 | 3>(2);
+  const [styleHlScale, setStyleHlScale] = useState(1);
+  const openStyle = (blockId: string) => {
+    const b = activePage?.layout.blocks.find((x) => x.id === blockId);
+    if (!b) return;
+    setStyleBlockId(blockId);
+    setStyleImgPos(b.style?.imagePosition ?? "top");
+    setStyleCols((b.style?.textColumns ?? 2) as 1 | 2 | 3);
+    setStyleHlScale(b.style?.hlScale ?? 1);
+  };
+  const saveStyle = async () => {
+    if (!activePage || !styleBlockId) return;
+    const blocks = activePage.layout.blocks.map((b) =>
+      b.id === styleBlockId ? { ...b, style: { imagePosition: styleImgPos, textColumns: styleCols, hlScale: styleHlScale } } : b
+    );
+    pushUndo(activePage.id, activePage.layout.blocks);
+    setEdition((prev) => prev ? { ...prev, pages: prev.pages.map((p) => p.id === activePage.id ? { ...p, layout: { blocks } } : p) } : prev);
+    await patchPage({ blocks });
+    setStyleBlockId(null);
+    toast("success", "Block style saved");
+  };
+
   // Image crop modal — per-block fractional crop on the article's featured image.
   const [cropBlockId, setCropBlockId] = useState<string | null>(null);
   const [cropImgUrl, setCropImgUrl] = useState<string | null>(null);
@@ -722,6 +747,52 @@ export default function EpaperEditorPage() {
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
       <Sidebar />
       <ToastViewport toasts={toasts} onDismiss={dismissToast} />
+      {/* Block style panel — image position, text columns, headline scale */}
+      {styleBlockId && (
+        <div onClick={() => setStyleBlockId(null)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 1200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()}
+            style={{ background: "#fff", borderRadius: 10, padding: 22, maxWidth: 460, width: "100%" }}>
+            <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>🎨 Block style</h2>
+
+            <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Image position</label>
+            <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+              {(["top", "left", "right", "none"] as const).map((p) => (
+                <button key={p} onClick={() => setStyleImgPos(p)}
+                  style={{ flex: 1, padding: "8px", background: styleImgPos === p ? "#7c3aed" : "#f3f4f6", color: styleImgPos === p ? "#fff" : "#374151", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer", textTransform: "capitalize" }}>
+                  {p}
+                </button>
+              ))}
+            </div>
+
+            <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Text columns</label>
+            <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+              {([1, 2, 3] as const).map((c) => (
+                <button key={c} onClick={() => setStyleCols(c)}
+                  style={{ flex: 1, padding: "8px", background: styleCols === c ? "#7c3aed" : "#f3f4f6", color: styleCols === c ? "#fff" : "#374151", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                  {c}-col
+                </button>
+              ))}
+            </div>
+
+            <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Headline scale: {styleHlScale.toFixed(2)}×</label>
+            <input type="range" min="0.75" max="2" step="0.05" value={styleHlScale}
+              onChange={(e) => setStyleHlScale(parseFloat(e.target.value))}
+              style={{ width: "100%", marginBottom: 18 }} />
+
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button onClick={() => setStyleBlockId(null)}
+                style={{ padding: "8px 16px", background: "#e5e7eb", color: "#374151", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                Cancel
+              </button>
+              <button onClick={saveStyle}
+                style={{ padding: "8px 16px", background: "#7c3aed", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                Save style
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Image crop modal */}
       {cropBlockId && cropImgUrl && (
         <div onClick={() => setCropBlockId(null)}
@@ -1359,6 +1430,11 @@ export default function EpaperEditorPage() {
                       disabled={!selectedBlockId}
                       style={{ flex: 1, padding: "8px 8px", background: "#dbeafe", color: "#1e40af", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: selectedBlockId ? "pointer" : "not-allowed" }}>
                       ✂ Crop
+                    </button>
+                    <button onClick={() => selectedBlockId && openStyle(selectedBlockId)}
+                      disabled={!selectedBlockId}
+                      style={{ flex: 1, padding: "8px 8px", background: "#f3e8ff", color: "#6b21a8", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: selectedBlockId ? "pointer" : "not-allowed" }}>
+                      🎨 Style
                     </button>
                     <button onClick={() => setPickerFilters({ ...DEFAULT_FILTERS, windowDays: pickerFilters.windowDays, sort: pickerFilters.sort })}
                       style={{ flex: 1, padding: "8px 8px", background: "#e5e7eb", color: "#374151", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
