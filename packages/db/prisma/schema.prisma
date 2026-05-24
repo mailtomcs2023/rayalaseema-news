@@ -369,6 +369,34 @@ model EpaperAd {
   @@map("epaper_ads")
 }
 
+enum EpaperImageAssetCategory {
+  CARTOON
+  CLASSIFIED
+  MASTHEAD
+  PHOTO
+  GRAPHIC
+  OTHER
+}
+
+/// Generic image library for the e-paper editor — cartoons, classifieds,
+/// masthead variants, stock photos etc. `image` blocks reference these
+/// by `assetId`. Separate from EpaperAdAsset because ads carry pricing /
+/// advertiser metadata that doesn't apply to a cartoon.
+model EpaperImageAsset {
+  id          String                       @id @default(cuid())
+  category    EpaperImageAssetCategory     @default(OTHER)
+  title       String                       // operator label, e.g. "Saturday cartoon — markets"
+  imageUrl    String                       // Azure Blob URL
+  caption     String?                      // optional caption rendered under the image in some templates
+  tags        String?                      // comma-separated for quick text search
+  active      Boolean                      @default(true)
+  createdAt   DateTime                     @default(now())
+  updatedAt   DateTime                     @updatedAt
+
+  @@index([category, active])
+  @@map("epaper_image_assets")
+}
+
 /// Reusable ad asset library. Each `ad` block in an EpaperPage layout
 /// references one of these by id. Separate from per-edition placement so the
 /// same creative can run across multiple editions without re-upload.

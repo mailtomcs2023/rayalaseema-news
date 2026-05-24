@@ -235,9 +235,16 @@ function briefBlock(b: Block, articles: ResolvedArticle[]): string {
   </div>`;
 }
 
-function imageBlock(b: Block): string {
+function imageBlock(b: Block, imageAssetUrlsById?: Record<string, { imageUrl: string; caption?: string | null }>): string {
+  // Prefer a resolved library asset (b.adAssetId reused for image-library
+  // references for now to avoid a schema migration on layout JSON), then
+  // fall back to b.content as a raw URL.
+  const fromLib = b.adAssetId && imageAssetUrlsById?.[b.adAssetId];
+  const url = fromLib?.imageUrl ?? b.content;
+  const caption = fromLib?.caption;
   return `<div class="block image" style="${blockStyle(b)}">
-    ${imageOrFallback(b.content, "free-img")}
+    ${imageOrFallback(url, "free-img", b.imageCrop)}
+    ${caption ? `<div class="image-caption">${esc(caption)}</div>` : ""}
   </div>`;
 }
 
@@ -320,6 +327,21 @@ async function resolveArticles(blocks: Block[]): Promise<Map<string, ResolvedArt
 export async function renderLayoutToHtml(input: RenderInput): Promise<string> {
   const articles = await resolveArticles(input.layout.blocks);
 
+  // Resolve any image-library references attached to image blocks. The block
+  // schema reuses `adAssetId` as a generic asset pointer for now — if it
+  // matches an EpaperImageAsset id we wire it through to the renderer.
+  const imageAssetIds = Array.from(new Set(
+    input.layout.blocks.filter((b) => b.type === "image" && b.adAssetId).map((b) => b.adAssetId!)
+  ));
+  let imageAssetsById: Record<string, { imageUrl: string; caption?: string | null }> = {};
+  if (imageAssetIds.length > 0) {
+    const rows = await prisma.epaperImageAsset.findMany({
+      where: { id: { in: imageAssetIds } },
+      select: { id: true, imageUrl: true, caption: true },
+    });
+    imageAssetsById = Object.fromEntries(rows.map((r) => [r.id, { imageUrl: r.imageUrl, caption: r.caption }]));
+  }
+
   // Group consecutive brief blocks that share a region — each `brief` block
   // gets its OWN articleId assignment from autofill, but visually we want
   // multiple briefs to render as a list inside one block. The autofill engine
@@ -364,7 +386,7 @@ export async function renderLayoutToHtml(input: RenderInput): Promise<string> {
         }
         break;
       case "image":
-        blockHtml.push(imageBlock(b));
+        blockHtml.push(imageBlock(b, imageAssetsById));
         break;
       case "ad":
         blockHtml.push(adBlock(b, input.ads));
