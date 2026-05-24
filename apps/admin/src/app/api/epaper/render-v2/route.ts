@@ -4,6 +4,7 @@ import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 import { renderLayoutToHtml } from "@/lib/epaper/render-layout";
 import { createSnapshot } from "@/lib/epaper/snapshots";
 import { findDuplicateArticles } from "@/lib/epaper/continuity";
+import { findQualityWarnings } from "@/lib/epaper/quality";
 import { uploadBuffer } from "@/lib/blob";
 import { chromium } from "playwright";
 import { PDFDocument, PDFName, PDFArray, PDFDict, type PDFRef } from "pdf-lib";
@@ -128,15 +129,18 @@ export async function POST(req: NextRequest) {
       data: { pdfUrl: finalUrl, status: "ready", pageCount: edition.pages.length },
     });
 
-    // Quality gate: any article appearing on >1 non-continuation block?
-    // Reported alongside the PDF — operator may want to fix and re-render.
-    const duplicates = await findDuplicateArticles(edition.id);
+    // Quality gates: duplicate articles + spell-check-lite warnings.
+    const [duplicates, qualityWarnings] = await Promise.all([
+      findDuplicateArticles(edition.id),
+      findQualityWarnings(edition.id),
+    ]);
 
     return NextResponse.json({
       editionId: edition.id,
       pdfUrl: finalUrl,
       pageCount: edition.pages.length,
       duplicates,
+      qualityWarnings,
     });
   } catch (e) {
     return apiError(e);

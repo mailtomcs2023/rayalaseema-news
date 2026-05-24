@@ -170,6 +170,15 @@ export default function EpaperEditorPage() {
           toast("warn", `Duplicate: "${d.title.slice(0, 50)}" on pages ${d.placements.map((p: any) => p.pageNumber).join(", ")}`);
         }
       }
+      // Quality gates: empty story slots, long English runs, missing-glyph chars.
+      if (Array.isArray(data.qualityWarnings) && data.qualityWarnings.length > 0) {
+        const empties = data.qualityWarnings.filter((w: any) => w.kind === "empty-story");
+        const others = data.qualityWarnings.filter((w: any) => w.kind !== "empty-story");
+        if (empties.length > 0) toast("warn", `${empties.length} empty story block${empties.length > 1 ? "s" : ""} on rendered pages`);
+        for (const w of others.slice(0, 3)) {
+          toast("warn", `Page ${w.pageNumber} · ${w.kind}: ${w.detail.slice(0, 60)}`);
+        }
+      }
       if (data.pdfUrl) window.open(data.pdfUrl, "_blank", "noopener,noreferrer");
     } catch (e: any) { setError(e.message); }
     finally { setBusy(null); }

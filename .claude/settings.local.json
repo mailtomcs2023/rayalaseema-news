@@ -51,7 +51,8 @@
       "Bash(git commit -m 'Closes #60: ePaper per-placement headline / dek override *)",
       "Bash(git commit -m 'Closes #61: ePaper image crop inside block *)",
       "Bash(git commit -m 'Closes #63: ePaper template builder — quick + add-block buttons *)",
-      "Bash(git commit -m 'Closes #66: ePaper first-time walkthrough tour *)"
+      "Bash(git commit -m 'Closes #66: ePaper first-time walkthrough tour *)",
+      "Bash(git commit -m 'Closes #69: ePaper render-time quality warnings \\(spell-check-lite\\) *)"
     ],
     "additionalDirectories": [
       "D:\\RSE2026M365\\assets\\masthead",
