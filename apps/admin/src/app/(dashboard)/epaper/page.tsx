@@ -203,7 +203,15 @@ export default function EpaperEditorPage() {
     }));
   }, [selectedBlockId, activePage]);
 
-  // Refetch picker results whenever the selected block, query, or any chip changes.
+  // Debounced + cancellable picker fetch. Previous version fired a new
+  // request on every keystroke / chip-toggle / block-click with no debounce
+  // and no AbortController, so the operator saw a parade of stale loads
+  // when typing fast.
+  const pickerAbortRef = useRef<AbortController | null>(null);
+  const [pickerLoading, setPickerLoading] = useState(false);
+  // Track which (block, windowDays) pair the total was already fetched for.
+  // Subsequent picker fetches for the same pair skip the server-side count.
+  const pickerTotalKeyRef = useRef<string>("");
   useEffect(() => {
     if (!selectedBlockId || !activePage) { setPickerArticles([]); setPickerTotal(0); return; }
     const params = new URLSearchParams();
@@ -216,9 +224,31 @@ export default function EpaperEditorPage() {
     params.set("windowDays", String(pickerFilters.windowDays));
     params.set("sort", pickerFilters.sort);
     if (pickerQuery) params.set("q", pickerQuery);
-    fetch(`/api/epaper/article-picker?${params.toString()}`)
-      .then((r) => r.json())
-      .then((data) => { setPickerArticles(data.articles || []); setPickerTotal(data.totalInWindow ?? 0); });
+    // Skip the server-side count after the first fetch for this (block,window).
+    const totalKey = `${selectedBlockId}|${pickerFilters.windowDays}`;
+    const wantTotal = pickerTotalKeyRef.current !== totalKey;
+    if (!wantTotal) params.set("skipTotal", "1");
+
+    // Debounce 200 ms so chip-toggle bursts collapse into a single fetch.
+    const timer = setTimeout(() => {
+      pickerAbortRef.current?.abort();
+      const ctrl = new AbortController();
+      pickerAbortRef.current = ctrl;
+      setPickerLoading(true);
+      fetch(`/api/epaper/article-picker?${params.toString()}`, { signal: ctrl.signal })
+        .then((r) => r.json())
+        .then((data) => {
+          setPickerArticles(data.articles || []);
+          // Only overwrite the cached count when the server actually returned one.
+          if (typeof data.totalInWindow === "number" && data.totalInWindow >= 0) {
+            setPickerTotal(data.totalInWindow);
+            pickerTotalKeyRef.current = totalKey;
+          }
+          setPickerLoading(false);
+        })
+        .catch((e) => { if (e.name !== "AbortError") setPickerLoading(false); });
+    }, 200);
+    return () => clearTimeout(timer);
   }, [selectedBlockId, pickerQuery, pickerFilters, activePage]);
 
   // Workflow transitions — what's available depends on the current state.
@@ -483,21 +513,49 @@ export default function EpaperEditorPage() {
     return updated;
   };
 
-  const setBlockArticle = async (articleId: string | null) => {
-    if (!activePage || !selectedBlockId) return;
+  const setBlockArticle = async (articleId: string | null, targetBlockId?: string) => {
+    if (!activePage) return;
+    const blockId = targetBlockId ?? selectedBlockId;
+    if (!blockId) return;
     pushUndo(activePage.id, activePage.layout.blocks);
-    const ok = await patchPage({ setArticle: { blockId: selectedBlockId, articleId } });
+    const ok = await patchPage({ setArticle: { blockId, articleId } });
     if (!ok) return;
     setEdition((prev) => {
       if (!prev) return prev;
       return { ...prev, pages: prev.pages.map((p) => p.id === activePage.id ? {
-        ...p, layout: { blocks: p.layout.blocks.map((b) => b.id === selectedBlockId ? { ...b, articleId } : b) },
+        ...p, layout: { blocks: p.layout.blocks.map((b) => b.id === blockId ? { ...b, articleId } : b) },
       } : p) };
     });
     if (articleId) {
       const picked = pickerArticles.find((a) => a.id === articleId);
       if (picked) setTitles((t) => ({ ...t, [articleId]: picked.title }));
     }
+  };
+
+  // Drag-from-picker → drop-on-block. State tracks which block is currently
+  // being hovered while dragging so the block highlights.
+  const [dragOverBlockId, setDragOverBlockId] = useState<string | null>(null);
+  const onArticleDragStart = (e: React.DragEvent, articleId: string) => {
+    e.dataTransfer.setData("application/x-re-article", articleId);
+    e.dataTransfer.effectAllowed = "copy";
+  };
+  const onBlockDragOver = (e: React.DragEvent, blockId: string) => {
+    if (e.dataTransfer.types.includes("application/x-re-article")) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+      if (dragOverBlockId !== blockId) setDragOverBlockId(blockId);
+    }
+  };
+  const onBlockDragLeave = (blockId: string) => {
+    if (dragOverBlockId === blockId) setDragOverBlockId(null);
+  };
+  const onBlockDrop = async (e: React.DragEvent, blockId: string) => {
+    const articleId = e.dataTransfer.getData("application/x-re-article");
+    setDragOverBlockId(null);
+    if (!articleId) return;
+    e.preventDefault();
+    await setBlockArticle(articleId, blockId);
+    toast("success", "Article dropped into block");
   };
 
   const toggleLock = async (blockId: string) => {
@@ -1386,6 +1444,10 @@ export default function EpaperEditorPage() {
                         titles={titles}
                         selectedBlockId={selectedBlockId}
                         multiSelected={selectedBlockIds}
+                        dragOverBlockId={dragOverBlockId}
+                        onDragOverBlock={onBlockDragOver}
+                        onDragLeaveBlock={onBlockDragLeave}
+                        onDropBlock={onBlockDrop}
                         onSelect={(id, e) => {
                           if (e?.shiftKey) {
                             setSelectedBlockIds((prev) => {
@@ -1422,6 +1484,19 @@ export default function EpaperEditorPage() {
             <aside style={{ width: 320, background: "#fff", borderRadius: 8, padding: 12, overflowY: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
               <h3 style={{ fontSize: 13, fontWeight: 800, color: "#555" }}>ARTICLE PICKER</h3>
               {!selectedBlockId && <p style={{ fontSize: 12, color: "#888" }}>Click a story block on the page to pick an article.</p>}
+              {selectedBlockId && activePage && (() => {
+                const b = activePage.layout.blocks.find((x) => x.id === selectedBlockId);
+                if (!b) return null;
+                const t = b.articleId ? titles[b.articleId] : null;
+                return (
+                  <div style={{ padding: "8px 10px", background: "#eef2ff", borderRadius: 6, fontSize: 11 }}>
+                    <div style={{ color: "#3730a3", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Selected: {b.type}</div>
+                    <div style={{ color: t ? "#111" : "#9ca3af", fontWeight: 600, marginTop: 2, lineHeight: 1.3 }}>
+                      {t || "(no article assigned yet)"}
+                    </div>
+                  </div>
+                );
+              })()}
               {selectedBlockId && (
                 <>
                   <input value={pickerQuery} onChange={(e) => setPickerQuery(e.target.value)}
@@ -1512,7 +1587,9 @@ export default function EpaperEditorPage() {
                   </div>
 
                   <p style={{ fontSize: 11, color: "#666", margin: 0 }}>
-                    <b>{pickerArticles.length}</b> match · {pickerTotal} published in {pickerFilters.windowDays}d window
+                    {pickerLoading
+                      ? <span style={{ color: "#4f46e5" }}>⏳ Loading…</span>
+                      : <><b>{pickerArticles.length}</b> match · {pickerTotal} published in {pickerFilters.windowDays}d window</>}
                   </p>
 
                   {pickerArticles.length === 0 && pickerTotal > 0 && (
@@ -1528,7 +1605,10 @@ export default function EpaperEditorPage() {
 
                   {pickerArticles.map((a) => (
                     <button key={a.id} onClick={() => setBlockArticle(a.id)}
-                      style={{ width: "100%", textAlign: "left", padding: 8, border: "1px solid #eee", borderRadius: 6, cursor: "pointer", background: "#fafafa", fontSize: 12, display: "flex", gap: 8 }}>
+                      draggable
+                      onDragStart={(e) => onArticleDragStart(e, a.id)}
+                      title="Drag onto any block, or click to assign to selected block"
+                      style={{ width: "100%", textAlign: "left", padding: 8, border: "1px solid #eee", borderRadius: 6, cursor: "grab", background: "#fafafa", fontSize: 12, display: "flex", gap: 8 }}>
                       {a.featuredImage ? (
                         <img src={a.featuredImage} alt="" style={{ width: 46, height: 46, objectFit: "cover", borderRadius: 4, flexShrink: 0 }} />
                       ) : (
@@ -1623,12 +1703,18 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
  *    can't accidentally drag the brand band off the page
  */
 function DraggableBlockGrid({
-  layout, titles, selectedBlockId, multiSelected, onSelect, onToggleLock, onLayoutChange,
+  layout, titles, selectedBlockId, multiSelected,
+  dragOverBlockId, onDragOverBlock, onDragLeaveBlock, onDropBlock,
+  onSelect, onToggleLock, onLayoutChange,
 }: {
   layout: { blocks: Block[] };
   titles: Record<string, string>;
   selectedBlockId: string | null;
   multiSelected?: Set<string>;
+  dragOverBlockId?: string | null;
+  onDragOverBlock?: (e: React.DragEvent, blockId: string) => void;
+  onDragLeaveBlock?: (blockId: string) => void;
+  onDropBlock?: (e: React.DragEvent, blockId: string) => void;
   onSelect: (id: string, e?: React.MouseEvent) => void;
   onToggleLock: (id: string) => void;
   onLayoutChange: (newBlocks: Block[]) => void;
@@ -1700,9 +1786,14 @@ function DraggableBlockGrid({
           return (
             <div key={b.id}
               onClick={(e) => isStory && onSelect(b.id, e)}
+              onDragOver={(e) => isStory && onDragOverBlock?.(e, b.id)}
+              onDragLeave={() => isStory && onDragLeaveBlock?.(b.id)}
+              onDrop={(e) => isStory && onDropBlock?.(e, b.id)}
               style={{
-                background: bg, color,
-                border: isMulti ? "3px solid #4f46e5" : isSelected ? "2px solid #4f46e5" : "1px solid #e5e7eb",
+                background: dragOverBlockId === b.id ? "#fbbf24" : bg, color,
+                border: dragOverBlockId === b.id
+                  ? "3px dashed #d97706"
+                  : isMulti ? "3px solid #4f46e5" : isSelected ? "2px solid #4f46e5" : "1px solid #e5e7eb",
                 borderRadius: 4, padding: 8, fontSize: 12, overflow: "hidden",
                 cursor: isStory ? "pointer" : "move",
                 display: "flex", flexDirection: "column", justifyContent: "space-between",
