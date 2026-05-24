@@ -100,7 +100,8 @@ export default function EpaperEditorPage() {
 
   const { toasts, push: toast, dismiss: dismissToast } = useToasts();
 
-  const [titles, setTitles] = useState<Record<string, string>>({});
+  type ArticleMeta = { title: string; summary?: string | null; featuredImage?: string | null };
+  const [titles, setTitles] = useState<Record<string, ArticleMeta>>({});
 
   const loadEdition = useCallback(async (d: string) => {
     setError(""); setBusy("loading");
@@ -119,8 +120,10 @@ export default function EpaperEditorPage() {
       if (allIds.size > 0) {
         const r = await fetch(`/api/articles?ids=${[...allIds].join(",")}&limit=500`);
         const list = await r.json();
-        const map: Record<string, string> = {};
-        for (const a of list.articles || []) map[a.id] = a.title;
+        const map: Record<string, ArticleMeta> = {};
+        for (const a of list.articles || []) {
+          map[a.id] = { title: a.title, summary: a.summary ?? null, featuredImage: a.featuredImage ?? null };
+        }
         setTitles(map);
       }
     } catch (e: any) { setError(e.message); }
@@ -303,7 +306,13 @@ export default function EpaperEditorPage() {
       "story-jump": { w: 4, h: 1 },
     };
     const d = defaults[type] || { w: 4, h: 4 };
+    const MAX_ROWS = 30; // Indian broadsheet printable rows — see DraggableBlockGrid
     const maxY = activePage.layout.blocks.reduce((m, b) => Math.max(m, b.y + b.h), 0);
+    if (maxY + d.h > MAX_ROWS) {
+      toast("warn", `Page full (${maxY}/${MAX_ROWS} rows). Move or shrink existing blocks first, or add a new page.`);
+      setAddBlockOpen(false);
+      return;
+    }
     const newBlock: Block = {
       id: `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
       type, x: 0, y: maxY, w: d.w, h: d.h,
@@ -554,7 +563,21 @@ export default function EpaperEditorPage() {
     });
     if (articleId) {
       const picked = pickerArticles.find((a) => a.id === articleId);
-      if (picked) setTitles((t) => ({ ...t, [articleId]: picked.title }));
+      if (picked) {
+        setTitles((t) => ({ ...t, [articleId]: {
+          title: picked.title,
+          summary: (picked as any).summary ?? null,
+          featuredImage: picked.featuredImage ?? null,
+        } }));
+      } else {
+        // Fetch metadata so the block tile shows image + summary immediately
+        fetch(`/api/articles?ids=${articleId}&limit=1`).then((r) => r.json()).then((data) => {
+          const a = data.articles?.[0];
+          if (a) setTitles((t) => ({ ...t, [articleId]: {
+            title: a.title, summary: a.summary ?? null, featuredImage: a.featuredImage ?? null,
+          } }));
+        }).catch(() => {});
+      }
     }
   };
 
@@ -1557,7 +1580,7 @@ export default function EpaperEditorPage() {
                   <div style={{ padding: "8px 10px", background: "#eef2ff", borderRadius: 6, fontSize: 11 }}>
                     <div style={{ color: "#3730a3", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>Selected: {b.type}</div>
                     <div style={{ color: t ? "#111" : "#9ca3af", fontWeight: 600, marginTop: 2, lineHeight: 1.3 }}>
-                      {t || "(no article assigned yet)"}
+                      {t?.title || "(no article assigned yet)"}
                     </div>
                   </div>
                 );
@@ -1773,7 +1796,7 @@ function DraggableBlockGrid({
   onSelect, onToggleLock, onLayoutChange,
 }: {
   layout: { blocks: Block[] };
-  titles: Record<string, string>;
+  titles: Record<string, { title: string; summary?: string | null; featuredImage?: string | null }>;
   selectedBlockId: string | null;
   multiSelected?: Set<string>;
   dragOverBlockId?: string | null;
@@ -1787,6 +1810,14 @@ function DraggableBlockGrid({
   const COLS = 12;
   const ROW_H = 28;
   const GRID_WIDTH = 980;
+  // Indian broadsheet PDF page is 300x560mm → 1480x2760 px. Render uses 92 px
+  // per row → 30 rows fills the printable area exactly. Any block placed past
+  // row 30 gets clipped on print. Cap the editor at 30 rows + overlay the
+  // overflow zone in red so editors stop adding "unlimited news".
+  const MAX_ROWS = 30;
+  const usedRows = layout.blocks.reduce((m, b) => Math.max(m, b.y + b.h), 0);
+  const isOverflow = usedRows > MAX_ROWS;
+  const canvasHeight = Math.max(MAX_ROWS, usedRows) * ROW_H + 24;
 
   // RGL layout items, keyed by block id.
   const rglLayout: RGLLayout[] = layout.blocks.map((b) => ({
@@ -1818,7 +1849,23 @@ function DraggableBlockGrid({
                 + ` repeating-linear-gradient(to bottom, rgba(79,70,229,0.06) 0, rgba(79,70,229,0.06) 1px, transparent 1px, transparent ${ROW_H}px)`;
 
   return (
-    <div style={{ background: "#fafafa", borderRadius: 6, padding: 8, backgroundImage: guideBg, backgroundSize: `${colPx}px ${ROW_H}px`, backgroundPosition: "8px 8px" }}>
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, fontSize: 11, fontWeight: 700 }}>
+        <span style={{ color: isOverflow ? "#dc2626" : usedRows >= MAX_ROWS - 3 ? "#d97706" : "#16a34a" }}>
+          Page fill: {usedRows} / {MAX_ROWS} rows{isOverflow ? " — OVERFLOW will be clipped on print!" : ""}
+        </span>
+        <div style={{ flex: 1, height: 6, background: "#e5e7eb", borderRadius: 3, overflow: "hidden" }}>
+          <div style={{ width: `${Math.min(100, (usedRows / MAX_ROWS) * 100)}%`, height: "100%", background: isOverflow ? "#dc2626" : usedRows >= MAX_ROWS - 3 ? "#d97706" : "#16a34a" }} />
+        </div>
+        <span style={{ color: "#6b7280", fontWeight: 500 }}>Indian broadsheet 300×560mm</span>
+      </div>
+      <div style={{ position: "relative", background: "#fafafa", borderRadius: 6, padding: 8, backgroundImage: guideBg, backgroundSize: `${colPx}px ${ROW_H}px`, backgroundPosition: "8px 8px" }}>
+        {/* Red overflow zone — anything below row MAX_ROWS gets clipped on PDF render */}
+        {isOverflow && (
+          <div style={{ position: "absolute", left: 8, right: 8, top: 8 + MAX_ROWS * ROW_H, height: (usedRows - MAX_ROWS) * ROW_H, background: "repeating-linear-gradient(45deg, rgba(220,38,38,0.12), rgba(220,38,38,0.12) 8px, rgba(220,38,38,0.04) 8px, rgba(220,38,38,0.04) 16px)", borderTop: "2px dashed #dc2626", pointerEvents: "none", zIndex: 1 }}>
+            <div style={{ position: "sticky", top: 4, textAlign: "center", color: "#991b1b", fontWeight: 800, fontSize: 11, padding: 4 }}>⚠ OFF-PAGE — clipped on print</div>
+          </div>
+        )}
       <GridLayout
         className="re-epaper-grid"
         layout={rglLayout}
@@ -1865,9 +1912,25 @@ function DraggableBlockGrid({
                 display: "flex", flexDirection: "column", justifyContent: "space-between",
                 minHeight: 0, height: "100%",
               }}>
-              <div style={{ overflow: "hidden" }}>
-                <div style={{ fontSize: 10, opacity: 0.7, textTransform: "uppercase", marginBottom: 3, fontWeight: 700 }}>{b.type}</div>
-                {title && <div style={{ fontWeight: 700, lineHeight: 1.3 }}>{title.slice(0, 120)}</div>}
+              <div style={{ overflow: "hidden", flex: 1, minHeight: 0, display: "flex", flexDirection: "column", gap: 4 }}>
+                <div style={{ fontSize: 9, opacity: 0.6, textTransform: "uppercase", fontWeight: 700, letterSpacing: 0.3 }}>{b.type}</div>
+                {title && (
+                  <>
+                    {title.featuredImage && b.type !== "brief" && b.type !== "story-jump" && (
+                      <div style={{ width: "100%", flex: "0 0 auto", height: Math.min(80, Math.max(40, b.h * 18)), overflow: "hidden", borderRadius: 3, background: "#e5e7eb" }}>
+                        <img src={title.featuredImage} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                      </div>
+                    )}
+                    <div style={{ fontWeight: 800, lineHeight: 1.25, fontSize: b.type === "lead" ? 14 : 12, color: "#111", fontFamily: "'Noto Serif Telugu', serif" }}>
+                      {(b.overrideTitle?.trim() || title.title).slice(0, 140)}
+                    </div>
+                    {title.summary && b.h >= 4 && (
+                      <div style={{ fontSize: 10, lineHeight: 1.35, color: "#4b5563", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: Math.max(2, Math.min(8, b.h - 2)), WebkitBoxOrient: "vertical" }}>
+                        {title.summary.slice(0, 320)}
+                      </div>
+                    )}
+                  </>
+                )}
                 {!title && isStory && <div style={{ fontStyle: "italic", opacity: 0.55 }}>empty — click to pick</div>}
               </div>
               {isStory && (
@@ -1891,6 +1954,7 @@ function DraggableBlockGrid({
         .re-epaper-grid .react-grid-item.react-grid-placeholder { background: #4f46e5; opacity: 0.18; border-radius: 4px; }
         .re-epaper-grid .react-resizable-handle { z-index: 5; }
       `}</style>
+      </div>
     </div>
   );
 }

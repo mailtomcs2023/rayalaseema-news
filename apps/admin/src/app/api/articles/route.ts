@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
       const ids = idsParam.split(",").map((s) => s.trim()).filter(Boolean).slice(0, 500);
       const articles = await prisma.article.findMany({
         where: { id: { in: ids } },
-        select: { id: true, title: true, slug: true },
+        select: { id: true, title: true, slug: true, summary: true, featuredImage: true },
       });
       return NextResponse.json({ articles, total: articles.length });
     }
