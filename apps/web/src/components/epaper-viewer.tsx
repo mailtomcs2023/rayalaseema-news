@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 interface Hotspot { slug: string; x: number; y: number; w: number; h: number; }
 interface EpaperPage {
@@ -20,11 +20,12 @@ interface EpaperPage {
  *  - Drag-to-clip + share modal preserved from v1
  */
 export function EpaperViewer({
-  pages, pdfUrl, dateLabel,
+  pages, pdfUrl, dateLabel, editionId,
 }: {
   pages: EpaperPage[];
   pdfUrl: string | null;
   dateLabel: string;
+  editionId?: string;     // when present, viewer pings /api/epaper/track on every page view
 }) {
   const [idx, setIdx] = useState(0);
   const [zoom, setZoom] = useState(1);
@@ -34,6 +35,18 @@ export function EpaperViewer({
   const [clipBusy, setClipBusy] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
   const dragStart = useRef<{ x: number; y: number } | null>(null);
+
+  // Analytics ping — fire when the current page changes. Fire-and-forget;
+  // never blocks UI.
+  useEffect(() => {
+    if (!editionId || !pages[idx]) return;
+    fetch("/api/epaper/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ editionId, pageNumber: pages[idx].pageNumber }),
+      keepalive: true,
+    }).catch(() => {});
+  }, [idx, editionId, pages]);
 
   if (!pages.length) return <div className="ev-empty">ఈ తేదీకి ఎడిషన్ లేదు.</div>;
 
@@ -160,6 +173,16 @@ export function EpaperViewer({
             {!clipMode &&
               cur.hotspots.map((h, i) => (
                 <a key={i} className="ev-hotspot" href={`/article/${h.slug}`}
+                  onClick={() => {
+                    if (editionId) {
+                      fetch("/api/epaper/track", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ editionId, pageNumber: cur.pageNumber, articleSlug: h.slug }),
+                        keepalive: true,
+                      }).catch(() => {});
+                    }
+                  }}
                   style={{ left: `${h.x * 100}%`, top: `${h.y * 100}%`, width: `${h.w * 100}%`, height: `${h.h * 100}%` }}
                   title="పూర్తి వార్త చదవండి" />
               ))}

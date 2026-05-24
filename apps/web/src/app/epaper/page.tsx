@@ -109,6 +109,7 @@ export default async function EpaperPage({
               hotspots: (p.hotspots as any) || [],
             }))}
             pdfUrl={selected.pdfUrl}
+            editionId={selected.id}
             dateLabel={`${teluguDate(selected.date)} · ${EDITION_NAMES[editionKey] || editionKey}`}
           />
         ) : (

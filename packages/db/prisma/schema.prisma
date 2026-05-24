@@ -448,6 +448,25 @@ model EpaperPage {
   @@map("epaper_pages")
 }
 
+/// E-paper viewer analytics: each row = one view OR one hotspot click.
+/// Tracked client-side from /epaper viewer; never PII, just edition + page +
+/// optional clicked article slug. Bucketed query roll-ups feed
+/// /epaper-analytics admin dashboard.
+model EpaperPageView {
+  id          String   @id @default(cuid())
+  editionId   String
+  pageNumber  Int
+  articleSlug String?  // when set, this row records a hotspot click on that article
+  referrer    String?
+  ipHash      String?  // sha256(ip + UA) — for unique-visitor approximations w/o storing PII
+  createdAt   DateTime @default(now())
+
+  @@index([editionId, createdAt])
+  @@index([editionId, pageNumber])
+  @@index([articleSlug])
+  @@map("epaper_page_views")
+}
+
 /// Editorial comments on an e-paper edition. Scoped to a specific block (when
 /// `blockId` is set) or to a whole page (when `blockId` is null). Used by the
 /// chief editor to leave notes like "swap this lead" without WhatsApp ping.
