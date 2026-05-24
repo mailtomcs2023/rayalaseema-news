@@ -53,7 +53,8 @@
       "Bash(git commit -m 'Closes #63: ePaper template builder — quick + add-block buttons *)",
       "Bash(git commit -m 'Closes #66: ePaper first-time walkthrough tour *)",
       "Bash(git commit -m 'Closes #69: ePaper render-time quality warnings \\(spell-check-lite\\) *)",
-      "Bash(git commit -m 'Closes #74: ePaper auto-crop via Azure Computer Vision areaOfInterest *)"
+      "Bash(git commit -m 'Closes #74: ePaper auto-crop via Azure Computer Vision areaOfInterest *)",
+      "Bash(git commit -m 'Closes #64: ePaper real-time presence \\(SSE-based, single-process\\) *)"
     ],
     "additionalDirectories": [
       "D:\\RSE2026M365\\assets\\masthead",

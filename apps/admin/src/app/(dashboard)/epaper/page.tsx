@@ -295,6 +295,30 @@ export default function EpaperEditorPage() {
     await loadEdition(date);
   };
 
+  // Real-time presence: tracks other editors on this edition via SSE.
+  interface Peer { userId: string; userName: string; pageId: string | null }
+  const [peers, setPeers] = useState<Peer[]>([]);
+  useEffect(() => {
+    if (!edition) return;
+    // Open SSE stream for live peer updates
+    const es = new EventSource(`/api/epaper/edition/${edition.id}/presence`);
+    es.onmessage = (e) => {
+      try { setPeers(JSON.parse(e.data)); } catch {}
+    };
+    // Send heartbeat every 10 s + whenever active page changes
+    const beat = () => {
+      fetch(`/api/epaper/edition/${edition.id}/presence`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pageId: activePage?.id ?? null }),
+        keepalive: true,
+      }).catch(() => {});
+    };
+    beat();
+    const interval = setInterval(beat, 10_000);
+    return () => { clearInterval(interval); es.close(); };
+  }, [edition, activePage]);
+
   // First-time walkthrough tour — fires once per browser, persists dismissal.
   const TOUR_STEPS = [
     { title: "Welcome to ePaper v3", body: "Quick 6-step tour to get you publishing. Press Esc anytime to dismiss." },
@@ -1087,6 +1111,12 @@ export default function EpaperEditorPage() {
               {WORKFLOW_LABEL[edition.workflowState]}
             </span>
           )}
+          {peers.length > 1 && (
+            <span title={peers.map((p) => `${p.userName}${p.pageId ? ` (page ${edition?.pages.find((x) => x.id === p.pageId)?.pageNumber ?? "?"})` : ""}`).join("\n")}
+              style={{ fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 999, background: "#dcfce7", color: "#166534" }}>
+              👥 {peers.length} editors
+            </span>
+          )}
           {edition && (NEXT_STATES[edition.workflowState] || []).map((opt) => (
             <button key={opt.to} onClick={() => transitionTo(opt.to, opt.label, !!opt.needNote)}
               style={{ padding: "6px 12px", background: opt.danger ? "#fee2e2" : "#ede9fe", color: opt.danger ? "#991b1b" : "#5b21b6", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
@@ -1137,6 +1167,11 @@ export default function EpaperEditorPage() {
                           : <span title="All story blocks filled">✓</span>}
                         {lockedCount > 0 && <span title={`${lockedCount} locked block${lockedCount > 1 ? "s" : ""}`}>🔒 {lockedCount}</span>}
                         {commentsByPage[p.id] > 0 && <span title={`${commentsByPage[p.id]} open comments`}>💬 {commentsByPage[p.id]}</span>}
+                        {peers.filter((peer) => peer.pageId === p.id && peer.userId !== "you").length > 0 && (
+                          <span title={peers.filter((peer) => peer.pageId === p.id).map((peer) => peer.userName).join(", ")}>
+                            👥 {peers.filter((peer) => peer.pageId === p.id).length}
+                          </span>
+                        )}
                       </div>
                     </button>
                     <button onClick={() => duplicatePage(p.id)} title="Duplicate page"
