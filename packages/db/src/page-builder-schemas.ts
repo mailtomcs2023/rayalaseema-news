@@ -124,18 +124,18 @@ const baseBlock = {
 };
 
 export const blockSchema = z.discriminatedUnion("type", [
-  z.object({ ...baseBlock, type: z.literal("ReturnVisitBanner"), config: returnVisitBannerConfig.default({}) }),
-  z.object({ ...baseBlock, type: z.literal("AdHeaderLeaderboard"), config: adHeaderLeaderboardConfig.default({}) }),
-  z.object({ ...baseBlock, type: z.literal("AboveFold"), config: aboveFoldConfig.default({}) }),
-  z.object({ ...baseBlock, type: z.literal("AdBannerMid"), config: adBannerMidConfig.default({}) }),
+  z.object({ ...baseBlock, type: z.literal("ReturnVisitBanner"), config: returnVisitBannerConfig }),
+  z.object({ ...baseBlock, type: z.literal("AdHeaderLeaderboard"), config: adHeaderLeaderboardConfig }),
+  z.object({ ...baseBlock, type: z.literal("AboveFold"), config: aboveFoldConfig }),
+  z.object({ ...baseBlock, type: z.literal("AdBannerMid"), config: adBannerMidConfig }),
   z.object({ ...baseBlock, type: z.literal("SectionBand"), config: sectionBandConfig }),
-  z.object({ ...baseBlock, type: z.literal("CinemaBand"), config: cinemaBandConfig.default({}) }),
-  z.object({ ...baseBlock, type: z.literal("VideoSection"), config: videoSectionConfig.default({}) }),
+  z.object({ ...baseBlock, type: z.literal("CinemaBand"), config: cinemaBandConfig }),
+  z.object({ ...baseBlock, type: z.literal("VideoSection"), config: videoSectionConfig }),
   z.object({ ...baseBlock, type: z.literal("CategoryPair"), config: categoryPairConfig }),
-  z.object({ ...baseBlock, type: z.literal("WebStories"), config: webStoriesConfig.default({}) }),
-  z.object({ ...baseBlock, type: z.literal("PhotoGallery"), config: photoGalleryConfig.default({}) }),
-  z.object({ ...baseBlock, type: z.literal("AdLeaderboard"), config: adLeaderboardConfig.default({}) }),
-  z.object({ ...baseBlock, type: z.literal("AdInFeedBanner"), config: adInFeedBannerConfig.default({}) }),
+  z.object({ ...baseBlock, type: z.literal("WebStories"), config: webStoriesConfig }),
+  z.object({ ...baseBlock, type: z.literal("PhotoGallery"), config: photoGalleryConfig }),
+  z.object({ ...baseBlock, type: z.literal("AdLeaderboard"), config: adLeaderboardConfig }),
+  z.object({ ...baseBlock, type: z.literal("AdInFeedBanner"), config: adInFeedBannerConfig }),
   // Synthetic: inlines a CompositeBlock.blocks at render time.
   z.object({
     ...baseBlock,
