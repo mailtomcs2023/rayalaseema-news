@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export default async function UsersPage() {
   const data = await prisma.user.findMany({
-    select: { id: true, email: true, name: true, role: true, active: true, createdAt: true, _count: { select: { articles: true } } },
+    select: { id: true, email: true, name: true, role: true, active: true, createdAt: true, _count: { select: { contents: true } } },
     orderBy: { createdAt: "asc" },
   });
 

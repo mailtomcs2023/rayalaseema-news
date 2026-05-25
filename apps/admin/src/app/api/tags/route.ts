@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("search") || "";
     const tags = await prisma.tag.findMany({
       where: search ? { name: { contains: search, mode: "insensitive" } } : undefined,
-      include: { _count: { select: { articles: true } } },
+      include: { _count: { select: { contentTags: true } } },
       orderBy: { name: "asc" },
       take: 200,
     });

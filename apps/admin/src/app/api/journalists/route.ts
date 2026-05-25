@@ -68,7 +68,7 @@ export async function GET() {
             },
           },
         },
-        _count: { select: { articles: true, payments: true } },
+        _count: { select: { contents: true, contentPayments: true } },
       },
       orderBy: { createdAt: "desc" },
     });

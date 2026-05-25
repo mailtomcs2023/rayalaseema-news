@@ -272,15 +272,15 @@ export async function GET() {
   const categories = await prisma.category.findMany({
     where: { active: true },
     orderBy: { sortOrder: "asc" },
-    include: { _count: { select: { articles: true } } },
+    include: { _count: { select: { contents: true } } },
   });
 
   return NextResponse.json(
     categories.map((c) => ({
       name: c.nameEn,
       slug: c.slug,
-      articles: c._count.articles,
-      needsMore: c._count.articles < 3,
+      articles: c._count.contents,
+      needsMore: c._count.contents < 3,
     }))
   );
 }

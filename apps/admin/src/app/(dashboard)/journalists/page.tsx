@@ -127,7 +127,7 @@ interface Journalist {
   active: boolean;
   createdAt: string;
   journalistProfile: JournalistProfile | null;
-  _count: { articles: number; payments: number };
+  _count: { contents: number; contentPayments: number };
 }
 
 // Common KYC rejection reasons. The label shown in the dropdown IS the text
@@ -194,7 +194,7 @@ function toRow(j: Journalist): JournalistRow {
     phone: j.phone || "",
     district: j.journalistProfile?.primaryDistrict || "",
     kyc: j.journalistProfile?.kycStatus || "NO PROFILE",
-    articles: j._count.articles,
+    articles: j._count.contents,
     pendingUpdates: j.journalistProfile?._count?.profileUpdateRequests || 0,
     joinedAt: j.createdAt,
     raw: j,
@@ -996,8 +996,8 @@ function ReviewDialog({
                 <Field label="Branch" value={p.bankBranch} />
 
                 <SectionTitle>Activity</SectionTitle>
-                <Field label="Articles" value={String(journalist._count.articles)} />
-                <Field label="Payments" value={String(journalist._count.payments)} />
+                <Field label="Articles" value={String(journalist._count.contents)} />
+                <Field label="Payments" value={String(journalist._count.contentPayments)} />
                 <Field label="Account" value={journalist.active ? "Active" : "Inactive"} />
                 <Field label="Joined" value={fmtDate(journalist.createdAt)} />
                 <Field label="Verified" value={p.verifiedAt ? fmtDate(p.verifiedAt) : null} />

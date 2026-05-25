@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     const branch = searchParams.get("branch"); // optional filter
     const desks = await prisma.desk.findMany({
       where: branch ? { branch: branch as any } : undefined,
-      include: { _count: { select: { articles: true } } },
+      include: { _count: { select: { contents: true } } },
       orderBy: [{ branch: "asc" }, { sortOrder: "asc" }, { nameEn: "asc" }],
     });
     return NextResponse.json(desks);

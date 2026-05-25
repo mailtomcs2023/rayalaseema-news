@@ -6,7 +6,7 @@ export async function GET() {
   const session = await requireAuth();
   if (isAuthError(session)) return session;
   try {
-    const categories = await prisma.category.findMany({ orderBy: { sortOrder: "asc" }, include: { _count: { select: { articles: true } } } });
+    const categories = await prisma.category.findMany({ orderBy: { sortOrder: "asc" }, include: { _count: { select: { contents: true } } } });
     return NextResponse.json(categories);
   } catch (error) {
     return apiError(error);

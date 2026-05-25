@@ -9,7 +9,7 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
     const { id } = await params;
     const desk = await prisma.desk.findUnique({
       where: { id },
-      include: { _count: { select: { articles: true } } },
+      include: { _count: { select: { contents: true } } },
     });
     if (!desk) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(desk);
