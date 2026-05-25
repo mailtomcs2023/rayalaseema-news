@@ -11,7 +11,7 @@ datasource db {
 
 enum Role {
   ADMIN           // Full access - everything
-  CHIEF_SUB_EDITOR // Edit all categories, publish, breaking news
+  EDITOR          // Edit all categories, publish, breaking news (was CHIEF_SUB_EDITOR)
   SUB_EDITOR      // Edit assigned categories, review articles, can't publish
   REPORTER        // Write articles, upload photos, submit for review only
 }

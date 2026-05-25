@@ -22,7 +22,7 @@ interface Block {
 //   - { setArticle: { blockId, articleId } }   swap a single block's article
 //   - { setLocked:  { blockId, locked } }      flip lock flag
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR", "SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR"]);
   if (isAuthError(session)) return session;
   try {
     const { id } = await params;

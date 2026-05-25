@@ -20,7 +20,7 @@ import { buildContinuations } from "@/lib/epaper/continuation";
 // Operator then reviews the edition in the drag-swap editor and clicks
 // Publish (which calls the existing render endpoint to produce the final PDF).
 export async function POST(req: NextRequest) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR", "SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR"]);
   if (isAuthError(session)) return session;
   try {
     const body = await req.json();

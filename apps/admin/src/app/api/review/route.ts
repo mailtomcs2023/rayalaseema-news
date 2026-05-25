@@ -4,7 +4,7 @@ import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 
 // GET /api/review - get articles pending review for current user
 export async function GET(req: NextRequest) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR", "SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR"]);
   if (isAuthError(session)) return session;
   try {
     const role = session.user.role;
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
       const categoryIds = assignments.map((a) => a.categoryId);
       where.categoryId = { in: categoryIds };
     }
-    // CHIEF_SUB_EDITOR and ADMIN see all
+    // EDITOR and ADMIN see all
 
     const articles = await prisma.article.findMany({
       where,
@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/review - take action on an article
 export async function POST(req: NextRequest) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR", "SUB_EDITOR", "REPORTER"]);
+  const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR", "REPORTER"]);
   if (isAuthError(session)) return session;
   try {
     const userId = session.user.id;
@@ -64,12 +64,12 @@ export async function POST(req: NextRequest) {
 
     // Status transitions based on action
     const transitions: Record<string, { newStatus: string; allowedRoles: string[] }> = {
-      submit: { newStatus: "SUBMITTED", allowedRoles: ["REPORTER", "SUB_EDITOR", "CHIEF_SUB_EDITOR", "ADMIN"] },
-      review: { newStatus: "IN_REVIEW", allowedRoles: ["SUB_EDITOR", "CHIEF_SUB_EDITOR", "ADMIN"] },
-      approve: { newStatus: "APPROVED", allowedRoles: ["CHIEF_SUB_EDITOR", "ADMIN"] },
-      reject: { newStatus: "REJECTED", allowedRoles: ["SUB_EDITOR", "CHIEF_SUB_EDITOR", "ADMIN"] },
-      publish: { newStatus: "PUBLISHED", allowedRoles: ["CHIEF_SUB_EDITOR", "ADMIN"] },
-      unpublish: { newStatus: "DRAFT", allowedRoles: ["CHIEF_SUB_EDITOR", "ADMIN"] },
+      submit: { newStatus: "SUBMITTED", allowedRoles: ["REPORTER", "SUB_EDITOR", "EDITOR", "ADMIN"] },
+      review: { newStatus: "IN_REVIEW", allowedRoles: ["SUB_EDITOR", "EDITOR", "ADMIN"] },
+      approve: { newStatus: "APPROVED", allowedRoles: ["EDITOR", "ADMIN"] },
+      reject: { newStatus: "REJECTED", allowedRoles: ["SUB_EDITOR", "EDITOR", "ADMIN"] },
+      publish: { newStatus: "PUBLISHED", allowedRoles: ["EDITOR", "ADMIN"] },
+      unpublish: { newStatus: "DRAFT", allowedRoles: ["EDITOR", "ADMIN"] },
       archive: { newStatus: "ARCHIVED", allowedRoles: ["ADMIN"] },
     };
 

@@ -5,7 +5,7 @@ import { logAudit } from "@/lib/audit";
 
 // DELETE /api/tags/[id]
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(session)) return session;
   try {
     const { id } = await params;

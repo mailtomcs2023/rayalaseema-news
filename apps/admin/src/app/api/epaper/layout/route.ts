@@ -4,7 +4,7 @@ import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 
 // GET /api/epaper/layout?date= — edition layout + titles of referenced articles
 export async function GET(req: NextRequest) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(session)) return session;
 
   const sp = new URL(req.url).searchParams;
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
 
 // PUT /api/epaper/layout?date= — save edited layout
 export async function PUT(req: NextRequest) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(session)) return session;
 
   const sp = new URL(req.url).searchParams;

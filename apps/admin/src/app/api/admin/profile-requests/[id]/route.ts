@@ -20,7 +20,7 @@ import {
 //
 // Both paths mark the request reviewed and emit an AuditLog entry.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR"]);
+  const auth = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(auth)) return auth;
 
   try {

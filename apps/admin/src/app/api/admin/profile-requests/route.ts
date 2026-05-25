@@ -8,7 +8,7 @@ import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 // to PENDING; pass ?status=ALL to see history. Includes the journalist's
 // basic identity so the admin UI can render rows without a second lookup.
 export async function GET(req: NextRequest) {
-  const auth = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR"]);
+  const auth = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(auth)) return auth;
 
   try {

@@ -1,12 +1,11 @@
 import React from "react";
-import { View, Image, StyleSheet } from "react-native";
+import { View, StyleSheet } from "react-native";
 
 import { LanguageToggle } from "./LanguageToggle";
-
-// Logo asset is red-on-transparent; we tint it white so it sits on the red
-// header bar (the asset is the only logo file checked in, so re-using it
-// keeps the brand mark consistent with the splash/icon).
-const LOGO = require("../../assets/logo.png");
+// SVG wordmark designed for dark backgrounds (the asset is already white-on-
+// transparent, so no tinting is needed). Imported as a React component via
+// react-native-svg-transformer — see metro.config.js.
+import LogoInverse from "../../assets/logo-inverse.svg";
 
 /**
  * The shared header shown at the top of every tab screen.
@@ -20,10 +19,9 @@ export function ScreenHeader() {
   return (
     <View style={styles.header}>
       <View style={styles.row}>
-        <Image
-          source={LOGO}
-          style={styles.logo}
-          resizeMode="contain"
+        <LogoInverse
+          width={140}
+          height={28}
           accessibilityLabel="Rayalaseema Express"
         />
         <LanguageToggle onDark />
@@ -42,8 +40,4 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 20,
   },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", height: 36 },
-  // 5:1 wordmark (PNG is 1200×240); width matches the natural aspect at
-  // height 28 so contain-resize leaves no padding on either side.
-  // Tinted white to read on the red header.
-  logo: { width: 140, height: 28, tintColor: "#fff" },
 });

@@ -5,11 +5,11 @@
     "scheme": "rereporter",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/icon-512.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/icon-512.png",
       "resizeMode": "contain",
       "backgroundColor": "#FF2C2C"
     },
@@ -19,7 +19,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/icon-512.png",
         "backgroundColor": "#FF2C2C"
       },
       "package": "com.rayalaseemaexpress.reporter",
@@ -34,7 +34,7 @@
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/icon-192.png"
     },
     "plugins": [
       "expo-router",

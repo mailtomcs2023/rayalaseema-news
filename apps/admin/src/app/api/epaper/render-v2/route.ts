@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
-import { renderLayoutToHtml } from "@/lib/epaper/render-layout";
+import { renderLayoutToHtml, type Block } from "@/lib/epaper/render-layout";
 import { uploadBuffer } from "@/lib/blob";
 import { chromium } from "playwright";
 import { PDFDocument, PDFName, PDFArray, PDFDict, type PDFRef } from "pdf-lib";
@@ -23,10 +23,12 @@ import { PDFDocument, PDFName, PDFArray, PDFDict, type PDFRef } from "pdf-lib";
 
 export const maxDuration = 300;
 
-interface Block { id: string; type: string; targetPage?: number }
+// Block is imported from @/lib/epaper/render-layout to keep the type
+// identity stable across the route and the renderer (otherwise two distinct
+// Block declarations clash when we pass the layout into renderLayoutToHtml).
 
 export async function POST(req: NextRequest) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR", "SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR"]);
   if (isAuthError(session)) return session;
   try {
     const body = await req.json();

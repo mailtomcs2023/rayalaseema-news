@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
 // POST /api/desks — create a new desk (admins only; geographic/topical desks are auto-seeded,
 // this is mainly for adding EDITORIAL desks or one-off bureaus).
 export async function POST(req: NextRequest) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(session)) return session;
   try {
     const body = await req.json();

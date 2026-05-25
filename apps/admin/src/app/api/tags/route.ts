@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/tags — create (or return existing) by name
 export async function POST(req: NextRequest) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR", "SUB_EDITOR", "REPORTER"]);
+  const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR", "REPORTER"]);
   if (isAuthError(session)) return session;
   try {
     const { name } = await req.json();

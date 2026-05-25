@@ -48,3 +48,10 @@ rayalaseema-recruitment.xlsx
 
 # Excel lock files (open document indicators)
 ~$*
+
+# Local Claude Code state
+.claude/
+.claude/scheduled_tasks.lock
+
+# Expo CLI local state (per-machine devices, credentials, generated README)
+.expo/

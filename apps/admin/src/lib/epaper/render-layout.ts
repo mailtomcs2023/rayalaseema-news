@@ -13,7 +13,7 @@ import { prisma } from "@rayalaseema/db";
 
 const SITE_URL = process.env.SITE_URL || "https://rayalaseemaexpress.com";
 
-interface Block {
+export interface Block {
   id: string;
   type:
     | "masthead"

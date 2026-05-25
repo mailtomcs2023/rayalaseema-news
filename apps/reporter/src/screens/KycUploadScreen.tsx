@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ScrollView, Image, Alert, ActivityIndicator,
@@ -62,7 +62,45 @@ export function KycUploadScreen() {
   });
   const [busyKey, setBusyKey] = useState<DocKey | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState<FormErrors>({});
+
+  // Pre-fill from /api/reporter/profile so a reporter who already submitted
+  // some details (during registration, or in a previous attempt that got
+  // REJECTED) doesn't have to re-type everything. Image fields hold the
+  // existing remote URL; if the user picks a new image we replace it with
+  // a local file:// URI which the submit handler uploads. Remote URLs
+  // (https://...) are passed through unchanged.
+  useEffect(() => {
+    let cancelled = false;
+    api("/api/reporter/profile")
+      .then((data) => {
+        if (cancelled) return;
+        const p = data?.profile;
+        if (p) {
+          if (p.aadhaarNumber) setAadhaarNumber(String(p.aadhaarNumber));
+          if (p.panNumber) setPanNumber(String(p.panNumber));
+          setDocs({
+            photoUri: p.photoUrl || "",
+            aadhaarFrontUri: p.aadhaarFrontUrl || "",
+            aadhaarBackUri: p.aadhaarBackUrl || "",
+            panCardUri: p.panCardUrl || "",
+          });
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // A doc URI is "local" (needs uploading) when it's a phone-side file URI
+  // from ImagePicker — file:// or content:// (Android). Anything else is
+  // a remote URL we can hand straight to the server.
+  const isLocalUri = (uri: string) => /^(file|content):/i.test(uri);
 
   const setDoc = (k: DocKey, uri: string) => setDocs((d) => ({ ...d, [k]: uri }));
 
@@ -97,11 +135,14 @@ export function KycUploadScreen() {
     setErrors({});
     setSubmitting(true);
     try {
-      // Upload each image in parallel — the helper returns the public URL.
+      // Upload each image in parallel — but skip the ones that are already
+      // remote URLs (i.e. preserved from a prior submission). uploadImage
+      // only handles local file/content URIs from ImagePicker.
       const uploaded: Record<string, string> = {};
       await Promise.all(
         DOCS.map(async (d) => {
-          uploaded[d.serverField] = await uploadImage(docs[d.key]);
+          const cur = docs[d.key];
+          uploaded[d.serverField] = isLocalUri(cur) ? await uploadImage(cur) : cur;
         }),
       );
 
@@ -140,6 +181,11 @@ export function KycUploadScreen() {
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
     >
+      {loading ? (
+        <View style={{ paddingVertical: 60, alignItems: "center" }}>
+          <ActivityIndicator color="#FF2C2C" />
+        </View>
+      ) : null}
       <Text style={styles.intro}>{t("kyc.screenIntro")}</Text>
 
       {/* Photo */}

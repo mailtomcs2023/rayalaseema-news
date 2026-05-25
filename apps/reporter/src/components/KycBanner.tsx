@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
+import { api } from "../api/client";
 import { useT } from "../i18n";
 
 type KycStatus = "PENDING" | "SUBMITTED" | "VERIFIED" | "REJECTED";
@@ -36,6 +37,8 @@ export function KycBanner() {
   const [status, setStatus] = useState<KycStatus | null>(null);
   const [note, setNote] = useState<string | null>(null);
 
+  // Fast path on first mount: read whatever's cached in AsyncStorage so the
+  // banner renders in one frame, no network wait.
   useEffect(() => {
     let cancelled = false;
     AsyncStorage.getItem("user").then((raw) => {
@@ -50,6 +53,41 @@ export function KycBanner() {
       cancelled = true;
     };
   }, []);
+
+  // Authoritative path: every time this screen comes into focus, hit the
+  // server. Catches admin-side changes (VERIFIED, REJECTED, etc.) that the
+  // app couldn't have known about from a stale login cache. The fresh
+  // status is mirrored back into AsyncStorage so other components reading
+  // `user.kycStatus` (Submit-for-Review gate, Earnings screen) see it too.
+  const refreshFromServer = useCallback(async () => {
+    try {
+      const data = await api("/api/reporter/profile");
+      const fresh = (data?.profile?.kycStatus as KycStatus) || null;
+      const freshNote = (data?.profile?.kycRejectionNote as string | null) ?? null;
+      if (!fresh) return;
+      setStatus(fresh);
+      setNote(freshNote);
+      const raw = await AsyncStorage.getItem("user");
+      if (raw) {
+        const u = JSON.parse(raw);
+        if (u.kycStatus !== fresh || u.kycRejectionNote !== freshNote) {
+          await AsyncStorage.setItem(
+            "user",
+            JSON.stringify({ ...u, kycStatus: fresh, kycRejectionNote: freshNote }),
+          );
+        }
+      }
+    } catch {
+      // Network/auth failures fall back to whatever the cache said; the
+      // api() helper already handles force-logout on 401.
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshFromServer();
+    }, [refreshFromServer]),
+  );
 
   if (!status || status === "VERIFIED") return null;
   const ui = getKycUi(status, t);

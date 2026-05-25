@@ -28,7 +28,10 @@ export default async function UsersPage() {
             { key: "email", label: "Email", type: "text", required: true },
             { key: "password", label: "Password (leave empty to keep)", type: "text" },
             { key: "role", label: "Role", type: "select", required: true, options: [
-              { value: "ADMIN", label: "Admin" }, { value: "EDITOR", label: "Editor" }, { value: "REPORTER", label: "Reporter" },
+              { value: "ADMIN", label: "Admin" },
+              { value: "EDITOR", label: "Editor" },
+              { value: "SUB_EDITOR", label: "Sub Editor" },
+              { value: "REPORTER", label: "Reporter" },
             ]},
             { key: "bio", label: "Bio", type: "textarea" },
             { key: "active", label: "Active", type: "checkbox", placeholder: "User is active" },

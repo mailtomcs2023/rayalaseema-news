@@ -19,7 +19,7 @@ async function findEdition(req: NextRequest) {
 
 // GET /api/epaper/ads?date=&edition= — list ads for the edition
 export async function GET(req: NextRequest) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(session)) return session;
   try {
     const edition = await findEdition(req);
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/epaper/ads?date=&edition= — upload an ad (formData: file, pageNumber, slot, linkUrl)
 export async function POST(req: NextRequest) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(session)) return session;
   if (!blobConfigured()) return NextResponse.json({ error: "Storage not configured" }, { status: 503 });
   try {
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
 
 // DELETE /api/epaper/ads?id= — remove an ad
 export async function DELETE(req: NextRequest) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(session)) return session;
   try {
     const id = new URL(req.url).searchParams.get("id");
