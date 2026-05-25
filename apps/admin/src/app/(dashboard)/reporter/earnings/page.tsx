@@ -55,7 +55,7 @@ export default async function ReporterEarningsPage() {
 
   return (
     <ReporterShell>
-      <div style={{ padding: 16 }}>
+      <div style={{ padding: "16px 14px 16px" }}>
         <KycBanner userId={userId} />
 
         {/* Hero — total earnings */}

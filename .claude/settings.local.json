@@ -99,7 +99,9 @@
       "Bash(git stash *)",
       "Bash(bunx tsc *)",
       "Bash(mkdir -p 'd:/Rayalaseema express/apps/admin/src/app/api/content/[id]/pib-approve')",
-      "Bash(mkdir -p 'd:/Rayalaseema express/apps/web/src/app/video/[slug]' 'd:/Rayalaseema express/apps/web/src/app/reel/[slug]' 'd:/Rayalaseema express/apps/web/src/app/story/[slug]' 'd:/Rayalaseema express/apps/web/src/app/gallery/[slug]' 'd:/Rayalaseema express/apps/web/src/app/cartoon/[slug]')"
+      "Bash(mkdir -p 'd:/Rayalaseema express/apps/web/src/app/video/[slug]' 'd:/Rayalaseema express/apps/web/src/app/reel/[slug]' 'd:/Rayalaseema express/apps/web/src/app/story/[slug]' 'd:/Rayalaseema express/apps/web/src/app/gallery/[slug]' 'd:/Rayalaseema express/apps/web/src/app/cartoon/[slug]')",
+      "Bash(rm 'd:/Rayalaseema express/apps/web/src/app/gallery/[id]/page.tsx')",
+      "Bash(rmdir 'd:/Rayalaseema express/apps/web/src/app/gallery/[id]')"
     ],
     "additionalDirectories": [
       "D:\\RSE2026M365\\assets\\masthead",

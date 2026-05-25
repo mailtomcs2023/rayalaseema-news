@@ -49,7 +49,9 @@ export function ReporterShell({ children }: { children: ReactNode }) {
         className="reporter-main"
         style={{
           flex: 1,
-          paddingBottom: 88,
+          // Tab bar (~56) + FAB clearance (~80 to bottom) — keep the last
+          // article card from being hidden behind the floating "+" button.
+          paddingBottom: 140,
           maxWidth: 960,
           width: "100%",
           margin: "0 auto",
@@ -128,8 +130,8 @@ export function ReporterShell({ children }: { children: ReactNode }) {
         }
         .reporter-fab {
           position: fixed;
-          right: 20px;
-          bottom: calc(76px + env(safe-area-inset-bottom, 0));
+          right: 16px;
+          bottom: calc(80px + env(safe-area-inset-bottom, 0));
           width: 56px;
           height: 56px;
           border-radius: 28px;

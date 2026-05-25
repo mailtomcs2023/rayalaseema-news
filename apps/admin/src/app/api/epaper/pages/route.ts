@@ -13,14 +13,23 @@ export async function POST(req: NextRequest) {
   if (isAuthError(session)) return session;
   try {
     const body = await req.json();
-    const { editionId, templateSlug, insertAfter, label } = body as {
-      editionId: string; templateSlug: string; insertAfter?: number | null; label?: string;
+    const { editionId, templateSlug, insertAfter, label, blank } = body as {
+      editionId: string; templateSlug?: string; insertAfter?: number | null; label?: string; blank?: boolean;
     };
-    if (!editionId || !templateSlug) {
-      return NextResponse.json({ error: "editionId + templateSlug required" }, { status: 400 });
+    if (!editionId) {
+      return NextResponse.json({ error: "editionId required" }, { status: 400 });
     }
-    const template = await prisma.epaperTemplate.findUnique({ where: { slug: templateSlug } });
-    if (!template) return NextResponse.json({ error: "Template not found" }, { status: 404 });
+    // Blank-page mode: empty canvas the operator draws onto. No template
+    // applied; layout = { blocks: [] }. Picks templateSlug='blank' for the
+    // page record so the renderer treats it as a freeform layout.
+    let template: { slug: string; layout: unknown; defaultLabel?: string | null; name: string } | null = null;
+    if (blank) {
+      template = { slug: "blank", layout: { blocks: [] }, defaultLabel: "Blank page", name: "Blank page" };
+    } else {
+      if (!templateSlug) return NextResponse.json({ error: "templateSlug or blank:true required" }, { status: 400 });
+      template = await prisma.epaperTemplate.findUnique({ where: { slug: templateSlug } });
+      if (!template) return NextResponse.json({ error: "Template not found" }, { status: 404 });
+    }
 
     await createSnapshot(editionId, "manual", { note: "Auto: before page insert", snappedById: session.user.id });
 
