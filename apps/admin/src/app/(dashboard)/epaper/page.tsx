@@ -230,6 +230,20 @@ export default function EpaperEditorPage() {
 
   const activePage = edition?.pages?.[activePageIdx];
 
+  // Set of article ids already placed anywhere in the current edition.
+  // Used by the picker to flag duplicates so editors don't re-pick the same
+  // story onto two pages.
+  const usedArticleIdsInEdition = (() => {
+    const s = new Set<string>();
+    if (!edition) return s;
+    for (const p of edition.pages) {
+      for (const b of p.layout?.blocks || []) {
+        if (b.articleId) s.add(b.articleId);
+      }
+    }
+    return s;
+  })();
+
   // When a block is selected, seed the chip filters from its slot rules.
   // Operator can untick chips after this to widen.
   useEffect(() => {
@@ -273,7 +287,8 @@ export default function EpaperEditorPage() {
     const wantTotal = pickerTotalKeyRef.current !== totalKey;
     if (!wantTotal) params.set("skipTotal", "1");
 
-    // Debounce 200 ms so chip-toggle bursts collapse into a single fetch.
+    // Debounce 100 ms — fast enough to feel instant, slow enough to collapse
+    // chip-toggle bursts into a single fetch.
     const timer = setTimeout(() => {
       pickerAbortRef.current?.abort();
       const ctrl = new AbortController();
@@ -291,7 +306,7 @@ export default function EpaperEditorPage() {
           setPickerLoading(false);
         })
         .catch((e) => { if (e.name !== "AbortError") setPickerLoading(false); });
-    }, 200);
+    }, 100);
     return () => clearTimeout(timer);
   }, [selectedBlockId, pickerQuery, pickerFilters, activePage]);
 
@@ -401,6 +416,27 @@ export default function EpaperEditorPage() {
     if (!r.ok) { setError("Delete failed"); return; }
     await loadEdition(date);
   };
+  const renamePage = async (pageId: string, current: string) => {
+    const next = prompt("Page label:", current);
+    if (!next || !next.trim() || next.trim() === current) return;
+    const r = await fetch(`/api/epaper/pages/${pageId}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label: next.trim() }),
+    });
+    if (!r.ok) { setError("Rename failed"); return; }
+    await loadEdition(date);
+  };
+  const movePage = async (pageId: string, moveTo: number) => {
+    const r = await fetch(`/api/epaper/pages/${pageId}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ moveTo }),
+    });
+    if (!r.ok) { setError("Move failed"); return; }
+    await loadEdition(date);
+  };
+  // Drag-reorder state for pages aside: tracks which page is currently
+  // being dragged so other rows can show the drop indicator.
+  const [draggingPageId, setDraggingPageId] = useState<string | null>(null);
 
   // Real-time presence: tracks other editors on this edition via SSE.
   interface Peer { userId: string; userName: string; pageId: string | null }
@@ -917,7 +953,7 @@ export default function EpaperEditorPage() {
   }, [undo, redo]);
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
+    <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "#f3f4f6" }}>
       <Sidebar />
       <ToastViewport toasts={toasts} onDismiss={dismissToast} />
       {/* Block style panel — image + columns + headline + colors + spacing */}
@@ -1332,7 +1368,7 @@ export default function EpaperEditorPage() {
           </div>
         </div>
       )}
-      <main style={{ marginLeft: 240, flex: 1, padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
+      <main style={{ marginLeft: 240, flex: 1, padding: 24, display: "flex", flexDirection: "column", gap: 16, height: "100vh", overflow: "hidden", minHeight: 0 }}>
         {/* Top bar */}
         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
           <h1 style={{ fontSize: 22, fontWeight: 800, color: "#111" }}>ePaper Editor (v2)</h1>
@@ -1484,8 +1520,10 @@ export default function EpaperEditorPage() {
 
         {edition && (
           <div style={{ display: "flex", gap: 16, flex: 1, minHeight: 0 }}>
-            {/* Page tabs */}
-            <aside style={{ width: 240, background: "#fff", borderRadius: 8, padding: 12, overflowY: "auto" }}>
+            {/* Page tabs — flex-shrink:0 so the picker on the right keeps its width;
+                overflowY:auto + minHeight:0 so this list scrolls independently
+                of the canvas (no full-page scroll bleed). */}
+            <aside style={{ width: 240, flexShrink: 0, background: "#fff", borderRadius: 8, padding: 12, overflowY: "auto", minHeight: 0 }}>
               <h3 style={{ fontSize: 13, fontWeight: 800, color: "#555", marginBottom: 8 }}>PAGES</h3>
               {edition.pages.map((p, i) => {
                 const isActive = i === activePageIdx;
@@ -1496,7 +1534,23 @@ export default function EpaperEditorPage() {
                 const emptyCount = storyBlocks.filter((b) => !b.articleId).length;
                 const lockedCount = p.layout.blocks.filter((b) => b.locked).length;
                 return (
-                  <div key={p.id} style={{ display: "flex", gap: 4, marginBottom: 4 }}>
+                  <div key={p.id}
+                    draggable
+                    onDragStart={(e) => { setDraggingPageId(p.id); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", p.id); }}
+                    onDragEnd={() => setDraggingPageId(null)}
+                    onDragOver={(e) => { if (draggingPageId && draggingPageId !== p.id) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; } }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const dragged = draggingPageId;
+                      setDraggingPageId(null);
+                      if (!dragged || dragged === p.id) return;
+                      movePage(dragged, p.pageNumber);
+                    }}
+                    style={{
+                      display: "flex", gap: 4, marginBottom: 4,
+                      opacity: draggingPageId === p.id ? 0.4 : 1,
+                      borderTop: draggingPageId && draggingPageId !== p.id ? "2px dashed transparent" : undefined,
+                    }}>
                     <button onClick={() => { setActivePageIdx(i); setSelectedBlockId(null); }}
                       style={{
                         flex: 1, textAlign: "left", padding: "8px 10px",
@@ -1521,6 +1575,8 @@ export default function EpaperEditorPage() {
                         )}
                       </div>
                     </button>
+                    <button onClick={() => renamePage(p.id, p.label)} title="Rename page"
+                      style={{ padding: "4px 6px", background: "transparent", border: "none", cursor: "pointer", color: isActive ? "#fff" : "#9ca3af", fontSize: 13 }}>✎</button>
                     <button onClick={() => duplicatePage(p.id)} title="Duplicate page"
                       style={{ padding: "4px 6px", background: "transparent", border: "none", cursor: "pointer", color: isActive ? "#fff" : "#9ca3af", fontSize: 13 }}>⎘</button>
                     <button onClick={() => deletePage(p.id, p.label)} title="Delete page"
@@ -1767,12 +1823,29 @@ export default function EpaperEditorPage() {
                     </div>
                   )}
 
-                  {pickerArticles.map((a) => (
-                    <button key={a.id} onClick={() => setBlockArticle(a.id)}
+                  {pickerArticles.map((a) => {
+                    const used = usedArticleIdsInEdition.has(a.id);
+                    return (
+                    <button key={a.id} onClick={() => {
+                      if (used && !confirm(`This article is already placed on another page of this edition. Pick it again anyway?`)) return;
+                      setBlockArticle(a.id);
+                    }}
                       draggable
                       onDragStart={(e) => onArticleDragStart(e, a.id)}
-                      title="Drag onto any block, or click to assign to selected block"
-                      style={{ width: "100%", textAlign: "left", padding: 8, border: "1px solid #eee", borderRadius: 6, cursor: "grab", background: "#fafafa", fontSize: 12, display: "flex", gap: 8 }}>
+                      title={used ? "⚠ Already placed on another page in this edition" : "Drag onto any block, or click to assign to selected block"}
+                      style={{
+                        width: "100%", textAlign: "left", padding: 8,
+                        border: used ? "1px solid #fbbf24" : "1px solid #eee",
+                        borderRadius: 6, cursor: "grab",
+                        background: used ? "#fffbeb" : "#fafafa",
+                        opacity: used ? 0.75 : 1,
+                        fontSize: 12, display: "flex", gap: 8, position: "relative",
+                      }}>
+                      {used && (
+                        <span style={{ position: "absolute", top: 4, right: 4, background: "#f59e0b", color: "#fff", fontSize: 9, fontWeight: 800, padding: "2px 5px", borderRadius: 3, letterSpacing: 0.3 }}>
+                          ⚠ ALREADY USED
+                        </span>
+                      )}
                       {a.featuredImage ? (
                         <img src={a.featuredImage} alt="" style={{ width: 46, height: 46, objectFit: "cover", borderRadius: 4, flexShrink: 0 }} />
                       ) : (
@@ -1788,7 +1861,8 @@ export default function EpaperEditorPage() {
                         </div>
                       </div>
                     </button>
-                  ))}
+                    );
+                  })}
                 </>
               )}
             </aside>
@@ -1905,6 +1979,15 @@ function DraggableBlockGrid({
   }));
 
   const onChange = (newRGL: RGLLayout[]) => {
+    // Refuse RGL changes that would push any block past MAX_ROWS — print
+    // would clip it. Snap the offending block back to its prior position
+    // instead and alert the operator with a clear next-step (split to
+    // continuation on the next page).
+    const overflowing = newRGL.find((it) => it.y + it.h > MAX_ROWS);
+    if (overflowing) {
+      alert(`Block "${overflowing.i}" would land past row ${MAX_ROWS} (the print page boundary). Page is full — pick one:\n\n• Make the block smaller\n• Move another block off this page\n• Add a new page and split the story to a continuation block`);
+      return;
+    }
     // Merge RGL coords back into our block model. Skip purely visual updates
     // (RGL fires on every render of children) by comparing first.
     const byId = new Map(newRGL.map((it) => [it.i, it]));
@@ -2010,11 +2093,18 @@ function DraggableBlockGrid({
                     <div style={{ fontWeight: 800, lineHeight: 1.25, fontSize: b.type === "lead" ? 14 : 12, color: "#111", fontFamily: "'Noto Serif Telugu', serif" }}>
                       {(b.overrideTitle?.trim() || title.title).slice(0, 140)}
                     </div>
-                    {title.summary && b.h >= 4 && (
-                      <div style={{ fontSize: 10, lineHeight: 1.35, color: "#4b5563", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: Math.max(2, Math.min(8, b.h - 2)), WebkitBoxOrient: "vertical" }}>
-                        {title.summary.slice(0, 320)}
-                      </div>
-                    )}
+                    {title.summary && b.h >= 4 && (() => {
+                      const cols = b.style?.textColumns ?? (b.type === "lead" ? 2 : 1);
+                      return (
+                        <div style={{
+                          fontSize: 10, lineHeight: 1.35, color: "#4b5563", overflow: "hidden",
+                          columnCount: cols, columnGap: 6,
+                          columnRule: cols > 1 ? "1px solid #d1d5db" : "none",
+                        }}>
+                          {title.summary.slice(0, 320 * cols)}
+                        </div>
+                      );
+                    })()}
                   </>
                 )}
                 {!title && isStory && <div style={{ fontStyle: "italic", opacity: 0.55 }}>empty — click to pick</div>}

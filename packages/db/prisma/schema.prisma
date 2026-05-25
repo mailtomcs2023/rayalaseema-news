@@ -448,6 +448,12 @@ model EpaperEdition {
   killedAt    DateTime?
   killedReason String?
   killedById  String?
+  // Masthead bibliographic fields (Eenadu-style): సంపుటి / సంచిక / price.
+  // Optional — defaults applied at render time if null. Set per-edition by
+  // operator or autoincremented from a known epoch.
+  volumeNumber Int?
+  issueNumber  Int?
+  priceInPaise Int?    @default(650)  // Rs 6.50 default
   pages       EpaperPage[]
   ads         EpaperAd[]
   snapshots   EpaperEditionSnapshot[]

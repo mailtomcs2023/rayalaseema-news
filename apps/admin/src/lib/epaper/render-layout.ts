@@ -95,6 +95,17 @@ interface RenderInput {
   layout: { blocks: Block[] };
   // ad image map keyed by block id
   ads?: Record<string, { imageUrl: string; href?: string | null }>;
+  // Masthead metadata (#5 Eenadu-style header). Optional — renderer falls
+  // back to sensible defaults when omitted.
+  mastheadInfo?: {
+    dayLabel?: string;          // "సోమవారం"
+    volumeNumber?: number;      // సంపుటి N
+    issueNumber?: number;       // సంచిక N
+    priceInPaise?: number;      // 650 → "రూ. 6-50"
+    logoUrl?: string;           // /logo.png on the web origin
+    sideAdLeft?: { imageUrl: string; href?: string | null };
+    sideAdRight?: { imageUrl: string; href?: string | null };
+  };
 }
 
 const FONTS_HREF =
@@ -162,16 +173,44 @@ function imageOrFallback(url: string | null | undefined, className: string, crop
   return `<div class="ph ${className} noimg">రాయలసీమ ఎక్స్‌ప్రెస్</div>`;
 }
 
-function masthead(b: Block, opts: { dateLabel: string }): string {
+function masthead(b: Block, opts: { dateLabel: string; totalPages: number; meta?: RenderInput["mastheadInfo"] }): string {
+  const meta = opts.meta || {};
+  const day = meta.dayLabel || "";
+  const vol = meta.volumeNumber ?? 1;
+  const iss = meta.issueNumber ?? 1;
+  const priceRupees = Math.floor((meta.priceInPaise ?? 650) / 100);
+  const pricePaise = ((meta.priceInPaise ?? 650) % 100).toString().padStart(2, "0");
+  const logoSrc = meta.logoUrl || `${SITE_URL}/logo.png`;
+  const leftAd = meta.sideAdLeft;
+  const rightAd = meta.sideAdRight;
+
+  // Three-column band: left ad | logo + tagline | right ad. Beneath: place/
+  // date/volume/issue on left, price/pages/web on right, tagline center.
+  const leftSlot = leftAd
+    ? `<a href="${esc(leftAd.href || "#")}" class="mast-adslot"><img src="${esc(leftAd.imageUrl)}" alt="Sponsor"/></a>`
+    : `<div class="mast-adslot empty">అడ్వర్టైజ్‌మెంట్</div>`;
+  const rightSlot = rightAd
+    ? `<a href="${esc(rightAd.href || "#")}" class="mast-adslot"><img src="${esc(rightAd.imageUrl)}" alt="Sponsor"/></a>`
+    : `<div class="mast-adslot empty">అడ్వర్టైజ్‌మెంట్</div>`;
+
   return `<div class="masthead" style="${blockStyle(b)}">
-    <div class="mast-side">ఈ-ఎడిషన్<br/>${esc(opts.dateLabel)}</div>
-    <div class="mast-mid">
-      <div class="mast-logo">రాయలసీమ ఎక్స్‌ప్రెస్</div>
-      <div class="mast-tag">— THE VOICE OF RAYALASEEMA —</div>
+    <div class="mast-row">
+      ${leftSlot}
+      <div class="mast-center">
+        <img class="mast-logo-img" src="${esc(logoSrc)}" alt="రాయలసీమ ఎక్స్‌ప్రెస్"
+          onerror="this.outerHTML='<div class=\\'mast-logo\\'>రాయలసీమ ఎక్స్‌ప్రెస్</div>'"/>
+        <div class="mast-tag">THE VOICE OF RAYALASEEMA — Largest circulated Rayalaseema daily</div>
+      </div>
+      ${rightSlot}
     </div>
-    <div class="mast-side r">కర్నూలు · నంద్యాల · అనంతపురం<br/>కడప · తిరుపతి · చిత్తూరు</div>
+    <div class="mast-bib">
+      <span class="mast-bib-left">కర్నూలు · ${esc(opts.dateLabel)}${day ? ` · ${esc(day)}` : ""} · సంపుటి ${vol} · సంచిక ${iss}</span>
+      <span class="mast-bib-right">రూ. ${priceRupees}-${pricePaise} · పేజీలు ${opts.totalPages} · www.rayalaseemaexpress.com</span>
+    </div>
+    <div class="mast-cities">హైదరాబాద్ · కర్నూలు · నంద్యాల · అనంతపురం · శ్రీసత్యసాయి · వైఎస్సార్ కడప · అన్నమయ్య · తిరుపతి · చిత్తూర్</div>
   </div>`;
 }
+
 
 function sectionBand(b: Block, label: string, opts: { dateLabel: string; pageNumber: number }): string {
   return `<div class="secbar" style="${blockStyle(b)}">
@@ -447,7 +486,7 @@ export async function renderLayoutToHtml(input: RenderInput): Promise<string> {
   for (const b of input.layout.blocks) {
     switch (b.type) {
       case "masthead":
-        blockHtml.push(masthead(b, { dateLabel: input.dateLabel }));
+        blockHtml.push(masthead(b, { dateLabel: input.dateLabel, totalPages: input.totalPages, meta: input.mastheadInfo }));
         break;
       case "section-band":
         blockHtml.push(sectionBand(b, input.label, { dateLabel: input.dateLabel, pageNumber: input.pageNumber }));
@@ -576,12 +615,33 @@ export async function renderLayoutToHtml(input: RenderInput): Promise<string> {
   .block a.story-link { color: inherit; text-decoration: none; display:block; height:100%; }
 
   /* Masthead */
-  .masthead{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #14110b;padding:0 10px;height:100%}
-  .mast-mid{text-align:center;flex:1}
-  .mast-logo{font-family:'Ramabhadra',serif;font-size:64px;color:#A50D0D;line-height:1}
-  .mast-tag{font-family:'Noto Sans Telugu',sans-serif;font-size:13px;letter-spacing:6px;color:#6b6155;margin-top:5px}
-  .mast-side{font-family:'Noto Sans Telugu',sans-serif;font-size:12px;line-height:1.5;color:#6b6155;width:170px}
-  .mast-side.r{text-align:right}
+  /* Eenadu-style masthead: 3-col [ad | logo+tag | ad] band on top,
+     bibliographic info row, cities band on the bottom. */
+  .masthead { display: flex; flex-direction: column; height: 100%;
+    border-bottom: 2px solid #14110b; padding: 4px 10px 0; gap: 4px; }
+  .mast-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex: 1; min-height: 0; }
+  .mast-adslot { flex: 0 0 18%; max-width: 220px; height: 100%; display: flex; align-items: center; justify-content: center;
+    border: 1px dashed #d8d0bd; border-radius: 4px; overflow: hidden; }
+  .mast-adslot img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .mast-adslot.empty { font-family: 'Noto Sans Telugu', sans-serif; font-size: 11px;
+    color: #b8ad94; text-transform: uppercase; letter-spacing: 2px; background: #faf6ec; }
+  .mast-center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+  .mast-logo-img { max-height: 80%; max-width: 92%; object-fit: contain; display: block; }
+  .mast-logo { font-family: 'Ramabhadra', serif; font-size: 64px; color: #A50D0D; line-height: 1; }
+  .mast-tag { font-family: 'Noto Sans Telugu', sans-serif; font-size: 13px; letter-spacing: 4px;
+    color: #c2185b; font-style: italic; font-weight: 700; text-transform: uppercase; }
+  .mast-bib { display: flex; justify-content: space-between; align-items: center;
+    font-family: 'Noto Sans Telugu', sans-serif; font-size: 12px; color: #14110b;
+    padding: 4px 2px; border-top: 1px solid #d8d0bd; }
+  .mast-bib-left, .mast-bib-right { font-weight: 700; }
+  .mast-cities { background: #A50D0D; color: #fff;
+    font-family: 'Noto Sans Telugu', sans-serif; font-size: 11px; font-weight: 700;
+    padding: 5px 8px; text-align: center; letter-spacing: 0.5px;
+    border-radius: 2px; margin-bottom: 2px; }
+  /* Legacy fallback styles (when logo image fails and we drop the typed name). */
+  .mast-mid { text-align: center; flex: 1; }
+  .mast-side { font-family: 'Noto Sans Telugu', sans-serif; font-size: 12px; line-height: 1.5; color: #6b6155; width: 170px; }
+  .mast-side.r { text-align: right; }
 
   /* Section band */
   .secbar{
@@ -706,6 +766,24 @@ export async function renderEpaperPageById(pageId: string): Promise<string> {
 
   const pageCount = await prisma.epaperPage.count({ where: { editionId: page.editionId } });
 
+  // Pick two ad assets to flank the masthead. Prefers MASTHEAD-category
+  // image assets when present, else falls back to active ad assets sorted
+  // by validFrom desc.
+  let mastheadLeft: { imageUrl: string; href?: string | null } | undefined;
+  let mastheadRight: { imageUrl: string; href?: string | null } | undefined;
+  try {
+    const ads = await prisma.epaperAdAsset.findMany({
+      where: { active: true },
+      orderBy: [{ validFrom: "desc" }, { createdAt: "desc" }],
+      take: 2,
+      select: { imageUrl: true, linkUrl: true },
+    });
+    if (ads[0]) mastheadLeft = { imageUrl: ads[0].imageUrl, href: ads[0].linkUrl };
+    if (ads[1]) mastheadRight = { imageUrl: ads[1].imageUrl, href: ads[1].linkUrl };
+  } catch { /* table optional; ignore */ }
+
+  const days = ["ఆదివారం","సోమవారం","మంగళవారం","బుధవారం","గురువారం","శుక్రవారం","శనివారం"];
+
   return renderLayoutToHtml({
     pageNumber: page.pageNumber,
     totalPages: pageCount,
@@ -714,5 +792,14 @@ export async function renderEpaperPageById(pageId: string): Promise<string> {
     dateLabel: page.edition.date.toLocaleDateString("te-IN", { day: "numeric", month: "long", year: "numeric" }),
     layout: (page.layout as unknown as { blocks: Block[] }) ?? { blocks: [] },
     ads: adsByBlockId,
+    mastheadInfo: {
+      dayLabel: days[page.edition.date.getUTCDay()],
+      volumeNumber: (page.edition as any).volumeNumber ?? undefined,
+      issueNumber: (page.edition as any).issueNumber ?? undefined,
+      priceInPaise: (page.edition as any).priceInPaise ?? undefined,
+      logoUrl: `${SITE_URL}/logo.png`,
+      sideAdLeft: mastheadLeft,
+      sideAdRight: mastheadRight,
+    },
   });
 }

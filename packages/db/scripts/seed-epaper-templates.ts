@@ -75,25 +75,26 @@ const frontPage: TemplateSpec = {
   sortOrder: 1,
   layout: {
     blocks: [
-      { id: "mh", type: "masthead", x: 0, y: 0, w: 12, h: 3 },
-      { id: "ad-top", type: "ad", x: 0, y: 3, w: 12, h: 2 },
+      // Masthead now carries side ads + bibliographic info + cities band
+      // (#5 Eenadu-style) so it's taller: 4 rows instead of 3.
+      { id: "mh", type: "masthead", x: 0, y: 0, w: 12, h: 4 },
       // Lead — image preferred but not mandatory (so it always fills)
-      { id: "lead", type: "lead", x: 0, y: 5, w: 8, h: 14, slotFilter: { minImages: 1 } },
+      { id: "lead", type: "lead", x: 0, y: 4, w: 8, h: 14, slotFilter: { minImages: 1 } },
       // Right column majors
-      { id: "maj-1", type: "major", x: 8, y: 5, w: 4, h: 7, slotFilter: { minImages: 1 } },
-      { id: "maj-2", type: "major", x: 8, y: 12, w: 4, h: 7, slotFilter: { minImages: 1 } },
+      { id: "maj-1", type: "major", x: 8, y: 4, w: 4, h: 7, slotFilter: { minImages: 1 } },
+      { id: "maj-2", type: "major", x: 8, y: 11, w: 4, h: 7, slotFilter: { minImages: 1 } },
       // Secondary band
-      { id: "sec-1", type: "secondary", x: 0, y: 19, w: 3, h: 5 },
-      { id: "sec-2", type: "secondary", x: 3, y: 19, w: 3, h: 5 },
-      { id: "sec-3", type: "secondary", x: 6, y: 19, w: 3, h: 5 },
-      { id: "sec-4", type: "secondary", x: 9, y: 19, w: 3, h: 5 },
+      { id: "sec-1", type: "secondary", x: 0, y: 18, w: 3, h: 5 },
+      { id: "sec-2", type: "secondary", x: 3, y: 18, w: 3, h: 5 },
+      { id: "sec-3", type: "secondary", x: 6, y: 18, w: 3, h: 5 },
+      { id: "sec-4", type: "secondary", x: 9, y: 18, w: 3, h: 5 },
       // Briefs — 2 cols × 3 rows
-      { id: "br-1", type: "brief", x: 0, y: 24, w: 6, h: 2 },
-      { id: "br-2", type: "brief", x: 0, y: 26, w: 6, h: 2 },
-      { id: "br-3", type: "brief", x: 6, y: 24, w: 6, h: 2 },
-      { id: "br-4", type: "brief", x: 6, y: 26, w: 6, h: 2 },
+      { id: "br-1", type: "brief", x: 0, y: 23, w: 6, h: 2 },
+      { id: "br-2", type: "brief", x: 0, y: 25, w: 6, h: 2 },
+      { id: "br-3", type: "brief", x: 6, y: 23, w: 6, h: 2 },
+      { id: "br-4", type: "brief", x: 6, y: 25, w: 6, h: 2 },
       // Bottom ad
-      { id: "ad-bot", type: "ad", x: 0, y: 28, w: 12, h: 2 },
+      { id: "ad-bot", type: "ad", x: 0, y: 27, w: 12, h: 3 },
     ],
   },
 };

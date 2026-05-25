@@ -85,3 +85,74 @@ export async function POST(_: NextRequest, { params }: { params: Promise<{ id: s
     return apiError(e);
   }
 }
+
+// PATCH /api/epaper/pages/[id]
+// Body shapes:
+//   { label: "..." }                  rename page
+//   { moveTo: <pageNumber 1-based> }  reorder — shifts other pages to make room
+//
+// (Layout-editing PATCH lives on /api/epaper/page/[id] — that's the
+// authoritative editor write path. This route handles the structural ops.)
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR", "SUB_EDITOR"]);
+  if (isAuthError(session)) return session;
+  try {
+    const { id } = await params;
+    const body = await req.json();
+    const page = await prisma.epaperPage.findUnique({ where: { id } });
+    if (!page) return NextResponse.json({ error: "Page not found" }, { status: 404 });
+
+    if (typeof body.label === "string" && body.label.trim()) {
+      const updated = await prisma.epaperPage.update({
+        where: { id }, data: { label: body.label.trim() },
+      });
+      return NextResponse.json(updated);
+    }
+
+    if (typeof body.moveTo === "number") {
+      const target = Math.max(1, Math.floor(body.moveTo));
+      const total = await prisma.epaperPage.count({ where: { editionId: page.editionId } });
+      const dest = Math.min(target, total);
+      if (dest === page.pageNumber) return NextResponse.json(page);
+
+      await createSnapshot(page.editionId, "manual", { note: `Auto: before move page ${page.pageNumber} → ${dest}`, snappedById: session.user.id });
+
+      // Park source page in negative space; shift the affected range; restore source.
+      await prisma.epaperPage.update({ where: { id }, data: { pageNumber: -1 } });
+      if (dest < page.pageNumber) {
+        // Moving earlier — bump pages in [dest..page.pageNumber-1] by +1.
+        const affected = await prisma.epaperPage.findMany({
+          where: { editionId: page.editionId, pageNumber: { gte: dest, lte: page.pageNumber - 1 } },
+          orderBy: { pageNumber: "desc" },
+          select: { id: true, pageNumber: true },
+        });
+        for (const p of affected) {
+          await prisma.epaperPage.update({ where: { id: p.id }, data: { pageNumber: -(p.pageNumber + 1) } });
+        }
+        for (const p of affected) {
+          await prisma.epaperPage.update({ where: { id: p.id }, data: { pageNumber: p.pageNumber + 1 } });
+        }
+      } else {
+        // Moving later — bump pages in [page.pageNumber+1..dest] by -1.
+        const affected = await prisma.epaperPage.findMany({
+          where: { editionId: page.editionId, pageNumber: { gte: page.pageNumber + 1, lte: dest } },
+          orderBy: { pageNumber: "asc" },
+          select: { id: true, pageNumber: true },
+        });
+        for (const p of affected) {
+          await prisma.epaperPage.update({ where: { id: p.id }, data: { pageNumber: -(p.pageNumber - 1) } });
+        }
+        for (const p of affected) {
+          await prisma.epaperPage.update({ where: { id: p.id }, data: { pageNumber: p.pageNumber - 1 } });
+        }
+      }
+      const moved = await prisma.epaperPage.update({ where: { id }, data: { pageNumber: dest } });
+      await prisma.epaperEdition.update({ where: { id: page.editionId }, data: { status: "draft" } });
+      return NextResponse.json(moved);
+    }
+
+    return NextResponse.json({ error: "Provide label or moveTo" }, { status: 400 });
+  } catch (e) {
+    return apiError(e);
+  }
+}
