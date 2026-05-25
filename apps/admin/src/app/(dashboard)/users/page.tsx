@@ -2,6 +2,8 @@ import { Sidebar } from "@/components/sidebar";
 import { CrudTable } from "@/components/crud-table";
 import { prisma } from "@rayalaseema/db";
 
+export const dynamic = "force-dynamic";
+
 export default async function UsersPage() {
   const data = await prisma.user.findMany({
     select: { id: true, email: true, name: true, role: true, active: true, createdAt: true, _count: { select: { articles: true } } },
@@ -26,7 +28,7 @@ export default async function UsersPage() {
           fields={[
             { key: "name", label: "Name", type: "text", required: true },
             { key: "email", label: "Email", type: "text", required: true },
-            { key: "password", label: "Password (leave empty to keep)", type: "text" },
+            { key: "password", label: "Password (required for new user; leave empty when editing to keep current)", type: "text" },
             { key: "role", label: "Role", type: "select", required: true, options: [
               { value: "ADMIN", label: "Admin" },
               { value: "CHIEF_SUB_EDITOR", label: "Chief Sub-Editor" },
