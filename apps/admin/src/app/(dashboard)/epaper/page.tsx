@@ -245,13 +245,12 @@ function EpaperEditorPage() {
 
   const activePage = edition?.pages?.[activePageIdx];
 
-  // Editor version flag (#147). v2 is now the default; operators can fall
-  // back to the legacy DraggableBlockGrid via ?editor=v1 while we keep
-  // both code paths alive for a stability burn-in window. Toolbar chip
-  // flips the flag via the router.
+  // Editor version flag. v1 (legacy RGL) is the stable default; v2 is
+  // available behind ?editor=v2 for testing while bugs get worked out.
+  // Toolbar chip flips the flag via the router.
   const searchParams = useSearchParams();
   const router = useRouter();
-  const editorVersion = searchParams.get("editor") === "v1" ? "v1" : "v2";
+  const editorVersion = searchParams.get("editor") === "v2" ? "v2" : "v1";
   const flipEditor = () => {
     const next = new URLSearchParams(searchParams);
     next.set("editor", editorVersion === "v2" ? "v1" : "v2");

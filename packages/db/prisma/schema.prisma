@@ -849,6 +849,7 @@ model Desk {
   constituency    Constituency? @relation(fields: [constituencyId], references: [id])
 
   articles        Article[]
+  contents        Content[]
   sortOrder       Int           @default(0)
   active          Boolean       @default(true)
   createdAt       DateTime      @default(now())
@@ -1186,7 +1187,8 @@ model PaymentConfig {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  payments    ArticlePayment[]
+  payments        ArticlePayment[]
+  contentPayments ContentPayment[] @relation("ContentPaymentConfig")
 
   @@map("payment_configs")
 }
@@ -1251,4 +1253,144 @@ model PayoutBatch {
 
   @@unique([month, year])
   @@map("payout_batches")
+}
+
+// ============ UNIFIED CONTENT (Spec #1 — additive, parallel to Article during transition) ============
+// See docs/superpowers/specs/2026-05-25-unified-content-model-design.md
+//
+// One table replaces seven (Article, Video, Reel, WebStory, PhotoGallery,
+// Cartoon, BreakingNews). Type discriminated by `type` enum. Type-specific
+// fields stored in `payload` JSON column (Zod-validated in app layer).
+//
+// During Spec #1 implementation this lives ALONGSIDE the legacy tables.
+// FK migration on dependent tables happens in #188, table drops in #189.
+
+enum ContentType {
+  ARTICLE
+  VIDEO
+  REEL
+  WEB_STORY
+  PHOTO_GALLERY
+  CARTOON
+  BREAKING_NEWS
+}
+
+model Content {
+  id              String        @id @default(cuid())
+  type            ContentType
+  title           String
+  // Null for BREAKING_NEWS (ticker headline, no public URL). All other types require slug.
+  slug            String?       @unique
+  summary         String?       @db.Text
+  // HTML body — ARTICLE only. Other types render from `payload`.
+  body            String?       @db.Text
+  featuredImage   String?
+  // Type-specific blob. Shape validated by Zod schemas in packages/db/src/payload-schemas.ts.
+  payload         Json?
+
+  categoryId      String?
+  category        Category?     @relation(fields: [categoryId], references: [id])
+  authorId        String
+  author          User          @relation("ContentAuthor", fields: [authorId], references: [id])
+  deskId          String?
+  desk            Desk?         @relation(fields: [deskId], references: [id])
+  constituencyId  String?
+  constituency    Constituency? @relation("ContentConstituency", fields: [constituencyId], references: [id])
+
+  status          ArticleStatus @default(DRAFT)
+  featured        Boolean       @default(false)
+  language        Language      @default(TELUGU)
+  viewCount       Int           @default(0)
+
+  publishedAt     DateTime?
+  scheduledAt     DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // PIB approval workflow (preserved from Article — #99)
+  needsPibApproval    Boolean       @default(false)
+  pibApprovedAt       DateTime?
+  pibReferenceNumber  String?
+
+  // Ingestion dedup — source news URL, unique so the same item can't be imported twice
+  sourceUrl       String?       @unique
+
+  tags            ContentTag[]
+  revisions       ContentRevision[]
+  payments        ContentPayment[]
+
+  @@index([type, status, publishedAt])
+  @@index([categoryId, status, publishedAt])
+  @@index([status, publishedAt])
+  @@index([authorId])
+  @@index([constituencyId])
+  @@index([deskId])
+  @@map("contents")
+}
+
+model ContentTag {
+  contentId  String
+  content    Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  tagId      String
+  tag        Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([contentId, tagId])
+  @@map("content_tags")
+}
+
+model ContentRevision {
+  id              String        @id @default(cuid())
+  contentId       String
+  content         Content       @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  title           String
+  slug            String?
+  summary         String?       @db.Text
+  body            String?       @db.Text
+  featuredImage   String?
+  categoryId      String?
+  payload         Json?
+  status          ArticleStatus
+
+  editedById      String
+  editedBy        User          @relation(fields: [editedById], references: [id])
+  editNote        String?
+  bodyLength      Int           @default(0)
+
+  createdAt       DateTime      @default(now())
+
+  @@index([contentId, createdAt])
+  @@index([editedById])
+  @@map("content_revisions")
+}
+
+model ContentPayment {
+  id            String         @id @default(cuid())
+  contentId     String         @unique
+  content       Content        @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  journalistId  String
+  journalist    User           @relation("ContentJournalist", fields: [journalistId], references: [id])
+  configId      String?
+  config        PaymentConfig? @relation("ContentPaymentConfig", fields: [configId], references: [id])
+
+  baseAmount    Float
+  bonusAmount   Float          @default(0)
+  deductions    Float          @default(0)
+  totalAmount   Float
+  currency      String         @default("INR")
+
+  status        PaymentStatus  @default(CALCULATED)
+  approvedById  String?
+  approvedAt    DateTime?
+  paidAt        DateTime?
+  transactionId String?
+  paymentMethod String?
+
+  note          String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([journalistId, status])
+  @@index([status])
+  @@map("content_payments")
 }

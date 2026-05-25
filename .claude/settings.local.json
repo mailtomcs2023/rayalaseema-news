@@ -89,7 +89,8 @@
       "Bash(python3 'd:/tmp/create-content-issues.py')",
       "Bash(cat > *)",
       "Bash(python3 'd:/tmp/create-pagebuilder-issues.py')",
-      "Bash(python3 'd:/tmp/create-menubuilder-issues.py')"
+      "Bash(python3 'd:/tmp/create-menubuilder-issues.py')",
+      "Bash(PGPASSWORD='Dhruva@123456' psql -h localhost -U postgres -d rayalaseema_express -c \"\\\\dt contents; \\\\dt content_*;\")"
     ],
     "additionalDirectories": [
       "D:\\RSE2026M365\\assets\\masthead",
