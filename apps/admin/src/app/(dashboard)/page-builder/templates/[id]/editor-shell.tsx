@@ -136,14 +136,32 @@ export function EditorShell({
     setLayout(next);
   }
 
-  function addBlock(type: string, compositeId?: string) {
+  function addBlock(type: string, compositeId?: string, position?: number) {
     const id = makeId(type === "Composite" ? "comp" : type.slice(0, 3).toLowerCase());
     const block: Block =
       type === "Composite"
         ? { id, type, compositeId: compositeId!, mobileVariant: "show" }
         : { id, type, config: { ...(DEFAULT_CONFIG[type] || {}) }, mobileVariant: "show" };
-    persistLocal({ ...layout, blocks: [...layout.blocks, block] });
+    const next = [...layout.blocks];
+    if (position === undefined || position < 0 || position > next.length) {
+      next.push(block);
+    } else {
+      next.splice(position, 0, block);
+    }
+    persistLocal({ ...layout, blocks: next });
     setSelectedId(id);
+  }
+
+  function reorderBlock(fromId: string, toIndex: number) {
+    const fromIdx = layout.blocks.findIndex((b) => b.id === fromId);
+    if (fromIdx === -1) return;
+    const next = [...layout.blocks];
+    const [item] = next.splice(fromIdx, 1);
+    // toIndex was computed against the pre-removal list; adjust if dragging
+    // downward so the visual drop position matches the array slot.
+    const adjusted = toIndex > fromIdx ? toIndex - 1 : toIndex;
+    next.splice(Math.max(0, Math.min(adjusted, next.length)), 0, item);
+    persistLocal({ ...layout, blocks: next });
   }
 
   function moveBlock(id: string, dir: -1 | 1) {
@@ -261,7 +279,12 @@ export function EditorShell({
         <aside style={paneLeft}>
           <PaletteSection title="Built-in blocks">
             {builtinBlockTypes.map((t) => (
-              <PaletteItem key={t} label={t} onClick={() => addBlock(t)} />
+              <PaletteItem
+                key={t}
+                label={t}
+                onClick={() => addBlock(t)}
+                dragPayload={{ type: t }}
+              />
             ))}
           </PaletteSection>
           <PaletteSection title="Composite blocks">
@@ -271,7 +294,12 @@ export function EditorShell({
               </div>
             ) : (
               composites.map((c) => (
-                <PaletteItem key={c.id} label={c.name} onClick={() => addBlock("Composite", c.id)} />
+                <PaletteItem
+                  key={c.id}
+                  label={c.name}
+                  onClick={() => addBlock("Composite", c.id)}
+                  dragPayload={{ type: "Composite", compositeId: c.id }}
+                />
               ))
             )}
           </PaletteSection>
@@ -285,6 +313,8 @@ export function EditorShell({
             onSelect={(id) => setSelectedId(id)}
             onMove={moveBlock}
             onDelete={deleteBlock}
+            onReorder={reorderBlock}
+            onDropNew={(type, compositeId, position) => addBlock(type, compositeId, position)}
             composites={composites}
           />
           <iframe
@@ -327,9 +357,29 @@ function PaletteSection({ title, children }: { title: string; children: React.Re
   );
 }
 
-function PaletteItem({ label, onClick }: { label: string; onClick: () => void }) {
+function PaletteItem({
+  label,
+  onClick,
+  dragPayload,
+}: {
+  label: string;
+  onClick: () => void;
+  dragPayload: { type: string; compositeId?: string };
+}) {
   return (
-    <button onClick={onClick} style={paletteItem}>
+    <button
+      onClick={onClick}
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = "copy";
+        e.dataTransfer.setData(
+          "application/page-builder",
+          JSON.stringify({ kind: "new", ...dragPayload }),
+        );
+      }}
+      style={paletteItem}
+      title="Click to add at end, or drag onto the outline at the desired position"
+    >
       + {label}
     </button>
   );
@@ -341,6 +391,8 @@ function BlockList({
   onSelect,
   onMove,
   onDelete,
+  onReorder,
+  onDropNew,
   composites,
 }: {
   blocks: Block[];
@@ -348,69 +400,129 @@ function BlockList({
   onSelect: (id: string) => void;
   onMove: (id: string, dir: -1 | 1) => void;
   onDelete: (id: string) => void;
+  onReorder: (fromId: string, toIndex: number) => void;
+  onDropNew: (type: string, compositeId: string | undefined, position: number) => void;
   composites: CompositeOpt[];
 }) {
+  const [dropIdx, setDropIdx] = useState<number | null>(null);
+
+  function handleDrop(targetIdx: number, ev: React.DragEvent) {
+    ev.preventDefault();
+    setDropIdx(null);
+    const raw = ev.dataTransfer.getData("application/page-builder");
+    if (!raw) return;
+    try {
+      const payload = JSON.parse(raw) as
+        | { kind: "new"; type: string; compositeId?: string }
+        | { kind: "move"; id: string };
+      if (payload.kind === "new") {
+        onDropNew(payload.type, payload.compositeId, targetIdx);
+      } else if (payload.kind === "move") {
+        onReorder(payload.id, targetIdx);
+      }
+    } catch {
+      /* ignore malformed payloads */
+    }
+  }
+
+  function dropZoneProps(idx: number): React.HTMLAttributes<HTMLDivElement> {
+    return {
+      onDragOver: (e) => {
+        if (e.dataTransfer.types.includes("application/page-builder")) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "copy";
+          setDropIdx(idx);
+        }
+      },
+      onDragLeave: () => setDropIdx((prev) => (prev === idx ? null : prev)),
+      onDrop: (e) => handleDrop(idx, e),
+    };
+  }
+
   return (
     <div style={blockListBox}>
       <div style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", marginBottom: 6 }}>
         Outline ({blocks.length} block{blocks.length === 1 ? "" : "s"})
       </div>
       {blocks.length === 0 && (
-        <div style={paletteHint}>Drop a block from the palette to start building.</div>
+        <div
+          {...dropZoneProps(0)}
+          style={{
+            ...paletteHint,
+            border: dropIdx === 0 ? "2px dashed #FF2C2C" : "2px dashed transparent",
+            borderRadius: 4,
+            padding: 12,
+          }}
+        >
+          Drop a block from the palette to start building.
+        </div>
       )}
+
+      {/* Drop indicator above the first block */}
+      {blocks.length > 0 && (
+        <div {...dropZoneProps(0)} style={dropZone(dropIdx === 0)} />
+      )}
+
       {blocks.map((b, i) => {
         const compName =
           b.type === "Composite" ? composites.find((c) => c.id === b.compositeId)?.name : null;
         return (
-          <div
-            key={b.id}
-            onClick={() => onSelect(b.id)}
-            style={{
-              ...blockRow,
-              ...(selectedId === b.id ? blockRowActive : {}),
-            }}
-          >
-            <span style={{ flex: 1, fontWeight: 600 }}>
-              {i + 1}. {b.type}
-              {compName && <span style={{ color: "#6b7280", fontWeight: 400 }}> · {compName}</span>}
-            </span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onMove(b.id, -1);
+          <div key={b.id}>
+            <div
+              onClick={() => onSelect(b.id)}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.effectAllowed = "move";
+                e.dataTransfer.setData(
+                  "application/page-builder",
+                  JSON.stringify({ kind: "move", id: b.id }),
+                );
               }}
-              disabled={i === 0}
-              style={iconBtn}
-              title="Move up"
-            >
-              ▲
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onMove(b.id, 1);
+              style={{
+                ...blockRow,
+                ...(selectedId === b.id ? blockRowActive : {}),
               }}
-              disabled={i === blocks.length - 1}
-              style={iconBtn}
-              title="Move down"
             >
-              ▼
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(b.id);
-              }}
-              style={{ ...iconBtn, color: "#B91C1C" }}
-              title="Delete"
-            >
-              ✕
-            </button>
+              <span style={{ color: "#9ca3af", cursor: "grab", marginRight: 4 }} title="Drag to reorder">⋮⋮</span>
+              <span style={{ flex: 1, fontWeight: 600 }}>
+                {i + 1}. {b.type}
+                {compName && <span style={{ color: "#6b7280", fontWeight: 400 }}> · {compName}</span>}
+              </span>
+              <button
+                onClick={(e) => { e.stopPropagation(); onMove(b.id, -1); }}
+                disabled={i === 0}
+                style={iconBtn}
+                title="Move up"
+              >▲</button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onMove(b.id, 1); }}
+                disabled={i === blocks.length - 1}
+                style={iconBtn}
+                title="Move down"
+              >▼</button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete(b.id); }}
+                style={{ ...iconBtn, color: "#B91C1C" }}
+                title="Delete"
+              >✕</button>
+            </div>
+            {/* Drop indicator after each block */}
+            <div {...dropZoneProps(i + 1)} style={dropZone(dropIdx === i + 1)} />
           </div>
         );
       })}
     </div>
   );
+}
+
+function dropZone(active: boolean): React.CSSProperties {
+  return {
+    height: active ? 14 : 6,
+    margin: "1px 0",
+    borderRadius: 3,
+    background: active ? "#FF2C2C" : "transparent",
+    transition: "background 0.1s, height 0.1s",
+  };
 }
 
 function ConfigPanel({
