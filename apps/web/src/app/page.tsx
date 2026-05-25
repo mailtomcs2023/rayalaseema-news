@@ -38,8 +38,11 @@ export default async function HomePage() {
   const afUnique = afPool.filter((a) => (afSeen.has(a.id) ? false : afSeen.add(a.id)));
 
   const featuredHard = featured.find((a) => !AF_EXCLUDE.has(a.category.slug));
-  const afLead = toAF(featuredHard || afUnique[0]);
-  const afLatest = afUnique.filter((a) => a.id !== afLead.id).slice(0, 8).map(toAF);
+  const afLeadSrc = featuredHard || afUnique[0] || null;
+  const afLead = afLeadSrc ? toAF(afLeadSrc) : null;
+  const afLatest = afLead
+    ? afUnique.filter((a) => a.id !== afLead.id).slice(0, 8).map(toAF)
+    : [];
 
   const afDistricts = Object.values(districtArticles)
     .map((d) => ({
@@ -169,8 +172,15 @@ export default async function HomePage() {
       <AdHeaderLeaderboard ads={adItems} />
 
       <main style={{ maxWidth: 1280, margin: "0 auto", padding: "2px 8px 0" }}>
-        {/* SECTION 1 — regional above-fold */}
-        <AboveFold lead={afLead} districts={afDistricts} breaking={afBreaking} latest={afLatest} />
+        {/* SECTION 1 — regional above-fold (only when at least one article exists) */}
+        {afLead ? (
+          <AboveFold lead={afLead} districts={afDistricts} breaking={afBreaking} latest={afLatest} />
+        ) : (
+          <div style={{ padding: "60px 16px", textAlign: "center", background: "#fff", border: "1px solid #eee", borderRadius: 8, margin: "12px 0" }}>
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: "#111", marginBottom: 8 }}>వార్తలు త్వరలో…</h2>
+            <p style={{ fontSize: 14, color: "#666" }}>No published articles yet. Add content from the admin panel.</p>
+          </div>
+        )}
 
         {/* Ad */}
         <div style={{ marginTop: 8 }}><AdBannerMid ads={adItems} /></div>
