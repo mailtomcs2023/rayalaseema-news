@@ -106,17 +106,26 @@ export async function TemplateRenderer({
   const needsComposites = parsed.data.blocks.some((b) => b.type === "Composite");
   const composites = needsComposites ? await fetchComposites() : undefined;
 
+  // Resolve every block on the server with per-block error isolation. One
+  // crashing fetcher would otherwise 500 the whole page (RSC promises
+  // rejecting at the parent boundary). Catching per block keeps the
+  // homepage rendering even if a single SectionBand / CinemaBand fails.
+  const resolved = await Promise.all(
+    parsed.data.blocks.map(async (block) => {
+      try {
+        const el = await BlockRenderer({ block, ctx: pageCtx, composites });
+        return el;
+      } catch (err) {
+        console.error(`[TemplateRenderer] block ${block.id} (${block.type}) crashed:`, err);
+        return null;
+      }
+    }),
+  );
+
   return (
     <>
-      {parsed.data.blocks.map((block) => (
-        // BlockRenderer is async; React renders the Promise as a Suspense boundary.
-        // @ts-expect-error — async server component
-        <BlockRenderer
-          key={block.id}
-          block={block}
-          ctx={pageCtx}
-          composites={composites}
-        />
+      {resolved.map((el, i) => (
+        <div key={parsed.data.blocks[i].id}>{el}</div>
       ))}
       <style>{`
         @media (max-width: 768px) {
