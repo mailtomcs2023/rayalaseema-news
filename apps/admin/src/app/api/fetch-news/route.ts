@@ -8,7 +8,8 @@ const NEWSDATA_API_KEY = process.env.NEWSDATA_API_KEY;
 
 // GET /api/fetch-news - fetch latest news from NewsData.io
 export async function GET(req: NextRequest) {
-  const session = await requireAuth(["ADMIN"]); if (isAuthError(session)) return session;
+  const session = await requireAuth(["ADMIN", "EDITOR", "CHIEF_SUB_EDITOR", "SUB_EDITOR", "REPORTER"]);
+  if (isAuthError(session)) return session;
   if (!NEWSDATA_API_KEY) return NextResponse.json({ error: "NEWSDATA_API_KEY not configured" }, { status: 503 });
   const { searchParams } = new URL(req.url);
   const query = searchParams.get("q") || "Rayalaseema OR Kurnool OR Anantapur OR Kadapa OR Tirupati OR Chittoor";
@@ -54,7 +55,8 @@ export async function GET(req: NextRequest) {
 
 // POST /api/fetch-news - import a news article as draft
 export async function POST(req: NextRequest) {
-  const session2 = await requireAuth(["ADMIN"]); if (isAuthError(session2)) return session2;
+  const session2 = await requireAuth(["ADMIN", "EDITOR", "CHIEF_SUB_EDITOR", "SUB_EDITOR", "REPORTER"]);
+  if (isAuthError(session2)) return session2;
   try {
     const body = await req.json();
     const { title, description, imageUrl, sourceUrl, categorySlug } = body;

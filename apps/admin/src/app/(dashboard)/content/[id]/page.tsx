@@ -394,24 +394,36 @@ export default function ContentEditorPage() {
               <>
                 <label style={lblStyle}>Body</label>
                 <RichEditor ref={editorRef} content={body} onChange={setBody} />
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 2fr", gap: 10, marginTop: 12 }}>
-                  <div>
-                    <label style={lblStyle}>Rating (movie review)</label>
-                    <input type="number" min="0" max="5" step="0.1" value={rating}
-                      onChange={(e) => setRating(e.target.value)} placeholder="0.0 - 5.0"
-                      style={inpStyle} />
-                  </div>
-                  <div>
-                    <label style={lblStyle}>Reviewer name</label>
-                    <input value={reviewerName} onChange={(e) => setReviewerName(e.target.value)}
-                      placeholder="Critic byline" style={inpStyle} />
-                  </div>
-                  <div>
-                    <label style={lblStyle}>Source URL</label>
-                    <input type="url" value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)}
-                      placeholder="https://..." style={inpStyle} />
-                  </div>
-                </div>
+                {/* Rating + reviewer-byline are movie-review-only inputs. The
+                    Source URL is also gated to that category — most ARTICLEs
+                    are original reporting, not wire imports. The "Fetch +
+                    translate" URL bar above already feeds sourceUrl when
+                    importing from a foreign site. */}
+                {(() => {
+                  const cat = categories.find((c) => c.id === categoryId);
+                  const isMovieReview = cat?.slug === "movie-reviews";
+                  if (!isMovieReview) return null;
+                  return (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 2fr", gap: 10, marginTop: 12, padding: 10, background: "#fef9c3", border: "1px solid #fde68a", borderRadius: 8 }}>
+                      <div>
+                        <label style={lblStyle}>Rating</label>
+                        <input type="number" min="0" max="5" step="0.1" value={rating}
+                          onChange={(e) => setRating(e.target.value)} placeholder="0.0 - 5.0"
+                          style={inpStyle} />
+                      </div>
+                      <div>
+                        <label style={lblStyle}>Reviewer name</label>
+                        <input value={reviewerName} onChange={(e) => setReviewerName(e.target.value)}
+                          placeholder="Critic byline" style={inpStyle} />
+                      </div>
+                      <div>
+                        <label style={lblStyle}>Source URL</label>
+                        <input type="url" value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)}
+                          placeholder="https://..." style={inpStyle} />
+                      </div>
+                    </div>
+                  );
+                })()}
               </>
             )}
 

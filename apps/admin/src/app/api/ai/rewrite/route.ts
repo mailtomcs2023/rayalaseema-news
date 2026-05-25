@@ -20,7 +20,14 @@ RULES:
 6. Professional newspaper tone - not casual, not overly formal
 7. Write like a HUMAN journalist, not like AI
 8. NEVER put translations in brackets
-9. If the source is in English, translate naturally - don't do word-by-word translation`;
+9. If the source is in English, translate naturally - don't do word-by-word translation
+
+PRIMARY vs SECONDARY SPEECH (CRITICAL — most common AI failure):
+- PRIMARY speech = direct quotes by a named person, marked in the source with quotation marks ("..." or "...") or phrases like "said", "stated", "అన్నారు", "చెప్పారు", "తెలిపారు". Render as <blockquote> in FIRST PERSON exactly as the speaker said it.
+- SECONDARY speech = reporter narration ABOUT what someone said or did. Render as <p> in THIRD PERSON ("X said that...", "X మాట్లాడుతూ...అని పేర్కొన్నారు"). NEVER convert this into a fabricated first-person quote.
+- DO NOT invent quotes. If the source does not contain quoted text by a person, your output MUST NOT contain a first-person quote attributed to that person.
+- DO NOT switch a reporter's third-person summary into a speaker's first-person claim. That is fabrication.
+- Proper nouns (people, place, party names) stay untranslated — write them in Telugu script phonetically, not translated.`;
 
 // Rayalaseema dialect - ONLY for editorials/opinion pieces
 const DIALECT_PROMPT = `You are an editorial writer for "Rayalaseema Express". Write opinion/editorial pieces with Rayalaseema dialect flavor.
@@ -81,7 +88,7 @@ export async function POST(req: NextRequest) {
   // mobile path first and fall back to the admin-session check.
   const reporterId = await getReporterId(req);
   if (!reporterId) {
-    const session = await requireAuth(["ADMIN"]);
+    const session = await requireAuth(["ADMIN", "EDITOR", "CHIEF_SUB_EDITOR", "SUB_EDITOR", "REPORTER"]);
     if (isAuthError(session)) return session;
   }
   if (!ENDPOINT || !KEY) {
@@ -105,7 +112,16 @@ export async function POST(req: NextRequest) {
     const systemPrompt = isDialect ? DIALECT_PROMPT : NEWS_PROMPT;
 
     const prompts: Record<string, string> = {
-      translate: `Translate this English news to standard Telugu. Write a complete newspaper article with headline and paragraphs:\n\n${fullText}`,
+      translate: `Translate this news to standard Telugu. Write a complete newspaper article with headline and paragraphs.
+
+STRICT FIDELITY RULES:
+- Only render <blockquote> first-person quotes for text that is ACTUALLY QUOTED in the source (inside "..." or "...") or explicitly introduced as a direct quote.
+- Reporter narration ("X said that Y", "X మాట్లాడుతూ...అని పేర్కొన్నారు") MUST stay as third-person <p>, NOT be flipped into a fake first-person <blockquote>.
+- Do NOT invent statements, emotions, or claims that are not in the source.
+- Keep names of people, places, parties exactly as written (transliterated to Telugu script, not translated).
+
+SOURCE:
+${fullText}`,
       // Short-text translation — single word / phrase / label. No HTML, no
       // article structure, no quotes. Just the Telugu equivalent.
       phrase: `Translate this English text to Telugu. Return ONLY the Telugu translation as plain text — no quotes, no explanation, no English in brackets, no HTML:\n\n${fullText}`,
@@ -129,7 +145,9 @@ export async function POST(req: NextRequest) {
             { role: "user", content: prompts[action] || prompts.translate },
           ],
           max_completion_tokens: 2000,
-          temperature: 0.5,
+          // Lower temp for translation/news to suppress hallucinated quotes.
+          // Editorial action still uses 0.5 because it's an opinion piece.
+          temperature: isDialect ? 0.5 : 0.3,
         }),
       }
     );
