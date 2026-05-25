@@ -10,7 +10,21 @@
 
 import { prisma, layoutSchema, resolveAssignment } from "@rayalaseema/db";
 import type { PageContext } from "./types";
-import { BlockRenderer } from "./block-renderer";
+import { BlockRenderer, type CompositeMap } from "./block-renderer";
+
+// Cheap composite map: one query that grabs everything referenced (or
+// likely to be referenced) by the rendered template. We pull all
+// composites unconditionally — the row count is small (curated by
+// editors, not bulk-imported), so a single query beats N round-trips
+// for individual Composite blocks.
+async function fetchComposites(): Promise<CompositeMap> {
+  const rows = await prisma.compositeBlock.findMany({
+    select: { id: true, slug: true, name: true, blocks: true },
+  });
+  const map: CompositeMap = new Map();
+  for (const r of rows) map.set(r.id, r);
+  return map;
+}
 
 function deriveCategorySlug(urlPath: string): string | undefined {
   const m = urlPath.match(/^\/category\/([^/]+)\/?$/);
@@ -88,12 +102,21 @@ export async function TemplateRenderer({
     districtSlug: ctx?.districtSlug ?? null,
   };
 
+  // Only pay the composite query when the layout actually references one.
+  const needsComposites = parsed.data.blocks.some((b) => b.type === "Composite");
+  const composites = needsComposites ? await fetchComposites() : undefined;
+
   return (
     <>
       {parsed.data.blocks.map((block) => (
         // BlockRenderer is async; React renders the Promise as a Suspense boundary.
         // @ts-expect-error — async server component
-        <BlockRenderer key={block.id} block={block} ctx={pageCtx} />
+        <BlockRenderer
+          key={block.id}
+          block={block}
+          ctx={pageCtx}
+          composites={composites}
+        />
       ))}
       <style>{`
         @media (max-width: 768px) {
