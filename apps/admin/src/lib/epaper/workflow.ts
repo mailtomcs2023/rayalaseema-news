@@ -40,6 +40,9 @@ export const TRANSITIONS: Transition[] = [
   { from: "APPROVED",     to: "PUBLISHED",     allowedRoles: ["ADMIN", "CHIEF_SUB_EDITOR"], label: "Publish" },
   { from: "REJECTED",     to: "DRAFT",         allowedRoles: ["ADMIN", "CHIEF_SUB_EDITOR", "SUB_EDITOR", "REPORTER"], label: "Reopen as draft" },
   { from: "PUBLISHED",    to: "DRAFT",         allowedRoles: ["ADMIN", "CHIEF_SUB_EDITOR"], label: "Unpublish" },
+  // Retraction — terminal kill from PUBLISHED. Note required (carries the
+  // reason that surfaces on /epaper/corrections).
+  { from: "PUBLISHED",    to: "KILLED",        allowedRoles: ["ADMIN", "CHIEF_SUB_EDITOR"], label: "🗑 Kill / retract", noteRequired: true },
 ];
 
 /** Returns every transition the given role can apply FROM the given state. */

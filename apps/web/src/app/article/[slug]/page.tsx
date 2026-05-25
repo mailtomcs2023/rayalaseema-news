@@ -7,6 +7,8 @@ import { TTSButton } from "@/components/tts-button";
 import { CommentsSection } from "@/components/comments-section";
 import { ScrollShareNudge } from "@/components/scroll-share-nudge";
 import { ShareBar } from "@/components/share-bar";
+import { PaywallModal } from "@/components/paywall-modal";
+import { DialectGlosser } from "@/components/dialect-glosser";
 import { getArticleBySlug, getTrendingArticles, getArticlesByCategory, incrementViewCount } from "@/lib/db-queries";
 import { injectInlineByline, formatRelativeTelugu } from "@/lib/byline";
 import type { Metadata } from "next";
@@ -19,7 +21,11 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   // Per-article SEO overrides w/ sensible fallbacks
   const metaTitle = (article as any).metaTitle || article.title;
   const metaDescription = (article as any).metaDescription || article.summary || article.title;
-  const ogImage = (article as any).ogImage || article.featuredImage || `${siteUrl}/logo.png`;
+  // OG image priority: editor-set ogImage > article's featured image >
+  // auto-generated branded card from /api/og/<slug> (#95). The autogen falls
+  // out as the default so every article ships a branded social preview even
+  // without a featured image.
+  const ogImage = (article as any).ogImage || article.featuredImage || `${siteUrl}/api/og/${slug}`;
   const canonical = `${siteUrl}/article/${slug}`;
   const noindex = article.status !== "PUBLISHED";
   return {
@@ -233,6 +239,8 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
             {/* Comments */}
             <CommentsSection articleId={article.id} />
           </article>
+          <PaywallModal articleSlug={article.slug} />
+          <DialectGlosser />
 
           {/* Sidebar */}
           <aside className="article-sidebar" style={{ width: 320, flexShrink: 0 }}>

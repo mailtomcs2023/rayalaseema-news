@@ -60,8 +60,13 @@ interface TemplateSpec {
 }
 
 // =========== FRONT PAGE ===========
-// 12 cols × 38 rows. Lead (full-image), 4 majors, 4 secondary, 2 brief cols (8 items
-// each), ad bands.
+// 12 cols × 30 rows — fits the Indian broadsheet printable area exactly
+// (30 rows × 92 px = 2760 px = PDF page height). Anything past row 30 gets
+// clipped by Playwright page.pdf, so the front page is tuned to land here.
+//
+// Story slots: 1 lead, 2 majors, 4 secondaries, 6 briefs (was 8 — trimmed
+// to fit). minWords filter removed from lead so editorial-light days still
+// fill the lead — score function still favors breaking+featured+image.
 const frontPage: TemplateSpec = {
   slug: "front",
   name: "Front Page",
@@ -70,29 +75,25 @@ const frontPage: TemplateSpec = {
   sortOrder: 1,
   layout: {
     blocks: [
-      { id: "mh", type: "masthead", x: 0, y: 0, w: 12, h: 4 },
-      { id: "ad-top", type: "ad", x: 0, y: 4, w: 12, h: 2 },
-      // Lead big
-      { id: "lead", type: "lead", x: 0, y: 6, w: 8, h: 14, slotFilter: { minImages: 1, minWords: 150 } },
-      // Right majors column
-      { id: "maj-1", type: "major", x: 8, y: 6, w: 4, h: 7, slotFilter: { minImages: 1 } },
-      { id: "maj-2", type: "major", x: 8, y: 13, w: 4, h: 7, slotFilter: { minImages: 1 } },
+      { id: "mh", type: "masthead", x: 0, y: 0, w: 12, h: 3 },
+      { id: "ad-top", type: "ad", x: 0, y: 3, w: 12, h: 2 },
+      // Lead — image preferred but not mandatory (so it always fills)
+      { id: "lead", type: "lead", x: 0, y: 5, w: 8, h: 14, slotFilter: { minImages: 1 } },
+      // Right column majors
+      { id: "maj-1", type: "major", x: 8, y: 5, w: 4, h: 7, slotFilter: { minImages: 1 } },
+      { id: "maj-2", type: "major", x: 8, y: 12, w: 4, h: 7, slotFilter: { minImages: 1 } },
       // Secondary band
-      { id: "sec-1", type: "secondary", x: 0, y: 20, w: 3, h: 6, slotFilter: { minImages: 1 } },
-      { id: "sec-2", type: "secondary", x: 3, y: 20, w: 3, h: 6, slotFilter: { minImages: 1 } },
-      { id: "sec-3", type: "secondary", x: 6, y: 20, w: 3, h: 6, slotFilter: { minImages: 1 } },
-      { id: "sec-4", type: "secondary", x: 9, y: 20, w: 3, h: 6, slotFilter: { minImages: 1 } },
-      // Briefs — 2 cols × 4 items
-      { id: "br-1", type: "brief", x: 0, y: 26, w: 6, h: 2 },
-      { id: "br-2", type: "brief", x: 0, y: 28, w: 6, h: 2 },
-      { id: "br-3", type: "brief", x: 0, y: 30, w: 6, h: 2 },
-      { id: "br-4", type: "brief", x: 0, y: 32, w: 6, h: 2 },
-      { id: "br-5", type: "brief", x: 6, y: 26, w: 6, h: 2 },
-      { id: "br-6", type: "brief", x: 6, y: 28, w: 6, h: 2 },
-      { id: "br-7", type: "brief", x: 6, y: 30, w: 6, h: 2 },
-      { id: "br-8", type: "brief", x: 6, y: 32, w: 6, h: 2 },
+      { id: "sec-1", type: "secondary", x: 0, y: 19, w: 3, h: 5 },
+      { id: "sec-2", type: "secondary", x: 3, y: 19, w: 3, h: 5 },
+      { id: "sec-3", type: "secondary", x: 6, y: 19, w: 3, h: 5 },
+      { id: "sec-4", type: "secondary", x: 9, y: 19, w: 3, h: 5 },
+      // Briefs — 2 cols × 3 rows
+      { id: "br-1", type: "brief", x: 0, y: 24, w: 6, h: 2 },
+      { id: "br-2", type: "brief", x: 0, y: 26, w: 6, h: 2 },
+      { id: "br-3", type: "brief", x: 6, y: 24, w: 6, h: 2 },
+      { id: "br-4", type: "brief", x: 6, y: 26, w: 6, h: 2 },
       // Bottom ad
-      { id: "ad-bot", type: "ad", x: 0, y: 34, w: 12, h: 4 },
+      { id: "ad-bot", type: "ad", x: 0, y: 28, w: 12, h: 2 },
     ],
   },
 };

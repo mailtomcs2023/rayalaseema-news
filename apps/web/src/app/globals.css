@@ -393,6 +393,17 @@
     margin-right: 4px;
   }
 
+  /* Paywall block (#93): when body has .article-paywall-blocked, fade out
+     the article body past a teaser and prevent scroll past the modal. */
+  body.article-paywall-blocked .article-body {
+    max-height: 220px;
+    overflow: hidden;
+    position: relative;
+    -webkit-mask-image: linear-gradient(to bottom, #000 60%, transparent);
+            mask-image: linear-gradient(to bottom, #000 60%, transparent);
+  }
+  body.article-paywall-blocked { overflow: hidden; }
+
   /* Editorial headline serif — article title only */
   article > h1, .article-title, .article-body h1 {
     font-family: var(--font-telugu-heading) !important;

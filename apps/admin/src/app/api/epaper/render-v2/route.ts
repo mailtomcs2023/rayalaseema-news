@@ -28,6 +28,11 @@ export const maxDuration = 300;
 
 interface Block { id: string; type: string; targetPage?: number }
 
+// Maximum render attempts before surfacing the failure to the operator.
+// Each attempt re-launches Chromium from scratch — most transient errors
+// (font load races, image fetch timeouts) clear on retry.
+const MAX_RENDER_ATTEMPTS = 3;
+
 export async function POST(req: NextRequest) {
   const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR", "SUB_EDITOR"]);
   if (isAuthError(session)) return session;
@@ -52,6 +57,66 @@ export async function POST(req: NextRequest) {
     await createSnapshot(edition.id, "pre-render", { snappedById: session.user.id });
 
     await prisma.epaperEdition.update({ where: { id: edition.id }, data: { status: "generating" } });
+
+    // Render-job row tracks attempts, duration, outcome — powers the SLA
+    // dashboard (#90). One row per POST, retries increment in-place.
+    const job = await prisma.epaperRenderJob.create({
+      data: {
+        editionId: edition.id,
+        triggeredById: session.user.id,
+        status: "running",
+        startedAt: new Date(),
+        pageCount: edition.pages.length,
+      },
+    });
+    const tStart = Date.now();
+    let attempt = 0;
+    let lastError: unknown = null;
+
+    // Retry loop: on Playwright crash or image-fetch timeout, re-launch
+    // Chromium fresh and try again up to MAX_RENDER_ATTEMPTS.
+    while (attempt < MAX_RENDER_ATTEMPTS) {
+      attempt++;
+      try {
+        return await renderEditionAttempt(edition, session, job.id, tStart, attempt);
+      } catch (err) {
+        lastError = err;
+        await prisma.epaperRenderJob.update({
+          where: { id: job.id },
+          data: { retries: attempt, lastError: String((err as Error)?.message || err).slice(0, 500) },
+        });
+        if (attempt >= MAX_RENDER_ATTEMPTS) break;
+        // Brief back-off before retry; let Azure Blob / font CDN settle.
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+    }
+
+    // All attempts exhausted — mark failed.
+    await prisma.epaperRenderJob.update({
+      where: { id: job.id },
+      data: {
+        status: "failed",
+        completedAt: new Date(),
+        durationMs: Date.now() - tStart,
+        retries: attempt,
+        lastError: String((lastError as Error)?.message || lastError).slice(0, 500),
+      },
+    });
+    await prisma.epaperEdition.update({ where: { id: edition.id }, data: { status: "failed" } });
+    return apiError(lastError);
+  } catch (e) {
+    return apiError(e);
+  }
+}
+
+async function renderEditionAttempt(
+  edition: { id: string; date: Date; pages: Array<{ id: string; pageNumber: number; label: string; templateSlug: string | null; layout: unknown }> },
+  session: { user: { id: string } },
+  jobId: string,
+  tStart: number,
+  attempt: number,
+): Promise<NextResponse> {
+  try {
 
     const browser = await chromium.launch();
     const masterPdf = await PDFDocument.create();
@@ -129,6 +194,18 @@ export async function POST(req: NextRequest) {
       data: { pdfUrl: finalUrl, status: "ready", pageCount: edition.pages.length },
     });
 
+    // Mark render-job succeeded with duration + artifact size for the SLA log.
+    await prisma.epaperRenderJob.update({
+      where: { id: jobId },
+      data: {
+        status: "succeeded",
+        completedAt: new Date(),
+        durationMs: Date.now() - tStart,
+        retries: attempt - 1,
+        pdfSizeBytes: finalBytes.byteLength,
+      },
+    });
+
     // Quality gates: duplicate articles + spell-check-lite warnings.
     const [duplicates, qualityWarnings] = await Promise.all([
       findDuplicateArticles(edition.id),
@@ -141,9 +218,11 @@ export async function POST(req: NextRequest) {
       pageCount: edition.pages.length,
       duplicates,
       qualityWarnings,
+      job: { id: jobId, attempt, durationMs: Date.now() - tStart },
     });
   } catch (e) {
-    return apiError(e);
+    // Re-throw — outer retry loop in POST handles retry + final failure logging.
+    throw e;
   }
 }
 

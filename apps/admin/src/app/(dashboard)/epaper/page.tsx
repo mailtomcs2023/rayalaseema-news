@@ -84,6 +84,9 @@ const STORY_TYPES = new Set(["lead", "major", "secondary", "brief"]);
 export default function EpaperEditorPage() {
   const today = new Date().toISOString().slice(0, 10);
   const [date, setDate] = useState(today);
+  const [variant, setVariant] = useState<string>("main");
+  type EditionVariant = { id: string; edition: string; status: string; workflowState: string; pdfUrl: string | null; pageCount: number };
+  const [variants, setVariants] = useState<EditionVariant[]>([]);
   const [edition, setEdition] = useState<Edition | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -103,10 +106,24 @@ export default function EpaperEditorPage() {
   type ArticleMeta = { title: string; summary?: string | null; featuredImage?: string | null };
   const [titles, setTitles] = useState<Record<string, ArticleMeta>>({});
 
-  const loadEdition = useCallback(async (d: string) => {
+  // Quality warnings from the most recent render — keyed by `${pageId}:${blockId}`
+  // so the block tile can show a per-block badge.
+  type QWarning = { pageNumber: number; blockId: string; blockType: string; kind: string; detail: string };
+  const [warnings, setWarnings] = useState<QWarning[]>([]);
+
+  // Baseline-grid overlay toggle for the preview iframe — helps editors verify
+  // text aligns horizontally across columns on a real print baseline.
+  const [showBaseline, setShowBaseline] = useState(false);
+
+  const loadEdition = useCallback(async (d: string, v: string = "main") => {
     setError(""); setBusy("loading");
     try {
-      const res = await fetch(`/api/epaper/edition?date=${d}`);
+      // Load the variant list for this date in parallel — used by the picker.
+      fetch(`/api/epaper/edition?date=${d}&listVariants=1`).then((r) => r.json())
+        .then((data) => setVariants(data.variants || []))
+        .catch(() => setVariants([]));
+
+      const res = await fetch(`/api/epaper/edition?date=${d}&variant=${v}`);
       if (res.status === 404) { setEdition(null); return; }
       if (!res.ok) throw new Error("Failed to load edition");
       const data = await res.json();
@@ -130,7 +147,26 @@ export default function EpaperEditorPage() {
     finally { setBusy(null); }
   }, []);
 
-  useEffect(() => { loadEdition(date); }, [date, loadEdition]);
+  useEffect(() => { loadEdition(date, variant); }, [date, variant, loadEdition]);
+
+  // Clone a district variant from the current edition.
+  const cloneVariant = async () => {
+    if (!edition) return;
+    const slug = prompt("Variant slug (e.g. 'district-kurnool', 'district-tirupati'):", "district-kurnool");
+    if (!slug) return;
+    setBusy("cloning");
+    try {
+      const res = await fetch(`/api/epaper/edition/${edition.id}/clone-variant`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ variantSlug: slug }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Clone failed");
+      toast("success", `Variant '${slug}' created — ${data.pageCount} pages`);
+      setVariant(slug);
+    } catch (e: any) { setError(e.message); }
+    finally { setBusy(null); }
+  };
   // Note: comments badge reload moved below `loadComments` definition to dodge
   // a temporal-dead-zone error in the Next.js prerender.
 
@@ -173,14 +209,19 @@ export default function EpaperEditorPage() {
           toast("warn", `Duplicate: "${d.title.slice(0, 50)}" on pages ${d.placements.map((p: any) => p.pageNumber).join(", ")}`);
         }
       }
-      // Quality gates: empty story slots, long English runs, missing-glyph chars.
+      // Quality gates: empty story slots, long English runs, missing-glyph chars, overflow.
       if (Array.isArray(data.qualityWarnings) && data.qualityWarnings.length > 0) {
+        setWarnings(data.qualityWarnings);
         const empties = data.qualityWarnings.filter((w: any) => w.kind === "empty-story");
-        const others = data.qualityWarnings.filter((w: any) => w.kind !== "empty-story");
+        const overflows = data.qualityWarnings.filter((w: any) => w.kind === "block-overflow");
+        const others = data.qualityWarnings.filter((w: any) => w.kind !== "empty-story" && w.kind !== "block-overflow");
         if (empties.length > 0) toast("warn", `${empties.length} empty story block${empties.length > 1 ? "s" : ""} on rendered pages`);
+        if (overflows.length > 0) toast("warn", `${overflows.length} block${overflows.length > 1 ? "s" : ""} overflow — copy will be clipped on print. Open the block to resize or split to continuation.`);
         for (const w of others.slice(0, 3)) {
           toast("warn", `Page ${w.pageNumber} · ${w.kind}: ${w.detail.slice(0, 60)}`);
         }
+      } else {
+        setWarnings([]);
       }
       if (data.pdfUrl) window.open(data.pdfUrl, "_blank", "noopener,noreferrer");
     } catch (e: any) { setError(e.message); }
@@ -304,6 +345,7 @@ export default function EpaperEditorPage() {
       brief: { w: 6, h: 2 }, image: { w: 4, h: 4 }, ad: { w: 12, h: 3 },
       text: { w: 6, h: 2 }, masthead: { w: 12, h: 3 }, "section-band": { w: 12, h: 2 },
       "story-jump": { w: 4, h: 1 },
+      "pull-quote": { w: 6, h: 3 },
     };
     const d = defaults[type] || { w: 4, h: 4 };
     const MAX_ROWS = 30; // Indian broadsheet printable rows — see DraggableBlockGrid
@@ -1294,8 +1336,26 @@ export default function EpaperEditorPage() {
         {/* Top bar */}
         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
           <h1 style={{ fontSize: 22, fontWeight: 800, color: "#111" }}>ePaper Editor (v2)</h1>
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
+          <input type="date" value={date} onChange={(e) => { setDate(e.target.value); setVariant("main"); }}
             style={{ padding: "6px 10px", border: "1px solid #ddd", borderRadius: 8, fontSize: 13 }} />
+          {variants.length > 0 && (
+            <select value={variant} onChange={(e) => setVariant(e.target.value)}
+              title="Edition variant — main + per-district splits"
+              style={{ padding: "6px 10px", border: "1px solid #ddd", borderRadius: 8, fontSize: 13, fontWeight: 700, background: variant !== "main" ? "#fef3c7" : "#fff" }}>
+              {variants.map((v) => (
+                <option key={v.id} value={v.edition}>
+                  {v.edition === "main" ? "Main edition" : `📰 ${v.edition}`} ({v.pageCount}p · {v.status})
+                </option>
+              ))}
+            </select>
+          )}
+          {edition && variant === "main" && (
+            <button onClick={cloneVariant} disabled={busy === "cloning"}
+              title="Clone the main edition into a district variant"
+              style={{ padding: "6px 12px", background: "#fff", color: "#0891b2", border: "1px dashed #0891b2", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+              {busy === "cloning" ? "Cloning…" : "+ Clone variant"}
+            </button>
+          )}
           <button onClick={generate} disabled={busy === "generating"}
             style={{ padding: "8px 16px", background: "#4f46e5", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
             {busy === "generating" ? "Generating…" : edition ? "Regenerate" : "Generate"}
@@ -1377,6 +1437,7 @@ export default function EpaperEditorPage() {
                       { t: "ad", lbl: "Ad slot", hint: "12×3 full-width" },
                       { t: "section-band", lbl: "Section band", hint: "12×2 colored header" },
                       { t: "story-jump", lbl: "Story jump", hint: "4×1 continuation pointer" },
+                      { t: "pull-quote", lbl: "Pull quote", hint: "6×3 emphasized excerpt" },
                     ].map((it) => (
                       <button key={it.t} onClick={() => addBlock(it.t)}
                         style={{ display: "block", width: "100%", textAlign: "left", padding: "8px 10px", background: "transparent", border: "none", borderRadius: 4, cursor: "pointer", fontSize: 13 }}
@@ -1530,6 +1591,15 @@ export default function EpaperEditorPage() {
                       <DraggableBlockGrid
                         layout={activePage.layout}
                         titles={titles}
+                        warningsByBlock={Object.fromEntries(
+                          warnings.filter((w) => w.pageNumber === activePage.pageNumber)
+                            .reduce((acc: Map<string, QWarning[]>, w) => {
+                              const arr = acc.get(w.blockId) || [];
+                              arr.push(w);
+                              acc.set(w.blockId, arr);
+                              return acc;
+                            }, new Map())
+                        )}
                         selectedBlockId={selectedBlockId}
                         multiSelected={selectedBlockIds}
                         dragOverBlockId={dragOverBlockId}
@@ -1556,10 +1626,16 @@ export default function EpaperEditorPage() {
                   )}
                   {(viewMode === "split" || viewMode === "preview") && (
                     <div style={{ flex: 1, minWidth: 0, border: "1px solid #e5e7eb", borderRadius: 6, background: "#FCFAF3", overflow: "hidden" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 8px", borderBottom: "1px solid #e5e7eb", fontSize: 11 }}>
+                        <label style={{ display: "flex", alignItems: "center", gap: 4, cursor: "pointer", color: "#6b7280", fontWeight: 700 }}>
+                          <input type="checkbox" checked={showBaseline} onChange={(e) => setShowBaseline(e.target.checked)} />
+                          Show baseline grid
+                        </label>
+                      </div>
                       <iframe
                         title="Live preview"
-                        src={`/api/epaper/page/${activePage.id}/preview?v=${activePage.version}`}
-                        style={{ width: "100%", height: "100%", border: "none", background: "#FCFAF3" }}
+                        src={`/api/epaper/page/${activePage.id}/preview?v=${activePage.version}${showBaseline ? "&grid=1" : ""}`}
+                        style={{ width: "100%", height: "calc(100% - 32px)", border: "none", background: "#FCFAF3" }}
                       />
                     </div>
                   )}
@@ -1791,12 +1867,13 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
  *    can't accidentally drag the brand band off the page
  */
 function DraggableBlockGrid({
-  layout, titles, selectedBlockId, multiSelected,
+  layout, titles, warningsByBlock, selectedBlockId, multiSelected,
   dragOverBlockId, onDragOverBlock, onDragLeaveBlock, onDropBlock,
   onSelect, onToggleLock, onLayoutChange,
 }: {
   layout: { blocks: Block[] };
   titles: Record<string, { title: string; summary?: string | null; featuredImage?: string | null }>;
+  warningsByBlock?: Record<string, Array<{ kind: string; detail: string }>>;
   selectedBlockId: string | null;
   multiSelected?: Set<string>;
   dragOverBlockId?: string | null;
@@ -1884,6 +1961,8 @@ function DraggableBlockGrid({
           const isSelected = b.id === selectedBlockId;
           const isMulti = !!multiSelected?.has(b.id);
           const title = b.articleId ? titles[b.articleId] : null;
+          const blockWarnings = warningsByBlock?.[b.id] || [];
+          const hasOverflow = blockWarnings.some((w) => w.kind === "block-overflow");
           const bg =
             b.type === "masthead" || b.type === "section-band"
               ? "#A50D0D"
@@ -1905,13 +1984,20 @@ function DraggableBlockGrid({
                 background: dragOverBlockId === b.id ? "#fbbf24" : bg, color,
                 border: dragOverBlockId === b.id
                   ? "3px dashed #d97706"
+                  : hasOverflow ? "3px solid #dc2626"
                   : isMulti ? "3px solid #4f46e5" : isSelected ? "2px solid #4f46e5" : "1px solid #e5e7eb",
-                borderRadius: 4, padding: 8, fontSize: 12, overflow: "hidden",
+                borderRadius: 4, padding: 8, fontSize: 12, overflow: "hidden", position: "relative",
                 // grab cursor makes drag-to-rearrange (RGL) discoverable; grabbing on active drag
                 cursor: isStory ? "grab" : "move",
                 display: "flex", flexDirection: "column", justifyContent: "space-between",
                 minHeight: 0, height: "100%",
               }}>
+              {blockWarnings.length > 0 && (
+                <div title={blockWarnings.map((w) => w.detail).join("\n")}
+                  style={{ position: "absolute", top: 2, right: 2, background: hasOverflow ? "#dc2626" : "#f59e0b", color: "#fff", fontSize: 9, fontWeight: 800, padding: "2px 5px", borderRadius: 3, zIndex: 4, lineHeight: 1 }}>
+                  {hasOverflow ? "⚠ OVERFLOW" : `⚠ ${blockWarnings.length}`}
+                </div>
+              )}
               <div style={{ overflow: "hidden", flex: 1, minHeight: 0, display: "flex", flexDirection: "column", gap: 4 }}>
                 <div style={{ fontSize: 9, opacity: 0.6, textTransform: "uppercase", fontWeight: 700, letterSpacing: 0.3 }}>{b.type}</div>
                 {title && (

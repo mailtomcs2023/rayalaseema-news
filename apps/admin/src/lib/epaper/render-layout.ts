@@ -10,6 +10,7 @@
 // existing ad creatives still fit), with each cell = 100 × 72 px.
 
 import { prisma } from "@rayalaseema/db";
+import { hyphenateTelugu } from "./telugu-hyphenation";
 
 const SITE_URL = process.env.SITE_URL || "https://rayalaseemaexpress.com";
 
@@ -26,7 +27,8 @@ interface Block {
     | "image"
     | "ad"
     | "text"
-    | "story-jump";
+    | "story-jump"
+    | "pull-quote";   // #103 — emphasized excerpt block
   x: number;
   y: number;
   w: number;
@@ -52,7 +54,7 @@ interface Block {
    *  padding: px inside-block padding (default 6).
    *  margin: px outside-block extra margin (default 0). */
   style?: {
-    imagePosition?: "top" | "left" | "right" | "none";
+    imagePosition?: "top" | "left" | "right" | "none" | "wrap";
     imageSize?: number;       // percent 10..70
     textColumns?: 1 | 2 | 3;
     hlScale?: number;
@@ -62,6 +64,8 @@ interface Block {
     textColor?: string;
     padding?: number;
     margin?: number;
+    dropCap?: boolean;           // #103 — drop cap on lead body first letter
+    pullQuoteAttribution?: string; // #103 — small "— By X" line under pull-quote
   };
   // Continuation metadata (matches continuation.ts)
   continuesToPage?: number;
@@ -98,6 +102,13 @@ const FONTS_HREF =
 
 function esc(s: string | null | undefined): string {
   return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// Body-text variant of esc that also injects soft hyphens into long Telugu
+// tokens (#102). Use for paragraph/body content; skip for headlines where
+// soft hyphens would change visual measure of the headline-set.
+function bodyEsc(s: string | null | undefined): string {
+  return esc(hyphenateTelugu(s || ""));
 }
 
 function articleHref(slug: string): string {
@@ -177,13 +188,22 @@ function leadBlock(b: Block, a: ResolvedArticle): string {
   const imgPos = b.style?.imagePosition ?? "top";
   const imgSize = b.style?.imageSize ?? 40;
   const cols = b.style?.textColumns ?? 2;
-  const img = imgPos === "none" ? "" : imageOrFallback(a.featuredImage, "lead-img", b.imageCrop);
+  const dropCap = b.style?.dropCap === true;
+  const isWrap = imgPos === "wrap";
+  const img = imgPos === "none" || isWrap ? "" : imageOrFallback(a.featuredImage, "lead-img", b.imageCrop);
+  // Wrap-mode renders the image inline inside the multi-column body so text
+  // flows around it (CSS shape-outside). The wrap markup is emitted by
+  // dekHtml below instead of as a sibling.
+  const wrapImageMarkup = isWrap && a.featuredImage
+    ? `<span class="wrap-img">${imageOrFallback(a.featuredImage, "lead-img", b.imageCrop)}</span>`
+    : "";
   const useFlex = imgPos === "left" || imgPos === "right";
   const wrapClass = imgPos === "left" ? "lead-flex-row"
                   : imgPos === "right" ? "lead-flex-row-rev"
-                  : ""; // default top = no extra wrapper class, render image inline
+                  : ""; // default top + wrap = no extra wrapper class
   const imgWrapStyle = useFlex ? ` style="flex:0 0 ${imgSize}%"` : "";
   const hlStyle = hlInlineStyle(b.style, 42);
+  const dekClass = `lead-dek${dropCap ? " drop-cap" : ""}${isWrap ? " has-wrap-image" : ""}`;
   const dekStyle = ` style="column-count:${cols}${b.style?.textColor ? `;color:${b.style.textColor}` : ""}"`;
   // If a continuation block exists on a later page, render the dek as plain
   // body-text truncated at `bodyStart` (set by the continuation post-process)
@@ -197,9 +217,9 @@ function leadBlock(b: Block, a: ResolvedArticle): string {
       const text = a.bodyText || a.summary || "";
       const splitAt = findApproxSplit(text, 1400);
       const head = text.slice(0, splitAt).trim();
-      return `<p class="lead-dek"${dekStyle}>${esc(head)}<a class="jump-link" href="#page=${target}"> &nbsp;→ మిగతా కథనం పేజీ ${target}</a></p>`;
+      return `<p class="${dekClass}"${dekStyle}>${wrapImageMarkup}${bodyEsc(head)}<a class="jump-link" href="#page=${target}"> &nbsp;→ మిగతా కథనం పేజీ ${target}</a></p>`;
     }
-    return displaySummary ? `<p class="lead-dek"${dekStyle}>${esc(displaySummary)}</p>` : "";
+    return displaySummary ? `<p class="${dekClass}"${dekStyle}>${wrapImageMarkup}${bodyEsc(displaySummary)}</p>` : "";
   })();
   // For default top-position render the image as a direct child of block-inner
   // so the `.lead-img { flex:0 0 300px }` rule keeps its height contract.
@@ -230,9 +250,9 @@ function majorBlock(b: Block, a: ResolvedArticle): string {
       const text = a.bodyText || a.summary || "";
       const splitAt = findApproxSplit(text, 280);
       const head = text.slice(0, splitAt).trim();
-      return `<p class="maj-dek">${esc(head)}<a class="jump-link" href="#page=${b.continuesToPage}"> →పేజీ ${b.continuesToPage}</a></p>`;
+      return `<p class="maj-dek">${bodyEsc(head)}<a class="jump-link" href="#page=${b.continuesToPage}"> →పేజీ ${b.continuesToPage}</a></p>`;
     }
-    return displaySummary ? `<p class="maj-dek">${esc(displaySummary)}</p>` : "";
+    return displaySummary ? `<p class="maj-dek">${bodyEsc(displaySummary)}</p>` : "";
   })();
   const hlStyle = hlInlineStyle(b.style, 22);
   const inner = `
@@ -328,6 +348,14 @@ function adBlock(b: Block, ads: RenderInput["ads"]): string {
 
 function textBlock(b: Block): string {
   return `<div class="block text" style="${blockStyle(b)}">${b.content ?? ""}</div>`;
+}
+
+function pullQuoteBlock(b: Block): string {
+  const text = b.content ?? "";
+  const attribution = b.style?.pullQuoteAttribution
+    ? `<span class="pq-attr">— ${esc(b.style.pullQuoteAttribution)}</span>`
+    : "";
+  return `<div class="block pull-quote" style="${blockStyle(b)}">${esc(text)}${attribution}</div>`;
 }
 
 function storyJumpBlock(b: Block): string {
@@ -463,6 +491,9 @@ export async function renderLayoutToHtml(input: RenderInput): Promise<string> {
       case "story-jump":
         blockHtml.push(storyJumpBlock(b));
         break;
+      case "pull-quote":
+        blockHtml.push(pullQuoteBlock(b));
+        break;
     }
   }
 
@@ -478,7 +509,59 @@ export async function renderLayoutToHtml(input: RenderInput): Promise<string> {
     font-family:'Noto Serif Telugu',serif;
     background:#FCFAF3;color:#14110b;
     padding:32px 36px;
+    /* Baseline grid: 6 mm (~23 px @ 125 dpi) — all body line-heights snap to
+       a multiple of this so text aligns horizontally across columns. */
+    --baseline: 23px;
+    /* Widow/orphan defaults — Telugu broadsheet convention: never leave a
+       single line at the top of a column or the bottom of a paragraph. */
+    orphans: 2;
+    widows: 2;
+    hyphens: auto;
   }
+  /* Body-text classes snap to a 2× baseline (46 px ≈ 1.6 leading on 15 px
+     body). Header classes use a 3× baseline so they still align. */
+  .lead-dek, .maj-dek, .sec-hl, .cont-body, .brief-item { line-height: calc(var(--baseline) * 1); }
+  .lead-hl { line-height: calc(var(--baseline) * 2); }
+  .maj-hl, .cont-hl { line-height: calc(var(--baseline) * 1.2); }
+  /* Avoid orphan/widow breaks inside story bodies. */
+  .lead-dek, .maj-dek, .cont-body, .sec-hl, .brief-item { orphans: 2; widows: 2; }
+  /* Headlines should never break across columns or pages. */
+  .lead-hl, .maj-hl, .sec-hl, .cont-hl, .kicker, .byline { break-inside: avoid; page-break-inside: avoid; }
+
+  /* Drop cap (#103) — opt-in via b.style.dropCap on lead blocks. Renders
+     the first character ~3 lines tall, floated. */
+  .lead-dek.drop-cap::first-letter {
+    initial-letter: 3;
+    -webkit-initial-letter: 3;
+    float: left;
+    font-family: 'Ramabhadra', 'Noto Serif Telugu', serif;
+    font-weight: 900;
+    color: #A50D0D;
+    font-size: 4.2em;
+    line-height: 0.85;
+    padding: 4px 8px 0 0;
+    margin-top: 4px;
+  }
+
+  /* Pull quote (#103) — emphasized excerpt rendered as its own block type. */
+  .pull-quote { border-top: 3px double #A50D0D; border-bottom: 3px double #A50D0D;
+    padding: 14px 18px; margin: 8px 0; font-family: 'Ramabhadra', serif;
+    font-size: 22px; line-height: 1.4; color: #5b1f1f; font-style: italic;
+    text-align: center; }
+  .pull-quote::before, .pull-quote::after { color: #A50D0D; font-size: 28px; line-height: 0; vertical-align: -8px; }
+  .pull-quote::before { content: "“ "; }
+  .pull-quote::after  { content: " ”"; }
+  .pull-quote .pq-attr { display: block; margin-top: 6px; font-size: 13px;
+    font-family: 'Noto Sans Telugu', sans-serif; font-style: normal;
+    color: #6b6155; letter-spacing: 1px; text-transform: uppercase; }
+
+  /* Multi-column wrap-around: when lead has image-position=wrap, image
+     floats to right inside the multi-column body so text flows around it. */
+  .lead-dek.has-wrap-image .wrap-img {
+    float: right; width: 40%; margin: 4px 0 8px 14px;
+    shape-outside: inset(0 round 4px); shape-margin: 6px;
+  }
+  .lead-dek.has-wrap-image .wrap-img img { width: 100%; height: auto; display: block; border-radius: 4px; }
   /* 12-col broadsheet grid. Row height is roomy so 28-row templates fill the
      full 2760-px viewport — leaves space for 12-18 stories per page. */
   .page {

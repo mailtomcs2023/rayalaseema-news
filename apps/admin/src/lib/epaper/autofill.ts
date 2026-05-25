@@ -39,6 +39,10 @@ export interface AutofillInput {
   excludeArticleIds?: Set<string>;
 }
 
+// Front-page slots get a heavy bonus on the top breaking+featured story so the
+// edition's biggest headline lands on Page 1 regardless of category mix.
+const FRONT_TEMPLATE_SLUG = "front";
+
 const STORY_TYPES = new Set(["lead", "major", "secondary", "brief"]);
 
 const SLOT_TYPE_PRIORITY: Record<string, number> = {
@@ -152,7 +156,7 @@ async function loadCandidatePool(input: AutofillInput): Promise<ScoredArticle[]>
  * adds up to +15 to popular categories so the auto-fill steers toward what
  * readers actually consume.
  */
-function scoreFit(slot: BlockSlot, a: ScoredArticle, heat?: Record<string, number>): number {
+function scoreFit(slot: BlockSlot, a: ScoredArticle, heat?: Record<string, number>, templateSlug?: string): number {
   const f = slot.slotFilter || {};
 
   // Hard disqualifiers
@@ -198,6 +202,14 @@ function scoreFit(slot: BlockSlot, a: ScoredArticle, heat?: Record<string, numbe
     s += heat[a.categorySlug] * 15;
   }
 
+  // Front-page priority: ensure the day's top breaking+featured story always
+  // wins Page 1's lead/major slots. Without this the heatmap can swing the
+  // lead toward a popular evergreen category and bury today's actual headline.
+  if (templateSlug === FRONT_TEMPLATE_SLUG && (slot.type === "lead" || slot.type === "major")) {
+    if (a.breaking) s += 40;
+    if (a.featured) s += 30;
+  }
+
   return s;
 }
 
@@ -235,7 +247,7 @@ export async function autofillTemplate(input: AutofillInput): Promise<AutofillRe
     let bestScore = -1;
     for (const a of pool) {
       if (used.has(a.id)) continue;
-      const score = scoreFit(slot, a, heat);
+      const score = scoreFit(slot, a, heat, input.templateSlug);
       if (score > bestScore) {
         bestScore = score;
         bestArticle = a;

@@ -33,9 +33,10 @@ export default async function EpaperPage({
   const config = await getSiteConfig();
   const editionKey = edition || "main";
 
-  // Ready editions, newest first
+  // Ready editions, newest first. Explicitly exclude KILLED workflow state
+  // even though killed editions have active=false too — defense in depth.
   const editions = await prisma.epaperEdition.findMany({
-    where: { active: true, status: "ready" },
+    where: { active: true, status: "ready", NOT: { workflowState: "KILLED" } },
     orderBy: { date: "desc" },
     select: { id: true, date: true, edition: true },
     take: 200,
@@ -70,10 +71,13 @@ export default async function EpaperPage({
       <Header config={config} breakingNews={[]} />
 
       <div style={{ background: "var(--brand, #E01B1B)" }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "12px" }}>
+        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "12px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
           <span style={{ fontFamily: "var(--font-telugu-heading), serif", fontSize: 26, fontWeight: 800, color: "#fff" }}>
             ఈ-పేపర్
           </span>
+          <Link href="/epaper/search" style={{ background: "#fff", color: "var(--brand, #E01B1B)", padding: "6px 14px", borderRadius: 999, fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
+            🔍 పాత ఎడిషన్‌లలో వెతుకు
+          </Link>
         </div>
       </div>
 

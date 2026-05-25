@@ -29,9 +29,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: "This transition requires a note" }, { status: 400 });
     }
 
+    // Stamp kill metadata when transitioning into KILLED. Reverse stamps on
+    // any other transition (e.g. KILLED → DRAFT if we ever allow undo).
+    const killPatch =
+      to === "KILLED"
+        ? { killedAt: new Date(), killedReason: note, killedById: session.user.id, active: false }
+        : edition.workflowState === "KILLED"
+        ? { killedAt: null, killedReason: null, killedById: null, active: true }
+        : {};
+
     const updated = await prisma.epaperEdition.update({
       where: { id },
-      data: { workflowState: to, workflowNote: note },
+      data: { workflowState: to, workflowNote: note, ...killPatch },
     });
 
     await logAudit({

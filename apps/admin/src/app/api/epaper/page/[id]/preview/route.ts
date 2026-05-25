@@ -16,7 +16,24 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
     const page = await prisma.epaperPage.findUnique({ where: { id }, select: { id: true } });
     if (!page) return NextResponse.json({ error: "Page not found" }, { status: 404 });
 
-    const html = await renderEpaperPageById(id);
+    let html = await renderEpaperPageById(id);
+
+    // Optional baseline-grid overlay for the editor preview. Activated via
+    // ?grid=1 — never enabled in the print PDF render.
+    const url = new URL(_.url);
+    if (url.searchParams.get("grid") === "1") {
+      const overlay = `<style>
+        body::before {
+          content: "";
+          position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+          background-image: repeating-linear-gradient(to bottom,
+            rgba(168,85,247,0.18) 0, rgba(168,85,247,0.18) 1px,
+            transparent 1px, transparent 23px);
+        }
+      </style>`;
+      html = html.replace("</head>", `${overlay}</head>`);
+    }
+
     return new NextResponse(html, {
       status: 200,
       headers: {

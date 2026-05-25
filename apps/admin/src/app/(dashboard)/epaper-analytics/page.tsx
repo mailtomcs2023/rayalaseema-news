@@ -2,7 +2,16 @@ import { Sidebar } from "@/components/sidebar";
 import { prisma } from "@rayalaseema/db";
 
 /** Editor-facing analytics for e-paper editions. Reads EpaperPageView
- *  (view + hotspot rows), groups by edition + page + article slug. */
+ *  (view + hotspot rows), groups by edition + page + article slug.
+ *  Also surfaces render-job SLA stats from EpaperRenderJob (#90). */
+
+function pct(arr: number[], p: number): number {
+  if (arr.length === 0) return 0;
+  const sorted = [...arr].sort((a, b) => a - b);
+  const idx = Math.min(sorted.length - 1, Math.floor((p / 100) * sorted.length));
+  return sorted[idx];
+}
+
 export default async function EpaperAnalyticsPage() {
   // Latest 10 editions with their per-page rollups.
   const editions = await prisma.epaperEdition.findMany({
@@ -11,6 +20,21 @@ export default async function EpaperAnalyticsPage() {
     take: 10,
     select: { id: true, date: true, edition: true, pageCount: true },
   });
+
+  // Render-job SLA stats over the last 30 days.
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const jobs = await prisma.epaperRenderJob.findMany({
+    where: { createdAt: { gte: since } },
+    select: { status: true, durationMs: true, retries: true, lastError: true, createdAt: true, editionId: true },
+    orderBy: { createdAt: "desc" },
+    take: 200,
+  });
+  const succeeded = jobs.filter((j) => j.status === "succeeded");
+  const failed = jobs.filter((j) => j.status === "failed");
+  const durations = succeeded.map((j) => j.durationMs || 0).filter((d) => d > 0);
+  const successRate = jobs.length > 0 ? ((succeeded.length / jobs.length) * 100) : 100;
+  const retriedJobs = jobs.filter((j) => j.retries > 0);
+  const recentFailures = failed.slice(0, 5);
 
   const editionIds = editions.map((e) => e.id);
 
@@ -50,6 +74,35 @@ export default async function EpaperAnalyticsPage() {
       <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, color: "#111", marginBottom: 16 }}>ePaper Analytics</h1>
+
+        {/* Render SLA panel — last 30 days of EpaperRenderJob */}
+        <section style={{ background: "#fff", padding: 16, borderRadius: 8, marginBottom: 16 }}>
+          <h2 style={{ fontSize: 15, fontWeight: 800, color: "#111", marginBottom: 8 }}>Render SLA (last 30 days)</h2>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
+            <div><div style={{ fontSize: 11, color: "#6b7280", fontWeight: 700 }}>Total jobs</div><div style={{ fontSize: 22, fontWeight: 800 }}>{jobs.length}</div></div>
+            <div><div style={{ fontSize: 11, color: "#6b7280", fontWeight: 700 }}>Success rate</div><div style={{ fontSize: 22, fontWeight: 800, color: successRate >= 95 ? "#16a34a" : successRate >= 85 ? "#d97706" : "#dc2626" }}>{successRate.toFixed(1)}%</div></div>
+            <div><div style={{ fontSize: 11, color: "#6b7280", fontWeight: 700 }}>P50 duration</div><div style={{ fontSize: 22, fontWeight: 800 }}>{(pct(durations, 50) / 1000).toFixed(1)}s</div></div>
+            <div><div style={{ fontSize: 11, color: "#6b7280", fontWeight: 700 }}>P95 duration</div><div style={{ fontSize: 22, fontWeight: 800 }}>{(pct(durations, 95) / 1000).toFixed(1)}s</div></div>
+            <div><div style={{ fontSize: 11, color: "#6b7280", fontWeight: 700 }}>P99 duration</div><div style={{ fontSize: 22, fontWeight: 800 }}>{(pct(durations, 99) / 1000).toFixed(1)}s</div></div>
+            <div><div style={{ fontSize: 11, color: "#6b7280", fontWeight: 700 }}>Retried</div><div style={{ fontSize: 22, fontWeight: 800, color: retriedJobs.length > 0 ? "#d97706" : "#16a34a" }}>{retriedJobs.length}</div></div>
+            <div><div style={{ fontSize: 11, color: "#6b7280", fontWeight: 700 }}>Failed</div><div style={{ fontSize: 22, fontWeight: 800, color: failed.length > 0 ? "#dc2626" : "#16a34a" }}>{failed.length}</div></div>
+          </div>
+          {recentFailures.length > 0 && (
+            <div style={{ marginTop: 14 }}>
+              <h3 style={{ fontSize: 12, fontWeight: 800, color: "#991b1b", marginBottom: 6 }}>Recent failures</h3>
+              <ul style={{ fontSize: 11, color: "#374151", paddingLeft: 16 }}>
+                {recentFailures.map((f, i) => (
+                  <li key={i} style={{ marginBottom: 4 }}>
+                    <span style={{ color: "#6b7280" }}>{f.createdAt.toISOString().slice(0, 16).replace("T", " ")}</span>
+                    {" — "}
+                    <code style={{ color: "#dc2626" }}>{(f.lastError || "unknown error").slice(0, 120)}</code>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+
         <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 16 }}>
           Last 10 editions · per-page reads + top article click-throughs.
           Tracked via <code>/api/epaper/track</code> from the public viewer.

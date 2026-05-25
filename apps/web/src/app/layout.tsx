@@ -4,6 +4,7 @@ import { CookieConsent } from "@/components/cookie-consent";
 import { WhatsAppFloat } from "@/components/whatsapp-float";
 import { PushNotifications } from "@/components/push-notifications";
 import { DistrictPicker } from "@/components/district-picker";
+import { SWRegister } from "@/components/sw-register";
 import "./globals.css";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
@@ -93,6 +94,7 @@ export default async function RootLayout({
         <WhatsAppFloat />
         <CookieConsent />
         <PushNotifications />
+        <SWRegister />
       </body>
     </html>
   );

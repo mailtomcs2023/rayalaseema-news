@@ -192,6 +192,14 @@ model Article {
   metaDescription String?
   ogImage         String?
 
+  // PIB approval workflow (#99) — when needsPibApproval is true the
+  // publish gate refuses to flip status to PUBLISHED until pibApprovedAt
+  // + pibReferenceNumber are stamped by an ADMIN.
+  needsPibApproval     Boolean   @default(false)
+  pibApprovedAt        DateTime?
+  pibApprovedById      String?
+  pibReferenceNumber   String?
+
   // Movie review (only set for movie-reviews category articles)
   rating          Float?        // 0.0 - 5.0 star rating
   reviewerName    String?       // Critic byline for the review
@@ -321,6 +329,97 @@ model Media {
 
 // ============ ePAPER ============
 
+/// Telugu spell-check ignore-list (#91). Tokens that should NOT trigger
+/// the COMMON_TYPOS scanner. Scoped optionally to a desk so beat reporters
+/// can curate proper-noun lists for their territory.
+model EpaperSpellIgnore {
+  id        String   @id @default(cuid())
+  token     String
+  deskId    String?  // null = global ignore
+  note      String?
+  addedById String?
+  createdAt DateTime @default(now())
+
+  @@unique([token, deskId])
+  @@map("epaper_spell_ignore")
+}
+
+/// Rayalaseema dialect glossary (#96). Maps regional dialect words to
+/// standard Telugu so non-region readers see a tooltip explanation on
+/// article pages. Curated by editorial team — small enough to ship the
+/// whole list to the client on article render.
+model DialectGloss {
+  id              String   @id @default(cuid())
+  token           String   @unique
+  standardTelugu  String
+  region          String?  // "rayalaseema" | "ananthapuramu" | "chittoor" — narrowing optional
+  note            String?
+  addedById       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("dialect_glosses")
+}
+
+/// A/B headline test (#94). Two headline variants for the same article;
+/// push notifications split 50/50, clicks counted via the redirect endpoint.
+/// After a settle window the winner is auto-promoted to Article.title.
+model HeadlineTest {
+  id           String   @id @default(cuid())
+  articleId    String
+  variantA     String
+  variantB     String
+  sentAt       DateTime?
+  clicksA      Int      @default(0)
+  clicksB      Int      @default(0)
+  winnerVariant String? // "A" | "B" | null while running
+  winnerAt     DateTime?
+  createdById  String?
+  createdAt    DateTime @default(now())
+
+  @@index([articleId])
+  @@index([winnerVariant])
+  @@map("headline_tests")
+}
+
+/// Paywall metering (#93). One row per unique-article read by an anonymous
+/// (non-logged-in) reader. Fingerprint = SHA-256(UA + IP hash + lang) — no
+/// PII. Rolling 30-day window decides when the paywall modal triggers.
+/// Logged-in readers don't get tracked here (subscription bypass).
+model ArticleReadEvent {
+  id          String   @id @default(cuid())
+  fingerprint String   // SHA-256 of UA + IP-hash + lang
+  articleSlug String
+  createdAt   DateTime @default(now())
+
+  @@index([fingerprint, createdAt])
+  @@index([articleSlug])
+  @@map("article_read_events")
+}
+
+/// Render-job log (#90) — one row per render-v2 invocation. Powers the SLA
+/// dashboard (P50/P95/P99 + success rate) and lets us see retries + errors
+/// without scraping app logs.
+model EpaperRenderJob {
+  id          String   @id @default(cuid())
+  editionId   String
+  triggeredById String?
+  status      String   // "queued" | "running" | "succeeded" | "failed"
+  startedAt   DateTime?
+  completedAt DateTime?
+  durationMs  Int?
+  retries     Int      @default(0)
+  pageCount   Int?
+  pdfSizeBytes Int?
+  lastError   String?
+  createdAt   DateTime @default(now())
+
+  @@index([editionId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("epaper_render_jobs")
+}
+
 enum EpaperWorkflowState {
   DRAFT             // operator is laying out
   SUB_REVIEW        // sub-editor needs to read it
@@ -328,6 +427,7 @@ enum EpaperWorkflowState {
   APPROVED          // ready to publish; render + push runs
   PUBLISHED         // out to readers
   REJECTED          // sent back with a note
+  KILLED            // retracted after publish — hidden from /epaper, logged on /epaper/corrections
 }
 
 model EpaperEdition {
@@ -343,6 +443,11 @@ model EpaperEdition {
   workflowState EpaperWorkflowState @default(DRAFT) // EDITORIAL approval workflow
   workflowNote  String? // last transition's note (rejection reason etc.)
   active      Boolean  @default(true)
+  // Retraction / kill switch (#88) — when set, edition is hidden from readers
+  // but persists in DB + appears on /epaper/corrections with the kill reason.
+  killedAt    DateTime?
+  killedReason String?
+  killedById  String?
   pages       EpaperPage[]
   ads         EpaperAd[]
   snapshots   EpaperEditionSnapshot[]
@@ -390,10 +495,18 @@ model EpaperImageAsset {
   caption     String?                      // optional caption rendered under the image in some templates
   tags        String?                      // comma-separated for quick text search
   active      Boolean                      @default(true)
+  // Image rights tracking (#98) — required before render-time use so we
+  // never publish an unlicensed photo.
+  licenseType String?                      // "STAFF" | "AGENCY" | "WIRE" | "UGC" | "CC0" | "CC-BY" | "PURCHASED"
+  licenseSource String?                    // "PTI" | "Reuters" | reporter name | URL
+  licenseExpiresAt DateTime?
+  copyrightHolder String?
+  attributionText String?                  // rendered under image as required
   createdAt   DateTime                     @default(now())
   updatedAt   DateTime                     @updatedAt
 
   @@index([category, active])
+  @@index([licenseType])
   @@map("epaper_image_assets")
 }
 
@@ -440,6 +553,11 @@ model EpaperPage {
   // send the version it last fetched so two editors can't silently overwrite
   // each other. Server returns 409 if expected != current.
   version     Int            @default(1)
+  // OCR'd text for legacy/uploaded PDFs that don't carry article-DB
+  // references (#89). Populated by background OCR worker (Tesseract tel+eng);
+  // exposed via /api/epaper/search alongside live-article hits.
+  ocrText     String?
+  ocrAt       DateTime?
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @default(now()) @updatedAt
 

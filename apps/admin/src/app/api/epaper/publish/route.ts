@@ -32,19 +32,85 @@ export async function POST(req: NextRequest) {
       data: { active: true, workflowState: "PUBLISHED", status: "ready" },
     });
 
-    // Steps 2-4: stubs. Each enables when its API key + opt-in list are wired.
-    const dispatched = {
-      web: true,
-      whatsapp: false, // Twilio Conversations API
-      push: false,     // OneSignal
-      tweet: false,    // X API v2
-    };
-    const skippedReason = {
-      whatsapp: "Set TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN + TWILIO_WHATSAPP_FROM + add subscriber opt-in list",
-      push: "Set ONESIGNAL_APP_ID + ONESIGNAL_REST_KEY and confirm web push opted-in users exist",
-      tweet: "Set X_BEARER_TOKEN with epaper:tweet permission",
-    };
+    const headline = `రాయలసీమ ఎక్స్‌ప్రెస్ — ${edition.date.toLocaleDateString("te-IN", { day: "numeric", month: "long", year: "numeric" })} ఎడిషన్ విడుదలైంది`;
+    const siteUrl = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+    const editionUrl = `${siteUrl}/epaper?date=${edition.date.toISOString().slice(0, 10)}`;
 
-    return NextResponse.json({ ok: true, dispatched, skippedReason, pdfUrl: edition.pdfUrl, issue: "#72" });
+    const dispatched: Record<string, boolean> = { web: true, whatsapp: false, push: false, tweet: false };
+    const skippedReason: Record<string, string> = {};
+    const errors: Record<string, string> = {};
+
+    // OneSignal web push — gated on app id + rest key.
+    if (process.env.ONESIGNAL_APP_ID && process.env.ONESIGNAL_REST_KEY) {
+      try {
+        const r = await fetch("https://api.onesignal.com/notifications", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Key ${process.env.ONESIGNAL_REST_KEY}`,
+          },
+          body: JSON.stringify({
+            app_id: process.env.ONESIGNAL_APP_ID,
+            headings: { en: headline, te: headline },
+            contents: { en: "Tap to read today's ePaper", te: "ఈ రోజు ఈ-పేపర్ చదవండి" },
+            url: editionUrl,
+            included_segments: ["All"],
+          }),
+        });
+        dispatched.push = r.ok;
+        if (!r.ok) errors.push = `HTTP ${r.status}`;
+      } catch (e) { errors.push = String((e as Error).message || e); }
+    } else {
+      skippedReason.push = "Set ONESIGNAL_APP_ID + ONESIGNAL_REST_KEY";
+    }
+
+    // X / Twitter v2 — bearer token must hold tweet.write scope.
+    if (process.env.X_BEARER_TOKEN) {
+      try {
+        const r = await fetch("https://api.twitter.com/2/tweets", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${process.env.X_BEARER_TOKEN}`,
+          },
+          body: JSON.stringify({ text: `${headline}\n${editionUrl}` }),
+        });
+        dispatched.tweet = r.ok;
+        if (!r.ok) errors.tweet = `HTTP ${r.status}`;
+      } catch (e) { errors.tweet = String((e as Error).message || e); }
+    } else {
+      skippedReason.tweet = "Set X_BEARER_TOKEN with tweet.write scope";
+    }
+
+    // WhatsApp via Twilio Conversations — broadcasts to E.164 opt-in list
+    // stored in TWILIO_WHATSAPP_TO (comma-separated). Replace with DB table
+    // when subscriber opt-in flow ships.
+    if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_WHATSAPP_FROM && process.env.TWILIO_WHATSAPP_TO) {
+      try {
+        const toList = process.env.TWILIO_WHATSAPP_TO.split(",").map((s) => s.trim()).filter(Boolean);
+        const auth = Buffer.from(`${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`).toString("base64");
+        const msgBody = `${headline}\n${editionUrl}\n${edition.pdfUrl}`;
+        let okCount = 0;
+        for (const to of toList) {
+          const form = new URLSearchParams({
+            From: `whatsapp:${process.env.TWILIO_WHATSAPP_FROM}`,
+            To: `whatsapp:${to}`,
+            Body: msgBody,
+          });
+          const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${process.env.TWILIO_ACCOUNT_SID}/Messages.json`, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded", Authorization: `Basic ${auth}` },
+            body: form.toString(),
+          });
+          if (r.ok) okCount++;
+        }
+        dispatched.whatsapp = okCount > 0;
+        if (okCount < toList.length) errors.whatsapp = `${okCount}/${toList.length} delivered`;
+      } catch (e) { errors.whatsapp = String((e as Error).message || e); }
+    } else {
+      skippedReason.whatsapp = "Set TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN + TWILIO_WHATSAPP_FROM + TWILIO_WHATSAPP_TO (comma-list)";
+    }
+
+    return NextResponse.json({ ok: true, dispatched, skippedReason, errors, pdfUrl: edition.pdfUrl });
   } catch (e) { return apiError(e); }
 }

@@ -116,7 +116,18 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       }
     }
 
-    if (data.status === "PUBLISHED") data.publishedAt = new Date();
+    if (data.status === "PUBLISHED") {
+      // PIB approval gate (#99) — articles flagged needsPibApproval can't
+      // flip to PUBLISHED until an ADMIN has stamped pibApprovedAt +
+      // pibReferenceNumber via /api/articles/[id]/pib-approve.
+      if (current?.needsPibApproval && !current?.pibApprovedAt) {
+        return NextResponse.json({
+          error: "PIB approval required",
+          detail: "This article was flagged for press-bureau review. An ADMIN must approve it via /api/articles/[id]/pib-approve before publish.",
+        }, { status: 403 });
+      }
+      data.publishedAt = new Date();
+    }
 
     const article = await prisma.article.update({
       where: { id },
