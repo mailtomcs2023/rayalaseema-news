@@ -163,10 +163,37 @@ export default function ContentListPage() {
             <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111" }}>Content</h1>
             <p style={{ fontSize: 13, color: "#888", marginTop: 4 }}>{total} total · 1 list replaces 7</p>
           </div>
-          <Link href="/content/new"
-            style={{ padding: "10px 20px", background: "#FF2C2C", color: "#fff", borderRadius: 8, fontSize: 14, fontWeight: 700, textDecoration: "none" }}>
-            + New Content
-          </Link>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              onClick={async () => {
+                if (!confirm("Bulk-fetch news for ALL categories + districts? Hits NewsData.io API + Azure OpenAI for Telugu translation. Takes ~2-3 minutes. Articles land as DRAFT for review.")) return;
+                const btn = (event?.currentTarget as HTMLButtonElement) || null;
+                if (btn) { btn.disabled = true; btn.textContent = "Fetching..."; }
+                try {
+                  const r = await fetch("/api/auto-fetch", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ categories: null }),  // null = all categories
+                  });
+                  const data = await r.json();
+                  if (!r.ok) { alert(`Fetch failed: ${data.error || r.status}`); return; }
+                  alert(`✓ Fetched. New articles: ${data.totalPublished ?? "?"}. Refresh to see.`);
+                  window.location.reload();
+                } catch (e: any) {
+                  alert(`Network error: ${e.message}`);
+                } finally {
+                  if (btn) { btn.disabled = false; btn.textContent = "🤖 Auto-fetch news"; }
+                }
+              }}
+              title="Pull ~5 news per category + district from NewsData.io, translate to Telugu via Azure OpenAI, save as DRAFT"
+              style={{ padding: "10px 16px", background: "#fff", color: "#16a34a", border: "2px solid #16a34a", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+              🤖 Auto-fetch news
+            </button>
+            <Link href="/content/new"
+              style={{ padding: "10px 20px", background: "#FF2C2C", color: "#fff", borderRadius: 8, fontSize: 14, fontWeight: 700, textDecoration: "none" }}>
+              + New Content
+            </Link>
+          </div>
         </div>
 
         {/* Type filter chips — clicking a chip narrows the list to that ContentType.
