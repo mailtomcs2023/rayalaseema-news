@@ -186,27 +186,38 @@ export async function fetchAboveFold(
 
 export async function fetchSectionBand(
   config: z.infer<typeof sectionBandConfig>,
-  _ctx: PageContext,
+  ctx: PageContext,
 ) {
-  const arts = await prisma.content.findMany({
-    where: {
-      type: "ARTICLE",
-      status: "PUBLISHED",
-      category: { slug: config.categorySlug },
-    },
-    orderBy: { publishedAt: "desc" },
-    take: 30,
-    select: {
-      id: true,
-      title: true,
-      slug: true,
-      summary: true,
-      featuredImage: true,
-      publishedAt: true,
-      viewCount: true,
-      category: { select: { name: true } },
-    },
-  });
+  // Pass-through mode: when the config omits brand / brandHref / categorySlug
+  // the block reads them from the page context (Standard Category template).
+  const slug = config.categorySlug || ctx.categorySlug;
+  if (!slug) return null;
+
+  const [arts, cat] = await Promise.all([
+    prisma.content.findMany({
+      where: {
+        type: "ARTICLE",
+        status: "PUBLISHED",
+        category: { slug },
+      },
+      orderBy: { publishedAt: "desc" },
+      take: 30,
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        summary: true,
+        featuredImage: true,
+        publishedAt: true,
+        viewCount: true,
+        category: { select: { name: true } },
+      },
+    }),
+    config.brand ? Promise.resolve(null) : prisma.category.findUnique({ where: { slug }, select: { name: true } }),
+  ]);
+
+  const brand = config.brand || cat?.name || slug;
+  const brandHref = config.brandHref || `/category/${slug}`;
 
   const lead = arts[0] ? toBandArticle(arts[0]) : null;
   if (!lead) return null;
@@ -242,8 +253,8 @@ export async function fetchSectionBand(
   }
 
   return {
-    brand: config.brand,
-    brandHref: config.brandHref,
+    brand,
+    brandHref,
     tabs: config.tabs,
     lead,
     grid,

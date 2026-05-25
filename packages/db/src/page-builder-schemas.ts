@@ -53,9 +53,13 @@ export const sectionBandTab = z
 
 export const sectionBandConfig = z
   .object({
-    brand: z.string().min(1),
-    brandHref: z.string().min(1),
-    categorySlug: z.string().min(1),
+    // brand/brandHref/categorySlug omitted ⇒ resolved from page context
+    // (e.g. /category/sports → brand from Category.name, slug from URL).
+    // Standard Category template uses this pass-through mode so one template
+    // serves every /category/* path.
+    brand: z.string().optional(),
+    brandHref: z.string().optional(),
+    categorySlug: z.string().optional(),
     tabs: z.array(sectionBandTab).default([]),
     leadCount: z.number().int().min(0).max(10).default(1),
     gridCount: z.number().int().min(0).max(20).default(4),
