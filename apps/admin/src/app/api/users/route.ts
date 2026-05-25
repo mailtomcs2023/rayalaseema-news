@@ -29,6 +29,14 @@ export async function POST(req: NextRequest) {
     const b = await req.json();
     if (!b.email || !b.password || !b.name) return NextResponse.json({ error: "Name, email, password required" }, { status: 400 });
 
+    // Validate role against the Prisma enum upfront so a bad value returns
+    // a readable 400 instead of bubbling up as an opaque 500 from Prisma.
+    const VALID_ROLES = ["ADMIN", "CHIEF_SUB_EDITOR", "SUB_EDITOR", "REPORTER"] as const;
+    const role = (b.role || "REPORTER") as string;
+    if (!VALID_ROLES.includes(role as any)) {
+      return NextResponse.json({ error: `Invalid role '${role}'. Must be one of: ${VALID_ROLES.join(", ")}` }, { status: 400 });
+    }
+
     const existing = await prisma.user.findUnique({ where: { email: b.email } });
     if (existing) return NextResponse.json({ error: "Email already exists" }, { status: 400 });
 
@@ -36,7 +44,7 @@ export async function POST(req: NextRequest) {
     const user = await prisma.user.create({
       data: {
         email: b.email, name: b.name, passwordHash,
-        role: b.role || "REPORTER", bio: b.bio, phone: b.phone,
+        role: role as any, bio: b.bio, phone: b.phone,
       },
     });
 
