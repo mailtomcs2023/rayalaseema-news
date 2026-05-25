@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { View, Text, FlatList, StyleSheet, RefreshControl } from "react-native";
+import { View, Text, FlatList, StyleSheet, RefreshControl, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "../api/client";
 import { useT } from "../i18n";
@@ -43,7 +43,7 @@ export function EarningsScreen() {
       <FlatList
         data={payments}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingBottom: 28 }}
+        contentContainerStyle={{ paddingBottom: Platform.OS === "android" ? 100 : 28 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#FF2C2C"]} tintColor="#FF2C2C" />

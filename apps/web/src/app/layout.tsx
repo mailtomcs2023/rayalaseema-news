@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { getSiteConfig } from "@/lib/db-queries";
 import { CookieConsent } from "@/components/cookie-consent";
 import { WhatsAppFloat } from "@/components/whatsapp-float";
@@ -49,33 +50,25 @@ export default async function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Telugu:wght@400;500;600;700;800;900&family=Noto+Serif+Telugu:wght@400;500;600;700;800;900&family=Mandali&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-        {adsenseId && (
-          <script async src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseId}`} crossOrigin="anonymous" />
-        )}
-        {/* Google Tag Manager — must load as high in <head> as possible */}
-        {gtmId && (
-          <script
-            dangerouslySetInnerHTML={{
-              __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${gtmId}');`,
-            }}
-          />
-        )}
-        {gaId && (
-          <>
-            <script async src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} />
-            <script dangerouslySetInnerHTML={{ __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','${gaId}');` }} />
-          </>
-        )}
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "NewsMediaOrganization",
-          name: "Rayalaseema Express",
-          alternateName: "రాయలసీమ ఎక్స్‌ప్రెస్",
-          url: "https://rayalaseemaexpress.com",
-          logo: "https://rayalaseemaexpress.com/logo.png",
-          sameAs: [],
-          publishingPrinciples: "https://rayalaseemaexpress.com/about",
-        }) }} />
+        {/* JSON-LD structured data — search-engine metadata. Uses
+            next/script so React 19 doesn't warn about raw <script>
+            tags inside components, but renders as an inline script in
+            <head> at hydration time (which is what crawlers read). */}
+        <Script
+          id="ld-json-org"
+          type="application/ld+json"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "NewsMediaOrganization",
+            name: "Rayalaseema Express",
+            alternateName: "రాయలసీమ ఎక్స్‌ప్రెస్",
+            url: "https://rayalaseemaexpress.com",
+            logo: "https://rayalaseemaexpress.com/logo.png",
+            sameAs: [],
+            publishingPrinciples: "https://rayalaseemaexpress.com/about",
+          }) }}
+        />
       </head>
       <body className="font-telugu antialiased" suppressHydrationWarning>
         {/* Google Tag Manager (noscript) — must be immediately after <body> */}
@@ -89,6 +82,37 @@ export default async function RootLayout({
             />
           </noscript>
         )}
+
+        {/* Analytics + ads loaded via next/script so they survive client
+            navigations and respect Next's loading strategies (and don't
+            trip React 19's "raw <script> in component" warning). */}
+        {adsenseId && (
+          <Script
+            id="adsense"
+            async
+            strategy="afterInteractive"
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseId}`}
+            crossOrigin="anonymous"
+          />
+        )}
+        {gtmId && (
+          <Script id="gtm" strategy="afterInteractive">
+            {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${gtmId}');`}
+          </Script>
+        )}
+        {gaId && (
+          <>
+            <Script
+              id="ga-loader"
+              strategy="afterInteractive"
+              src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
+            />
+            <Script id="ga-init" strategy="afterInteractive">
+              {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','${gaId}');`}
+            </Script>
+          </>
+        )}
+
         {children}
         <DistrictPicker />
         <WhatsAppFloat />

@@ -2,11 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { hash, compare } from "bcryptjs";
 import { getReporterId } from "@/lib/reporter-auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 // Self-service password change for the reporter app. The account is identified
 // by the bearer token; the current password is still required as a second
 // check before the password is replaced.
 export async function POST(req: NextRequest) {
+  // Brute-force the current-password check is also a real risk if a token
+  // gets stolen — limit to 10/min/IP same as login.
+  const limited = checkRateLimit(req, { max: 10, windowMs: 60_000, prefix: "reporter-change-password" });
+  if (limited) return limited;
+
   try {
     const reporterId = await getReporterId(req);
     if (!reporterId) {

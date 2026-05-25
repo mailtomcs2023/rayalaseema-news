@@ -34,9 +34,14 @@ export async function GET(req: NextRequest) {
       take: 50,
     });
 
-    // Count by status
+    // Counts must respect the same category-scope as the list — otherwise
+    // a sub editor sees "Submitted (3)" but an empty table because those
+    // articles aren't in any of their assigned categories.
+    const countWhere: any = {};
+    if (where.categoryId) countWhere.categoryId = where.categoryId;
     const counts = await prisma.article.groupBy({
       by: ["status"],
+      where: countWhere,
       _count: true,
     });
     const countMap: Record<string, number> = {};

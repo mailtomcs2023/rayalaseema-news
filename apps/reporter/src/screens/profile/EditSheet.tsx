@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import {
-  View, Text, Modal, TextInput, TouchableOpacity, StyleSheet, Image, Alert,
+  View, Text, Modal, TouchableOpacity, StyleSheet, Image, Alert,
   KeyboardAvoidingView, Platform,
 } from "react-native";
+import { TextInput } from "../../components/Input";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";

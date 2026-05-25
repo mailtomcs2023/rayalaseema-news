@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 import { getReporterId } from "@/lib/reporter-auth";
+import { isUrlSafeToFetch } from "@/lib/ssrf-guard";
 
 const ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT;
 const KEY = process.env.AZURE_OPENAI_KEY;
@@ -38,14 +39,20 @@ DIALECT WORDS (use sparingly):
 లెక్క=డబ్బు, పైపైమాటలు=hollow promises, సీమ=రాయలసీమ,
 గాంధారి వాన=భారీ వర్షం, మోడం=మొబ్బు, కసురు=అరవడం, రావిడి=గోల`;
 
-// Scrape full article from source URL
+// Scrape full article from source URL.
+//
+// SSRF guard: prefix-checking the hostname misses cloud metadata endpoints
+// (169.254.169.254 → Azure/AWS creds), IPv6 loopback (::1), IPv4-mapped IPv6,
+// and DNS-rebinding tricks (evil.com → 127.0.0.1). isUrlSafeToFetch does a
+// real DNS lookup and rejects any hostname whose A/AAAA records land in a
+// private/loopback/link-local/multicast range — see lib/ssrf-guard.ts.
 async function scrapeSource(url: string): Promise<string> {
   try {
-    const parsed = new URL(url);
-    if (!["http:", "https:"].includes(parsed.protocol)) return "";
-    // Block internal IPs
-    const host = parsed.hostname;
-    if (host === "localhost" || host === "127.0.0.1" || host.startsWith("10.") || host.startsWith("192.168.") || host.startsWith("172.16.") || host.endsWith(".local") || host === "0.0.0.0" || host === "[::1]") return "";
+    const safety = await isUrlSafeToFetch(url);
+    if (!safety.safe) {
+      console.error("[ai/rewrite] Refusing to scrape", url, "→", safety.reason);
+      return "";
+    }
 
     const res = await fetch(url, {
       headers: { "User-Agent": "Mozilla/5.0 (compatible; RayalaseemaExpress/1.0)" },

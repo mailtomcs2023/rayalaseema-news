@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import { router } from "expo-router";
+import { getAuthToken, clearAuthToken } from "../lib/secure-token";
 
 // Clears stored credentials and bounces the user to /login. Triggered when
 // any reporter endpoint returns 401 — typically because the admin toggled
@@ -10,7 +11,7 @@ async function forceLogout(reason: string) {
   if (forcingLogout) return;
   forcingLogout = true;
   try {
-    await AsyncStorage.removeItem("auth-token");
+    await clearAuthToken();
     await AsyncStorage.removeItem("user");
     // Best-effort navigation. If the router isn't mounted yet (e.g. cold
     // start before the root layout renders), the index gate sees the empty
@@ -68,7 +69,7 @@ interface ApiOptions {
 }
 
 export async function api(path: string, options: ApiOptions = {}) {
-  const token = await AsyncStorage.getItem("auth-token");
+  const token = await getAuthToken();
 
   // RN fetch has no default timeout — a silently-dropped TCP connection
   // (wrong IP, firewall drop) hangs the UI for ~60s. 10s is more than
@@ -118,7 +119,7 @@ export async function api(path: string, options: ApiOptions = {}) {
 }
 
 export async function uploadImage(uri: string): Promise<string> {
-  const token = await AsyncStorage.getItem("auth-token");
+  const token = await getAuthToken();
   const formData = new FormData();
   const filename = uri.split("/").pop() || "photo.jpg";
   // Normalise the extension — "jpg" must map to the "image/jpeg" MIME type.

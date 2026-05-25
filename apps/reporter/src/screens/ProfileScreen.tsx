@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, ActivityIndicator, Alert, RefreshControl } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { clearAuthToken } from "../lib/secure-token";
 import * as Haptics from "expo-haptics";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -47,7 +48,10 @@ export function ProfileScreen() {
   const onRefresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
 
   const handleLogout = async () => {
-    await AsyncStorage.multiRemove(["user", "auth-token"]);
+    await Promise.all([
+      AsyncStorage.removeItem("user"),
+      clearAuthToken(),
+    ]);
     router.replace("/login");
   };
   const confirmLogout = () => {

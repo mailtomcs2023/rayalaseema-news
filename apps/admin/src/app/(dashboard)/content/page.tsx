@@ -55,7 +55,12 @@ export default function ContentListPage() {
   const limit = 15;
 
   useEffect(() => {
-    fetch("/api/categories").then((r) => r.json()).then(setCategories);
+    // Guard against non-array responses (e.g. {error: "Unauthorized"} when the
+    // session has expired) so .map() further down doesn't crash the page.
+    fetch("/api/categories")
+      .then((r) => r.json())
+      .then((data) => setCategories(Array.isArray(data) ? data : []))
+      .catch(() => setCategories([]));
   }, []);
 
   useEffect(() => {
@@ -169,7 +174,10 @@ export default function ContentListPage() {
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
           {TYPE_ORDER.map((t) => {
             const isActive = typeFilter === t;
-            const color = t ? TYPE_COLORS[t] : { bg: "#111827", fg: "#fff", label: "All" };
+            // "All" follows the same {bg=light, fg=dark} convention as the
+            // colored chips so the active-state swap (bg=fg, text=#fff)
+            // produces a dark pill with white text instead of white-on-white.
+            const color = t ? TYPE_COLORS[t] : { bg: "#e5e7eb", fg: "#111827", label: "All" };
             return (
               <button
                 key={t || "all"}

@@ -1,7 +1,9 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Image, Alert, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { TextInput } from "../components/Input";
 import { DismissKeyboard } from "../components/DismissKeyboard";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { setAuthToken } from "../lib/secure-token";
 import { useT } from "../i18n";
 import { LanguageToggle } from "../components/LanguageToggle";
 import { FieldError } from "../components/FieldError";
@@ -41,7 +43,7 @@ export function LoginScreen() {
 
       if (data.user && data.token) {
         await AsyncStorage.setItem("user", JSON.stringify(data.user));
-        await AsyncStorage.setItem("auth-token", data.token);
+        await setAuthToken(data.token);
         router.replace("/home");
       } else {
         Alert.alert(t("login.loginFailed"), data.error || t("login.invalidCredentials"));

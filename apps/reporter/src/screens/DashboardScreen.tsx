@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { api } from "../api/client";
@@ -62,7 +62,7 @@ export function DashboardScreen() {
         style={styles.list}
         data={articles}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingBottom: 28 }}
+        contentContainerStyle={{ paddingBottom: Platform.OS === "android" ? 100 : 28 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#FF2C2C"]} tintColor="#FF2C2C" />
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
 
   // Floating "new article" button
   fab: {
-    position: "absolute", right: 16, bottom: 96,
+    position: "absolute", right: 16, bottom: 120,
     width: 56, height: 56, borderRadius: 28,
     backgroundColor: "#FF2C2C",
     alignItems: "center", justifyContent: "center",

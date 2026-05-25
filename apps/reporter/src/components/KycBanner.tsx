@@ -238,6 +238,16 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     gap: 14,
+    // Hairline border + soft shadow so the card reads as a card even when its
+    // tinted background (#eef4ff / #fff7ed / #fff1f1) is close in value to the
+    // screen's #f3f4f6 — otherwise SUBMITTED in particular blends in.
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   topRow: { flexDirection: "row", gap: 12, alignItems: "flex-start" },
   iconChip: {

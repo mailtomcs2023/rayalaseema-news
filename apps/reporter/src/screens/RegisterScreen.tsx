@@ -1,5 +1,6 @@
-import React, { useState, useLayoutEffect, useRef } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Image, Platform, Modal } from "react-native";
+import React, { useState, useLayoutEffect, useRef, useEffect } from "react";
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Image, Platform, Modal, KeyboardAvoidingView, Keyboard } from "react-native";
+import { TextInput } from "../components/Input";
 import * as ImagePicker from "expo-image-picker";
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
@@ -27,6 +28,30 @@ const fetchWithTimeout = (url: string, options: RequestInit = {}, ms = 25000) =>
 // UIDAI convention. The spaces are presentation-only — stripped on every edit.
 const formatAadhaar = (digits: string) => digits.replace(/(\d{4})(?=\d)/g, "$1 ");
 
+// DOB stored as ISO "YYYY-MM-DD"; shown as "Jun-15-2000" in the UI so the
+// reporter reads it left-to-right the way a printed ID card shows it.
+const DOB_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+function formatDOBDisplay(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return iso;
+  return `${DOB_MONTHS[m - 1]}-${String(d).padStart(2, "0")}-${y}`;
+}
+
+// Field label that colours the trailing "*" red. Many of the register
+// labels live in i18n as "Full Name *" / "Email *"; rendering them through
+// this component splits the asterisk onto its own <Text> so it gets the
+// brand red without touching every translation string.
+function FieldLabel({ children, style }: { children: string; style?: any }) {
+  const idx = children.lastIndexOf(" *");
+  if (idx < 0) return <Text style={style}>{children}</Text>;
+  return (
+    <Text style={style}>
+      {children.slice(0, idx)}
+      <Text style={{ color: "#FF2C2C" }}> *</Text>
+    </Text>
+  );
+}
+
 // Rayalaseema region districts. Slugs must match District.slug in the DB
 // (packages/db/prisma/location-data.json).
 const districts = [
@@ -48,6 +73,12 @@ export function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showCityPicker, setShowCityPicker] = useState(false);
+  const [showExperiencePicker, setShowExperiencePicker] = useState(false);
+
+  // Predefined experience ranges shown in the modal picker (Step 1).
+  // The stored value is the localized label so the admin journalist page
+  // sees the same string regardless of language toggled at submit time.
+  const experienceKeys = ["none", "lt1", "oneToThree", "threeToFive", "fiveToTen", "tenPlus"] as const;
   const [pincodeInfo, setPincodeInfo] = useState<
     { status: "ok" | "outside"; district?: string } | null
   >(null);
@@ -63,10 +94,65 @@ export function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Used to lift the multiline Address field a bit higher above the keyboard
-  // (automaticallyAdjustKeyboardInsets alone leaves it flush against it).
+  // Used to lift focused inputs (especially the multiline Address field) a
+  // bit higher above the keyboard. iOS's automaticallyAdjustKeyboardInsets
+  // alone leaves it flush against the keyboard; Android's adjustResize
+  // doesn't scroll at all.
   const scrollRef = useRef<ScrollView>(null);
+  // Tracks the current scroll content offset so the focus handler knows how
+  // much extra to scroll on top of the field's on-screen position.
+  const scrollY = useRef(0);
   const addressY = useRef(0);
+
+  // Live keyboard height — used as dynamic bottom padding on the ScrollView
+  // so fields near the end of the form can scroll up *into* the visible area
+  // when the keyboard is open, without leaving dead space when it's closed.
+  const [keyboardSpace, setKeyboardSpace] = useState(0);
+  useEffect(() => {
+    const showEvt = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvt = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const showSub = Keyboard.addListener(showEvt, (e) => {
+      setKeyboardSpace(e.endCoordinates?.height ?? 280);
+    });
+    const hideSub = Keyboard.addListener(hideEvt, () => setKeyboardSpace(0));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  // Smoothly scroll any focused TextInput so its top sits ~100 px from the top
+  // of the ScrollView — well clear of the keyboard. Uses measureLayout, which
+  // is reliable on the New Architecture (Fabric) where the legacy
+  // scrollResponderScrollNativeHandleToKeyboard helper is a no-op for many
+  // input types. The 80 ms delay lets the keyboard begin animating in first
+  // so the layout is settled when we measure.
+  const handleInputFocus = (e: any) => {
+    const target: any = e?.target;
+    if (!target || typeof target.measure !== "function") return;
+    // `measure` returns the field's absolute on-screen position (pageY).
+    // Combined with the live scroll offset we track via onScroll, we can
+    // compute exactly how far to scroll so the field sits at a comfortable
+    // height above the keyboard. Works the same on Fabric/Paper and
+    // iOS/Android — no node-handle gymnastics.
+    setTimeout(() => {
+      target.measure(
+        (_x: number, _y: number, _w: number, _h: number, _pageX: number, pageY: number) => {
+          // Target on-screen position: ~220 px from the top of the screen.
+          // Leaves room for the nav header above and ~400 px below for the
+          // keyboard + a small margin. Skip the scroll if the field is
+          // already above that line.
+          const desiredTop = 220;
+          if (pageY <= desiredTop) return;
+          const delta = pageY - desiredTop;
+          scrollRef.current?.scrollTo({
+            y: scrollY.current + delta,
+            animated: true,
+          });
+        },
+      );
+    }, 80);
+  };
 
   // A translate-style EN/తె toggle in the header lets the reporter pick a language.
   useLayoutEffect(() => {
@@ -295,13 +381,29 @@ export function RegisterScreen() {
   };
 
   return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      // iOS uses `padding` so the bottom inputs get pushed above the keyboard.
+      // Android relies on the activity's adjustResize (Expo default) — setting
+      // a behavior here on Android often fights the native resize and ends up
+      // with double-padding.
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+    >
     <ScrollView
       ref={scrollRef}
       style={styles.container}
-      contentContainerStyle={{ paddingHorizontal: 14, paddingVertical: 20 }}
+      // Bottom padding grows by the keyboard height while it's open so the
+      // last fields can scroll up into the visible area. When the keyboard
+      // closes, padding collapses back to its base value — no dead space.
+      contentContainerStyle={{ paddingHorizontal: 14, paddingVertical: 20, paddingBottom: 60 + keyboardSpace }}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
       automaticallyAdjustKeyboardInsets
+      // Live-track scroll Y so handleInputFocus can compute the correct
+      // delta to scroll a focused field to the desired on-screen position.
+      onScroll={(e) => { scrollY.current = e.nativeEvent.contentOffset.y; }}
+      scrollEventThrottle={16}
     >
       <Text style={styles.title}>{t("register.title")}</Text>
 
@@ -319,21 +421,26 @@ export function RegisterScreen() {
 
       {step === 1 && (
         <>
-          <TextInput style={[styles.input, errors.fullName ? styles.inputError : null]} placeholder={t("register.fullName")} value={form.fullName} onChangeText={(v) => update("fullName", v)} />
+          <FieldLabel style={styles.label}>{t("register.fullName")}</FieldLabel>
+          <TextInput style={[styles.input, errors.fullName ? styles.inputError : null]} placeholder={t("register.fullNamePlaceholder")} value={form.fullName} onChangeText={(v) => update("fullName", v)} onFocus={handleInputFocus} />
           <FieldError message={errors.fullName} />
-          <TextInput style={[styles.input, errors.email ? styles.inputError : null]} placeholder={t("register.email")} value={form.email} onChangeText={(v) => update("email", v)} keyboardType="email-address" autoCapitalize="none" />
+          <FieldLabel style={styles.label}>{t("register.email")}</FieldLabel>
+          <TextInput style={[styles.input, errors.email ? styles.inputError : null]} placeholder={t("register.emailPlaceholder")} value={form.email} onChangeText={(v) => update("email", v)} keyboardType="email-address" autoCapitalize="none" onFocus={handleInputFocus} />
           <FieldError message={errors.email} />
-          <TextInput style={[styles.input, errors.phone ? styles.inputError : null]} placeholder={t("register.phone")} value={form.phone} onChangeText={(v) => update("phone", v.replace(/[^0-9]/g, "").slice(0, 10))} keyboardType="phone-pad" maxLength={10} />
+          <FieldLabel style={styles.label}>{t("register.phone")}</FieldLabel>
+          <TextInput style={[styles.input, errors.phone ? styles.inputError : null]} placeholder={t("register.phonePlaceholder")} value={form.phone} onChangeText={(v) => update("phone", v.replace(/[^0-9]/g, "").slice(0, 10))} keyboardType="phone-pad" maxLength={10} onFocus={handleInputFocus} />
           <FieldError message={errors.phone} />
+          <FieldLabel style={styles.label}>{t("register.password")}</FieldLabel>
           <View style={styles.passwordRow}>
             <View style={[styles.passwordField, errors.password ? styles.inputError : null]}>
               <TextInput
                 style={styles.passwordInput}
-                placeholder={t("register.password")}
+                placeholder={t("register.passwordPlaceholder")}
                 value={form.password}
                 onChangeText={(v) => update("password", v)}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
+                onFocus={handleInputFocus}
               />
               <TouchableOpacity
                 onPress={() => {
@@ -355,9 +462,10 @@ export function RegisterScreen() {
             </TouchableOpacity>
           </View>
           <FieldError message={errors.password} />
+          <FieldLabel style={styles.label}>{t("register.dob")}</FieldLabel>
           <TouchableOpacity style={[styles.input, styles.dateField]} onPress={() => setShowDatePicker(true)} activeOpacity={0.7}>
-            <Text style={form.dateOfBirth ? styles.dateValue : styles.datePlaceholder}>
-              {form.dateOfBirth || t("register.dob")}
+            <Text numberOfLines={1} style={form.dateOfBirth ? styles.dateValue : styles.datePlaceholder}>
+              {form.dateOfBirth ? formatDOBDisplay(form.dateOfBirth) : t("register.dob")}
             </Text>
             <Ionicons name="calendar-outline" size={20} color="#888" />
           </TouchableOpacity>
@@ -388,13 +496,15 @@ export function RegisterScreen() {
             </Modal>
           )}
           {/* Pincode — typing 6 digits auto-detects the district */}
+          <FieldLabel style={styles.label}>{t("register.pincode")}</FieldLabel>
           <TextInput
             style={[styles.input, errors.pincode ? styles.inputError : null]}
-            placeholder={t("register.pincode")}
+            placeholder={t("register.pincodePlaceholder")}
             value={form.pincode}
             onChangeText={onPincodeChange}
             keyboardType="numeric"
             maxLength={6}
+            onFocus={handleInputFocus}
           />
           <FieldError message={errors.pincode} />
           {pincodeInfo?.status === "ok" && (
@@ -408,7 +518,7 @@ export function RegisterScreen() {
             <Text style={[styles.pincodeHint, styles.pincodeWarn]}>{t("register.pincodeOutside")}</Text>
           )}
 
-          <Text style={styles.label}>{t("register.primaryDistrict")}</Text>
+          <FieldLabel style={styles.label}>{t("register.primaryDistrict")}</FieldLabel>
           <View style={styles.chipRow}>
             {districts.map((d) => (
               <TouchableOpacity key={d.value} onPress={() => setForm((f) => ({ ...f, primaryDistrict: d.value, city: "" }))}
@@ -419,9 +529,9 @@ export function RegisterScreen() {
           </View>
 
           {/* City = assembly constituency within the selected district — tap to choose */}
-          <Text style={styles.label}>{t("register.city")}</Text>
+          <FieldLabel style={styles.label}>{t("register.city")}</FieldLabel>
           <TouchableOpacity style={[styles.input, styles.dateField]} onPress={() => setShowCityPicker(true)} activeOpacity={0.7}>
-            <Text style={form.city ? styles.dateValue : styles.datePlaceholder}>
+            <Text numberOfLines={1} style={form.city ? styles.dateValue : styles.datePlaceholder}>
               {cityLabel || t("register.city")}
             </Text>
             <Ionicons name="chevron-down" size={20} color="#888" />
@@ -456,17 +566,57 @@ export function RegisterScreen() {
             </TouchableOpacity>
           </Modal>
 
+          <FieldLabel style={styles.label}>{t("register.address")}</FieldLabel>
           <TextInput
             style={styles.input}
-            placeholder={t("register.address")}
+            placeholder={t("register.addressPlaceholder")}
             value={form.address}
             onChangeText={(v) => update("address", v)}
             multiline
-            onLayout={(e) => { addressY.current = e.nativeEvent.layout.y; }}
-            onFocus={() => setTimeout(() => scrollRef.current?.scrollTo({ y: Math.max(0, addressY.current - 110), animated: true }), 100)}
+            onFocus={handleInputFocus}
           />
 
-          <TextInput style={[styles.input, { height: 80 }]} placeholder={t("register.experience")} value={form.experience} onChangeText={(v) => update("experience", v)} multiline />
+          {/* Previous media experience — select from a fixed set of ranges
+              instead of free text. The stored value is the localized label,
+              so the admin Journalist page sees the same string. */}
+          <FieldLabel style={styles.label}>{t("register.experienceLabel")}</FieldLabel>
+          <TouchableOpacity style={[styles.input, styles.dateField]} onPress={() => setShowExperiencePicker(true)} activeOpacity={0.7}>
+            <Text numberOfLines={1} style={form.experience ? styles.dateValue : styles.datePlaceholder}>
+              {form.experience || t("register.experiencePlaceholder")}
+            </Text>
+            <Ionicons name="chevron-down" size={20} color="#888" />
+          </TouchableOpacity>
+          <Modal visible={showExperiencePicker} transparent animationType="slide" onRequestClose={() => setShowExperiencePicker(false)}>
+            <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setShowExperiencePicker(false)}>
+              <View style={styles.modalSheet} onStartShouldSetResponder={() => true}>
+                <View style={styles.modalBarSplit}>
+                  <Text style={styles.modalTitle}>{t("register.experienceLabel")}</Text>
+                  <TouchableOpacity onPress={() => setShowExperiencePicker(false)}>
+                    <Text style={styles.modalDone}>{t("common.ok")}</Text>
+                  </TouchableOpacity>
+                </View>
+                <ScrollView style={styles.cityList}>
+                  {experienceKeys.map((key) => {
+                    const label = t(`register.experienceOptions.${key}`);
+                    const active = form.experience === label;
+                    return (
+                      <TouchableOpacity
+                        key={key}
+                        style={styles.cityOption}
+                        onPress={() => {
+                          update("experience", label);
+                          setShowExperiencePicker(false);
+                        }}
+                      >
+                        <Text style={[styles.cityOptionText, active && styles.cityOptionTextActive]}>{label}</Text>
+                        {active && <Ionicons name="checkmark" size={20} color="#FF2C2C" />}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            </TouchableOpacity>
+          </Modal>
 
           <TouchableOpacity style={styles.button} onPress={goToStep2}>
             <Text style={styles.buttonText}>{t("register.nextDocuments")}</Text>
@@ -497,18 +647,19 @@ export function RegisterScreen() {
               </Text>
               {aadhaarDone && <Ionicons name="checkmark-circle" size={18} color="#16a34a" />}
             </View>
+            <FieldLabel style={styles.label}>{t("register.aadhaarNumber")}</FieldLabel>
             <TextInput
               style={[styles.input, errors.aadhaarNumber ? styles.inputError : null]}
-              placeholder={t("register.aadhaarNumber")}
+              placeholder={t("register.aadhaarPlaceholder")}
               value={formatAadhaar(form.aadhaarNumber)}
               onChangeText={(v) => update("aadhaarNumber", v.replace(/[^0-9]/g, "").slice(0, 12))}
               keyboardType="numeric"
               maxLength={14}
             />
             <FieldError message={errors.aadhaarNumber} />
-            <Text style={styles.label}>{t("register.aadhaarFront")}</Text>
+            <FieldLabel style={styles.label}>{t("register.aadhaarFront")}</FieldLabel>
             {renderDoc("aadhaarFrontUri", t("common.camera"), "camera-outline", errors.aadhaarFrontUri)}
-            <Text style={styles.label}>{t("register.aadhaarBack")}</Text>
+            <FieldLabel style={styles.label}>{t("register.aadhaarBack")}</FieldLabel>
             {renderDoc("aadhaarBackUri", t("common.camera"), "camera-outline", errors.aadhaarBackUri)}
           </View>
 
@@ -521,16 +672,17 @@ export function RegisterScreen() {
               </Text>
               {panDone && <Ionicons name="checkmark-circle" size={18} color="#16a34a" />}
             </View>
+            <FieldLabel style={styles.label}>{t("register.panNumber")}</FieldLabel>
             <TextInput
               style={[styles.input, errors.panNumber ? styles.inputError : null]}
-              placeholder={t("register.panNumber")}
+              placeholder={t("register.panPlaceholder")}
               value={form.panNumber}
               onChangeText={onPanChange}
               autoCapitalize="characters"
               maxLength={10}
             />
             <FieldError message={errors.panNumber} />
-            <Text style={styles.label}>{t("register.panCard")}</Text>
+            <FieldLabel style={styles.label}>{t("register.panCard")}</FieldLabel>
             {renderDoc("panCardUri", t("common.camera"), "camera-outline", errors.panCardUri)}
           </View>
 
@@ -549,13 +701,17 @@ export function RegisterScreen() {
 
       {step === 3 && (
         <>
-          <TextInput style={[styles.input, errors.upiId ? styles.inputError : null]} placeholder={t("register.upiId")} value={form.upiId} onChangeText={(v) => update("upiId", v.trim())} autoCapitalize="none" />
+          <FieldLabel style={styles.label}>{t("register.upiId")}</FieldLabel>
+          <TextInput style={[styles.input, errors.upiId ? styles.inputError : null]} placeholder={t("register.upiPlaceholder")} value={form.upiId} onChangeText={(v) => update("upiId", v.trim())} autoCapitalize="none" />
           <FieldError message={errors.upiId} />
-          <TextInput style={[styles.input, errors.bankName ? styles.inputError : null]} placeholder={t("register.bankName")} value={form.bankName} onChangeText={(v) => update("bankName", v)} />
+          <FieldLabel style={styles.label}>{t("register.bankName")}</FieldLabel>
+          <TextInput style={[styles.input, errors.bankName ? styles.inputError : null]} placeholder={t("register.bankNamePlaceholder")} value={form.bankName} onChangeText={(v) => update("bankName", v)} />
           <FieldError message={errors.bankName} />
-          <TextInput style={[styles.input, errors.bankAccount ? styles.inputError : null]} placeholder={t("register.accountNumber")} value={form.bankAccount} onChangeText={(v) => update("bankAccount", v.replace(/[^0-9]/g, "").slice(0, 18))} keyboardType="numeric" />
+          <FieldLabel style={styles.label}>{t("register.accountNumber")}</FieldLabel>
+          <TextInput style={[styles.input, errors.bankAccount ? styles.inputError : null]} placeholder={t("register.accountNumberPlaceholder")} value={form.bankAccount} onChangeText={(v) => update("bankAccount", v.replace(/[^0-9]/g, "").slice(0, 18))} keyboardType="numeric" />
           <FieldError message={errors.bankAccount} />
-          <TextInput style={[styles.input, errors.bankIfsc ? styles.inputError : null]} placeholder={t("register.ifsc")} value={form.bankIfsc} onChangeText={(v) => update("bankIfsc", v.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 11))} autoCapitalize="characters" />
+          <FieldLabel style={styles.label}>{t("register.ifsc")}</FieldLabel>
+          <TextInput style={[styles.input, errors.bankIfsc ? styles.inputError : null]} placeholder={t("register.ifscPlaceholder")} value={form.bankIfsc} onChangeText={(v) => update("bankIfsc", v.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 11))} autoCapitalize="characters" />
           <FieldError message={errors.bankIfsc} />
 
           <View style={styles.navRow}>
@@ -570,6 +726,7 @@ export function RegisterScreen() {
         </>
       )}
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -589,8 +746,11 @@ const styles = StyleSheet.create({
   pincodeOk: { color: "#16a34a" },
   pincodeWarn: { color: "#dc2626" },
   dateField: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  dateValue: { fontSize: 14, lineHeight: 22, color: "#111" },
-  datePlaceholder: { fontSize: 14, lineHeight: 22, color: "#9ca3af" },
+  // flex:1 + marginRight gives the inner <Text> the full remaining width and
+  // a gap from the chevron. Without it the chevron sat hard against the text
+  // and clipped the trailing character ("City" → "Cit").
+  dateValue: { flex: 1, marginRight: 8, fontSize: 14, lineHeight: 22, color: "#111" },
+  datePlaceholder: { flex: 1, marginRight: 8, fontSize: 14, lineHeight: 22, color: "#9ca3af" },
   modalBackdrop: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.4)" },
   modalSheet: { backgroundColor: "#fff", borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: 24 },
   modalBar: { flexDirection: "row", justifyContent: "flex-end", paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#f0f0f0" },

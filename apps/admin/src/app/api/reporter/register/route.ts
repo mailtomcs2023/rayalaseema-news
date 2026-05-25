@@ -1,13 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { hash } from "bcryptjs";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
+  // 5 registrations per IP per hour is plenty for a real user and tight
+  // enough that scripted account-farming is uncomfortable.
+  const limited = checkRateLimit(req, { max: 5, windowMs: 60 * 60_000, prefix: "reporter-register" });
+  if (limited) return limited;
+
   try {
     const body = await req.json();
     const { fullName, email, phone, password, dateOfBirth, gender, address, city, pincode,
       primaryDistrict, aadhaarNumber, aadhaarFrontUrl, aadhaarBackUrl, panNumber, panCardUrl,
-      photoUrl, upiId, bankName, bankAccount, bankIfsc, experience } = body;
+      photoUrl, experience } = body;
+
+    // Banking details (upiId / bankName / bankAccount / bankIfsc) are
+    // intentionally NOT accepted here. A self-serve registration page can't
+    // prove the reporter actually owns the account they typed, so accepting
+    // them would let one reporter route payouts to someone else's UPI/IFSC.
+    // Admin captures + verifies these during KYC review instead.
+    // (Old app builds still POST them in the body; we silently ignore.)
 
     if (!fullName || !email || !phone || !password) {
       return NextResponse.json({ error: "Name, email, phone, password required" }, { status: 400 });
@@ -36,7 +49,6 @@ export async function POST(req: NextRequest) {
         kycStatus: hasDocuments ? "SUBMITTED" : "PENDING",
         aadhaarNumber, aadhaarFrontUrl, aadhaarBackUrl,
         panNumber, panCardUrl, photoUrl,
-        upiId, bankName, bankAccount, bankIfsc,
         experience,
         languages: ["Telugu"],
       },

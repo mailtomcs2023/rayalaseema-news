@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useCallback } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Image, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Image, ActivityIndicator } from "react-native";
+import { TextInput } from "../components/Input";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { api, uploadImage } from "../api/client";
@@ -308,15 +309,19 @@ export function EditArticleScreen() {
       />
       <FieldError message={errors.title} />
 
-      {/* Summary */}
+      {/* Summary — multi-line textarea. `textAlignVertical: top` is required
+          on Android so the caret starts at the top instead of being centered
+          vertically (iOS already does this with multiline). */}
       <Text style={styles.label}>{t("newArticle.summary")}</Text>
       <TextInput
-        style={[styles.input, { height: 60 }, !editable && styles.inputDisabled]}
+        style={[styles.input, styles.textarea, !editable && styles.inputDisabled]}
         value={summary}
         editable={editable}
         onChangeText={setSummary}
         placeholder={t("newArticle.summaryPlaceholder")}
         multiline
+        numberOfLines={4}
+        textAlignVertical="top"
       />
 
       {/* Body */}
@@ -472,6 +477,8 @@ const styles = StyleSheet.create({
 
   label: { fontSize: 12, fontWeight: "700", color: "#555", marginBottom: 4, marginTop: 8 },
   input: { backgroundColor: "#fff", borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 10, padding: 14, fontSize: 15, marginBottom: 8 },
+  // Summary textarea — grows from ~4 lines tall, content top-anchored.
+  textarea: { minHeight: 100, paddingTop: 12, lineHeight: 22 },
   inputError: { borderColor: "#dc2626" },
   inputDisabled: { backgroundColor: "#f3f4f6", color: "#555" },
 

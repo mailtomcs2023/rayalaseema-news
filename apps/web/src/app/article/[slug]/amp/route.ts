@@ -1,31 +1,15 @@
 import { NextResponse } from "next/server";
 import { getArticleBySlug } from "@/lib/db-queries";
+import { sanitizeForAmp } from "@/lib/sanitize";
 
 // AMP HTML route — /article/[slug]/amp
 // Returns a minimal, AMP-valid HTML document. Linked back to canonical from the
 // regular article page (and vice versa) so Google can discover the AMP version.
 // Spec: https://amp.dev/documentation/guides-and-tutorials/start/create
-
-function sanitizeForAmp(html: string): string {
-  // AMP forbids <script>, inline event handlers, <iframe> w/o amp-iframe, <img> (must use amp-img)
-  return html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-    .replace(/\son\w+\s*=\s*"[^"]*"/gi, "")
-    .replace(/\son\w+\s*=\s*'[^']*'/gi, "")
-    .replace(/javascript\s*:/gi, "")
-    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, "")
-    .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, "")
-    .replace(/<embed\b[^>]*>/gi, "")
-    .replace(/<form\b[^<]*(?:(?!<\/form>)<[^<]*)*<\/form>/gi, "")
-    // Convert <img> → <amp-img> w/ layout=responsive
-    .replace(/<img\b([^>]*?)src=("|')(.*?)\2([^>]*?)\/?>/gi, (_m, pre, _q, src, post) => {
-      // Try to extract alt
-      const altMatch = (pre + post).match(/alt=("|')(.*?)\1/);
-      const alt = altMatch ? altMatch[2] : "";
-      return `<amp-img src="${src}" alt="${alt}" width="800" height="450" layout="responsive"></amp-img>`;
-    })
-    .replace(/style="[^"]*"/gi, ""); // strip inline styles (AMP-incompatible)
-}
+//
+// HTML sanitisation + <img> → <amp-img> rewrite live in lib/sanitize.ts so
+// both the article page and the AMP route share a single, well-vetted
+// allow-list rather than each maintaining its own regex.
 
 export async function GET(_: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;

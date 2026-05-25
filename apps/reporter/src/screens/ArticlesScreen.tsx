@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl,
-  ScrollView, Alert, Modal, Pressable, TextInput,
+  ScrollView, Alert, Modal, Pressable, Platform,
 } from "react-native";
+import { TextInput } from "../components/Input";
 import { Ionicons, FontAwesome6 } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { api } from "../api/client";
@@ -442,7 +443,7 @@ export function ArticlesScreen() {
       <FlatList
         data={visibleArticles}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: 14, paddingBottom: 28 }}
+        contentContainerStyle={{ padding: 14, paddingBottom: Platform.OS === "android" ? 100 : 28 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#FF2C2C"]} tintColor="#FF2C2C" />
@@ -583,7 +584,6 @@ export function ArticlesScreen() {
                   value={searchQuery}
                   onChangeText={setSearchQuery}
                   placeholder={t("filterSort.searchPlaceholder")}
-                  placeholderTextColor="#94a3b8"
                   returnKeyType="search"
                 />
                 {searchQuery.length > 0 && (
@@ -724,7 +724,7 @@ const styles = StyleSheet.create({
   funnelBadgeText: { color: "#fff", fontSize: 9, fontWeight: "800" },
 
   fab: {
-    position: "absolute", right: 16, bottom: 96,
+    position: "absolute", right: 16, bottom: 120,
     width: 56, height: 56, borderRadius: 28,
     backgroundColor: "#FF2C2C",
     alignItems: "center", justifyContent: "center",

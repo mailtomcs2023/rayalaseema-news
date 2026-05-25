@@ -40,7 +40,8 @@
       "expo-router",
       "expo-camera",
       "expo-image-picker",
-      "expo-location"
+      "expo-location",
+      "expo-secure-store"
     ],
     "extra": {
       "router": {},

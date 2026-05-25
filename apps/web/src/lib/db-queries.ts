@@ -9,6 +9,24 @@
 // are gone from this file. Those tables still exist in the DB but are dormant;
 // they get dropped in #189 once every reader/writer has migrated.
 import { prisma } from "@rayalaseema/db";
+import { sanitizeAdHtml } from "./sanitize";
+
+// Run admin-supplied ad markup through the sanitizer at the data layer so the
+// client component can stop worrying about XSS. Centralising this also means
+// any new caller that surfaces an Ad row is automatically safe.
+function sanitizeAdRow<T extends { htmlContent?: string | null }>(ad: T): T {
+  if (ad.htmlContent) {
+    return { ...ad, htmlContent: sanitizeAdHtml(ad.htmlContent) };
+  }
+  return ad;
+}
+
+// Articles written before the new admin Content workspace existed are
+// "old-style" — they should NOT appear on the homepage / category pages that
+// were redesigned for the new template. Detail pages (/article/[slug]),
+// search, tag, and author pages still surface them so existing links keep
+// working. Bump this date if the cutover moment changes.
+const NEW_TEMPLATE_ARTICLE_CUTOFF = new Date("2026-05-25T00:00:00.000Z");
 
 // ---------- Helpers ----------
 
@@ -119,7 +137,7 @@ export async function getSiteConfig(): Promise<Record<string, string>> {
 
 export async function getFeaturedArticles(limit = 6) {
   const rows = await prisma.content.findMany({
-    where: { type: "ARTICLE", status: "PUBLISHED", featured: true },
+    where: { type: "ARTICLE", status: "PUBLISHED", featured: true, createdAt: { gte: NEW_TEMPLATE_ARTICLE_CUTOFF } },
     include: {
       category: { select: { name: true, nameEn: true, slug: true, color: true } },
       author: { select: { name: true } },
@@ -133,7 +151,7 @@ export async function getFeaturedArticles(limit = 6) {
 
 export async function getLatestArticles(limit = 12) {
   return prisma.content.findMany({
-    where: { type: "ARTICLE", status: "PUBLISHED" },
+    where: { type: "ARTICLE", status: "PUBLISHED", createdAt: { gte: NEW_TEMPLATE_ARTICLE_CUTOFF } },
     select: { id: true, title: true, slug: true, publishedAt: true },
     orderBy: { publishedAt: "desc" },
     take: limit,
@@ -142,7 +160,7 @@ export async function getLatestArticles(limit = 12) {
 
 export async function getArticlesByCategory(categorySlug: string, limit = 5) {
   const rows = await prisma.content.findMany({
-    where: { type: "ARTICLE", status: "PUBLISHED", category: { slug: categorySlug } },
+    where: { type: "ARTICLE", status: "PUBLISHED", category: { slug: categorySlug }, createdAt: { gte: NEW_TEMPLATE_ARTICLE_CUTOFF } },
     include: {
       category: { select: { name: true, nameEn: true, slug: true, color: true } },
       author: { select: { name: true } },
@@ -183,7 +201,7 @@ export async function getHomepageData() {
       orderBy: { sortOrder: "asc" },
     }),
     prisma.content.findMany({
-      where: { type: "ARTICLE", status: "PUBLISHED" },
+      where: { type: "ARTICLE", status: "PUBLISHED", createdAt: { gte: NEW_TEMPLATE_ARTICLE_CUTOFF } },
       include: {
         category: { select: { name: true, nameEn: true, slug: true, color: true } },
         author: { select: { name: true } },
@@ -437,7 +455,7 @@ export async function getCartoons(limit = 5) {
 // ---------- Ads (unchanged — Ad is its own table, not unified) ----------
 
 export async function getAdsByPosition(position: string) {
-  return prisma.ad.findMany({
+  const rows = await prisma.ad.findMany({
     where: {
       position: position as any,
       active: true,
@@ -445,15 +463,17 @@ export async function getAdsByPosition(position: string) {
     },
     take: 1,
   });
+  return rows.map(sanitizeAdRow);
 }
 
 export async function getAllAds() {
-  return prisma.ad.findMany({
+  const rows = await prisma.ad.findMany({
     where: {
       active: true,
       OR: [{ endDate: null }, { endDate: { gt: new Date() } }],
     },
   });
+  return rows.map(sanitizeAdRow);
 }
 
 // ---------- District-wise articles (type=ARTICLE filtered) ----------
@@ -483,6 +503,7 @@ export async function getDistrictArticles(myDistrictSlug?: string | null) {
     where: {
       type: "ARTICLE",
       status: "PUBLISHED",
+      createdAt: { gte: NEW_TEMPLATE_ARTICLE_CUTOFF },
       OR: [
         { constituencyId: { in: allConstIds } },
         ...districts.flatMap((d) => [

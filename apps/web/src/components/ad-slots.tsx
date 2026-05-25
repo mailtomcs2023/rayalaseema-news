@@ -15,6 +15,10 @@ interface DbAd {
 
 function DbAdRenderer({ ad }: { ad?: DbAd | null }) {
   if (!ad) return null;
+  // htmlContent is pre-sanitized by sanitizeAdRow in apps/web/src/lib/db-queries.ts
+  // (drops <script>, on* handlers, javascript: URLs, iframe/object/embed/form).
+  // If you ever surface an Ad row from a different query, route it through
+  // sanitizeAdHtml in lib/sanitize.ts before rendering.
   if (ad.htmlContent) return <div dangerouslySetInnerHTML={{ __html: ad.htmlContent }} />;
   if (ad.imageUrl) {
     const img = <img src={ad.imageUrl} alt={ad.name} style={{ width: "100%", display: "block", borderRadius: 4 }} />;

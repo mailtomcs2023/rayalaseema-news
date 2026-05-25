@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getReporterId } from "@/lib/reporter-auth";
 import { uploadBuffer, blobConfigured } from "@/lib/blob";
+import { sniffImageMime } from "@/lib/image-magic";
 
 const EXT_BY_TYPE: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -12,6 +13,13 @@ const EXT_BY_TYPE: Record<string, string> = {
 
 // Image upload for the reporter app (article photos). Token-protected;
 // uploads the file to Azure Blob and returns its public URL.
+//
+// Defense in depth — we check BOTH:
+//   1. The client-declared `file.type` is in our allow-list (cheap).
+//   2. The actual file bytes start with the magic signature for that MIME
+//      (the multipart Content-Type header is attacker-controlled, so a
+//      `malware.html` renamed to `photo.jpg` can otherwise sneak in and
+//      get served back as an XSS payload from Azure Blob).
 export async function POST(req: NextRequest) {
   if (!(await getReporterId(req))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -32,7 +40,18 @@ export async function POST(req: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const url = await uploadBuffer(buffer, EXT_BY_TYPE[file.type], file.type);
+
+    // Magic-byte verification — the bytes have to actually be the image type
+    // the client claimed. Stops content-type spoofing in its tracks.
+    const detected = sniffImageMime(buffer);
+    if (!detected || detected !== file.type) {
+      return NextResponse.json(
+        { error: "File contents do not match an allowed image format" },
+        { status: 400 },
+      );
+    }
+
+    const url = await uploadBuffer(buffer, EXT_BY_TYPE[detected], detected);
 
     return NextResponse.json({ url, size: file.size });
   } catch (e: any) {

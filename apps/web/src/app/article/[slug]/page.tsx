@@ -11,6 +11,7 @@ import { PaywallModal } from "@/components/paywall-modal";
 import { DialectGlosser } from "@/components/dialect-glosser";
 import { getArticleBySlug, getTrendingArticles, getArticlesByCategory, incrementViewCount } from "@/lib/db-queries";
 import { injectInlineByline, formatRelativeTelugu } from "@/lib/byline";
+import { sanitizeArticleHtml } from "@/lib/sanitize";
 import type { Metadata } from "next";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -54,19 +55,6 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       images: ogImage ? [ogImage] : undefined,
     },
   };
-}
-
-function sanitizeHtml(html: string): string {
-  // Remove script tags, event handlers, and dangerous attributes
-  return html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-    .replace(/\son\w+\s*=\s*"[^"]*"/gi, "")
-    .replace(/\son\w+\s*=\s*'[^']*'/gi, "")
-    .replace(/javascript\s*:/gi, "")
-    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, "")
-    .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, "")
-    .replace(/<embed\b[^>]*>/gi, "")
-    .replace(/<form\b[^<]*(?:(?!<\/form>)<[^<]*)*<\/form>/gi, "");
 }
 
 export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
@@ -201,7 +189,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               className="article-body"
               style={{ marginTop: 24 }}
               dangerouslySetInnerHTML={{
-                __html: injectInlineByline(sanitizeHtml(article.body || ""), article.desk?.name, article.title),
+                __html: injectInlineByline(sanitizeArticleHtml(article.body || ""), article.desk?.name, article.title),
               }}
             />
 

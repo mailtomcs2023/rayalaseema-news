@@ -447,7 +447,7 @@ export default function JournalistsPage() {
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
       <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111", marginBottom: 4 }}>Journalists &amp; KYC</h1>
+        <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111", marginBottom: 4 }}>Reporters &amp; KYC</h1>
         <p style={{ fontSize: 13, color: "#888", marginBottom: 20 }}>
           Manage reporter profiles, verify KYC, track performance
         </p>
@@ -555,7 +555,7 @@ export default function JournalistsPage() {
 
             <div className="ms-auto flex items-center gap-3">
               <span className="text-sm text-muted-foreground">
-                {table.getRowCount()} journalist{table.getRowCount() === 1 ? "" : "s"}
+                {table.getRowCount()} reporter{table.getRowCount() === 1 ? "" : "s"}
               </span>
               {table.getSelectedRowModel().rows.length > 0 && (
                 <Button
@@ -570,7 +570,7 @@ export default function JournalistsPage() {
               )}
               <Button onClick={() => setFormFor({ mode: "create" })}>
                 <UserPlusIcon aria-hidden="true" className="-ms-1 opacity-90" size={16} />
-                Add Journalist
+                Add Reporter
               </Button>
             </div>
           </div>
@@ -627,7 +627,7 @@ export default function JournalistsPage() {
                 ) : (
                   <TableRow>
                     <TableCell className="h-24 text-center" colSpan={columns.length}>
-                      {loading ? "Loading journalists..." : "No journalists found."}
+                      {loading ? "Loading reporters..." : "No reporters found."}
                     </TableCell>
                   </TableRow>
                 )}

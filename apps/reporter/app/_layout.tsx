@@ -25,7 +25,7 @@ export default function RootLayout() {
         <Stack.Screen name="login" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="register" options={{ headerShown: true, title: "Register", headerTintColor: "#FF2C2C" }} />
-        <Stack.Screen name="new-article" options={{ headerShown: true, title: "New Article", headerTintColor: "#FF2C2C" }} />
+        <Stack.Screen name="new-article" options={{ headerShown: true, title: "New Article", headerTintColor: "#FF2C2C", headerTitleAlign: "center" }} />
         {/* In-app KYC upload — opened from the KycBanner CTA when the reporter
             has PENDING or REJECTED status. */}
         <Stack.Screen name="kyc" options={{ headerShown: true, title: "KYC Documents", headerTintColor: "#FF2C2C" }} />

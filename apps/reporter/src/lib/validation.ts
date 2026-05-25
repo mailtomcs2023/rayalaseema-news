@@ -30,15 +30,16 @@ export function loginSchema(t: TFn) {
   });
 }
 
-// Register — step 1: personal details. Required fields are marked * in the UI;
-// pincode is optional but must be 6 digits when provided.
+// Register — step 1: personal details. Required fields are marked * in the UI.
+// Pincode is required because the admin uses it to route the reporter to the
+// correct district desk for the editorial workflow.
 export function step1Schema(t: TFn) {
   return z.object({
     fullName: z.string().trim().min(1, t("validation.required")),
     email: z.string().trim().min(1, t("validation.required")).email(t("validation.email")),
     phone: z.string().regex(PHONE_RE, t("validation.phone")),
     password: z.string().min(8, t("validation.password")),
-    pincode: optionalMatch(/^[0-9]{6}$/, t("validation.pincode")),
+    pincode: z.string().regex(/^[0-9]{6}$/, t("validation.pincode")),
   });
 }
 

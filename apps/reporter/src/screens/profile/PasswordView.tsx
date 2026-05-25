@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from "react-native";
+import { TextInput } from "../../components/Input";
+import { getAuthToken } from "../../lib/secure-token";
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
 import { useT } from "../../i18n";
@@ -30,7 +31,7 @@ export function ProfilePasswordView() {
     setErrors({});
     setLoading(true);
     try {
-      const token = await AsyncStorage.getItem("auth-token");
+      const token = await getAuthToken();
       const res = await fetch(`${API_URL}/api/reporter/change-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token ?? ""}` },

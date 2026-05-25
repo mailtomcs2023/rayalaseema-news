@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { compare } from "bcryptjs";
 import { createReporterToken } from "@/lib/reporter-auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 // Mobile login for the reporter (Expo) app.
 //
@@ -10,6 +11,12 @@ import { createReporterToken } from "@/lib/reporter-auth";
 // which React Native's fetch cannot perform reliably. One POST, one JSON
 // response with the user object the app stores locally.
 export async function POST(req: NextRequest) {
+  // Brute-force guard — 10 attempts per minute per IP. Enough headroom for a
+  // reporter fat-fingering the password a few times, tight enough that
+  // automated credential-stuffing has to wait ~6 seconds between guesses.
+  const limited = checkRateLimit(req, { max: 10, windowMs: 60_000, prefix: "reporter-login" });
+  if (limited) return limited;
+
   try {
     const { email, password } = await req.json();
 
