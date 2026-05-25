@@ -23,9 +23,12 @@ export async function POST(req: NextRequest) {
 
   const now = new Date();
   try {
-    const due = await prisma.article.findMany({
+    // Spec #1 #109: query unified Content table. Cron now flips ALL content
+    // types (Article, Video, Reel, Story, Cartoon, Breaking) — anything with
+    // status=SCHEDULED past its scheduledAt becomes PUBLISHED.
+    const due = await prisma.content.findMany({
       where: { status: "SCHEDULED", scheduledAt: { lte: now } },
-      select: { id: true, slug: true, title: true, scheduledAt: true },
+      select: { id: true, type: true, slug: true, title: true, scheduledAt: true },
     });
 
     if (due.length === 0) {
@@ -34,32 +37,33 @@ export async function POST(req: NextRequest) {
 
     // Use scheduledAt as the canonical publishedAt for analytics/feed ordering consistency.
     const updates = await Promise.allSettled(
-      due.map((a) =>
-        prisma.article.update({
-          where: { id: a.id },
-          data: { status: "PUBLISHED", publishedAt: a.scheduledAt ?? now },
+      due.map((c) =>
+        prisma.content.update({
+          where: { id: c.id },
+          data: { status: "PUBLISHED", publishedAt: c.scheduledAt ?? now },
         })
       )
     );
 
-    const items = due.map((a, i) => ({
-      id: a.id,
-      slug: a.slug,
-      title: a.title,
-      scheduledAt: a.scheduledAt,
+    const items = due.map((c, i) => ({
+      id: c.id,
+      type: c.type,
+      slug: c.slug,
+      title: c.title,
+      scheduledAt: c.scheduledAt,
       ok: updates[i].status === "fulfilled",
       error: updates[i].status === "rejected" ? String((updates[i] as PromiseRejectedResult).reason) : null,
     }));
     const ok = items.filter((i) => i.ok).length;
 
-    // Audit log per successfully published article (system actor)
+    // Audit log per successfully published row (system actor)
     await Promise.all(
       items.filter((i) => i.ok).map((i) =>
         logAudit({
-          action: "article.publish",
-          resource: "article",
+          action: "content.publish",
+          resource: "content",
           resourceId: i.id,
-          meta: { via: "cron.publish-scheduled", scheduledAt: i.scheduledAt, title: i.title },
+          meta: { via: "cron.publish-scheduled", type: i.type, scheduledAt: i.scheduledAt, title: i.title },
           actor: { id: null, email: "system@cron", role: "SYSTEM" },
           req,
         })
@@ -76,8 +80,8 @@ export async function POST(req: NextRequest) {
 export async function GET() {
   const now = new Date();
   const [pending, dueNow] = await Promise.all([
-    prisma.article.count({ where: { status: "SCHEDULED" } }),
-    prisma.article.count({ where: { status: "SCHEDULED", scheduledAt: { lte: now } } }),
+    prisma.content.count({ where: { status: "SCHEDULED" } }),
+    prisma.content.count({ where: { status: "SCHEDULED", scheduledAt: { lte: now } } }),
   ]);
   return NextResponse.json({ pending, dueNow, serverTime: now.toISOString() });
 }
