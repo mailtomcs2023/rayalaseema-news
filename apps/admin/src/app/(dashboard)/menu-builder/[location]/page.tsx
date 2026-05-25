@@ -55,7 +55,7 @@ export default async function MenuBuilderPage({ params }: { params: Promise<{ lo
   });
 
   // Categories + recent Content for the per-item target pickers.
-  const [categories, recentContent] = await Promise.all([
+  const [rawCategories, recentContent] = await Promise.all([
     prisma.category.findMany({
       where: { active: true },
       select: { slug: true, name: true, nameEn: true },
@@ -68,6 +68,45 @@ export default async function MenuBuilderPage({ params }: { params: Promise<{ lo
       take: 200,
     }),
   ]);
+  const categories = rawCategories.map((c) => ({ slug: c.slug, name: c.name, nameEn: c.nameEn ?? c.name }));
+
+  // Spec #3 F1 #185 — broken-link detection. Collect every CATEGORY slug and
+  // CONTENT id referenced by the menu (draft view, since editor shows draft),
+  // then check which still exist. Items pointing at deleted rows get the ⚠
+  // marker + a top-of-page banner.
+  type AnyItem = { target?: { type?: string; categorySlug?: string; contentId?: string }; children?: AnyItem[] };
+  const draftView = ((menu.draftItems ?? menu.items) as AnyItem[]) || [];
+  const referencedCategorySlugs = new Set<string>();
+  const referencedContentIds = new Set<string>();
+  const walk = (items: AnyItem[]) => {
+    for (const it of items) {
+      const t = it.target;
+      if (t?.type === "CATEGORY" && t.categorySlug) referencedCategorySlugs.add(t.categorySlug);
+      if (t?.type === "CONTENT" && t.contentId) referencedContentIds.add(t.contentId);
+      if (it.children?.length) walk(it.children);
+    }
+  };
+  walk(draftView);
+
+  const [validCategoryRows, validContentRows] = await Promise.all([
+    referencedCategorySlugs.size
+      ? prisma.category.findMany({
+          where: { slug: { in: [...referencedCategorySlugs] }, active: true },
+          select: { slug: true },
+        })
+      : Promise.resolve([]),
+    referencedContentIds.size
+      ? prisma.content.findMany({
+          where: { id: { in: [...referencedContentIds] } },
+          select: { id: true, status: true },
+        })
+      : Promise.resolve([]),
+  ]);
+  const validCategorySlugs = new Set(validCategoryRows.map((r) => r.slug));
+  // Treat unpublished content as broken — public site won't render the link.
+  const validContentIds = new Set(
+    validContentRows.filter((r) => r.status === "PUBLISHED").map((r) => r.id),
+  );
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
@@ -84,6 +123,9 @@ export default async function MenuBuilderPage({ params }: { params: Promise<{ lo
           versionCount={menu._count.versions}
           categories={categories}
           recentContent={JSON.parse(JSON.stringify(recentContent))}
+          validCategorySlugs={[...validCategorySlugs]}
+          validContentIds={[...validContentIds]}
+          currentUserName={(session.user.name as string) || (session.user.email as string) || "Editor"}
         />
       </main>
     </div>

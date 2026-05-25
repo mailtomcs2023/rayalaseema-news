@@ -36,6 +36,13 @@ interface Props {
   versionCount: number;
   categories: Category[];
   recentContent: ContentRow[];
+  // Spec #3 F1 #185 — broken-link detection. Pre-computed sets of currently
+  // valid CATEGORY slugs and CONTENT ids referenced by this menu. Any item
+  // whose target points outside these sets gets a ⚠ icon + banner.
+  validCategorySlugs: string[];
+  validContentIds: string[];
+  // Display name of the logged-in editor, used by presence heartbeats.
+  currentUserName: string;
 }
 
 function genId() {
@@ -51,8 +58,33 @@ export function MenuTreeEditor(props: Props) {
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState("");
+  const [otherEditors, setOtherEditors] = useState<{ userId: string; name: string }[]>([]);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dirty = useRef(false);
+
+  // Sets from props recomputed once per render — referenced by the
+  // ItemRow / banner code to flag broken targets.
+  const validCategorySet = new Set(props.validCategorySlugs);
+  const validContentSet = new Set(props.validContentIds);
+
+  // Walk the tree once per render to find broken items. Cheap: tree caps
+  // at ~30 items in practice (header/footer/mobile each).
+  const brokenItems: { label: string; reason: string }[] = [];
+  for (const top of tree) {
+    const flat = [top, ...(top.children || [])];
+    for (const it of flat) {
+      if (it.target.type === "CATEGORY" && !validCategorySet.has(it.target.categorySlug)) {
+        brokenItems.push({ label: it.label, reason: `category "${it.target.categorySlug}" deleted or inactive` });
+      } else if (it.target.type === "CONTENT" && !validContentSet.has(it.target.contentId)) {
+        brokenItems.push({ label: it.label, reason: `content row missing or unpublished` });
+      }
+    }
+  }
+  const isBroken = (item: Item): boolean => {
+    if (item.target.type === "CATEGORY") return !validCategorySet.has(item.target.categorySlug);
+    if (item.target.type === "CONTENT") return !validContentSet.has(item.target.contentId);
+    return false;
+  };
 
   // Debounced auto-save — 5s after the last edit. The status pill in the
   // header reflects the save state.
@@ -104,6 +136,25 @@ export function MenuTreeEditor(props: Props) {
   };
 
   useEffect(() => { return () => { if (saveTimer.current) clearTimeout(saveTimer.current); }; }, []);
+
+  // Presence heartbeat (Spec #3 F1 #185). Pings every 10s; the API stores
+  // entries with a 30s TTL so a closed tab silently times out.
+  useEffect(() => {
+    let alive = true;
+    const tick = async () => {
+      try {
+        await fetch(`/api/menu-builder/menus/${props.location}/presence`, { method: "POST" });
+        const res = await fetch(`/api/menu-builder/menus/${props.location}/presence`);
+        if (res.ok && alive) {
+          const data = await res.json();
+          setOtherEditors(data.others || []);
+        }
+      } catch { /* swallow — presence is non-critical */ }
+    };
+    tick();
+    const iv = setInterval(tick, 10_000);
+    return () => { alive = false; clearInterval(iv); };
+  }, [props.location]);
 
   // --- mutators ---
   const update = (next: Item[]) => { setTree(next); queueSave(); };
@@ -249,6 +300,28 @@ export function MenuTreeEditor(props: Props) {
         </div>
       )}
 
+      {/* Broken-link banner (Spec #3 F1 #185). Lists every item whose
+          target row was deleted or unpublished since the last save. */}
+      {brokenItems.length > 0 && (
+        <div style={{ background: "#fef3c7", border: "1px solid #fde68a", padding: "10px 14px", borderRadius: 8, fontSize: 13, color: "#92400e", marginBottom: 12 }}>
+          <strong>⚠ {brokenItems.length} item{brokenItems.length === 1 ? "" : "s"} reference deleted content:</strong>
+          <ul style={{ margin: "6px 0 0 18px" }}>
+            {brokenItems.slice(0, 6).map((b, i) => (
+              <li key={i}><b>{b.label}</b> — {b.reason}</li>
+            ))}
+            {brokenItems.length > 6 && <li>…and {brokenItems.length - 6} more</li>}
+          </ul>
+        </div>
+      )}
+
+      {/* Presence banner (Spec #3 F1 #185). Shown when another active
+          session was seen on this location in the last 30s. */}
+      {otherEditors.length > 0 && (
+        <div style={{ background: "#eef2ff", border: "1px solid #c7d2fe", padding: "8px 14px", borderRadius: 8, fontSize: 12, color: "#3730a3", marginBottom: 12 }}>
+          👥 Also editing now: {otherEditors.map((e) => e.name).join(", ")} — last writer wins.
+        </div>
+      )}
+
       <div style={{ display: "grid", gridTemplateColumns: "260px 1fr 320px", gap: 16 }}>
         {/* PALETTE — 4 target type adders */}
         <div style={{ background: "#fff", borderRadius: 10, padding: 14, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
@@ -291,6 +364,7 @@ export function MenuTreeEditor(props: Props) {
                 key={item.id}
                 item={item}
                 isTop
+                broken={isBroken(item)}
                 selected={selected?.topIdx === ti && selected.childIdx === null}
                 onSelect={() => setSelected({ topIdx: ti, childIdx: null })}
                 onUp={() => moveItem(ti, null, -1)}
@@ -303,6 +377,7 @@ export function MenuTreeEditor(props: Props) {
                     key={child.id}
                     item={child}
                     isTop={false}
+                    broken={isBroken(child)}
                     selected={selected?.topIdx === ti && selected.childIdx === ci}
                     onSelect={() => setSelected({ topIdx: ti, childIdx: ci })}
                     onUp={() => moveItem(ti, ci, -1)}
@@ -397,9 +472,9 @@ function ContentPicker({ rows, search, setSearch, onPick }: { rows: ContentRow[]
 }
 
 function ItemRow({
-  item, isTop, selected, onSelect, onUp, onDown, onNest, onUnnest, onRemove, children,
+  item, isTop, broken, selected, onSelect, onUp, onDown, onNest, onUnnest, onRemove, children,
 }: {
-  item: Item; isTop: boolean; selected: boolean;
+  item: Item; isTop: boolean; broken?: boolean; selected: boolean;
   onSelect: () => void; onUp: () => void; onDown: () => void;
   onNest?: () => void; onUnnest?: () => void; onRemove: () => void;
   children?: React.ReactNode;
@@ -409,14 +484,15 @@ function ItemRow({
       <div style={{
         display: "flex", alignItems: "center", gap: 6,
         padding: "8px 10px", borderRadius: 6, marginBottom: 4,
-        background: selected ? "#eff6ff" : "transparent",
+        background: selected ? "#eff6ff" : broken ? "#fef3c7" : "transparent",
         marginLeft: isTop ? 0 : 24,
-        border: selected ? "1px solid #93c5fd" : "1px solid transparent",
+        border: selected ? "1px solid #93c5fd" : broken ? "1px solid #fde68a" : "1px solid transparent",
         cursor: "pointer",
       }} onClick={onSelect}>
         <span style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", width: 60 }}>
           {item.target.type.replace("_URL", "").slice(0, 8)}
         </span>
+        {broken && <span title="Target row no longer exists" style={{ fontSize: 13 }}>⚠</span>}
         <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: "#111", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {item.label}
         </span>

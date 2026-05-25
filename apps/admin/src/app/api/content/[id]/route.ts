@@ -25,6 +25,11 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
       },
     });
     if (!content) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    // REPORTERs can only read their own rows. Return 404 (not 403) so they
+    // can't probe for existence of admin drafts by id.
+    if (session.user.role === "REPORTER" && content.authorId !== session.user.id) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
     return NextResponse.json(content);
   } catch (error) {
     return apiError(error);
@@ -88,10 +93,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       select: {
         type: true, title: true, slug: true, summary: true, body: true,
         featuredImage: true, categoryId: true, status: true, payload: true,
-        needsPibApproval: true, pibApprovedAt: true,
+        needsPibApproval: true, pibApprovedAt: true, authorId: true,
       },
     });
     if (!current) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    // REPORTERs may only edit their own rows.
+    if (session.user.role === "REPORTER" && current.authorId !== session.user.id) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
 
     // Re-validate payload if changed.
     if (data.payload !== undefined && data.payload !== null) {
@@ -202,25 +211,67 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 }
 
-// DELETE — hard delete (ADMIN only). Cascade kills ContentTag + ContentRevision
-// + ContentPayment per schema. Audit log captures the slug/title for forensic
-// trace even after the row is gone.
+// DELETE — tiered soft-delete.
+//   REPORTER: may soft-delete own rows whose status is DRAFT or SUBMITTED.
+//   EDITOR / CHIEF_SUB_EDITOR / SUB_EDITOR: may soft-delete any row whose
+//     status is not PUBLISHED.
+//   ADMIN: may soft-delete anything, and with `?purge=1` hard-deletes the
+//     row (cascade kills tags/revisions/payments per schema).
+// Soft-deleted rows stay in DB so admin can restore via POST /restore.
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await requireAuth(["ADMIN"]);
+  const session = await requireAuth(["ADMIN", "EDITOR", "CHIEF_SUB_EDITOR", "SUB_EDITOR", "REPORTER"]);
   if (isAuthError(session)) return session;
   try {
     const { id } = await params;
+    const url = new URL(req.url);
+    const purge = url.searchParams.get("purge") === "1";
+
     const existing = await prisma.content.findUnique({
       where: { id },
-      select: { type: true, title: true, slug: true, status: true },
+      select: { type: true, title: true, slug: true, status: true, authorId: true, deletedAt: true },
     });
-    await prisma.content.delete({ where: { id } });
+    if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const role = session.user.role;
+    if (role === "REPORTER") {
+      if (existing.authorId !== session.user.id) return NextResponse.json({ error: "Not found" }, { status: 404 });
+      if (existing.status !== "DRAFT" && existing.status !== "SUBMITTED") {
+        return NextResponse.json({ error: "Reporters can only delete drafts or submissions" }, { status: 403 });
+      }
+    } else if (role === "EDITOR" || role === "CHIEF_SUB_EDITOR" || role === "SUB_EDITOR") {
+      if (existing.status === "PUBLISHED") {
+        return NextResponse.json({ error: "Unpublish before deleting a live article" }, { status: 403 });
+      }
+    } else if (role !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    if (purge) {
+      if (role !== "ADMIN") return NextResponse.json({ error: "Only ADMIN may purge" }, { status: 403 });
+      await prisma.content.delete({ where: { id } });
+      await logAudit({
+        action: "content.purge",
+        resource: "content",
+        resourceId: id,
+        meta: { type: existing.type, title: existing.title, slug: existing.slug, status: existing.status },
+        actor: { id: session.user.id, email: session.user.email, role: (session.user as any).role },
+        req,
+      });
+      return NextResponse.json({ success: true, purged: true });
+    }
+
+    if (existing.deletedAt) return NextResponse.json({ success: true, alreadyDeleted: true });
+
+    await prisma.content.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedById: session.user.id },
+    });
 
     await logAudit({
       action: "content.delete",
       resource: "content",
       resourceId: id,
-      meta: existing ? { type: existing.type, title: existing.title, slug: existing.slug, status: existing.status } : undefined,
+      meta: { type: existing.type, title: existing.title, slug: existing.slug, status: existing.status, soft: true },
       actor: { id: session.user.id, email: session.user.email, role: (session.user as any).role },
       req,
     });

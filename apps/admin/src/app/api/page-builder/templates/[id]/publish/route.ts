@@ -12,7 +12,7 @@
 // failure can't leave the template half-published.
 
 import { NextRequest, NextResponse } from "next/server";
-import { prisma, layoutSchema } from "@rayalaseema/db";
+import { prisma, layoutSchema, Prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         where: { id },
         data: {
           layout: parsed.data as unknown as object,
-          draftLayout: null,
+          draftLayout: Prisma.DbNull,
           isPublished: true,
           publishedAt: now,
         },

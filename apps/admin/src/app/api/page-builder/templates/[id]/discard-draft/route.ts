@@ -2,7 +2,7 @@
 // editor opens this template it sees the published layout again.
 
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@rayalaseema/db";
+import { prisma, Prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -10,7 +10,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   if (isAuthError(session)) return session;
   try {
     const { id } = await params;
-    await prisma.template.update({ where: { id }, data: { draftLayout: null } });
+    await prisma.template.update({ where: { id }, data: { draftLayout: Prisma.DbNull } });
     return NextResponse.json({ ok: true });
   } catch (error) {
     return apiError(error);

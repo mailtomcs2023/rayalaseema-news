@@ -57,6 +57,27 @@ export async function GET(req: NextRequest) {
     if (status) where.status = status;
     if (category) where.categoryId = category;
 
+    // Visibility: REPORTER sees only their own rows. SUB_EDITOR / EDITOR /
+    // CHIEF_SUB_EDITOR / ADMIN see everything. Prevents reporters from
+    // browsing admin drafts and unpublished editorial copy.
+    if (session.user.role === "REPORTER") {
+      where.authorId = session.user.id;
+    }
+
+    // Soft-delete: hide trashed rows by default. `?trash=1` (admin/editor)
+    // returns ONLY trashed rows. Reporters never see trash; the soft-deleted
+    // row simply disappears from their list.
+    const trash = searchParams.get("trash") === "1";
+    if (trash) {
+      const role = session.user.role;
+      if (role !== "ADMIN" && role !== "EDITOR" && role !== "CHIEF_SUB_EDITOR") {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+      where.deletedAt = { not: null };
+    } else {
+      where.deletedAt = null;
+    }
+
     const [items, total] = await Promise.all([
       prisma.content.findMany({
         where,

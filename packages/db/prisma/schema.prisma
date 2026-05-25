@@ -1058,6 +1058,13 @@ model Content {
   // Ingestion dedup — source news URL, unique so the same item can't be imported twice
   sourceUrl       String?       @unique
 
+  // Soft-delete (Spec #1 follow-up). Non-null = hidden from list/public.
+  // Reporters soft-delete their own DRAFT/SUBMITTED. Editors soft-delete
+  // anything not PUBLISHED. Admins soft-delete anything + can hard-purge.
+  // List queries default to `deletedAt: null`; trash view filters non-null.
+  deletedAt       DateTime?
+  deletedById     String?
+
   // Editorial review trail (Spec #1 A1C #189 — promoted from Article columns
   // so existing UI keeps showing rejection notes + reviewer stamps).
   rejectionNote   String?       @db.Text
@@ -1079,6 +1086,7 @@ model Content {
   @@index([authorId])
   @@index([constituencyId])
   @@index([deskId])
+  @@index([deletedAt])
   @@map("contents")
 }
 

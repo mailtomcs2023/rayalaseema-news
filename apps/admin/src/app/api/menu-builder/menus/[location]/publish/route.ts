@@ -2,7 +2,7 @@
 // (Spec #3 D1). Snapshots a MenuVersion before promoting, invalidates the
 // web cache via revalidateTag('menu').
 import { NextRequest, NextResponse } from "next/server";
-import { prisma, MenuLocation, safeValidateMenuItems } from "@rayalaseema/db";
+import { prisma, MenuLocation, safeValidateMenuItems, Prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 import { revalidateTag } from "next/cache";
 
@@ -47,14 +47,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ loc
       where: { id: menu.id },
       data: {
         items: validated.data as any,
-        draftItems: null,
+        draftItems: Prisma.DbNull,
         isPublished: true,
         publishedAt: new Date(),
       },
     });
 
     // Bust the web-app menu cache (tag set in apps/web/src/lib/menu.ts).
-    try { revalidateTag("menu"); } catch {}
+    try { revalidateTag("menu", "global"); } catch {}
 
     return NextResponse.json({ ok: true, publishedAt: updated.publishedAt });
   } catch (e) { return apiError(e); }
