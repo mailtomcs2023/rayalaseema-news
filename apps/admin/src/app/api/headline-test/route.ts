@@ -23,19 +23,22 @@ export async function POST(req: NextRequest) {
   if (isAuthError(session)) return session;
   try {
     const body = await req.json();
-    const { articleId, variantA, variantB } = body as { articleId?: string; variantA?: string; variantB?: string };
-    if (!articleId || !variantA?.trim() || !variantB?.trim()) {
-      return NextResponse.json({ error: "articleId + variantA + variantB required" }, { status: 400 });
+    // Spec #1 A1B (#188) — column renamed articleId -> contentId. Accept the
+    // old `articleId` key as an alias so any in-flight client code still works.
+    const contentId: string | undefined = body.contentId || body.articleId;
+    const { variantA, variantB } = body as { variantA?: string; variantB?: string };
+    if (!contentId || !variantA?.trim() || !variantB?.trim()) {
+      return NextResponse.json({ error: "contentId + variantA + variantB required" }, { status: 400 });
     }
     if (variantA.trim() === variantB.trim()) {
       return NextResponse.json({ error: "Variants must differ" }, { status: 400 });
     }
-    const article = await prisma.article.findUnique({ where: { id: articleId }, select: { id: true } });
-    if (!article) return NextResponse.json({ error: "Article not found" }, { status: 404 });
+    const content = await prisma.content.findUnique({ where: { id: contentId }, select: { id: true, type: true } });
+    if (!content || content.type !== "ARTICLE") return NextResponse.json({ error: "Article not found" }, { status: 404 });
 
     const test = await prisma.headlineTest.create({
       data: {
-        articleId,
+        contentId,
         variantA: variantA.trim(),
         variantB: variantB.trim(),
         createdById: session.user.id,

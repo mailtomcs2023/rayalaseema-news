@@ -2,13 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { rateLimit } from "@/lib/rate-limit";
 
-// GET comments for an article
+// GET comments for a content row. The query string still accepts `articleId`
+// as an alias for `contentId` so callers in flight (article page client
+// components) keep working without a coordinated swap. Either param is fine.
 export async function GET(req: NextRequest) {
-  const articleId = req.nextUrl.searchParams.get("articleId");
-  if (!articleId) return NextResponse.json([]);
+  const sp = req.nextUrl.searchParams;
+  const contentId = sp.get("contentId") || sp.get("articleId");
+  if (!contentId) return NextResponse.json([]);
 
   const comments = await prisma.comment.findMany({
-    where: { articleId, approved: true },
+    where: { contentId, approved: true },
     orderBy: { createdAt: "desc" },
     take: 50,
   });
@@ -18,22 +21,25 @@ export async function GET(req: NextRequest) {
   });
 }
 
-// POST a new comment
+// POST a new comment. Body accepts either `contentId` (preferred, Spec #1)
+// or `articleId` (legacy alias).
 export async function POST(req: NextRequest) {
-  const limited = rateLimit(req, { maxRequests: 5, windowMs: 60_000, prefix: "comment" }); if (limited) return limited;
-  const { articleId, name, email, content } = await req.json();
+  const limited = rateLimit(req, { maxRequests: 5, windowMs: 60_000, prefix: "comment" });
+  if (limited) return limited;
+  const body = await req.json();
+  const contentId: string | undefined = body.contentId || body.articleId;
+  const { name, email, content } = body;
 
-  if (!articleId || !name?.trim() || !content?.trim()) {
+  if (!contentId || !name?.trim() || !content?.trim()) {
     return NextResponse.json({ error: "Name and comment are required" }, { status: 400 });
   }
-
   if (content.length > 2000) {
     return NextResponse.json({ error: "Comment too long (max 2000 chars)" }, { status: 400 });
   }
 
-  const comment = await prisma.comment.create({
+  await prisma.comment.create({
     data: {
-      articleId,
+      contentId,
       name: name.trim(),
       email: email?.trim() || null,
       content: content.trim(),

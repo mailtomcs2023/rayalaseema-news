@@ -21,8 +21,10 @@ export async function POST(_: NextRequest, { params }: { params: Promise<{ id: s
     const winner = test.clicksB > test.clicksA ? "B" : "A";
     const newTitle = winner === "A" ? test.variantA : test.variantB;
 
+    // Spec #1 A1B (#188) — column renamed articleId -> contentId. Promotes
+    // the winning headline onto the Content row (type=ARTICLE).
     await prisma.$transaction([
-      prisma.article.update({ where: { id: test.articleId }, data: { title: newTitle } }),
+      prisma.content.update({ where: { id: test.contentId }, data: { title: newTitle } }),
       prisma.headlineTest.update({
         where: { id }, data: { winnerVariant: winner, winnerAt: new Date() },
       }),
