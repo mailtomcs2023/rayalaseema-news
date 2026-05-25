@@ -63,6 +63,11 @@ model User {
   contentRevisions  ContentRevision[]
   contentPayments   ContentPayment[]  @relation("ContentJournalist")
 
+  // Page Builder (Spec #2) — back-relations
+  templates         Template[]         @relation("TemplateCreator")
+  templateVersions  TemplateVersion[]
+  composites        CompositeBlock[]   @relation("CompositeCreator")
+
   // Profile-change requests this user has reviewed (admin role)
   reviewedProfileUpdateRequests ProfileUpdateRequest[] @relation("ProfileUpdateRequestReviewer")
 
@@ -1393,4 +1398,78 @@ model ContentPayment {
   @@index([journalistId, status])
   @@index([status])
   @@map("content_payments")
+}
+
+// ============ PAGE BUILDER (Spec #2 — admin-editable templates for / and /category/[slug]) ============
+// See docs/superpowers/specs/2026-05-25-page-builder-design.md
+//
+// Template       = named layout (block tree) with draft/published states.
+// TemplateVersion= snapshot per publish; restorable into draft.
+// TemplateAssignment = priority-ordered URL-pattern → template mapping.
+// CompositeBlock = reusable named group of blocks; referenced by { type:"Composite", compositeId }.
+
+model Template {
+  id           String              @id @default(cuid())
+  name         String
+  slug         String              @unique
+  description  String?
+  // Published layout (block tree). Shape validated by Zod (layoutSchema).
+  layout       Json
+  // In-progress edits; promoted to `layout` on publish.
+  draftLayout  Json?
+  isPublished  Boolean             @default(false)
+  publishedAt  DateTime?
+  createdById  String
+  createdBy    User                @relation("TemplateCreator", fields: [createdById], references: [id])
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  assignments  TemplateAssignment[]
+  versions     TemplateVersion[]
+
+  @@index([slug])
+  @@map("templates")
+}
+
+model TemplateVersion {
+  id         String   @id @default(cuid())
+  templateId String
+  template   Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  layout     Json
+  editedById String
+  editedBy   User     @relation(fields: [editedById], references: [id])
+  editNote   String?
+  createdAt  DateTime @default(now())
+
+  @@index([templateId, createdAt])
+  @@map("template_versions")
+}
+
+model TemplateAssignment {
+  id         String   @id @default(cuid())
+  templateId String
+  template   Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  // URL pattern: "/", "/category/movie-reviews", "/category/*", "/category/**"
+  pattern    String
+  priority   Int      @default(10)
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  @@unique([pattern, templateId])
+  @@index([active, priority])
+  @@map("template_assignments")
+}
+
+model CompositeBlock {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  // Array of block configs (same shape as layout.blocks). Zod-validated.
+  blocks      Json
+  createdById String
+  createdBy   User     @relation("CompositeCreator", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("composite_blocks")
 }

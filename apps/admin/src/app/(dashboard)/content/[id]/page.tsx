@@ -14,6 +14,7 @@ import { useRouter, useParams } from "next/navigation";
 import { Sidebar } from "@/components/sidebar";
 import { RichEditor, type RichEditorRef } from "@/components/rich-editor";
 import { ImageUpload } from "@/components/image-upload";
+import { ContentPayloadEditor } from "@/components/content-payload-editor";
 
 interface Category { id: string; name: string; nameEn: string; slug: string }
 
@@ -61,8 +62,8 @@ export default function ContentEditorPage() {
   const [reviewerName, setReviewerName] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
 
-  // Generic payload JSON (escape hatch for non-ARTICLE types until F2-F6 ship)
-  const [payloadJson, setPayloadJson] = useState("");
+  // Typed payload state for non-ARTICLE types (F2-F6).
+  const [typedPayload, setTypedPayload] = useState<Record<string, unknown>>({});
   const [payloadError, setPayloadError] = useState("");
 
   const editorRef = useRef<RichEditorRef>(null);
@@ -103,14 +104,15 @@ export default function ContentEditorPage() {
       if (Array.isArray(row.tags)) {
         setTagsInput(row.tags.map((t: any) => t.tag?.name).filter(Boolean).join(", "));
       }
-      // Project payload into typed state for ARTICLE; everything else uses
-      // the raw-JSON escape hatch until its dedicated subform lands.
+      // Project payload into the right state shape per type. ARTICLE pulls
+      // rating + reviewerName into dedicated inputs; everything else hands the
+      // raw payload to ContentPayloadEditor which switches on type internally.
       const payload = row.payload || {};
       if (row.type === "ARTICLE") {
         setRating(typeof payload.rating === "number" ? String(payload.rating) : "");
         setReviewerName(payload.reviewerName || "");
-      } else if (payload && Object.keys(payload).length > 0) {
-        setPayloadJson(JSON.stringify(payload, null, 2));
+      } else {
+        setTypedPayload(payload as Record<string, unknown>);
       }
       setLoading(false);
     });
@@ -126,13 +128,14 @@ export default function ContentEditorPage() {
       if (reviewerName.trim()) p.reviewerName = reviewerName.trim();
       return Object.keys(p).length > 0 ? p : null;
     }
-    if (!payloadJson.trim()) return null;
-    try {
-      return JSON.parse(payloadJson);
-    } catch {
-      setPayloadError("Payload is not valid JSON");
-      return undefined;
+    // Strip empty top-level fields so the Zod .strict() schemas don't trip on
+    // empty strings that the user never filled.
+    const cleaned: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(typedPayload)) {
+      if (v === "" || v === null || v === undefined) continue;
+      cleaned[k] = v;
     }
+    return Object.keys(cleaned).length > 0 ? cleaned : null;
   };
 
   const handleSave = async (newStatus?: string) => {
@@ -282,25 +285,7 @@ export default function ContentEditorPage() {
             )}
 
             {type !== "ARTICLE" && (
-              <div style={{ marginTop: 12, padding: 16, background: "#fffbeb", border: "1px dashed #f59e0b", borderRadius: 8 }}>
-                <p style={{ fontSize: 13, fontWeight: 700, color: "#92400e", marginBottom: 6 }}>
-                  Type-specific editor coming soon (F2-F6)
-                </p>
-                <p style={{ fontSize: 12, color: "#92400e", marginBottom: 10 }}>
-                  Until the {typeMeta.label} subform lands, edit the payload as raw JSON below.
-                  Shape is validated by Zod on save (see <code>packages/db/src/payload-schemas.ts</code>).
-                </p>
-                <textarea
-                  value={payloadJson}
-                  onChange={(e) => setPayloadJson(e.target.value)}
-                  rows={8}
-                  placeholder='{"videoUrl": "https://...", "duration": 120}'
-                  style={{ ...inpStyle, fontFamily: "monospace", fontSize: 12, background: "#fff" }}
-                />
-                {payloadError && (
-                  <p style={{ marginTop: 6, fontSize: 12, color: "#dc2626" }}>{payloadError}</p>
-                )}
-              </div>
+              <ContentPayloadEditor type={type} payload={typedPayload} setPayload={setTypedPayload} />
             )}
           </div>
 
