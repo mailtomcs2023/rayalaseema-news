@@ -108,6 +108,20 @@ export function EditorShell({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const iframeNonce = useRef(0);
 
+  // Undo / redo (H1 #171): each persistLocal call pushes the prior layout
+  // onto a bounded history stack so cmd-Z reverts the last edit. cmd-shift-Z
+  // pops from a redo stack. Stack capped at 50 entries to keep memory bounded.
+  const undoStack = useRef<Layout[]>([]);
+  const redoStack = useRef<Layout[]>([]);
+  const MAX_HISTORY = 50;
+
+  // Presence (H1 #171): poll the template endpoint every 15s and warn
+  // when somebody else has updated the row since this editor session
+  // opened. The save/publish handlers update openedAtRef when they
+  // succeed locally to suppress false positives on our own writes.
+  const openedAtRef = useRef<number>(Date.now());
+  const [otherEditorWarning, setOtherEditorWarning] = useState<string | null>(null);
+
   const previewSrc = `${webUrl}/page-builder/preview/${initial.id}?draft=1&_n=${iframeNonce.current}`;
 
   // Reload the iframe whenever the draft changes (E3+ will replace this
@@ -204,8 +218,69 @@ export function EditorShell({
   }, []);
 
   function persistLocal(next: Layout) {
+    undoStack.current.push(layout);
+    if (undoStack.current.length > MAX_HISTORY) undoStack.current.shift();
+    redoStack.current = [];
     setLayout(next);
   }
+
+  function undo() {
+    const prev = undoStack.current.pop();
+    if (!prev) return;
+    redoStack.current.push(layout);
+    if (redoStack.current.length > MAX_HISTORY) redoStack.current.shift();
+    setLayout(prev);
+  }
+
+  function redo() {
+    const next = redoStack.current.pop();
+    if (!next) return;
+    undoStack.current.push(layout);
+    if (undoStack.current.length > MAX_HISTORY) undoStack.current.shift();
+    setLayout(next);
+  }
+
+  // Keyboard shortcuts: cmd/ctrl+Z = undo, cmd/ctrl+shift+Z = redo.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod) return;
+      // Ignore when typing in inputs / textareas / contenteditable.
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || target?.isContentEditable) return;
+      if (e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      } else if ((e.key === "z" && e.shiftKey) || e.key === "y") {
+        e.preventDefault();
+        redo();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layout]);
+
+  // Presence: poll for foreign updates every 15s.
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/page-builder/templates/${initial.id}`);
+        if (!res.ok) return;
+        const json = await res.json();
+        const remoteAt = new Date(json.updatedAt).getTime();
+        if (remoteAt > openedAtRef.current + 2000) {
+          setOtherEditorWarning(
+            "Someone else has saved this template since you opened it. Your next save will overwrite their changes — refresh first if you want to keep theirs.",
+          );
+        }
+      } catch {
+        /* ignore — transient network */
+      }
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [initial.id]);
 
   function addBlock(type: string, compositeId?: string, position?: number) {
     const id = makeId(type === "Composite" ? "comp" : type.slice(0, 3).toLowerCase());
@@ -332,6 +407,8 @@ export function EditorShell({
     }
     lastSavedJson.current = snapshot;
     setSavedAt(new Date());
+    openedAtRef.current = Date.now();
+    setOtherEditorWarning(null);
     refreshPreview();
   }
 
@@ -352,6 +429,8 @@ export function EditorShell({
       return;
     }
     setSavedAt(new Date());
+    openedAtRef.current = Date.now();
+    setOtherEditorWarning(null);
     refreshPreview();
   }
 
@@ -376,6 +455,22 @@ export function EditorShell({
         </span>
 
         <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+          <button
+            onClick={undo}
+            disabled={undoStack.current.length === 0}
+            style={btnSecondary}
+            title="Undo (Cmd/Ctrl+Z)"
+          >
+            ↶ Undo
+          </button>
+          <button
+            onClick={redo}
+            disabled={redoStack.current.length === 0}
+            style={btnSecondary}
+            title="Redo (Cmd/Ctrl+Shift+Z)"
+          >
+            ↷ Redo
+          </button>
           <div style={deviceTabs}>
             <button
               onClick={() => setDevice("desktop")}
@@ -415,6 +510,32 @@ export function EditorShell({
           </button>
         </div>
       </div>
+
+      {otherEditorWarning && (
+        <div
+          style={{
+            background: "#FEF3C7",
+            color: "#92400E",
+            border: "1px solid #FCD34D",
+            borderRadius: 6,
+            padding: "8px 12px",
+            marginBottom: 10,
+            fontSize: 13,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          ⚠ {otherEditorWarning}
+          <button
+            onClick={() => setOtherEditorWarning(null)}
+            style={{ marginLeft: "auto", background: "transparent", border: "none", cursor: "pointer", color: "#92400E", fontSize: 16 }}
+            aria-label="Dismiss"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {error && <div style={errBox}>{error}</div>}
 
