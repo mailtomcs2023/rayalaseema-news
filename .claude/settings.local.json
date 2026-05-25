@@ -88,7 +88,8 @@
       "PowerShell(Get-NetTCPConnection -LocalPort 58426 -ErrorAction SilentlyContinue)",
       "Bash(python3 'd:/tmp/create-content-issues.py')",
       "Bash(cat > *)",
-      "Bash(python3 'd:/tmp/create-pagebuilder-issues.py')"
+      "Bash(python3 'd:/tmp/create-pagebuilder-issues.py')",
+      "Bash(python3 'd:/tmp/create-menubuilder-issues.py')"
     ],
     "additionalDirectories": [
       "D:\\RSE2026M365\\assets\\masthead",

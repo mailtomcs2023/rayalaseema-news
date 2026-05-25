@@ -420,30 +420,60 @@ function EpaperEditorPage() {
   const [addBlockOpen, setAddBlockOpen] = useState(false);
   const addBlock = async (type: string) => {
     if (!activePage) return;
-    const defaults: Record<string, { w: number; h: number }> = {
+    // v1 (RGL grid): w in 12-col units, h in 30-row units.
+    // v2 (mm-coord): w in mm (8-col grid → multiples of 44.6mm), h in mm.
+    const V1_DEFAULTS: Record<string, { w: number; h: number }> = {
       lead: { w: 8, h: 12 }, major: { w: 4, h: 6 }, secondary: { w: 3, h: 5 },
       brief: { w: 6, h: 2 }, image: { w: 4, h: 4 }, ad: { w: 12, h: 3 },
       text: { w: 6, h: 2 }, masthead: { w: 12, h: 3 }, "section-band": { w: 12, h: 2 },
-      "story-jump": { w: 4, h: 1 },
-      "pull-quote": { w: 6, h: 3 },
+      "story-jump": { w: 4, h: 1 }, "pull-quote": { w: 6, h: 3 },
     };
-    const d = defaults[type] || { w: 4, h: 4 };
-    const MAX_ROWS = 30; // Indian broadsheet printable rows — see DraggableBlockGrid
-    const maxY = activePage.layout.blocks.reduce((m, b) => Math.max(m, b.y + b.h), 0);
-    if (maxY + d.h > MAX_ROWS) {
-      toast("warn", `Page full (${maxY}/${MAX_ROWS} rows). Move or shrink existing blocks first, or add a new page.`);
+    // v2 mm defaults: width in mm snapped to columns (40.6×N + 4×(N-1));
+    // height in mm. 8-col grid math: 1col=40.6, 2col=85.2, 3col=129.8,
+    // 4col=174.4, 5col=219, 6col=263.6, 7col=308.2, 8col=330. Live=520mm.
+    const V2_DEFAULTS: Record<string, { w: number; h: number }> = {
+      lead: { w: 219, h: 200 },        // 5 cols × 200mm
+      major: { w: 174.4, h: 90 },      // 4 cols × 90mm
+      secondary: { w: 129.8, h: 70 },  // 3 cols × 70mm
+      brief: { w: 263.6, h: 30 },      // 6 cols × 30mm
+      image: { w: 174.4, h: 80 },
+      ad: { w: 330, h: 50 },
+      text: { w: 263.6, h: 30 },
+      masthead: { w: 330, h: 85 },
+      "section-band": { w: 330, h: 18 },
+      "story-jump": { w: 174.4, h: 14 },
+      "pull-quote": { w: 263.6, h: 50 },
+    };
+
+    const isV2 = editorVersion === "v2";
+    const d = (isV2 ? V2_DEFAULTS : V1_DEFAULTS)[type] || (isV2 ? { w: 174.4, h: 80 } : { w: 4, h: 4 });
+
+    // v2 bounds check uses mm (live h = 520); v1 keeps the 30-row cap.
+    const maxBoundary = isV2 ? 520 : 30;
+    const sourceBlocks = isV2 ? (v2BlocksForActive as any[]) : activePage.layout.blocks;
+    const maxY = sourceBlocks.reduce((m, b) => Math.max(m, (b.y ?? 0) + (b.h ?? 0)), 0);
+    if (maxY + d.h > maxBoundary) {
+      toast("warn", `Page full (${maxY.toFixed(0)}/${maxBoundary}${isV2 ? "mm" : " rows"}). Move or shrink existing blocks first, or add a new page.`);
       setAddBlockOpen(false);
       return;
     }
-    const newBlock: Block = {
+    const newBlock: any = {
       id: `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
       type, x: 0, y: maxY, w: d.w, h: d.h,
     };
-    const blocks = [...activePage.layout.blocks, newBlock];
+    const nextBlocks = isV2
+      ? [...(v2BlocksForActive as any[]), newBlock]
+      : [...activePage.layout.blocks, newBlock];
     pushUndo(activePage.id, activePage.layout.blocks);
     setEdition((prev) => prev ? { ...prev, pages: prev.pages.map((p) =>
-      p.id === activePage.id ? { ...p, layout: { blocks } } : p) } : prev);
-    await patchPage({ blocks });
+      p.id === activePage.id ? {
+        ...p,
+        layout: isV2
+          ? { coordSystem: "mm-v2", blocks: nextBlocks }
+          : { blocks: nextBlocks },
+      } : p) } : prev);
+    // Persist via PATCH — include coordSystem so server round-trips it.
+    await patchPage(isV2 ? { blocks: nextBlocks, coordSystem: "mm-v2" } : { blocks: nextBlocks });
     setAddBlockOpen(false);
     toast("success", `Added ${type} block — drag to reposition`);
   };
@@ -769,13 +799,19 @@ function EpaperEditorPage() {
   // Persists the full block-layout when react-grid-layout finishes a drag/resize.
   const saveLayout = async (newBlocks: Block[]) => {
     if (!activePage) return;
+    const isV2 = editorVersion === "v2";
     pushUndo(activePage.id, activePage.layout.blocks);
     setEdition((prev) => {
       if (!prev) return prev;
       return { ...prev, pages: prev.pages.map((p) =>
-        p.id === activePage.id ? { ...p, layout: { blocks: newBlocks } } : p) };
+        p.id === activePage.id ? {
+          ...p,
+          layout: isV2
+            ? { coordSystem: "mm-v2", blocks: newBlocks }
+            : { blocks: newBlocks },
+        } : p) };
     });
-    await patchPage({ blocks: newBlocks });
+    await patchPage(isV2 ? { blocks: newBlocks, coordSystem: "mm-v2" } : { blocks: newBlocks });
   };
 
   const undo = useCallback(async () => {

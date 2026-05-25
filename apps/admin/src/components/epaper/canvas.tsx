@@ -169,6 +169,24 @@ export function Canvas({
       {blocks.map((b) => {
         const isSelected = selectedBlockIds.has(b.id);
         const isMaster = !!b.isMaster;
+        // Per-type color so overlapping blocks stay visually distinct (the
+        // original single-pink-for-empty made layered tiles look like one
+        // big slab covering the whole page).
+        const typeColor: Record<string, { bg: string; border: string }> = {
+          masthead:       { bg: "#7c2d12", border: "#9a3412" },
+          "section-band": { bg: "#991b1b", border: "#b91c1c" },
+          lead:           { bg: "#bfdbfe", border: "#3b82f6" },
+          major:          { bg: "#c7d2fe", border: "#6366f1" },
+          secondary:      { bg: "#ddd6fe", border: "#8b5cf6" },
+          brief:          { bg: "#fed7aa", border: "#f97316" },
+          image:          { bg: "#bbf7d0", border: "#22c55e" },
+          ad:             { bg: "repeating-linear-gradient(45deg,#fafaf6,#fafaf6 6px,#e5e7eb 6px,#e5e7eb 12px)", border: "#9ca3af" },
+          text:           { bg: "#fef9c3", border: "#eab308" },
+          folio:          { bg: "#f3f4f6", border: "#9ca3af" },
+          "story-jump":   { bg: "#fff7ed", border: "#fb923c" },
+          "pull-quote":   { bg: "#fce7f3", border: "#ec4899" },
+        };
+        const t = typeColor[b.type] ?? { bg: "#fee2e2", border: "#f87171" };
         return (
           <div
             key={b.id}
@@ -179,17 +197,21 @@ export function Canvas({
               top: mm(b.y),
               width: mm(b.w),
               height: mm(b.h),
-              background: isMaster ? "rgba(99,102,241,0.06)" : b.articleId ? "#dbeafe" : "#fee2e2",
+              background: isMaster ? "rgba(99,102,241,0.10)" : t.bg,
+              // Always 2px solid border so overlapping tiles stay visually
+              // separable; selection bumps to indigo, master uses dashed purple.
               border: isMaster
-                ? "1px dashed #6366f1"
+                ? "2px dashed #6366f1"
                 : isSelected
-                ? "2px solid #4f46e5"
-                : "1px solid #93c5fd",
+                ? "3px solid #4f46e5"
+                : `2px solid ${t.border}`,
+              boxShadow: isSelected ? "0 0 0 4px rgba(79,70,229,0.15)" : "inset 0 0 0 1px rgba(255,255,255,0.4)",
               cursor: isMaster ? "not-allowed" : "grab",
               overflow: "hidden",
               padding: 4,
               fontSize: 11,
-              opacity: isMaster ? 0.7 : 1,
+              color: ["masthead", "section-band"].includes(b.type) ? "#fff" : "#111",
+              opacity: isMaster ? 0.55 : 1,
             }}
             onClick={(e) => {
               e.stopPropagation();
