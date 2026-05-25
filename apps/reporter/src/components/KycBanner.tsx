@@ -285,10 +285,15 @@ const styles = StyleSheet.create({
   metaText: { fontSize: 12, fontWeight: "700" },
   draftsText: { fontSize: 11, color: "#6b7280" },
 
-  // Rejection note for REJECTED state
+  // Rejection note for REJECTED state — flat-left, rounded-right callout
+  // so the red accent border reads as an inset marker (admin's note),
+  // not a floating card.
   noteBox: {
     backgroundColor: "#fff",
-    borderRadius: 10,
+    borderTopLeftRadius: 0,
+    borderBottomLeftRadius: 0,
+    borderTopRightRadius: 10,
+    borderBottomRightRadius: 10,
     padding: 10,
     borderLeftWidth: 3,
     borderLeftColor: "#dc2626",

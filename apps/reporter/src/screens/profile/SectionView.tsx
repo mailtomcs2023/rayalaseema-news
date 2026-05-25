@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
 
   pendingChip: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 6, backgroundColor: "#fef3c7", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, alignSelf: "flex-start", maxWidth: "100%" },
   pendingChipText: { fontSize: 11, fontWeight: "700", color: "#92400e", flexShrink: 1 },
-  rejectedBox: { marginTop: 6, padding: 8, backgroundColor: "#fef2f2", borderRadius: 6, borderLeftWidth: 2, borderLeftColor: "#dc2626" },
+  rejectedBox: { marginTop: 6, padding: 8, backgroundColor: "#fef2f2", borderTopLeftRadius: 0, borderBottomLeftRadius: 0, borderTopRightRadius: 6, borderBottomRightRadius: 6, borderLeftWidth: 2, borderLeftColor: "#dc2626" },
   rejectedLabel: { fontSize: 11, fontWeight: "800", color: "#dc2626" },
   rejectedNote: { fontSize: 12, color: "#666", marginTop: 2 },
 });

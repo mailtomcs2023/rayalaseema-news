@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
   rolePillText: { fontSize: 12, fontWeight: "700", color: "#FF2C2C" },
   kycPill: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999 },
   kycPillText: { fontSize: 12, fontWeight: "700" },
-  kycRejectBox: { marginTop: 14, padding: 10, backgroundColor: "#fef2f2", borderRadius: 8, borderLeftWidth: 3, borderLeftColor: "#dc2626", alignSelf: "stretch" },
+  kycRejectBox: { marginTop: 14, padding: 10, backgroundColor: "#fef2f2", borderTopLeftRadius: 0, borderBottomLeftRadius: 0, borderTopRightRadius: 8, borderBottomRightRadius: 8, borderLeftWidth: 3, borderLeftColor: "#dc2626", alignSelf: "stretch" },
   kycRejectLabel: { fontSize: 10, fontWeight: "800", color: "#dc2626" },
   kycRejectText: { fontSize: 12, color: "#666", marginTop: 2 },
 

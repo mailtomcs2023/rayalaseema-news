@@ -750,7 +750,11 @@ const styles = StyleSheet.create({
   metaText: { fontSize: 11.5, color: "#64748b", fontWeight: "500", flexShrink: 1 },
 
   rejectionBox: {
-    marginTop: 12, padding: 10, backgroundColor: "#fef2f2", borderRadius: 10,
+    marginTop: 12, padding: 10, backgroundColor: "#fef2f2",
+    // Flat left edge (keeps the red accent border), rounded right edge — reads
+    // as a callout marker rather than a floating card.
+    borderTopLeftRadius: 0, borderBottomLeftRadius: 0,
+    borderTopRightRadius: 10, borderBottomRightRadius: 10,
     borderLeftWidth: 3, borderLeftColor: "#dc2626",
   },
   rejectionLabel: { fontSize: 10, fontWeight: "800", color: "#dc2626", textTransform: "uppercase", letterSpacing: 0.4 },

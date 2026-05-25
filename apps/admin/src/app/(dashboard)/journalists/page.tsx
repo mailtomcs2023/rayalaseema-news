@@ -130,6 +130,22 @@ interface Journalist {
   _count: { articles: number; payments: number };
 }
 
+// Common KYC rejection reasons. The label shown in the dropdown IS the text
+// stored on JournalistProfile.kycRejectionNote and shown to the reporter in
+// the app's red KYC banner — keep them short, plain-English, actionable.
+// "other" is a sentinel that reveals a free-text input for one-off cases.
+const REJECTION_REASONS = [
+  "Aadhaar photo unclear or blurry",
+  "PAN card photo unclear or blurry",
+  "Selfie does not match the Aadhaar photo",
+  "Aadhaar number does not match the document",
+  "PAN number is invalid",
+  "Bank account details look incorrect",
+  "Documents appear edited or tampered",
+  "Wrong document type uploaded",
+] as const;
+const REJECTION_OTHER = "__other__";
+
 // ---- table row ----
 interface JournalistRow {
   id: string;
@@ -857,13 +873,20 @@ function ReviewDialog({
   onClose: () => void;
   onChanged: () => void;
 }) {
+  // rejectReason holds the SELECT value: "" = nothing chosen, a preset string
+  // from REJECTION_REASONS, or REJECTION_OTHER. rejectNote is the free-text
+  // override used only when "Other" is chosen.
+  const [rejectReason, setRejectReason] = useState<string>("");
   const [rejectNote, setRejectNote] = useState("");
+  const [rejectError, setRejectError] = useState<string | null>(null);
   const [tempPassword, setTempPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
   // reset transient state whenever a different journalist opens
   useEffect(() => {
+    setRejectReason("");
     setRejectNote("");
+    setRejectError(null);
     setTempPassword("");
   }, [journalist?.id]);
 
@@ -1001,15 +1024,55 @@ function ReviewDialog({
                   )}
                   {p.kycStatus !== "REJECTED" && (
                     <>
-                      <Input
-                        onChange={(e) => setRejectNote(e.target.value)}
-                        placeholder="Rejection reason (optional)..."
-                        value={rejectNote}
-                      />
+                      <Select
+                        value={rejectReason}
+                        onValueChange={(v) => {
+                          setRejectReason(v);
+                          if (rejectError) setRejectError(null);
+                        }}
+                      >
+                        <SelectTrigger className="w-full" aria-invalid={!!rejectError}>
+                          <SelectValue placeholder="Select a rejection reason (required)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {REJECTION_REASONS.map((r) => (
+                            <SelectItem key={r} value={r}>
+                              {r}
+                            </SelectItem>
+                          ))}
+                          <SelectItem value={REJECTION_OTHER}>Other (type a custom reason)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {rejectReason === REJECTION_OTHER && (
+                        <Input
+                          onChange={(e) => {
+                            setRejectNote(e.target.value);
+                            if (rejectError) setRejectError(null);
+                          }}
+                          placeholder="Describe the reason — the reporter will see this"
+                          value={rejectNote}
+                          aria-invalid={!!rejectError}
+                        />
+                      )}
+                      {rejectError && (
+                        <p className="text-xs text-red-600 -mt-1">{rejectError}</p>
+                      )}
                       <Button
                         className="w-full"
                         disabled={busy}
-                        onClick={() => act("reject", rejectNote)}
+                        onClick={() => {
+                          if (!rejectReason) {
+                            setRejectError("Please select a rejection reason.");
+                            return;
+                          }
+                          const finalNote =
+                            rejectReason === REJECTION_OTHER ? rejectNote.trim() : rejectReason;
+                          if (!finalNote) {
+                            setRejectError("Please describe the reason — the reporter sees this in the app.");
+                            return;
+                          }
+                          act("reject", finalNote);
+                        }}
                         variant="destructive"
                       >
                         {p.kycStatus === "VERIFIED" ? "Revoke Verification" : "Reject KYC"}

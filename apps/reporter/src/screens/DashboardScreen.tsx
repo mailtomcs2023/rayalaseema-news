@@ -219,7 +219,9 @@ const styles = StyleSheet.create({
   statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   statusText: { fontSize: 9, fontWeight: "800", letterSpacing: 0.4 },
   articleMeta: { fontSize: 11, color: "#999", marginTop: 6 },
-  rejectionBox: { marginTop: 10, padding: 9, backgroundColor: "#fef2f2", borderRadius: 8, borderLeftWidth: 3, borderLeftColor: "#dc2626" },
+  // Flat-left, rounded-right callout: the red border-left is the marker, the
+  // right side rounds off so it doesn't read as a floating card.
+  rejectionBox: { marginTop: 10, padding: 9, backgroundColor: "#fef2f2", borderTopLeftRadius: 0, borderBottomLeftRadius: 0, borderTopRightRadius: 8, borderBottomRightRadius: 8, borderLeftWidth: 3, borderLeftColor: "#dc2626" },
   rejectionLabel: { fontSize: 10, fontWeight: "800", color: "#dc2626" },
   rejectionText: { fontSize: 12, color: "#666", marginTop: 1 },
 

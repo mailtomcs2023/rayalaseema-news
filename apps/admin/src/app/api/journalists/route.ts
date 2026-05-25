@@ -205,9 +205,17 @@ export async function POST(req: NextRequest) {
         data: { kycStatus: "VERIFIED", verifiedAt: new Date() },
       });
     } else if (action === "reject") {
+      // Rejection reason is mandatory — the reporter sees this text in the
+      // app's KYC banner and uses it to fix their re-submission. Without it
+      // the rejection is unactionable, so the admin UI also blocks empty
+      // submissions; this is defense in depth for any non-UI caller.
+      const trimmedNote = typeof note === "string" ? note.trim() : "";
+      if (!trimmedNote) {
+        return NextResponse.json({ error: "Rejection reason is required" }, { status: 400 });
+      }
       await prisma.journalistProfile.update({
         where: { id: profileId },
-        data: { kycStatus: "REJECTED", kycRejectionNote: note || "Documents not clear" },
+        data: { kycStatus: "REJECTED", kycRejectionNote: trimmedNote },
       });
     } else if (action === "reset-password") {
       // Two knobs the admin modal can send in addition to `profileId`:

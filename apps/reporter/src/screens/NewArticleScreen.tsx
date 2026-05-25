@@ -360,7 +360,7 @@ export function NewArticleScreen() {
       {/* Title */}
       <Text style={styles.label}>{t("newArticle.headline")}</Text>
       <TextInput
-        style={[styles.input, errors.title ? styles.inputError : null, readOnly && styles.inputDisabled]}
+        style={[styles.input, styles.headlineInput, errors.title ? styles.inputError : null, readOnly && styles.inputDisabled]}
         value={title}
         editable={!readOnly}
         onChangeText={(v) => { setTitle(v); clearErr("title"); }}
