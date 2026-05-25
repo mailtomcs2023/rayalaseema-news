@@ -20,6 +20,7 @@ import "react-grid-layout/css/styles.css";
 import { EditorV2 } from "@/components/epaper/editor-v2";
 import { migrateLegacyLayout } from "@/lib/epaper/migrate-layout";
 import { PreflightPanel, PreflightChip } from "@/components/epaper/preflight-panel";
+import { InlineTextEditor } from "@/components/epaper/inline-text-editor";
 
 interface Block {
   id: string;
@@ -498,6 +499,77 @@ function EpaperEditorPage() {
     setInsertOpen(false);
     setInsertTemplate("");
     await loadEdition(date);
+  };
+
+  // Blank-page insert (Word/InDesign-style empty canvas). Operator draws
+  // rectangles for every block themselves via the canvas draw-mode.
+  const insertBlankPage = async () => {
+    if (!edition) return;
+    const insertAfter = activePage?.pageNumber ?? edition.pages.length;
+    const label = prompt("Page label:", "Blank page");
+    if (label === null) return;
+    const r = await fetch("/api/epaper/pages", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ editionId: edition.id, blank: true, insertAfter, label: label || "Blank page" }),
+    });
+    if (!r.ok) { setError("Blank-page insert failed"); return; }
+    await loadEdition(date);
+    toast("success", "Blank page added — drag in the canvas to draw blocks.");
+  };
+
+  // Draw-block mode on the canvas: hold B + drag = create a new block at
+  // those grid coords. Block type chosen via small popover before drawing.
+  const [drawType, setDrawType] = useState<string | null>(null);  // null = off
+  const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null);
+  const [drawRect, setDrawRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+
+  const handleCanvasMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!drawType || !activePage) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    setDrawStart({ x, y });
+    setDrawRect({ x, y, w: 0, h: 0 });
+  };
+  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!drawStart) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    setDrawRect({
+      x: Math.min(drawStart.x, x),
+      y: Math.min(drawStart.y, y),
+      w: Math.abs(x - drawStart.x),
+      h: Math.abs(y - drawStart.y),
+    });
+  };
+  const handleCanvasMouseUp = async () => {
+    if (!drawType || !drawRect || !activePage) {
+      setDrawStart(null); setDrawRect(null); return;
+    }
+    // Convert pixel coords → grid coords. ROW_H=60, GRID_WIDTH=980, 12 cols.
+    const ROW_H = 60; const GRID_WIDTH = 980; const COLS = 12;
+    const colPx = (GRID_WIDTH - 16) / COLS;
+    const gridX = Math.max(0, Math.round(drawRect.x / colPx));
+    const gridY = Math.max(0, Math.round(drawRect.y / ROW_H));
+    const gridW = Math.max(1, Math.round(drawRect.w / colPx));
+    const gridH = Math.max(1, Math.round(drawRect.h / ROW_H));
+    const newBlock: Block = {
+      id: `${drawType}-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+      type: drawType,
+      x: Math.min(gridX, COLS - gridW),
+      y: gridY,
+      w: Math.min(gridW, COLS),
+      h: gridH,
+    };
+    const blocks = [...activePage.layout.blocks, newBlock];
+    pushUndo(activePage.id, activePage.layout.blocks);
+    setEdition((prev) => prev ? { ...prev, pages: prev.pages.map((p) =>
+      p.id === activePage.id ? { ...p, layout: { blocks } } : p) } : prev);
+    await patchPage({ blocks });
+    toast("success", `Drew ${drawType} block (${gridW}×${gridH})`);
+    setDrawStart(null); setDrawRect(null);
+    setDrawType(null);  // single-shot draw; click toolbar again for next
   };
   const duplicatePage = async (pageId: string) => {
     const r = await fetch(`/api/epaper/pages/${pageId}`, { method: "POST" });
@@ -1049,6 +1121,7 @@ function EpaperEditorPage() {
         e.preventDefault(); setHelpOpen(true);
       } else if (e.key === "Escape") {
         setHelpOpen(false); setConflict(null); setInsertOpen(false); setHistoryOpen(false);
+        setDrawType(null); setDrawStart(null); setDrawRect(null);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -1708,7 +1781,12 @@ function EpaperEditorPage() {
               })}
               <button onClick={() => { setInsertOpen(true); loadTemplateOptions(); }}
                 style={{ width: "100%", marginTop: 8, padding: "8px 10px", background: "#fff", color: "#4f46e5", border: "1px dashed #4f46e5", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                + New Page
+                + New Page (from template)
+              </button>
+              <button onClick={insertBlankPage}
+                title="Word/InDesign-style: empty canvas. Draw blocks anywhere with the toolbar tool."
+                style={{ width: "100%", marginTop: 6, padding: "8px 10px", background: "#fff", color: "#16a34a", border: "1px dashed #16a34a", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                + Blank page
               </button>
             </aside>
 
@@ -1810,6 +1888,38 @@ function EpaperEditorPage() {
                           }}
                         />
                       ) : (
+                        <div style={{ position: "relative" }}>
+                          {/* Draw toolbar — Word/InDesign-style. Click a tool then
+                              drag on the canvas to create a block at any size. */}
+                          <div style={{ display: "flex", gap: 6, marginBottom: 6, flexWrap: "wrap", alignItems: "center", padding: "6px 8px", background: "#f9fafb", borderRadius: 6, border: "1px solid #e5e7eb" }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: "#374151" }}>✏ Draw tool:</span>
+                            {(["lead","major","secondary","brief","image","text","ad","pull-quote"] as const).map((t) => (
+                              <button key={t} onClick={() => setDrawType(drawType === t ? null : t)}
+                                style={{ padding: "3px 8px", fontSize: 11, fontWeight: 700, borderRadius: 4,
+                                  border: drawType === t ? "2px solid #4f46e5" : "1px solid #d1d5db",
+                                  background: drawType === t ? "#4f46e5" : "#fff",
+                                  color: drawType === t ? "#fff" : "#374151", cursor: "pointer" }}>
+                                {t}
+                              </button>
+                            ))}
+                            {drawType && (
+                              <span style={{ marginLeft: "auto", fontSize: 11, color: "#16a34a", fontWeight: 700 }}>
+                                Drag on canvas to draw a {drawType} block. Esc cancels.
+                              </span>
+                            )}
+                          </div>
+                          {/* Draw overlay — appears only when a tool is selected. */}
+                          {drawType && (
+                            <div onMouseDown={handleCanvasMouseDown}
+                              onMouseMove={handleCanvasMouseMove}
+                              onMouseUp={handleCanvasMouseUp}
+                              onMouseLeave={() => { setDrawStart(null); setDrawRect(null); }}
+                              style={{ position: "absolute", inset: "44px 0 0 0", zIndex: 50, cursor: "crosshair", background: "rgba(99,102,241,0.04)" }}>
+                              {drawRect && (
+                                <div style={{ position: "absolute", left: drawRect.x, top: drawRect.y, width: drawRect.w, height: drawRect.h, border: "2px solid #4f46e5", background: "rgba(79,70,229,0.15)", pointerEvents: "none" }} />
+                              )}
+                            </div>
+                          )}
                         <DraggableBlockGrid
                           layout={activePage.layout}
                           titles={titles}
@@ -1832,6 +1942,21 @@ function EpaperEditorPage() {
                           onClearOffPage={clearOffPageBlocks}
                           pageId={activePage.id}
                           pageVersion={activePage.version}
+                          onInlineEdit={async (blockId, patch) => {
+                            if (!activePage) return;
+                            const blocks = activePage.layout.blocks.map((b) =>
+                              b.id === blockId ? { ...b, ...patch } : b);
+                            // Skip patch + state update when nothing changed.
+                            const existing = activePage.layout.blocks.find((b) => b.id === blockId);
+                            if (!existing) return;
+                            const sameTitle = patch.overrideTitle !== undefined && (existing.overrideTitle ?? "") === patch.overrideTitle;
+                            const sameDek = patch.overrideDek !== undefined && (existing.overrideDek ?? "") === patch.overrideDek;
+                            if ((patch.overrideTitle !== undefined ? sameTitle : true) && (patch.overrideDek !== undefined ? sameDek : true)) return;
+                            pushUndo(activePage.id, activePage.layout.blocks);
+                            setEdition((prev) => prev ? { ...prev, pages: prev.pages.map((p) =>
+                              p.id === activePage.id ? { ...p, layout: { blocks } } : p) } : prev);
+                            await patchPage({ blocks });
+                          }}
                           onSelect={(id, e) => {
                             if (e?.shiftKey) {
                               setSelectedBlockIds((prev) => {
@@ -1848,6 +1973,7 @@ function EpaperEditorPage() {
                           onToggleLock={toggleLock}
                           onLayoutChange={saveLayout}
                         />
+                        </div>
                       )}
                     </div>
                   )}
@@ -2116,6 +2242,7 @@ function DraggableBlockGrid({
   dragOverBlockId, onDragOverBlock, onDragLeaveBlock, onDropBlock,
   onSelect, onToggleLock, onLayoutChange, onRemoveBlock, onClearOffPage,
   pageId, pageVersion,
+  onInlineEdit,
 }: {
   layout: { blocks: Block[] };
   titles: Record<string, { title: string; summary?: string | null; featuredImage?: string | null }>;
@@ -2133,6 +2260,9 @@ function DraggableBlockGrid({
   onClearOffPage?: () => void;
   pageId?: string;
   pageVersion?: number;
+  /** Inline TipTap edits: { id, overrideTitle?, overrideDek? } — parent
+   *  patches the matching block in the layout. */
+  onInlineEdit?: (blockId: string, patch: { overrideTitle?: string; overrideDek?: string }) => void;
 }) {
   const COLS = 12;
   // Row height = 60px so 30 rows × 60 = 1800px tall canvas. Matches the
@@ -2330,6 +2460,35 @@ function DraggableBlockGrid({
               {!title && isStory && (
                 <div style={{ alignSelf: "center", marginTop: "auto", marginBottom: "auto", color: "#92400e", fontSize: 11, fontStyle: "italic", fontWeight: 700, padding: 4 }}>
                   empty — click to pick
+                </div>
+              )}
+              {/* Inline TipTap editor — appears when this story block is
+                  selected. Operator types headline + body directly into
+                  the canvas; save persists to overrideTitle / overrideDek.
+                  Render path already prefers overrides over the linked
+                  Article so "what you type = what you print". */}
+              {isSelected && isStory && title && onInlineEdit && (
+                <div onClick={(e) => e.stopPropagation()}
+                  className="lock-btn"
+                  style={{ position: "absolute", inset: "20px 4px 24px 4px", background: "rgba(255,255,255,0.92)", border: "1px solid #4f46e5", borderRadius: 4, padding: 6, fontSize: 11, overflow: "auto", zIndex: 7, display: "flex", flexDirection: "column", gap: 6, fontFamily: "'Noto Serif Telugu', serif" }}>
+                  <div style={{ fontSize: 9, color: "#6b7280", fontWeight: 700, textTransform: "uppercase" }}>Headline (Telugu)</div>
+                  <div style={{ fontWeight: 800, fontSize: b.type === "lead" ? 16 : 13, lineHeight: 1.2, color: "#111" }}>
+                    <InlineTextEditor
+                      value={b.overrideTitle?.trim() || title.title}
+                      multiline={false}
+                      placeholder="Type headline…"
+                      onBlur={(next) => onInlineEdit(b.id, { overrideTitle: next })}
+                    />
+                  </div>
+                  <div style={{ fontSize: 9, color: "#6b7280", fontWeight: 700, textTransform: "uppercase" }}>Body / Dek</div>
+                  <div style={{ fontSize: 11, lineHeight: 1.4, color: "#374151", flex: 1, overflow: "auto" }}>
+                    <InlineTextEditor
+                      value={b.overrideDek?.trim() || title.summary || ""}
+                      multiline={true}
+                      placeholder="Type body or dek…"
+                      onBlur={(next) => onInlineEdit(b.id, { overrideDek: next })}
+                    />
+                  </div>
                 </div>
               )}
               {isStory && (
