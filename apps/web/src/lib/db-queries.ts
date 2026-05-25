@@ -227,6 +227,55 @@ export async function getArticleBySlug(slug: string) {
   return projectArticle(row);
 }
 
+// Generic detail-page helpers per ContentType (Spec #1 #111). Each returns
+// null when the slug isn't found, the type doesn't match, or the row isn't
+// PUBLISHED — so the calling page can render a clean notFound().
+
+export async function getVideoBySlug(slug: string) {
+  const row = await prisma.content.findUnique({
+    where: { slug },
+    include: { category: { select: { name: true, slug: true, color: true } }, author: { select: { name: true } } },
+  });
+  if (!row || row.type !== "VIDEO" || row.status !== "PUBLISHED") return null;
+  return projectVideo(row);
+}
+
+export async function getReelBySlug(slug: string) {
+  const row = await prisma.content.findUnique({
+    where: { slug },
+    include: { category: { select: { name: true, slug: true, color: true } }, author: { select: { name: true } } },
+  });
+  if (!row || row.type !== "REEL" || row.status !== "PUBLISHED") return null;
+  return projectReel(row);
+}
+
+export async function getWebStoryBySlug(slug: string) {
+  const row = await prisma.content.findUnique({
+    where: { slug },
+    include: { category: { select: { name: true, slug: true } } },
+  });
+  if (!row || row.type !== "WEB_STORY" || row.status !== "PUBLISHED") return null;
+  return projectWebStory(row);
+}
+
+export async function getPhotoGalleryBySlug(slug: string) {
+  const row = await prisma.content.findUnique({
+    where: { slug },
+    include: { category: { select: { name: true, slug: true, color: true } } },
+  });
+  if (!row || row.type !== "PHOTO_GALLERY" || row.status !== "PUBLISHED") return null;
+  return projectPhotoGallery(row);
+}
+
+export async function getCartoonBySlug(slug: string) {
+  const row = await prisma.content.findUnique({
+    where: { slug },
+    include: { category: { select: { name: true, slug: true, color: true } } },
+  });
+  if (!row || row.type !== "CARTOON" || row.status !== "PUBLISHED") return null;
+  return projectCartoon(row);
+}
+
 export async function getTrendingArticles(limit = 10) {
   return prisma.content.findMany({
     where: { type: "ARTICLE", status: "PUBLISHED" },

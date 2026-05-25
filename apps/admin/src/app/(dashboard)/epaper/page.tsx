@@ -595,10 +595,10 @@ function EpaperEditorPage() {
   // View mode: edit canvas / split (canvas + preview iframe) / preview-only.
   // Live preview hits /api/epaper/page/[id]/preview which reuses
   // renderLayoutToHtml — no Playwright in the hot path so it's near-instant.
-  // Default to split so editor always sees real Eenadu-style preview
-  // side-by-side with the editable grid. Operator can flip to Edit-only or
-  // Preview-only via the toolbar pill.
-  const [viewMode, setViewMode] = useState<"edit" | "split" | "preview">("split");
+  // Default Edit because the canvas itself is now WYSIWYG (renders the
+  // real Eenadu-style preview behind the editable blocks). Split + Preview
+  // pills still available for full-bleed preview mode.
+  const [viewMode, setViewMode] = useState<"edit" | "split" | "preview">("edit");
 
   // Save-status indicator: tracks every PATCH so the operator can see whether
   // their last action persisted. Three states: saving | saved | failed.
@@ -1830,6 +1830,8 @@ function EpaperEditorPage() {
                           onDropBlock={onBlockDrop}
                           onRemoveBlock={removeBlock}
                           onClearOffPage={clearOffPageBlocks}
+                          pageId={activePage.id}
+                          pageVersion={activePage.version}
                           onSelect={(id, e) => {
                             if (e?.shiftKey) {
                               setSelectedBlockIds((prev) => {
@@ -2113,6 +2115,7 @@ function DraggableBlockGrid({
   layout, titles, warningsByBlock, selectedBlockId, multiSelected,
   dragOverBlockId, onDragOverBlock, onDragLeaveBlock, onDropBlock,
   onSelect, onToggleLock, onLayoutChange, onRemoveBlock, onClearOffPage,
+  pageId, pageVersion,
 }: {
   layout: { blocks: Block[] };
   titles: Record<string, { title: string; summary?: string | null; featuredImage?: string | null }>;
@@ -2128,9 +2131,14 @@ function DraggableBlockGrid({
   onLayoutChange: (newBlocks: Block[]) => void;
   onRemoveBlock?: (blockId: string) => void;
   onClearOffPage?: () => void;
+  pageId?: string;
+  pageVersion?: number;
 }) {
   const COLS = 12;
-  const ROW_H = 28;
+  // Row height = 60px so 30 rows × 60 = 1800px tall canvas. Matches the
+  // broadsheet aspect (1480×2760 scaled to 980 wide = 1827px tall) so the
+  // WYSIWYG iframe underlay aligns 1:1 with the grid coordinates.
+  const ROW_H = 60;
   const GRID_WIDTH = 980;
   // Indian broadsheet PDF page is 300x560mm → 1480x2760 px. Render uses 92 px
   // per row → 30 rows fills the printable area exactly. Any block placed past
@@ -2197,7 +2205,37 @@ function DraggableBlockGrid({
         )}
         <span style={{ color: "#6b7280", fontWeight: 500 }}>Indian broadsheet 300×560mm</span>
       </div>
-      <div style={{ position: "relative", background: "#fafafa", borderRadius: 6, padding: 8, backgroundImage: guideBg, backgroundSize: `${colPx}px ${ROW_H}px`, backgroundPosition: "8px 8px" }}>
+      <div style={{ position: "relative", background: "#FCFAF3", borderRadius: 6, padding: 8 }}>
+        {/* WYSIWYG underlay — the actual rendered HTML the PDF will produce.
+            Scale = GRID_WIDTH / 1480 ≈ 0.662 so 1480×2760 page becomes
+            980×1827 ≈ matches the grid's 30×60=1800 footprint. Tiles above
+            stay transparent so the operator sees + edits the real Eenadu-
+            style output in one view. */}
+        {pageId && (
+          <div style={{
+            position: "absolute", top: 8, left: 8,
+            width: GRID_WIDTH,
+            height: MAX_ROWS * ROW_H,
+            overflow: "hidden",
+            background: "#FCFAF3",
+            border: "1px solid #d8d0bd",
+            zIndex: 0,
+          }}>
+            <iframe
+              title="WYSIWYG underlay"
+              src={`/api/epaper/page/${pageId}/preview?v=${pageVersion ?? 0}`}
+              width={1480}
+              height={2760}
+              style={{
+                border: "none",
+                transform: `scale(${GRID_WIDTH / 1480})`,
+                transformOrigin: "0 0",
+                pointerEvents: "none",
+                background: "#FCFAF3",
+              }}
+            />
+          </div>
+        )}
         {/* Red overflow zone — anything below row MAX_ROWS gets clipped on PDF render */}
         {isOverflow && (
           <div style={{ position: "absolute", left: 8, right: 8, top: 8 + MAX_ROWS * ROW_H, height: (usedRows - MAX_ROWS) * ROW_H, background: "repeating-linear-gradient(45deg, rgba(220,38,38,0.12), rgba(220,38,38,0.12) 8px, rgba(220,38,38,0.04) 8px, rgba(220,38,38,0.04) 16px)", borderTop: "2px dashed #dc2626", pointerEvents: "none", zIndex: 1 }}>
@@ -2242,16 +2280,28 @@ function DraggableBlockGrid({
               onDragLeave={() => isStory && onDragLeaveBlock?.(b.id)}
               onDrop={(e) => isStory && onDropBlock?.(e, b.id)}
               style={{
-                background: dragOverBlockId === b.id ? "#fbbf24" : bg, color,
+                // WYSIWYG: tile bg transparent so the rendered iframe behind
+                // shows through. Selection + warnings still visible as
+                // colored borders. Empty story slots get a faint amber hint
+                // so the operator can see what's unfilled.
+                background: dragOverBlockId === b.id
+                  ? "rgba(251,191,36,0.55)"
+                  : isStory && !b.articleId
+                  ? "rgba(254,243,199,0.55)"
+                  : "transparent",
+                color: "#111",
                 border: dragOverBlockId === b.id
                   ? "3px dashed #d97706"
                   : hasOverflow ? "3px solid #dc2626"
-                  : isMulti ? "3px solid #4f46e5" : isSelected ? "2px solid #4f46e5" : "1px solid #e5e7eb",
-                borderRadius: 4, padding: 8, fontSize: 12, overflow: "hidden", position: "relative",
-                // grab cursor makes drag-to-rearrange (RGL) discoverable; grabbing on active drag
+                  : isMulti ? "3px solid #4f46e5"
+                  : isSelected ? "3px solid #4f46e5"
+                  : isStory && !b.articleId ? "2px dashed #f59e0b"
+                  : "1px dashed rgba(0,0,0,0.15)",
+                borderRadius: 4, padding: 0, fontSize: 12, overflow: "hidden", position: "relative",
                 cursor: isStory ? "grab" : "move",
                 display: "flex", flexDirection: "column", justifyContent: "space-between",
                 minHeight: 0, height: "100%",
+                zIndex: isSelected ? 3 : 2,
               }}>
               {onRemoveBlock && b.type !== "masthead" && b.type !== "section-band" && (
                 <button
@@ -2268,34 +2318,20 @@ function DraggableBlockGrid({
                   {hasOverflow ? "⚠ OVERFLOW" : `⚠ ${blockWarnings.length}`}
                 </div>
               )}
-              <div style={{ overflow: "hidden", flex: 1, minHeight: 0, display: "flex", flexDirection: "column", gap: 4 }}>
-                <div style={{ fontSize: 9, opacity: 0.6, textTransform: "uppercase", fontWeight: 700, letterSpacing: 0.3 }}>{b.type}</div>
-                {title && (
-                  <>
-                    {title.featuredImage && b.type !== "brief" && b.type !== "story-jump" && (
-                      <div style={{ width: "100%", flex: "0 0 auto", height: Math.min(80, Math.max(40, b.h * 18)), overflow: "hidden", borderRadius: 3, background: "#e5e7eb" }}>
-                        <img src={title.featuredImage} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                      </div>
-                    )}
-                    <div style={{ fontWeight: 800, lineHeight: 1.25, fontSize: b.type === "lead" ? 14 : 12, color: "#111", fontFamily: "'Noto Serif Telugu', serif" }}>
-                      {(b.overrideTitle?.trim() || title.title).slice(0, 140)}
-                    </div>
-                    {title.summary && b.h >= 4 && (() => {
-                      const cols = b.style?.textColumns ?? (b.type === "lead" ? 2 : 1);
-                      return (
-                        <div style={{
-                          fontSize: 10, lineHeight: 1.35, color: "#4b5563", overflow: "hidden",
-                          columnCount: cols, columnGap: 6,
-                          columnRule: cols > 1 ? "1px solid #d1d5db" : "none",
-                        }}>
-                          {title.summary.slice(0, 320 * cols)}
-                        </div>
-                      );
-                    })()}
-                  </>
-                )}
-                {!title && isStory && <div style={{ fontStyle: "italic", opacity: 0.55 }}>empty — click to pick</div>}
+              {/* Block-type pill (top-left): small label so operator sees
+                  what kind of block this is. iframe behind shows real
+                  rendered content; tile only shows minimal chrome. */}
+              <div style={{ position: "absolute", top: 2, left: 2, fontSize: 9, padding: "1px 6px",
+                background: isSelected ? "#4f46e5" : "rgba(0,0,0,0.55)", color: "#fff",
+                borderRadius: 3, fontWeight: 700, letterSpacing: 0.3, zIndex: 4, lineHeight: 1.3 }}>
+                {b.type}
               </div>
+              {/* Empty-state CTA only when no article and the block is a story */}
+              {!title && isStory && (
+                <div style={{ alignSelf: "center", marginTop: "auto", marginBottom: "auto", color: "#92400e", fontSize: 11, fontStyle: "italic", fontWeight: 700, padding: 4 }}>
+                  empty — click to pick
+                </div>
+              )}
               {isStory && (
                 <button
                   className="lock-btn"
