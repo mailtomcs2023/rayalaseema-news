@@ -1,0 +1,40 @@
+name: Reset user password
+# One-shot manual workflow: gh workflow run reset-user.yml -f email=x -f password=y
+# Looks up the user on prod, prints before/after, and either resets the
+# password or lists similar emails if no exact match. Safe to run repeatedly.
+
+on:
+  workflow_dispatch:
+    inputs:
+      email:
+        description: "Exact user email to reset"
+        required: true
+      password:
+        description: "New plaintext password (will be bcrypt-hashed)"
+        required: true
+
+jobs:
+  reset:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: SSH to Azure VM and run reset
+        uses: appleboy/ssh-action@v1.2.1
+        with:
+          host: 20.198.2.80
+          username: azureuser
+          key: ${{ secrets.VM_SSH_KEY }}
+          script_stop: true
+          command_timeout: 3m
+          # Email + password forwarded via env so they never appear in the
+          # logged command line. The script does the bcrypt + update.
+          envs: EMAIL,PASSWORD
+          script: |
+            set -e
+            export PATH="$HOME/.bun/bin:$PATH"
+            export EMAIL="${{ github.event.inputs.email }}"
+            export PASSWORD="${{ github.event.inputs.password }}"
+            cd /home/azureuser/app/packages/db
+            bunx tsx scripts/reset-user-password.ts
