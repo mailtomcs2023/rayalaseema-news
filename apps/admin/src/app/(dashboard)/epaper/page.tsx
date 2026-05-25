@@ -350,6 +350,33 @@ export default function EpaperEditorPage() {
     await loadEdition(date);
   };
 
+  // Delete a single block from the active page.
+  const removeBlock = async (blockId: string) => {
+    if (!activePage) return;
+    const blocks = activePage.layout.blocks.filter((b) => b.id !== blockId);
+    pushUndo(activePage.id, activePage.layout.blocks);
+    setEdition((prev) => prev ? { ...prev, pages: prev.pages.map((p) =>
+      p.id === activePage.id ? { ...p, layout: { blocks } } : p) } : prev);
+    if (selectedBlockId === blockId) setSelectedBlockId(null);
+    await patchPage({ blocks });
+    toast("success", "Block removed");
+  };
+
+  // Bulk-delete every block whose footprint lands past the 30-row print cap.
+  const clearOffPageBlocks = async () => {
+    if (!activePage) return;
+    const MAX_ROWS = 30;
+    const keep = activePage.layout.blocks.filter((b) => b.y + b.h <= MAX_ROWS);
+    const removed = activePage.layout.blocks.length - keep.length;
+    if (removed === 0) { toast("info", "No off-page blocks to clear"); return; }
+    if (!confirm(`Delete ${removed} block${removed > 1 ? "s" : ""} past row ${MAX_ROWS} (off-page on print)?`)) return;
+    pushUndo(activePage.id, activePage.layout.blocks);
+    setEdition((prev) => prev ? { ...prev, pages: prev.pages.map((p) =>
+      p.id === activePage.id ? { ...p, layout: { blocks: keep } } : p) } : prev);
+    await patchPage({ blocks: keep });
+    toast("success", `Removed ${removed} off-page block${removed > 1 ? "s" : ""}`);
+  };
+
   // Add a new block to the currently-active page. Type picked from a tiny
   // inline menu; block stacks below existing content.
   const [addBlockOpen, setAddBlockOpen] = useState(false);
@@ -1662,6 +1689,8 @@ export default function EpaperEditorPage() {
                         onDragOverBlock={onBlockDragOver}
                         onDragLeaveBlock={onBlockDragLeave}
                         onDropBlock={onBlockDrop}
+                        onRemoveBlock={removeBlock}
+                        onClearOffPage={clearOffPageBlocks}
                         onSelect={(id, e) => {
                           if (e?.shiftKey) {
                             setSelectedBlockIds((prev) => {
@@ -1943,7 +1972,7 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
 function DraggableBlockGrid({
   layout, titles, warningsByBlock, selectedBlockId, multiSelected,
   dragOverBlockId, onDragOverBlock, onDragLeaveBlock, onDropBlock,
-  onSelect, onToggleLock, onLayoutChange,
+  onSelect, onToggleLock, onLayoutChange, onRemoveBlock, onClearOffPage,
 }: {
   layout: { blocks: Block[] };
   titles: Record<string, { title: string; summary?: string | null; featuredImage?: string | null }>;
@@ -1957,6 +1986,8 @@ function DraggableBlockGrid({
   onSelect: (id: string, e?: React.MouseEvent) => void;
   onToggleLock: (id: string) => void;
   onLayoutChange: (newBlocks: Block[]) => void;
+  onRemoveBlock?: (blockId: string) => void;
+  onClearOffPage?: () => void;
 }) {
   const COLS = 12;
   const ROW_H = 28;
@@ -2017,6 +2048,13 @@ function DraggableBlockGrid({
         <div style={{ flex: 1, height: 6, background: "#e5e7eb", borderRadius: 3, overflow: "hidden" }}>
           <div style={{ width: `${Math.min(100, (usedRows / MAX_ROWS) * 100)}%`, height: "100%", background: isOverflow ? "#dc2626" : usedRows >= MAX_ROWS - 3 ? "#d97706" : "#16a34a" }} />
         </div>
+        {isOverflow && onClearOffPage && (
+          <button onClick={onClearOffPage}
+            title="Delete every block past row 30 in one click"
+            style={{ padding: "4px 10px", background: "#dc2626", color: "#fff", border: "none", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+            🗑 Clear off-page
+          </button>
+        )}
         <span style={{ color: "#6b7280", fontWeight: 500 }}>Indian broadsheet 300×560mm</span>
       </div>
       <div style={{ position: "relative", background: "#fafafa", borderRadius: 6, padding: 8, backgroundImage: guideBg, backgroundSize: `${colPx}px ${ROW_H}px`, backgroundPosition: "8px 8px" }}>
@@ -2075,6 +2113,15 @@ function DraggableBlockGrid({
                 display: "flex", flexDirection: "column", justifyContent: "space-between",
                 minHeight: 0, height: "100%",
               }}>
+              {onRemoveBlock && (
+                <button
+                  className="lock-btn"
+                  onClick={(e) => { e.stopPropagation(); if (confirm(`Delete ${b.type} block?`)) onRemoveBlock(b.id); }}
+                  title={`Delete this ${b.type} block`}
+                  style={{ position: "absolute", top: 2, left: 2, background: "rgba(220,38,38,0.85)", color: "#fff", fontSize: 11, fontWeight: 800, width: 18, height: 18, border: "none", borderRadius: 3, cursor: "pointer", zIndex: 5, lineHeight: 1, padding: 0 }}>
+                  ×
+                </button>
+              )}
               {blockWarnings.length > 0 && (
                 <div title={blockWarnings.map((w) => w.detail).join("\n")}
                   style={{ position: "absolute", top: 2, right: 2, background: hasOverflow ? "#dc2626" : "#f59e0b", color: "#fff", fontSize: 9, fontWeight: 800, padding: "2px 5px", borderRadius: 3, zIndex: 4, lineHeight: 1 }}>

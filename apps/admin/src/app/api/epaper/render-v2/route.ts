@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
-import { renderLayoutToHtml } from "@/lib/epaper/render-layout";
+import { renderEpaperPageById } from "@/lib/epaper/render-layout";
 import { createSnapshot } from "@/lib/epaper/snapshots";
 import { findDuplicateArticles } from "@/lib/epaper/continuity";
 import { findQualityWarnings } from "@/lib/epaper/quality";
@@ -123,15 +123,10 @@ async function renderEditionAttempt(
 
     try {
       for (const ep of edition.pages) {
-        const html = await renderLayoutToHtml({
-          pageNumber: ep.pageNumber,
-          totalPages: edition.pages.length,
-          label: ep.label,
-          templateSlug: ep.templateSlug,
-          dateLabel: edition.date.toLocaleDateString("te-IN", { day: "numeric", month: "long", year: "numeric" }),
-          layout: (ep.layout as unknown as { blocks: Block[] }) ?? { blocks: [] },
-          ads: {},
-        });
+        // Use the same render path as the preview iframe so the rendered PDF
+        // matches what the editor shows. renderEpaperPageById loads the
+        // legacy + v2 ad assets + masthead bibliographic info from DB.
+        const html = await renderEpaperPageById(ep.id);
 
         // Indian broadsheet single-page side ≈ 300×560 mm. Render at 1480×2760 px
         // (~125 dpi) so headlines stay sharp when readers zoom in.
