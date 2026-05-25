@@ -51,8 +51,8 @@ export async function POST(req: NextRequest) {
       if (p.slots.lead) ids.add(p.slots.lead);
       [...p.slots.majors, ...p.slots.secondary, ...p.slots.briefs].forEach((id) => ids.add(id));
     }
-    const arts = await prisma.article.findMany({
-      where: { id: { in: [...ids] } },
+    const arts = await prisma.content.findMany({
+      where: { type: "ARTICLE", id: { in: [...ids] } },
       select: {
         id: true, slug: true, title: true, summary: true, featuredImage: true,
         category: { select: { name: true } },
@@ -61,11 +61,11 @@ export async function POST(req: NextRequest) {
     });
     const artMap = new Map<string, EpaperArticle>(
       arts.map((a) => [a.id, {
-        slug: a.slug,
+        slug: a.slug || "",
         title: a.title,
         summary: a.summary,
         featuredImage: a.featuredImage,
-        categoryName: a.category.name,
+        categoryName: a.category?.name || "",
         deskName: a.desk?.name ?? null,
       }])
     );

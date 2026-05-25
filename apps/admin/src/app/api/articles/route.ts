@@ -18,19 +18,23 @@ export async function GET(req: NextRequest) {
     const category = searchParams.get("category") || "";
     const offset = (page - 1) * limit;
 
+    // Spec #1 #133: /api/articles is now a compat shim over Content where
+    // type=ARTICLE. ePaper editor + any legacy caller keeps working without
+    // change to its URL contract.
+    const where: any = { type: "ARTICLE" };
+
     // `?ids=a,b,c` short-circuits the listing — returns just those rows
     // (used by the e-paper editor to look up article titles by id).
     const idsParam = searchParams.get("ids");
     if (idsParam) {
       const ids = idsParam.split(",").map((s) => s.trim()).filter(Boolean).slice(0, 500);
-      const articles = await prisma.article.findMany({
-        where: { id: { in: ids } },
+      const articles = await prisma.content.findMany({
+        where: { type: "ARTICLE", id: { in: ids } },
         select: { id: true, title: true, slug: true, summary: true, featuredImage: true },
       });
       return NextResponse.json({ articles, total: articles.length });
     }
 
-    const where: any = {};
     if (search) {
       where.OR = [
         { title: { contains: search, mode: "insensitive" } },
@@ -42,7 +46,7 @@ export async function GET(req: NextRequest) {
     if (category) where.categoryId = category;
 
     const [articles, total] = await Promise.all([
-      prisma.article.findMany({
+      prisma.content.findMany({
         where,
         include: {
           category: { select: { name: true, nameEn: true, slug: true, color: true } },
@@ -52,7 +56,7 @@ export async function GET(req: NextRequest) {
         take: limit,
         skip: offset,
       }),
-      prisma.article.count({ where }),
+      prisma.content.count({ where }),
     ]);
 
     return NextResponse.json({ articles, total, page, limit });
@@ -61,15 +65,16 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/articles - create new article
+// POST /api/articles — Spec #1 #133: compat shim that creates a Content row
+// with type=ARTICLE. Mirrors prior contract (returns the created row) so
+// legacy callers don't break. New code should POST /api/content directly.
 export async function POST(req: NextRequest) {
-  const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR", "REPORTER"]);
+  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR", "SUB_EDITOR", "REPORTER"]);
   if (isAuthError(session)) return session;
   try {
     const authorId = session.user.id;
-
     const body = await req.json();
-    const { title, slug, summary, body: articleBody, categoryId, featuredImage, status, featured, breaking, constituencyId, deskId, scheduledAt, tagNames, metaTitle, metaDescription, ogImage } = body;
+    const { title, slug, summary, body: articleBody, categoryId, featuredImage, status, featured, constituencyId, deskId, scheduledAt, tagNames } = body;
 
     if (!title || !title.trim()) return NextResponse.json({ error: "Title is required" }, { status: 400 });
     if (!slug || !slug.trim()) return NextResponse.json({ error: "Slug is required" }, { status: 400 });
@@ -78,29 +83,21 @@ export async function POST(req: NextRequest) {
     const cleanSlug = sanitizeSlug(slug);
     if (!cleanSlug) return NextResponse.json({ error: "Slug must contain at least one alphanumeric character" }, { status: 400 });
 
-    const existing = await prisma.article.findUnique({ where: { slug: cleanSlug } });
+    const existing = await prisma.content.findUnique({ where: { slug: cleanSlug } });
     if (existing) return NextResponse.json({ error: "Slug already exists" }, { status: 400 });
 
-    // Scheduling logic: future scheduledAt + status SCHEDULED keeps article hidden until cron flips it.
     const scheduledDate = scheduledAt ? new Date(scheduledAt) : null;
     if (scheduledDate && isNaN(scheduledDate.getTime())) {
       return NextResponse.json({ error: "Invalid scheduledAt date" }, { status: 400 });
     }
     let finalStatus = status || "DRAFT";
-    if (scheduledDate && scheduledDate.getTime() > Date.now()) {
-      finalStatus = "SCHEDULED";
-    } else if (finalStatus === "SCHEDULED" && (!scheduledDate || scheduledDate.getTime() <= Date.now())) {
-      return NextResponse.json({ error: "SCHEDULED status requires a future scheduledAt date" }, { status: 400 });
-    }
+    if (scheduledDate && scheduledDate.getTime() > Date.now()) finalStatus = "SCHEDULED";
 
-    const resolvedDeskId = await resolveDeskId({
-      deskId: deskId || null,
-      categoryId,
-      constituencyId: constituencyId || null,
-    });
+    const resolvedDeskId = await resolveDeskId({ deskId: deskId || null, categoryId, constituencyId: constituencyId || null });
 
-    const article = await prisma.article.create({
+    const article = await prisma.content.create({
       data: {
+        type: "ARTICLE",
         title: title.trim(),
         slug: cleanSlug,
         summary: summary?.trim() || null,
@@ -109,20 +106,15 @@ export async function POST(req: NextRequest) {
         featuredImage: featuredImage?.trim() || null,
         status: finalStatus,
         featured: featured || false,
-        breaking: breaking || false,
         constituencyId: constituencyId || null,
         deskId: resolvedDeskId,
         language: "TELUGU",
         authorId,
         publishedAt: finalStatus === "PUBLISHED" ? new Date() : null,
         scheduledAt: scheduledDate,
-        metaTitle: metaTitle?.trim() || null,
-        metaDescription: metaDescription?.trim() || null,
-        ogImage: ogImage?.trim() || null,
       },
     });
 
-    // Attach tags (auto-create missing). tagNames = string[] of human-readable names.
     if (Array.isArray(tagNames) && tagNames.length > 0) {
       const slugify = (s: string) => s.toLowerCase().trim().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-").substring(0, 80);
       const seen = new Set<string>();
@@ -133,15 +125,15 @@ export async function POST(req: NextRequest) {
         if (!tagSlug || seen.has(tagSlug)) continue;
         seen.add(tagSlug);
         const tag = await prisma.tag.upsert({ where: { slug: tagSlug }, update: {}, create: { name, slug: tagSlug } });
-        await prisma.articleTag.create({ data: { articleId: article.id, tagId: tag.id } }).catch(() => {});
+        await prisma.contentTag.create({ data: { contentId: article.id, tagId: tag.id } }).catch(() => {});
       }
     }
 
     await logAudit({
-      action: "article.create",
-      resource: "article",
+      action: "content.create",
+      resource: "content",
       resourceId: article.id,
-      meta: { title: article.title, slug: article.slug, status: article.status, scheduledAt: article.scheduledAt },
+      meta: { type: "ARTICLE", title: article.title, slug: article.slug, status: article.status, via: "compat:/api/articles" },
       actor: { id: session.user.id, email: session.user.email, role: (session.user as any).role },
       req,
     });

@@ -41,10 +41,12 @@ export async function POST(req: NextRequest) {
       // Pull last-24h published articles + a small bag of metadata; ask LLM
       // to rank top 3 for front-page lead with one-line reasoning each.
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      const articles = await prisma.article.findMany({
-        where: { status: "PUBLISHED", publishedAt: { gte: since } },
+      // Spec #1 #133: read Content where type=ARTICLE. `breaking` is no
+      // longer a per-row flag (BREAKING_NEWS is its own type) so dropped.
+      const articles = await prisma.content.findMany({
+        where: { type: "ARTICLE", status: "PUBLISHED", publishedAt: { gte: since } },
         select: {
-          id: true, title: true, summary: true, breaking: true, featured: true, viewCount: true,
+          id: true, title: true, summary: true, featured: true, viewCount: true,
           category: { select: { name: true } },
         },
         orderBy: { publishedAt: "desc" },
@@ -57,10 +59,9 @@ export async function POST(req: NextRequest) {
         id: a.id,
         title: a.title.slice(0, 200),
         summary: (a.summary || "").slice(0, 200),
-        breaking: a.breaking,
         featured: a.featured,
         viewCount: a.viewCount,
-        category: a.category.name,
+        category: a.category?.name || "",
       }));
       const sys = `You're the chief editor of a Rayalaseema regional Telugu newspaper. Pick the 3 most newsworthy articles for tomorrow's FRONT PAGE LEAD from the supplied list. Optimize for: public interest, regional relevance, exclusivity, urgency. Reply as pure JSON array with shape [{id,reason}]. No markdown.`;
       const raw = await callLLM(sys, JSON.stringify(slim));
@@ -74,7 +75,8 @@ export async function POST(req: NextRequest) {
     if (action === "shorten-headline") {
       const articleId = body?.articleId as string;
       const maxChars = Number(body?.maxChars || 60);
-      const article = await prisma.article.findUnique({ where: { id: articleId }, select: { title: true } });
+      const article = await prisma.content.findUnique({ where: { id: articleId }, select: { title: true, type: true } });
+      if (article && article.type !== "ARTICLE") return NextResponse.json({ error: "Not an article" }, { status: 400 });
       if (!article) return NextResponse.json({ error: "Article not found" }, { status: 404 });
       const sys = `Rewrite the given Telugu newspaper headline to fit within ${maxChars} characters while preserving the news angle. Reply with exactly 3 alternative headlines, one per line, no numbering, no quotes, no explanation.`;
       const raw = await callLLM(sys, article.title);

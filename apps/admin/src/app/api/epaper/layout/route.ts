@@ -27,12 +27,12 @@ export async function GET(req: NextRequest) {
       if (p.slots?.lead) ids.add(p.slots.lead);
       [...(p.slots?.majors || []), ...(p.slots?.secondary || []), ...(p.slots?.briefs || [])].forEach((id: string) => ids.add(id));
     }
-    const arts = await prisma.article.findMany({
-      where: { id: { in: [...ids] } },
+    const arts = await prisma.content.findMany({
+      where: { type: "ARTICLE", id: { in: [...ids] } },
       select: { id: true, title: true, category: { select: { name: true } } },
     });
     const titles: Record<string, { title: string; category: string }> = {};
-    arts.forEach((a) => (titles[a.id] = { title: a.title, category: a.category.name }));
+    arts.forEach((a) => (titles[a.id] = { title: a.title, category: a.category?.name || "" }));
 
     return NextResponse.json({ status: edition.status, layout, titles });
   } catch (error) {

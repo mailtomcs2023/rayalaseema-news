@@ -26,30 +26,32 @@ export async function GET(req: NextRequest) {
     const limit = Math.max(10, Math.min(500, parseInt(sp.get("limit") || "100", 10) || 100));
 
     const since = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000);
+    // Spec #1 #133: reads Content where type=ARTICLE. `breaking` no longer a
+    // boolean on the row (BREAKING_NEWS is its own type now), so we filter
+    // for `featured` only when the chip is on and drop the breaking sort key.
     const where: Record<string, unknown> = {
+      type: "ARTICLE",
       status: "PUBLISHED",
       publishedAt: { gte: since },
     };
     if (categorySlug) (where as any).category = { slug: categorySlug };
     if (districtSlug) (where as any).constituency = { district: { slug: districtSlug } };
     if (hasImage) (where as any).featuredImage = { not: null };
-    if (breaking) (where as any).breaking = true;
     if (featured) (where as any).featured = true;
     if (q) (where as any).title = { contains: q, mode: "insensitive" };
 
     const orderBy =
       sort === "views" ? { viewCount: "desc" as const }
-      : sort === "breaking" ? [{ breaking: "desc" as const }, { publishedAt: "desc" as const }]
       : sort === "featured" ? [{ featured: "desc" as const }, { publishedAt: "desc" as const }]
       : { publishedAt: "desc" as const };
 
     // Fetch a larger pool when minWords > 0 — body-length filter runs in app code
     // (no efficient SQL for `LENGTH(strip_html(body))`).
-    const rows = await prisma.article.findMany({
+    const rows = await prisma.content.findMany({
       where: where as any,
       select: {
         id: true, slug: true, title: true, featuredImage: true, publishedAt: true,
-        breaking: true, featured: true, viewCount: true,
+        featured: true, viewCount: true,
         ...(minWords > 0 ? { body: true } : {}),
         category: { select: { name: true, slug: true } },
       },
@@ -68,8 +70,8 @@ export async function GET(req: NextRequest) {
     // cost. Speeds up typical interactions from ~600 ms to ~120 ms.
     let totalInWindow = -1;
     if (sp.get("skipTotal") !== "1") {
-      totalInWindow = await prisma.article.count({
-        where: { status: "PUBLISHED", publishedAt: { gte: since } },
+      totalInWindow = await prisma.content.count({
+        where: { type: "ARTICLE", status: "PUBLISHED", publishedAt: { gte: since } },
       });
     }
 
@@ -78,7 +80,7 @@ export async function GET(req: NextRequest) {
         id: a.id, slug: a.slug, title: a.title,
         featuredImage: a.featuredImage,
         publishedAt: a.publishedAt,
-        breaking: a.breaking, featured: a.featured,
+        breaking: false, featured: a.featured,
         viewCount: a.viewCount,
         category: a.category,
       })),

@@ -41,15 +41,18 @@ export async function POST(req: NextRequest) {
   editionDate.setHours(0, 0, 0, 0);
 
   try {
-    const articles = await prisma.article.findMany({
-      where: { status: "PUBLISHED" },
+    const articles = await prisma.content.findMany({
+      where: { type: "ARTICLE", status: "PUBLISHED" },
       orderBy: { publishedAt: "desc" },
       take: 600,
       select: { id: true, title: true, summary: true, constituencyId: true, category: { select: { slug: true } } },
     });
 
     const byCat: Record<string, string[]> = {};
-    for (const a of articles) (byCat[a.category.slug] ||= []).push(a.id);
+    for (const a of articles) {
+      const slug = a.category?.slug;
+      if (slug) (byCat[slug] ||= []).push(a.id);
+    }
 
     // District edition — front + district-news pages drawn from this district's articles
     let districtName = "";

@@ -110,8 +110,8 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
     const layout = (page.layout as unknown as { blocks: Block[] }) ?? { blocks: [] };
     const ids = Array.from(new Set(layout.blocks.map((b) => b.articleId).filter((x): x is string => !!x)));
     const articles = ids.length
-      ? await prisma.article.findMany({
-          where: { id: { in: ids } },
+      ? await prisma.content.findMany({
+          where: { type: "ARTICLE", id: { in: ids } },
           select: {
             id: true, slug: true, title: true, featuredImage: true,
             category: { select: { name: true, slug: true } },
