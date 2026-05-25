@@ -17,4 +17,6 @@ if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
 export * from "@prisma/client";
 export * from "./payload-schemas";
+export * from "./page-builder-schemas";
+export * from "./page-builder-pattern";
 export default prisma;
