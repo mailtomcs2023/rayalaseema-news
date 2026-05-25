@@ -586,11 +586,16 @@ export async function renderLayoutToHtml(input: RenderInput): Promise<string> {
 <link href="${FONTS_HREF}" rel="stylesheet">
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-  html,body{width:${coordSystem === "mm-v2" ? "330mm" : "1480px"}}
+  /* @page declares the exact PDF sheet size; preferCSSPageSize=true in
+     Playwright honors it. Eliminates the ~80px body-padding overflow that
+     caused every edition page to slice into 2 PDF pages (68 instead of
+     34). One sheet per edition page, every time. */
+  @page { size: ${coordSystem === "mm-v2" ? "330mm 520mm" : "300mm 560mm"}; margin: 0; }
+  html,body{width:${coordSystem === "mm-v2" ? "330mm" : "1480px"};height:${coordSystem === "mm-v2" ? "520mm" : "2760px"};overflow:hidden}
   body{
     font-family:'Noto Serif Telugu',serif;
     background:#FCFAF3;color:#14110b;
-    padding:${coordSystem === "mm-v2" ? "0" : "32px 36px"};
+    padding:0;
     /* Baseline grid: 6 mm (~23 px @ 125 dpi) — all body line-heights snap to
        a multiple of this so text aligns horizontally across columns. */
     --baseline: 23px;
@@ -660,12 +665,12 @@ export async function renderLayoutToHtml(input: RenderInput): Promise<string> {
     grid-template-rows: repeat(${maxRow}, 92px);
     column-gap: 14px;
     row-gap: 12px;
-    /* Hard contain the page to one PDF sheet. Without this the page grew
-       to fit oversized children (mostly the masthead logo image) and
-       Playwright sliced the content into dozens of PDF pages. */
-    width: 1408px;
-    height: ${maxRow * 92}px;
-    max-height: ${maxRow * 92}px;
+    /* Hard contain the page to one PDF sheet (1480×2760px = 300×560mm
+       @ ~125 dpi). 30 rows × 92px = 2760px = exact fit. No padding so
+       the grid math stays clean — visual breathing room is per-block. */
+    width: 1480px;
+    height: 2760px;
+    max-height: 2760px;
     overflow: hidden;
   }
   /* CSS-grid items default to min-height: auto, so any oversized child

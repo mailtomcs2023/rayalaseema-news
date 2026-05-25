@@ -163,7 +163,9 @@ async function renderEditionAttempt(
           width: pdfDims.width,
           height: pdfDims.height,
           printBackground: true,
-          preferCSSPageSize: false,
+          // Honor the @page CSS declaration so we get one PDF page per
+          // edition page (no off-by-padding overflow into a 2nd sheet).
+          preferCSSPageSize: true,
           margin: { top: "0", right: "0", bottom: "0", left: "0" },
         });
 
