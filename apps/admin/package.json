@@ -44,8 +44,10 @@
     "playwright": "^1.60.0",
     "playwright-core": "^1.60.0",
     "react": "^19.0.0",
-    "react-grid-layout": "^1.4.4",
     "react-dom": "^19.0.0",
+    "react-grid-layout": "^1.4.4",
+    "react-moveable": "^0.56.0",
+    "selecto": "^1.26.3",
     "tailwind-merge": "^3.6.0",
     "tailwindcss-animate": "^1.0.7"
   },

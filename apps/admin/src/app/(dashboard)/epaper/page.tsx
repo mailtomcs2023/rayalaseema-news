@@ -11,11 +11,15 @@
 //   5. lock toggle per block (autofill skips locked blocks on regenerate)
 //   6. Render button → /api/epaper/render-v2 builds the vector PDF
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/sidebar";
 import { ToastViewport, useToasts } from "@/components/toast";
 import GridLayout, { type Layout as RGLLayout } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
+import { EditorV2 } from "@/components/epaper/editor-v2";
+import { migrateLegacyLayout } from "@/lib/epaper/migrate-layout";
+import { PreflightPanel, PreflightChip } from "@/components/epaper/preflight-panel";
 
 interface Block {
   id: string;
@@ -81,7 +85,11 @@ const DEFAULT_FILTERS: PickerFilters = {
 
 const STORY_TYPES = new Set(["lead", "major", "secondary", "brief"]);
 
-export default function EpaperEditorPage() {
+export default function EpaperEditorPageWrapper() {
+  return <Suspense fallback={null}><EpaperEditorPage /></Suspense>;
+}
+
+function EpaperEditorPage() {
   const today = new Date().toISOString().slice(0, 10);
   const [date, setDate] = useState(today);
   const [variant, setVariant] = useState<string>("main");
@@ -114,6 +122,11 @@ export default function EpaperEditorPage() {
   // Baseline-grid overlay toggle for the preview iframe — helps editors verify
   // text aligns horizontally across columns on a real print baseline.
   const [showBaseline, setShowBaseline] = useState(false);
+
+  // Preflight panel (#139) — open/close + reload key bumped on render/save
+  // so the chip + panel reflect fresh state.
+  const [preflightOpen, setPreflightOpen] = useState(false);
+  const [preflightReload, setPreflightReload] = useState(0);
 
   const loadEdition = useCallback(async (d: string, v: string = "main") => {
     setError(""); setBusy("loading");
@@ -209,6 +222,8 @@ export default function EpaperEditorPage() {
           toast("warn", `Duplicate: "${d.title.slice(0, 50)}" on pages ${d.placements.map((p: any) => p.pageNumber).join(", ")}`);
         }
       }
+      // Bump preflight reload so chip + panel reflect the just-rendered state.
+      setPreflightReload((n) => n + 1);
       // Quality gates: empty story slots, long English runs, missing-glyph chars, overflow.
       if (Array.isArray(data.qualityWarnings) && data.qualityWarnings.length > 0) {
         setWarnings(data.qualityWarnings);
@@ -229,6 +244,29 @@ export default function EpaperEditorPage() {
   };
 
   const activePage = edition?.pages?.[activePageIdx];
+
+  // Editor version flag (#147). v2 is now the default; operators can fall
+  // back to the legacy DraggableBlockGrid via ?editor=v1 while we keep
+  // both code paths alive for a stability burn-in window. Toolbar chip
+  // flips the flag via the router.
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const editorVersion = searchParams.get("editor") === "v1" ? "v1" : "v2";
+  const flipEditor = () => {
+    const next = new URLSearchParams(searchParams);
+    next.set("editor", editorVersion === "v2" ? "v1" : "v2");
+    router.replace(`?${next.toString()}`);
+  };
+
+  // v2 reads blocks in mm-v2 shape — auto-migrate legacy grid-v1 layouts
+  // on the fly so an operator can flip ?editor=v2 on any existing edition
+  // without manual schema conversion. The migration is purely read-side
+  // here; first save persists the new shape via the existing PATCH path.
+  const v2BlocksForActive = useMemo(() => {
+    if (!activePage) return [];
+    const migrated = migrateLegacyLayout(activePage.layout as unknown);
+    return migrated.blocks as any[];
+  }, [activePage]);
 
   // Set of article ids already placed anywhere in the current edition.
   // Used by the picker to flag duplicates so editors don't re-pick the same
@@ -983,6 +1021,17 @@ export default function EpaperEditorPage() {
     <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "#f3f4f6" }}>
       <Sidebar />
       <ToastViewport toasts={toasts} onDismiss={dismissToast} />
+      <PreflightPanel
+        editionId={edition?.id ?? null}
+        open={preflightOpen}
+        onClose={() => setPreflightOpen(false)}
+        reloadKey={preflightReload}
+        onFocusBlock={(pageNumber, blockId) => {
+          const idx = edition?.pages.findIndex((p) => p.pageNumber === pageNumber) ?? -1;
+          if (idx >= 0) setActivePageIdx(idx);
+          if (blockId) { setSelectedBlockId(blockId); setSelectedBlockIds(new Set([blockId])); }
+        }}
+      />
       {/* Block style panel — image + columns + headline + colors + spacing */}
       {styleBlockId && (
         <div onClick={() => setStyleBlockId(null)}
@@ -1450,6 +1499,14 @@ export default function EpaperEditorPage() {
               ↩ History
             </button>
           )}
+          {/* Preflight chip (#139) — opens side panel listing every issue. */}
+          {edition && <PreflightChip editionId={edition.id} onClick={() => setPreflightOpen(true)} reloadKey={preflightReload} />}
+          {/* v2 editor flag chip (#135). Click to flip between v1 (RGL) and v2 (mm canvas + moveable). */}
+          <button onClick={flipEditor}
+            title={editorVersion === "v2" ? "Switch back to legacy editor" : "Try the new mm-coord editor (BETA)"}
+            style={{ padding: "6px 12px", background: editorVersion === "v2" ? "#db2777" : "#fff", color: editorVersion === "v2" ? "#fff" : "#db2777", border: "1px solid #db2777", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+            editor: {editorVersion}{editorVersion === "v2" ? " BETA" : ""}
+          </button>
           {edition && (
             <button onClick={() => setCommentsOpen(true)}
               style={{ padding: "8px 16px", background: "#fff", color: "#0891b2", border: "1px solid #0891b2", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
@@ -1671,42 +1728,87 @@ export default function EpaperEditorPage() {
                           </button>
                         </div>
                       )}
-                      <DraggableBlockGrid
-                        layout={activePage.layout}
-                        titles={titles}
-                        warningsByBlock={Object.fromEntries(
-                          warnings.filter((w) => w.pageNumber === activePage.pageNumber)
-                            .reduce((acc: Map<string, QWarning[]>, w) => {
-                              const arr = acc.get(w.blockId) || [];
-                              arr.push(w);
-                              acc.set(w.blockId, arr);
-                              return acc;
-                            }, new Map())
-                        )}
-                        selectedBlockId={selectedBlockId}
-                        multiSelected={selectedBlockIds}
-                        dragOverBlockId={dragOverBlockId}
-                        onDragOverBlock={onBlockDragOver}
-                        onDragLeaveBlock={onBlockDragLeave}
-                        onDropBlock={onBlockDrop}
-                        onRemoveBlock={removeBlock}
-                        onClearOffPage={clearOffPageBlocks}
-                        onSelect={(id, e) => {
-                          if (e?.shiftKey) {
-                            setSelectedBlockIds((prev) => {
-                              const next = new Set(prev);
-                              if (next.has(id)) next.delete(id);
-                              else next.add(id);
-                              return next;
-                            });
-                          } else {
-                            setSelectedBlockId(id);
-                            setSelectedBlockIds(new Set([id]));
-                          }
-                        }}
-                        onToggleLock={toggleLock}
-                        onLayoutChange={saveLayout}
-                      />
+                      {editorVersion === "v2" ? (
+                        <EditorV2
+                          blocks={v2BlocksForActive}
+                          selectedBlockIds={selectedBlockIds}
+                          onSelect={(ids, shift) => {
+                            if (shift) {
+                              setSelectedBlockIds((prev) => {
+                                const next = new Set(prev);
+                                for (const id of ids) {
+                                  if (next.has(id)) next.delete(id);
+                                  else next.add(id);
+                                }
+                                return next;
+                              });
+                            } else {
+                              setSelectedBlockId(ids[0] ?? null);
+                              setSelectedBlockIds(new Set(ids));
+                            }
+                          }}
+                          onLayoutChange={(next) => saveLayout(next as any)}
+                          onDetachMaster={(masterBlock) => {
+                            if (!activePage) return;
+                            // Deep-copy master block into the page layer w/ a fresh id; mark isOverride.
+                            const copy = {
+                              ...masterBlock,
+                              id: `${masterBlock.id}-override-${Date.now().toString(36)}`,
+                              isMaster: false,
+                              isOverride: true,
+                            };
+                            const next = [...v2BlocksForActive, copy];
+                            saveLayout(next as any);
+                            toast("success", `Detached ${masterBlock.type} block — editable on this page only.`);
+                          }}
+                          renderBlockContent={(b) => {
+                            const meta = b.articleId ? titles[b.articleId] : null;
+                            return (
+                              <>
+                                <div style={{ fontSize: 9, color: "#6b7280", fontWeight: 700, textTransform: "uppercase" }}>{b.type}</div>
+                                {meta?.title && <div style={{ fontWeight: 700, marginTop: 3, color: "#111", lineHeight: 1.25 }}>{meta.title.slice(0, 100)}</div>}
+                              </>
+                            );
+                          }}
+                        />
+                      ) : (
+                        <DraggableBlockGrid
+                          layout={activePage.layout}
+                          titles={titles}
+                          warningsByBlock={Object.fromEntries(
+                            warnings.filter((w) => w.pageNumber === activePage.pageNumber)
+                              .reduce((acc: Map<string, QWarning[]>, w) => {
+                                const arr = acc.get(w.blockId) || [];
+                                arr.push(w);
+                                acc.set(w.blockId, arr);
+                                return acc;
+                              }, new Map())
+                          )}
+                          selectedBlockId={selectedBlockId}
+                          multiSelected={selectedBlockIds}
+                          dragOverBlockId={dragOverBlockId}
+                          onDragOverBlock={onBlockDragOver}
+                          onDragLeaveBlock={onBlockDragLeave}
+                          onDropBlock={onBlockDrop}
+                          onRemoveBlock={removeBlock}
+                          onClearOffPage={clearOffPageBlocks}
+                          onSelect={(id, e) => {
+                            if (e?.shiftKey) {
+                              setSelectedBlockIds((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(id)) next.delete(id);
+                                else next.add(id);
+                                return next;
+                              });
+                            } else {
+                              setSelectedBlockId(id);
+                              setSelectedBlockIds(new Set([id]));
+                            }
+                          }}
+                          onToggleLock={toggleLock}
+                          onLayoutChange={saveLayout}
+                        />
+                      )}
                     </div>
                   )}
                   {(viewMode === "split" || viewMode === "preview") && (

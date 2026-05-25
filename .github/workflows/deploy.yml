@@ -61,6 +61,8 @@ jobs:
 
             echo "=== Seed e-paper v2 templates (front + 8 district + 4 section) ==="
             bunx tsx scripts/seed-epaper-templates.ts
+            echo "=== Seed e-paper v2 masters (#108: front/district/section) ==="
+            bunx tsx scripts/seed-epaper-masters.ts
             cd ../..
 
             echo "=== Install Playwright Chromium (e-paper render) ==="
