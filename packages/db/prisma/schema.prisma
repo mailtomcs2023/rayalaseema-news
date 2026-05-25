@@ -11,7 +11,10 @@ datasource db {
 
 enum Role {
   ADMIN           // Full access - everything
-  EDITOR          // Edit all categories, publish, breaking news (was CHIEF_SUB_EDITOR)
+  EDITOR          // Edit all categories, publish, breaking news
+  CHIEF_SUB_EDITOR // Legacy alias for EDITOR. Prod has rows with this value;
+                   // removing it from the enum breaks prisma db push on
+                   // deploy. Keep until prod rows migrate to EDITOR.
   SUB_EDITOR      // Edit assigned categories, review articles, can't publish
   REPORTER        // Write articles, upload photos, submit for review only
 }
