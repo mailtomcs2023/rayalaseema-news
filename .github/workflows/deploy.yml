@@ -38,6 +38,22 @@ jobs:
             echo "=== Install dependencies ==="
             bun install --frozen-lockfile || bun install
 
+            # Spec #1 I1 #134 — pg_dump backup BEFORE any prisma db push.
+            # Spec #1 Phase A1B (#188) renames FK columns and A1C (#189) drops
+            # ~10 legacy tables. Either step is irrecoverable without a backup.
+            # Backup runs on every deploy to keep the muscle memory consistent;
+            # only the last 14 are kept to bound disk usage.
+            echo "=== Backup database (pg_dump) ==="
+            BACKUP_DIR=/home/azureuser/db-backups
+            mkdir -p "$BACKUP_DIR"
+            BACKUP_FILE="$BACKUP_DIR/pre-deploy-$(date +%Y%m%d-%H%M%S).sql.gz"
+            PGPASSWORD='RayalaseemaExpress2026!' pg_dump -h localhost -U reapp -d rayalaseema_express \
+              --no-owner --no-privileges \
+              | gzip > "$BACKUP_FILE"
+            echo "Backup written to $BACKUP_FILE ($(du -h "$BACKUP_FILE" | cut -f1))"
+            # Keep the 14 most recent backups; delete older ones.
+            ls -1t "$BACKUP_DIR"/pre-deploy-*.sql.gz 2>/dev/null | tail -n +15 | xargs -r rm -f
+
             echo "=== Generate Prisma client ==="
             cd packages/db
             bunx prisma generate
