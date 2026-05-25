@@ -1,11 +1,12 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, Image } from "react-native";
 
 import { LanguageToggle } from "./LanguageToggle";
-// SVG wordmark designed for dark backgrounds (the asset is already white-on-
-// transparent, so no tinting is needed). Imported as a React component via
-// react-native-svg-transformer — see metro.config.js.
-import LogoInverse from "../../assets/logo-inverse.svg";
+
+// White-on-transparent wordmark, rasterised at 4× the rendered size so it
+// stays crisp on xxxhdpi screens. Source SVG was 2.2 MB (embedded font); the
+// PNG is ~14 KB. Re-render via scripts/rasterize-logo.mjs if the SVG returns.
+const logoInverse = require("../../assets/logo-inverse.png");
 
 /**
  * The shared header shown at the top of every tab screen.
@@ -19,9 +20,10 @@ export function ScreenHeader() {
   return (
     <View style={styles.header}>
       <View style={styles.row}>
-        <LogoInverse
-          width={140}
-          height={28}
+        <Image
+          source={logoInverse}
+          style={styles.logo}
+          resizeMode="contain"
           accessibilityLabel="Rayalaseema Express"
         />
         <LanguageToggle onDark />
@@ -40,4 +42,5 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 20,
   },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", height: 36 },
+  logo: { width: 140, height: 28 },
 });
