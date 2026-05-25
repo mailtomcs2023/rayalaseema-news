@@ -68,7 +68,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     // Skip snapshot if nothing meaningful changed (status-only flips, etc.) — checked below.
     const current = await prisma.article.findUnique({
       where: { id },
-      select: { title: true, slug: true, summary: true, body: true, featuredImage: true, categoryId: true, status: true },
+      select: { title: true, slug: true, summary: true, body: true, featuredImage: true, categoryId: true, status: true, needsPibApproval: true, pibApprovedAt: true },
     });
     if (current) {
       const willChangeContent =

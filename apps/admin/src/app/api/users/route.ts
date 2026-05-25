@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
 
     // Validate role against the Prisma enum upfront so a bad value returns
     // a readable 400 instead of bubbling up as an opaque 500 from Prisma.
-    const VALID_ROLES = ["ADMIN", "CHIEF_SUB_EDITOR", "SUB_EDITOR", "REPORTER"] as const;
+    const VALID_ROLES = ["ADMIN", "EDITOR", "SUB_EDITOR", "REPORTER"] as const;
     const role = (b.role || "REPORTER") as string;
     if (!VALID_ROLES.includes(role as any)) {
       return NextResponse.json({ error: `Invalid role '${role}'. Must be one of: ${VALID_ROLES.join(", ")}` }, { status: 400 });

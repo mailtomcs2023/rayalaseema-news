@@ -1,12 +1,12 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { DismissKeyboard } from "../components/DismissKeyboard";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useT } from "../i18n";
 import { LanguageToggle } from "../components/LanguageToggle";
 import { FieldError } from "../components/FieldError";
 import { loginSchema, fieldErrors } from "../lib/validation";
-import { API_URL } from "../api/client";
+import { api } from "../api/client";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
@@ -31,15 +31,15 @@ export function LoginScreen() {
     setLoading(true);
 
     try {
-      // Single JSON POST to the reporter login endpoint — no cookies/redirects.
-      const res = await fetch(`${API_URL}/api/reporter/login`, {
+      // Single JSON POST to the reporter login endpoint via the shared api()
+      // helper, which adds a 10s timeout + tags network errors with the URL
+      // it could not reach (raw fetch hangs ~60s on a dropped connection).
+      const data = await api("/api/reporter/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), password }),
+        body: { email: email.trim(), password },
       });
-      const data = await res.json();
 
-      if (res.ok && data.user && data.token) {
+      if (data.user && data.token) {
         await AsyncStorage.setItem("user", JSON.stringify(data.user));
         await AsyncStorage.setItem("auth-token", data.token);
         router.replace("/home");
@@ -53,7 +53,18 @@ export function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={0}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
       <DismissKeyboard>
       <View style={styles.card}>
         <View style={styles.toggleRow}>
@@ -107,13 +118,18 @@ export function LoginScreen() {
         </TouchableOpacity>
       </View>
       </DismissKeyboard>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#f3f4f6", padding: 20 },
-  card: { width: "100%", maxWidth: 400, backgroundColor: "#fff", borderRadius: 16, padding: 32, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 16, elevation: 8 },
+  container: { flex: 1, backgroundColor: "#f3f4f6" },
+  // ScrollView content: centers the card vertically when there is room, and
+  // becomes scrollable when the keyboard pushes the card up so the focused
+  // input is always reachable. flexGrow:1 is what makes the centering work.
+  scrollContent: { flexGrow: 1, justifyContent: "center", alignItems: "center", padding: 20 },
+  card: { width: "100%", maxWidth: 400, backgroundColor: "#fff", borderRadius: 16, padding: 32, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 },
   toggleRow: { flexDirection: "row", justifyContent: "flex-end", marginBottom: 4 },
   logo: { width: 240, height: 48, alignSelf: "center", marginBottom: 4 },
   // Fixed lineHeight / height values below keep the layout identical in English

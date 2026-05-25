@@ -18,7 +18,7 @@ export type Role = "ADMIN" | "EDITOR" | "SUB_EDITOR" | "REPORTER";
 export function landingFor(role: Role | string | undefined): string {
   switch (role) {
     case "REPORTER":
-      return "/reporter-home";
+      return "/reporter";
     case "SUB_EDITOR":
       return "/review";
     case "EDITOR":
@@ -34,14 +34,11 @@ export function landingFor(role: Role | string | undefined): string {
 export function canVisit(role: Role | string | undefined, pathname: string): boolean {
   if (role === "ADMIN") return true;
   if (role === "REPORTER") {
-    // Reporters get the dedicated home + read-only routes that aren't
-    // sensitive. Anything outside this list bounces them to /reporter-home.
-    return (
-      pathname === "/reporter-home" ||
-      pathname.startsWith("/reporter-home/") ||
-      pathname === "/login" ||
-      pathname.startsWith("/api/")
-    );
+    // Reporter web portal mirrors the Expo app — everything lives under
+    // /reporter (home), /reporter/articles, /reporter/earnings, /reporter/profile.
+    // Anything else bounces to /reporter.
+    if (pathname === "/login" || pathname.startsWith("/api/")) return true;
+    return pathname === "/reporter" || pathname.startsWith("/reporter/");
   }
   // SUB_EDITOR + EDITOR: blocked from the HR/finance/settings cluster.
   const adminOnly = [

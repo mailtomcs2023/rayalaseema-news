@@ -18,7 +18,7 @@ import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 // Tracking issue: #70.
 
 export async function POST(req: NextRequest) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(session)) return session;
   try {
     return NextResponse.json({

@@ -17,7 +17,7 @@ const slugify = (s: string) =>
 interface Column {
   key: string;
   label: string;
-  type?: "text" | "boolean" | "color" | "count" | "date" | "link";
+  type?: "text" | "boolean" | "color" | "count" | "date" | "link" | "url";
 }
 
 interface CrudTableProps {
@@ -234,6 +234,16 @@ export function CrudTable({ title, apiPath, columns, data, fields }: CrudTablePr
                         val ? new Date(val).toLocaleDateString() : "-"
                       ) : col.type === "link" ? (
                         val ? "Yes" : "-"
+                      ) : col.type === "url" ? (
+                        // Image columns — render a small thumbnail when the cell
+                        // is an image URL (epaper-ads, epaper-images). Falls
+                        // back to the URL text if the image fails to load.
+                        val ? (
+                          <a href={String(val)} target="_blank" rel="noopener noreferrer" style={{ display: "inline-block" }}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={String(val)} alt="" style={{ height: 32, width: "auto", borderRadius: 4, verticalAlign: "middle", background: "#f3f4f6" }} />
+                          </a>
+                        ) : "-"
                       ) : (
                         String(val ?? "")
                       )}

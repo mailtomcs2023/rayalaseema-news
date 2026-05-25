@@ -9,7 +9,7 @@ import { createSnapshot } from "@/lib/epaper/snapshots";
 // after the insertion point get their pageNumber bumped by 1 (temp-negative
 // scratch trick keeps the [editionId,pageNumber] unique constraint happy).
 export async function POST(req: NextRequest) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR", "SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR"]);
   if (isAuthError(session)) return session;
   try {
     const body = await req.json();
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
 // Body: { editionId, order: pageId[] }
 // Bulk-reorder: array order becomes the new pageNumber sequence (1..N).
 export async function PATCH(req: NextRequest) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR", "SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR"]);
   if (isAuthError(session)) return session;
   try {
     const body = await req.json();

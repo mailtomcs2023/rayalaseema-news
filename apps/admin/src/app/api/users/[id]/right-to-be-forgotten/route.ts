@@ -53,7 +53,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     // Best-effort anonymize related rows. Each wrapped in catch so a missing
     // model doesn't block erasure.
-    await prisma.comment.updateMany({ where: { authorId: id }, data: { /* keep body, author already anonymized via user row */ } }).catch(() => {});
+    // Comments are anonymous (name + email only, no userId). Erasure of
+    // the user row covers staff comments; public comments aren't linked.
+    // Restore an anonymize-by-userId step here once Comment.userId exists.
 
     await logAudit({
       action: "user.right_to_be_forgotten",

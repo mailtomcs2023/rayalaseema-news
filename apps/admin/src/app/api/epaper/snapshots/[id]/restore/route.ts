@@ -7,7 +7,7 @@ import { restoreSnapshot } from "@/lib/epaper/snapshots";
 // A "pre-restore" snapshot of the current state is written first so the
 // rollback itself is undoable.
 export async function POST(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(session)) return session;
   try {
     const { id } = await params;

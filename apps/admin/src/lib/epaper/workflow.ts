@@ -19,7 +19,7 @@
 
 import type { EpaperWorkflowState } from "@prisma/client";
 
-type Role = "ADMIN" | "CHIEF_SUB_EDITOR" | "SUB_EDITOR" | "REPORTER";
+type Role = "ADMIN" | "EDITOR" | "SUB_EDITOR" | "REPORTER";
 
 export interface Transition {
   from: EpaperWorkflowState;
@@ -32,17 +32,17 @@ export interface Transition {
 }
 
 export const TRANSITIONS: Transition[] = [
-  { from: "DRAFT",        to: "SUB_REVIEW",    allowedRoles: ["ADMIN", "CHIEF_SUB_EDITOR", "SUB_EDITOR", "REPORTER"], label: "Submit for sub-editor review" },
-  { from: "SUB_REVIEW",   to: "CHIEF_REVIEW",  allowedRoles: ["ADMIN", "CHIEF_SUB_EDITOR", "SUB_EDITOR"], label: "Pass to chief editor" },
-  { from: "SUB_REVIEW",   to: "REJECTED",      allowedRoles: ["ADMIN", "CHIEF_SUB_EDITOR", "SUB_EDITOR"], label: "Reject", noteRequired: true },
-  { from: "CHIEF_REVIEW", to: "APPROVED",      allowedRoles: ["ADMIN", "CHIEF_SUB_EDITOR"], label: "Approve" },
-  { from: "CHIEF_REVIEW", to: "REJECTED",      allowedRoles: ["ADMIN", "CHIEF_SUB_EDITOR"], label: "Reject", noteRequired: true },
-  { from: "APPROVED",     to: "PUBLISHED",     allowedRoles: ["ADMIN", "CHIEF_SUB_EDITOR"], label: "Publish" },
-  { from: "REJECTED",     to: "DRAFT",         allowedRoles: ["ADMIN", "CHIEF_SUB_EDITOR", "SUB_EDITOR", "REPORTER"], label: "Reopen as draft" },
-  { from: "PUBLISHED",    to: "DRAFT",         allowedRoles: ["ADMIN", "CHIEF_SUB_EDITOR"], label: "Unpublish" },
+  { from: "DRAFT",        to: "SUB_REVIEW",    allowedRoles: ["ADMIN", "EDITOR", "SUB_EDITOR", "REPORTER"], label: "Submit for sub-editor review" },
+  { from: "SUB_REVIEW",   to: "CHIEF_REVIEW",  allowedRoles: ["ADMIN", "EDITOR", "SUB_EDITOR"], label: "Pass to chief editor" },
+  { from: "SUB_REVIEW",   to: "REJECTED",      allowedRoles: ["ADMIN", "EDITOR", "SUB_EDITOR"], label: "Reject", noteRequired: true },
+  { from: "CHIEF_REVIEW", to: "APPROVED",      allowedRoles: ["ADMIN", "EDITOR"], label: "Approve" },
+  { from: "CHIEF_REVIEW", to: "REJECTED",      allowedRoles: ["ADMIN", "EDITOR"], label: "Reject", noteRequired: true },
+  { from: "APPROVED",     to: "PUBLISHED",     allowedRoles: ["ADMIN", "EDITOR"], label: "Publish" },
+  { from: "REJECTED",     to: "DRAFT",         allowedRoles: ["ADMIN", "EDITOR", "SUB_EDITOR", "REPORTER"], label: "Reopen as draft" },
+  { from: "PUBLISHED",    to: "DRAFT",         allowedRoles: ["ADMIN", "EDITOR"], label: "Unpublish" },
   // Retraction — terminal kill from PUBLISHED. Note required (carries the
   // reason that surfaces on /epaper/corrections).
-  { from: "PUBLISHED",    to: "KILLED",        allowedRoles: ["ADMIN", "CHIEF_SUB_EDITOR"], label: "🗑 Kill / retract", noteRequired: true },
+  { from: "PUBLISHED",    to: "KILLED",        allowedRoles: ["ADMIN", "EDITOR"], label: "🗑 Kill / retract", noteRequired: true },
 ];
 
 /** Returns every transition the given role can apply FROM the given state. */

@@ -1,8 +1,18 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/sidebar";
 import { getDashboardStats } from "@/lib/admin-queries";
+import { auth } from "@/lib/auth";
+import { landingFor } from "@/lib/roles";
 
 export default async function DashboardPage() {
+  // Reporters get bounced to their own portal (since middleware no longer
+  // does role-based routing). Sub editors land here too but the sidebar
+  // hides items they can't use.
+  const session = await auth();
+  const role = (session?.user as any)?.role as string | undefined;
+  if (role === "REPORTER") redirect(landingFor("REPORTER"));
+
   const stats = await getDashboardStats();
 
   const statCards = [

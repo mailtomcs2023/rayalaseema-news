@@ -17,7 +17,7 @@ const ENDPOINT = process.env.AZURE_VISION_ENDPOINT;
 const KEY = process.env.AZURE_VISION_KEY;
 
 export async function POST(req: NextRequest) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR", "SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR"]);
   if (isAuthError(session)) return session;
   if (!ENDPOINT || !KEY) {
     return NextResponse.json({

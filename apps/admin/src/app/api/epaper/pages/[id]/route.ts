@@ -6,7 +6,7 @@ import { createSnapshot } from "@/lib/epaper/snapshots";
 // DELETE /api/epaper/pages/[id]
 // Removes the page and closes the gap in pageNumber sequence.
 export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(session)) return session;
   try {
     const { id } = await params;
@@ -44,7 +44,7 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
 // POST /api/epaper/pages/[id]/duplicate
 // Inserts a copy of the page directly AFTER itself.
 export async function POST(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR", "SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR"]);
   if (isAuthError(session)) return session;
   try {
     const { id } = await params;
@@ -94,7 +94,7 @@ export async function POST(_: NextRequest, { params }: { params: Promise<{ id: s
 // (Layout-editing PATCH lives on /api/epaper/page/[id] — that's the
 // authoritative editor write path. This route handles the structural ops.)
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR", "SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR"]);
   if (isAuthError(session)) return session;
   try {
     const { id } = await params;

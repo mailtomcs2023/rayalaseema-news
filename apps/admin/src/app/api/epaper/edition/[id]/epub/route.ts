@@ -11,7 +11,7 @@ import { uploadBuffer } from "@/lib/blob";
 //
 // Idempotent — re-running rebuilds + uploads a fresh blob.
 export async function POST(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR", "SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR"]);
   if (isAuthError(session)) return session;
   try {
     const { id } = await params;

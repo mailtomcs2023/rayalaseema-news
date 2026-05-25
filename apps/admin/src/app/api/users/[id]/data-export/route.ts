@@ -44,12 +44,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         orderBy: { createdAt: "desc" },
         take: 1000,
       }),
-      prisma.comment.findMany({
-        where: { authorId: id },
-        select: { id: true, body: true, articleId: true, createdAt: true },
-        orderBy: { createdAt: "desc" },
-        take: 1000,
-      }).catch(() => []),
+      // Comments are anonymous in this schema (name + email, no userId
+      // relation). Return [] to keep the export shape stable until a
+      // userId column lands on Comment.
+      Promise.resolve([] as never[]),
       prisma.auditLog.findMany({
         where: { actorId: id },
         select: { id: true, action: true, resource: true, resourceId: true, createdAt: true, meta: true },

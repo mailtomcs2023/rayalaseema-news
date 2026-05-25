@@ -9,9 +9,16 @@ export default function Index() {
   const [target, setTarget] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log("[auth-gate] index.tsx mounted, reading AsyncStorage…");
     AsyncStorage.getItem("user")
-      .then((u) => setTarget(u ? "/home" : "/login"))
-      .catch(() => setTarget("/login"));
+      .then((u) => {
+        console.log("[auth-gate] user =", u ? "present" : "absent", "→ routing to", u ? "/home" : "/login");
+        setTarget(u ? "/home" : "/login");
+      })
+      .catch((err) => {
+        console.log("[auth-gate] AsyncStorage error:", err, "→ /login");
+        setTarget("/login");
+      });
   }, []);
 
   if (!target) {

@@ -28,6 +28,28 @@ interface Block {
     districtSlug?: string;
     minImages?: number;
   };
+  // Per-block visual overrides written by the 🎨 Style panel below. Mirrors
+  // the same field on Block in @/lib/epaper/render-layout.ts; the editor
+  // exposes a strict subset (no "wrap" image-position).
+  style?: {
+    imagePosition?: "top" | "left" | "right" | "none";
+    imageSize?: number;
+    textColumns?: 1 | 2 | 3;
+    hlScale?: number;
+    hlColor?: string;
+    hlBgColor?: string;
+    blockBgColor?: string;
+    textColor?: string;
+    padding?: number;
+    margin?: number;
+    dropCap?: boolean;
+    pullQuoteAttribution?: string;
+  };
+  // Per-placement overrides + image crop also live in the layout JSON and
+  // are passed straight through to the renderer.
+  imageCrop?: { x: number; y: number; w: number; h: number };
+  overrideTitle?: string;
+  overrideDek?: string;
 }
 interface PageRow {
   id: string;

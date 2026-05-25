@@ -9,7 +9,7 @@ import { uploadBuffer } from "@/lib/blob";
 // Converts edition.pdfUrl (sRGB from web render) to CMYK with optional press
 // ICC profile via Ghostscript. Returns the CMYK PDF blob URL. #101.
 export async function POST(req: NextRequest) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(session)) return session;
   try {
     if (!isCmykEnabled()) {

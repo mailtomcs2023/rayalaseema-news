@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/epaper/image-assets — create
 export async function POST(req: NextRequest) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR", "SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR"]);
   if (isAuthError(session)) return session;
   try {
     const body = await req.json();

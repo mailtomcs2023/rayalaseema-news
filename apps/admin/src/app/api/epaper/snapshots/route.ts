@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
 // Body: { editionId, note? }
 // Manual snapshot from the History panel's "Snapshot now" button.
 export async function POST(req: NextRequest) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR", "SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR"]);
   if (isAuthError(session)) return session;
   try {
     const body = await req.json();

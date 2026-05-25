@@ -10,7 +10,7 @@ import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 //
 // Operator-triggered for now — cron loop is a follow-up.
 export async function POST(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(session)) return session;
   try {
     const { id } = await params;

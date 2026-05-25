@@ -13,14 +13,13 @@ export async function GET() {
     const tests = await prisma.headlineTest.findMany({
       orderBy: { createdAt: "desc" },
       take: 50,
-      include: { /* keep slim — admin list view */ },
     });
     return NextResponse.json({ tests });
   } catch (e) { return apiError(e); }
 }
 
 export async function POST(req: NextRequest) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR", "SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR"]);
   if (isAuthError(session)) return session;
   try {
     const body = await req.json();

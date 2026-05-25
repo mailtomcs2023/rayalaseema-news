@@ -2,7 +2,17 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@rayalaseema/db";
-import { Sidebar } from "@/components/sidebar";
+import { ReporterShell } from "@/components/reporter/reporter-shell";
+import { KycBanner } from "@/components/reporter/kyc-banner";
+import {
+  FileText,
+  CheckCircle2,
+  Eye,
+  PencilLine,
+  Wallet,
+  ChevronRight,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 // Reporter-only landing page in the admin portal. The middleware bounces
 // any non-reporter that ends up here to landingFor(role), and bounces any
@@ -45,23 +55,24 @@ export default async function ReporterHome() {
   const name = session.user.name || "Reporter";
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-      <Sidebar />
-      <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111", marginBottom: 4 }}>
+    <ReporterShell>
+      <div style={{ padding: 16 }}>
+        <KycBanner userId={userId} />
+
+        <h1 style={{ fontSize: 17, lineHeight: "24px", fontWeight: 800, color: "#111", paddingTop: 8, marginBottom: 4 }}>
           Welcome, {name}
         </h1>
-        <p style={{ fontSize: 13, color: "#888", marginBottom: 20 }}>
-          Your articles, earnings, and KYC at a glance. Use the mobile app to write new articles.
+        <p style={{ fontSize: 13, color: "#888", marginBottom: 16 }}>
+          Your articles, earnings, and KYC at a glance.
         </p>
 
-        {/* KPI grid */}
+        {/* KPI grid — tappable cards, mirrors the Expo Dashboard KpiCard */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 24 }}>
-          <Kpi label="Total articles" value={stats.total} tint="#3b82f6" />
-          <Kpi label="Published" value={stats.published} tint="#16a34a" />
-          <Kpi label="In review" value={stats.inReview} tint="#f59e0b" />
-          <Kpi label="Drafts" value={stats.drafts} tint="#6b7280" />
-          <Kpi label="Earnings" value={`₹${Math.round(stats.earnings).toLocaleString("en-IN")}`} tint="#FF2C2C" />
+          <Kpi Icon={FileText}     tint="#3b82f6" value={stats.total}     label="Total articles" href="/reporter/articles" />
+          <Kpi Icon={CheckCircle2} tint="#16a34a" value={stats.published} label="Published"      href="/reporter/articles?status=PUBLISHED" />
+          <Kpi Icon={Eye}          tint="#f59e0b" value={stats.inReview}  label="In review"      href="/reporter/articles?status=IN_REVIEW" />
+          <Kpi Icon={PencilLine}   tint="#6b7280" value={stats.drafts}    label="Drafts"         href="/reporter/articles?status=DRAFT" />
+          <Kpi Icon={Wallet}       tint="#FF2C2C" value={`₹${Math.round(stats.earnings).toLocaleString("en-IN")}`} label="Earnings" href="/reporter/earnings" />
         </div>
 
         {/* Recent articles */}
@@ -126,28 +137,56 @@ export default async function ReporterHome() {
           )}
         </div>
 
-        <p style={{ marginTop: 18, fontSize: 12, color: "#888", textAlign: "center" }}>
-          To write a new article or edit a draft, please use the Rayalaseema Express reporter app on your phone.
-        </p>
-      </main>
-    </div>
+      </div>
+    </ReporterShell>
   );
 }
 
-function Kpi({ label, value, tint }: { label: string; value: number | string; tint: string }) {
+function Kpi({
+  Icon,
+  tint,
+  value,
+  label,
+  href,
+}: {
+  Icon: LucideIcon;
+  tint: string;
+  value: number | string;
+  label: string;
+  href: string;
+}) {
   return (
-    <div
+    <Link
+      href={href}
       style={{
         background: "#fff",
-        borderRadius: 12,
+        borderRadius: 16,
         padding: 14,
-        boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.05), 0 4px 12px rgba(0,0,0,0.03)",
+        textDecoration: "none",
+        color: "inherit",
+        display: "block",
       }}
     >
-      <div style={{ width: 28, height: 28, borderRadius: 8, background: tint + "1A", marginBottom: 8 }} />
-      <p style={{ fontSize: 20, fontWeight: 900, color: "#111" }}>{value}</p>
-      <p style={{ fontSize: 11, color: "#888", fontWeight: 600, marginTop: 2 }}>{label}</p>
-    </div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+        <span
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: 10,
+            background: tint + "1A",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Icon size={18} color={tint} />
+        </span>
+        <ChevronRight size={16} color="#c4c4c4" />
+      </div>
+      <p style={{ fontSize: 22, fontWeight: 900, color: "#111" }}>{value}</p>
+      <p style={{ fontSize: 12, color: "#888", fontWeight: 600, marginTop: 1 }}>{label}</p>
+    </Link>
   );
 }
 

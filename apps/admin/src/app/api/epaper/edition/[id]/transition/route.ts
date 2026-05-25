@@ -20,7 +20,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const edition = await prisma.epaperEdition.findUnique({ where: { id } });
     if (!edition) return NextResponse.json({ error: "Edition not found" }, { status: 404 });
 
-    const role = (session.user as any).role as "ADMIN" | "CHIEF_SUB_EDITOR" | "SUB_EDITOR" | "REPORTER";
+    const role = (session.user as any).role as "ADMIN" | "EDITOR" | "SUB_EDITOR" | "REPORTER";
     const reason = canTransition(edition.workflowState, to, role);
     if (reason) return NextResponse.json({ error: reason }, { status: 403 });
 

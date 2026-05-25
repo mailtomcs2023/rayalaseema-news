@@ -15,7 +15,7 @@ import { autofillTemplate, type BlockSlot } from "@/lib/epaper/autofill";
 // fillRules.districtSlug for the district pages so the engine pulls correct
 // articles for the variant.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(session)) return session;
   try {
     const { id } = await params;
@@ -63,8 +63,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const usedArticleIds = new Set<string>();
     for (const p of source.pages) {
       let layout = JSON.parse(JSON.stringify(p.layout)) as { blocks: BlockSlot[] };
-      const isDistrictPage = p.templateSlug.startsWith("district-");
-      if (isDistrictPage && districtFilterSlug) {
+      const isDistrictPage = (p.templateSlug || "").startsWith("district-");
+      if (isDistrictPage && districtFilterSlug && p.templateSlug) {
         const result = await autofillTemplate({
           templateSlug: p.templateSlug,
           templateLayout: layout,

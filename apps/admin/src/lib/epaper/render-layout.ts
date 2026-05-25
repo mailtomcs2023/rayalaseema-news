@@ -364,7 +364,10 @@ function imageBlock(b: Block, imageAssetUrlsById?: Record<string, { imageUrl: st
   // Prefer a resolved library asset (b.adAssetId reused for image-library
   // references for now to avoid a schema migration on layout JSON), then
   // fall back to b.content as a raw URL.
-  const fromLib = b.adAssetId && imageAssetUrlsById?.[b.adAssetId];
+  // Use a conditional rather than `&&` so the narrowed type is just the
+  // object | undefined (the `&&` form admitted a falsy `""` short-circuit
+  // value that broke .imageUrl access).
+  const fromLib = b.adAssetId ? imageAssetUrlsById?.[b.adAssetId] : undefined;
   const url = fromLib?.imageUrl ?? b.content;
   const caption = fromLib?.caption;
   return `<div class="block image" style="${blockStyle(b)}">
