@@ -12,6 +12,20 @@ import React from "react";
 import Highlight from "@tiptap/extension-highlight";
 import { useState, useCallback, useRef, useEffect } from "react";
 
+// Spec #1 G1 #127 — industry-standard extensions.
+// TipTap v3 exports many of these as named (not default). Color lives inside
+// extension-text-style; text-style must be loaded for color to attach.
+import { TextStyle, Color } from "@tiptap/extension-text-style";
+import { TaskList } from "@tiptap/extension-task-list";
+import { TaskItem } from "@tiptap/extension-task-item";
+import { Table } from "@tiptap/extension-table";
+import { TableRow } from "@tiptap/extension-table-row";
+import { TableCell } from "@tiptap/extension-table-cell";
+import { TableHeader } from "@tiptap/extension-table-header";
+import { Superscript } from "@tiptap/extension-superscript";
+import { Subscript } from "@tiptap/extension-subscript";
+import { Youtube } from "@tiptap/extension-youtube";
+
 // Google Transliteration API (free, no key needed, works in 2026)
 async function transliterate(word: string): Promise<string[]> {
   try {
@@ -41,13 +55,27 @@ export const RichEditor = React.forwardRef<RichEditorRef, { content: string; onC
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      StarterKit.configure({ heading: { levels: [2, 3, 4] } }),
+      // H1-H6 all enabled (industry-standard editor expects every level).
+      StarterKit.configure({ heading: { levels: [1, 2, 3, 4, 5, 6] } }),
       TiptapImage.configure({ inline: false, allowBase64: true }),
       TiptapLink.configure({ openOnClick: false, autolink: true }),
       Placeholder.configure({ placeholder: "Start writing your article..." }),
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       Underline,
       Highlight,
+      // Spec #1 G1 #127 additions — text color, task list, table, sub/sup,
+      // YouTube embed. text-style first so color can attach to its mark.
+      TextStyle,
+      Color,
+      TaskList,
+      TaskItem.configure({ nested: true }),
+      Table.configure({ resizable: true }),
+      TableRow,
+      TableCell,
+      TableHeader,
+      Superscript,
+      Subscript,
+      Youtube.configure({ controls: true, nocookie: true }),
     ],
     content,
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
@@ -147,8 +175,34 @@ export const RichEditor = React.forwardRef<RichEditorRef, { content: string; onC
           <span style={{ background: "#fef08a", padding: "0 2px", borderRadius: 2 }}>H</span>
         </T>
         <S />
+        <T on={editor.isActive("heading", { level: 1 })} fn={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}>H1</T>
         <T on={editor.isActive("heading", { level: 2 })} fn={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>H2</T>
         <T on={editor.isActive("heading", { level: 3 })} fn={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>H3</T>
+        <T on={editor.isActive("heading", { level: 4 })} fn={() => editor.chain().focus().toggleHeading({ level: 4 }).run()}>H4</T>
+        <T on={editor.isActive("heading", { level: 5 })} fn={() => editor.chain().focus().toggleHeading({ level: 5 }).run()}>H5</T>
+        <T on={editor.isActive("heading", { level: 6 })} fn={() => editor.chain().focus().toggleHeading({ level: 6 }).run()}>H6</T>
+        <S />
+        {/* Spec #1 G1 #127 — color picker, code, sub/sup, task list, table, YouTube */}
+        <label title="Text color" style={{ display: "inline-flex", alignItems: "center", padding: "0 6px", height: 30, cursor: "pointer" }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>A</span>
+          <input type="color" onChange={(e) => editor.chain().focus().setColor(e.target.value).run()}
+            style={{ width: 18, height: 14, marginLeft: 4, border: "none", padding: 0, cursor: "pointer", background: "transparent" }} />
+        </label>
+        <T on={editor.isActive("strike")} fn={() => editor.chain().focus().toggleStrike().run()}><s>S</s></T>
+        <T on={editor.isActive("code")} fn={() => editor.chain().focus().toggleCode().run()}>
+          <span style={{ fontFamily: "monospace", fontSize: 12 }}>&lt;/&gt;</span>
+        </T>
+        <T on={editor.isActive("codeBlock")} fn={() => editor.chain().focus().toggleCodeBlock().run()}>
+          <span style={{ fontFamily: "monospace", fontSize: 11 }}>{"{}"}</span>
+        </T>
+        <T on={editor.isActive("superscript")} fn={() => editor.chain().focus().toggleSuperscript().run()}>x²</T>
+        <T on={editor.isActive("subscript")} fn={() => editor.chain().focus().toggleSubscript().run()}>x₂</T>
+        <T on={editor.isActive("taskList")} fn={() => editor.chain().focus().toggleTaskList().run()}>☐</T>
+        <T on={false} fn={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>⊞</T>
+        <T on={false} fn={() => {
+          const url = prompt("YouTube URL");
+          if (url) editor.commands.setYoutubeVideo({ src: url });
+        }}>▶</T>
         <S />
         <T on={editor.isActive("bulletList")} fn={() => editor.chain().focus().toggleBulletList().run()}>
           <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="3" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="3" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg>
