@@ -95,10 +95,15 @@ export function EditorShell({
     return src && Array.isArray(src.blocks) ? src : { version: 1, blocks: [] };
   });
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Multi-select (F1 #168) — Ctrl/Cmd+click on an outline row toggles
+  // membership. Anchored to single-select state so the rest of the
+  // editor (config panel) keeps working with the primary selection.
+  const [multiSelectedIds, setMultiSelectedIds] = useState<Set<string>>(() => new Set());
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [publishing, setPublishing] = useState(false);
+  const [showGroupModal, setShowGroupModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const iframeNonce = useRef(0);
@@ -250,6 +255,67 @@ export function EditorShell({
     persistLocal({ ...layout, blocks: next });
   }
 
+  function toggleMultiSelect(id: string) {
+    setMultiSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  // F1: Replace multi-selected blocks with a new Composite that wraps them.
+  async function createCompositeFromSelection(name: string, slug: string, description: string) {
+    if (multiSelectedIds.size < 2) {
+      setError("Pick at least two blocks to group.");
+      return;
+    }
+    const selectedBlocks = layout.blocks.filter((b) => multiSelectedIds.has(b.id));
+    if (selectedBlocks.some((b) => b.type === "Composite")) {
+      setError("Nested composites aren't allowed yet. Ungroup before grouping.");
+      return;
+    }
+    setError(null);
+    const res = await fetch("/api/page-builder/composites", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        name,
+        slug: slug || undefined,
+        description: description || null,
+        blocks: selectedBlocks,
+      }),
+    });
+    if (!res.ok) {
+      setError((await res.json().catch(() => ({}))).error || "Create composite failed");
+      return;
+    }
+    const composite = await res.json();
+
+    // Find the index of the first selected block — that's where the
+    // Composite reference goes. Strip all multi-selected blocks and
+    // splice the new Composite block in.
+    const firstIdx = layout.blocks.findIndex((b) => multiSelectedIds.has(b.id));
+    const remaining = layout.blocks.filter((b) => !multiSelectedIds.has(b.id));
+    const newBlock: Block = {
+      id: makeId("comp"),
+      type: "Composite",
+      compositeId: composite.id,
+      mobileVariant: "show",
+    };
+    const next = [...remaining];
+    next.splice(firstIdx, 0, newBlock);
+    persistLocal({ ...layout, blocks: next });
+
+    setMultiSelectedIds(new Set());
+    setSelectedId(newBlock.id);
+    setShowGroupModal(false);
+
+    // The composites prop is server-rendered; refresh the page so the
+    // new entry appears in the palette + selectable list.
+    if (typeof window !== "undefined") window.location.reload();
+  }
+
   async function saveDraft() {
     setError(null);
     setSaving(true);
@@ -324,6 +390,11 @@ export function EditorShell({
               Mobile
             </button>
           </div>
+          {multiSelectedIds.size >= 2 && (
+            <button onClick={() => setShowGroupModal(true)} style={btnSecondary}>
+              Group {multiSelectedIds.size} into composite
+            </button>
+          )}
           <Link
             href={`/page-builder/templates/${initial.id}/versions`}
             style={btnSecondary}
@@ -384,7 +455,15 @@ export function EditorShell({
           <BlockList
             blocks={layout.blocks}
             selectedId={selectedId}
-            onSelect={(id) => setSelectedId(id)}
+            multiSelectedIds={multiSelectedIds}
+            onSelect={(id, withModifier) => {
+              if (withModifier) {
+                toggleMultiSelect(id);
+              } else {
+                setSelectedId(id);
+                setMultiSelectedIds(new Set());
+              }
+            }}
             onMove={moveBlock}
             onDelete={deleteBlock}
             onReorder={reorderBlock}
@@ -416,6 +495,76 @@ export function EditorShell({
           )}
         </aside>
       </div>
+
+      {showGroupModal && (
+        <GroupModal
+          count={multiSelectedIds.size}
+          onClose={() => setShowGroupModal(false)}
+          onSubmit={createCompositeFromSelection}
+        />
+      )}
+    </div>
+  );
+}
+
+function GroupModal({
+  count,
+  onClose,
+  onSubmit,
+}: {
+  count: number;
+  onClose: () => void;
+  onSubmit: (name: string, slug: string, description: string) => Promise<void>;
+}) {
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [description, setDescription] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  async function go(e: React.FormEvent) {
+    e.preventDefault();
+    setSubmitting(true);
+    await onSubmit(name, slug, description);
+    setSubmitting(false);
+  }
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }} onClick={onClose}>
+      <form
+        onSubmit={go}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "#fff",
+          borderRadius: 10,
+          padding: 24,
+          minWidth: 420,
+          maxWidth: 520,
+          boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+        }}
+      >
+        <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, marginBottom: 4 }}>Group into composite</h2>
+        <p style={{ fontSize: 12, color: "#6b7280", marginTop: 0, marginBottom: 16 }}>
+          Wraps the {count} selected blocks in a new reusable composite. The blocks are removed
+          from this template and replaced with a single Composite reference at the position of
+          the first selected block.
+        </p>
+
+        <Label>Name</Label>
+        <input autoFocus value={name} onChange={(e) => setName(e.target.value)} required style={inp} placeholder="Election Day Hero" />
+
+        <Label>Slug (optional)</Label>
+        <input value={slug} onChange={(e) => setSlug(e.target.value)} style={inp} placeholder="auto from name" />
+
+        <Label>Description (optional)</Label>
+        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} style={{ ...inp, resize: "vertical" }} />
+
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 12 }}>
+          <button type="button" onClick={onClose} style={btnSecondary} disabled={submitting}>Cancel</button>
+          <button type="submit" style={btnPrimary} disabled={submitting}>
+            {submitting ? "Grouping…" : "Group"}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
@@ -462,6 +611,7 @@ function PaletteItem({
 function BlockList({
   blocks,
   selectedId,
+  multiSelectedIds,
   onSelect,
   onMove,
   onDelete,
@@ -471,7 +621,8 @@ function BlockList({
 }: {
   blocks: Block[];
   selectedId: string | null;
-  onSelect: (id: string) => void;
+  multiSelectedIds: Set<string>;
+  onSelect: (id: string, withModifier: boolean) => void;
   onMove: (id: string, dir: -1 | 1) => void;
   onDelete: (id: string) => void;
   onReorder: (fromId: string, toIndex: number) => void;
@@ -543,7 +694,7 @@ function BlockList({
         return (
           <div key={b.id}>
             <div
-              onClick={() => onSelect(b.id)}
+              onClick={(e) => onSelect(b.id, e.metaKey || e.ctrlKey)}
               draggable
               onDragStart={(e) => {
                 e.dataTransfer.effectAllowed = "move";
@@ -555,7 +706,9 @@ function BlockList({
               style={{
                 ...blockRow,
                 ...(selectedId === b.id ? blockRowActive : {}),
+                ...(multiSelectedIds.has(b.id) ? blockRowMulti : {}),
               }}
+              title={multiSelectedIds.has(b.id) ? "Click to keep selecting; Cmd/Ctrl-click to toggle" : "Cmd/Ctrl-click to multi-select"}
             >
               <span style={{ color: "#9ca3af", cursor: "grab", marginRight: 4 }} title="Drag to reorder">⋮⋮</span>
               <span style={{ flex: 1, fontWeight: 600 }}>
@@ -998,6 +1151,10 @@ const blockRow: React.CSSProperties = {
 const blockRowActive: React.CSSProperties = {
   border: "1px solid #FF2C2C",
   background: "#FEF2F2",
+};
+const blockRowMulti: React.CSSProperties = {
+  border: "1px solid #2563EB",
+  background: "#EFF6FF",
 };
 const iconBtn: React.CSSProperties = {
   background: "transparent",
