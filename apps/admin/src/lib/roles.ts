@@ -67,6 +67,7 @@ export function canVisit(role: Role | string | undefined, pathname: string): boo
       "/epaper",
       "/profile-requests",
       "/audit-log",
+      "/page-builder",
     ];
     if (adminOnly.some((p) => pathname === p || pathname.startsWith(p + "/"))) return false;
     if (editorOnly.some((p) => pathname === p || pathname.startsWith(p + "/"))) return false;
