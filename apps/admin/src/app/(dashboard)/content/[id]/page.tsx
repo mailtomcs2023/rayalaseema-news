@@ -66,7 +66,100 @@ export default function ContentEditorPage() {
   const [typedPayload, setTypedPayload] = useState<Record<string, unknown>>({});
   const [payloadError, setPayloadError] = useState("");
 
+  // AI helpers (translate / editorial / summarize / headline) + URL fetch.
+  // Ported from the legacy /articles/[id] editor — same /api/ai/rewrite and
+  // /api/fetch-news endpoints, now wired into the unified content editor.
+  const [aiLoading, setAiLoading] = useState<string | null>(null);
+  const [pasteUrl, setPasteUrl] = useState("");
+
   const editorRef = useRef<RichEditorRef>(null);
+
+  const runAI = async (action: "translate" | "editorial" | "summarize" | "headline") => {
+    const text = body || summary || title;
+    if (!text) { setError("No content to process — type or paste something first."); return; }
+    setAiLoading(action);
+    setError("");
+    setSuccess("");
+    try {
+      const urlMatch = body.match(/href="(https?:\/\/[^"]+)"/);
+      const ctxSourceUrl = urlMatch ? urlMatch[1] : (sourceUrl || undefined);
+      const res = await fetch("/api/ai/rewrite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: `Title: ${title}\n\nSummary: ${summary}\n\nBody: ${body.replace(/<[^>]+>/g, " ").trim()}`,
+          action,
+          sourceUrl: ctxSourceUrl,
+        }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        setError(data.error);
+      } else if (data.result) {
+        if (action === "summarize") {
+          setSummary(String(data.result).replace(/<[^>]+>/g, "").trim());
+          setSuccess("Summary generated.");
+        } else if (action === "headline") {
+          setSuccess(String(data.result));
+        } else {
+          // Translate / editorial — full body rewrite.
+          const h2 = data.result.match(/<h2[^>]*>(.*?)<\/h2>/);
+          if (h2) setTitle(h2[1].replace(/<[^>]+>/g, "").trim());
+          const p = data.result.match(/<p[^>]*>(.*?)<\/p>/);
+          if (p) {
+            const first = p[1].replace(/<[^>]+>/g, "").trim();
+            if (first.length > 20) setSummary(first.substring(0, 200));
+          }
+          setBody(data.result);
+          editorRef.current?.setContent(data.result);
+          setSuccess(`Done. Tokens used: ${data.tokens?.total_tokens || data.tokens?.total || 0}`);
+        }
+      }
+    } catch (e: any) {
+      setError(e.message || "AI request failed");
+    }
+    setAiLoading(null);
+    setTimeout(() => setSuccess(""), 5000);
+  };
+
+  const fetchFromUrl = async () => {
+    if (!pasteUrl.trim()) return;
+    setAiLoading("fetch");
+    setError("");
+    try {
+      const res = await fetch("/api/fetch-news", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sourceUrl: pasteUrl.trim(),
+          categoryId: categoryId || (categories[0]?.id || ""),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || `Fetch failed (${res.status})`);
+        setAiLoading(null);
+        return;
+      }
+      // Populate the form from the newly-fetched draft. We don't navigate
+      // away — the user sees what landed and can polish before saving.
+      if (data.title) setTitle(data.title);
+      if (data.summary) setSummary(data.summary);
+      if (data.body) {
+        setBody(data.body);
+        editorRef.current?.setContent(data.body);
+      }
+      if (data.featuredImage) setFeaturedImage(data.featuredImage);
+      if (data.slug) setSlug(data.slug);
+      setSourceUrl(pasteUrl.trim());
+      setPasteUrl("");
+      setSuccess("Fetched + translated. Review + Save Draft when ready.");
+    } catch (e: any) {
+      setError(e.message || "Fetch failed");
+    }
+    setAiLoading(null);
+    setTimeout(() => setSuccess(""), 5000);
+  };
 
   useEffect(() => {
     Promise.all([
@@ -257,6 +350,44 @@ export default function ContentEditorPage() {
             <label style={lblStyle}>Summary</label>
             <textarea value={summary} onChange={(e) => setSummary(e.target.value)} rows={2}
               placeholder="Short 60-word summary..." style={{ ...inpStyle, resize: "vertical" }} />
+
+            {/* AI assist — ARTICLE only. Paste URL → fetch + translate, or
+                run translate / editorial / summarize / headline on the
+                current body. */}
+            {type === "ARTICLE" && (
+              <div style={{ marginTop: 12, padding: 12, background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8 }}>
+                <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                  <input
+                    value={pasteUrl}
+                    onChange={(e) => setPasteUrl(e.target.value)}
+                    placeholder="Paste a source URL — we'll fetch + translate it"
+                    style={{ ...inpStyle, fontSize: 12 }}
+                  />
+                  <button onClick={fetchFromUrl} disabled={aiLoading !== null || !pasteUrl.trim()}
+                    style={{ padding: "8px 14px", background: "#16a34a", color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: aiLoading || !pasteUrl.trim() ? "not-allowed" : "pointer" }}>
+                    {aiLoading === "fetch" ? "Fetching…" : "Fetch + translate"}
+                  </button>
+                </div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  <button onClick={() => runAI("translate")} disabled={aiLoading !== null}
+                    style={{ padding: "6px 12px", background: aiLoading === "translate" ? "#4b5563" : "#3b82f6", color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: aiLoading ? "not-allowed" : "pointer" }}>
+                    {aiLoading === "translate" ? "Translating…" : "తెలుగులో రాయండి"}
+                  </button>
+                  <button onClick={() => runAI("editorial")} disabled={aiLoading !== null}
+                    style={{ padding: "6px 12px", background: aiLoading === "editorial" ? "#4b5563" : "#dc2626", color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: aiLoading ? "not-allowed" : "pointer" }}>
+                    {aiLoading === "editorial" ? "Writing…" : "Editorial style"}
+                  </button>
+                  <button onClick={() => runAI("summarize")} disabled={aiLoading !== null}
+                    style={{ padding: "6px 12px", background: "#fff", color: "#374151", border: "1px solid #e5e7eb", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: aiLoading ? "not-allowed" : "pointer" }}>
+                    {aiLoading === "summarize" ? "Summarizing…" : "Summarize"}
+                  </button>
+                  <button onClick={() => runAI("headline")} disabled={aiLoading !== null}
+                    style={{ padding: "6px 12px", background: "#fff", color: "#374151", border: "1px solid #e5e7eb", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: aiLoading ? "not-allowed" : "pointer" }}>
+                    {aiLoading === "headline" ? "Generating…" : "Headline ideas"}
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Type-specific body / payload */}
             {type === "ARTICLE" && (

@@ -62,6 +62,11 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
   const [config, setConfig] = useState(initialConfig);
   const [breakingNews, setBreakingNews] = useState(initialBreaking);
   const [tickerPaused, setTickerPaused] = useState(false);
+  // Spec #3 E1 (#183) — admin-published HEADER menu, fetched on mount.
+  // While loading or when unpublished, we fall back to the hardcoded
+  // `mainNavItems` + `dropdownItems` above so the nav is never empty.
+  const [adminTop, setAdminTop] = useState<typeof mainNavItems | null>(null);
+  const [adminDrop, setAdminDrop] = useState<typeof dropdownItems | null>(null);
   const fetchedRef = useRef(false);
   const pathname = usePathname();
   // True when this nav item maps to the current URL. Home matches only "/";
@@ -84,7 +89,53 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
     if (Object.keys(config).length === 0) {
       fetch("/api/config").then((r) => r.json()).then(setConfig).catch(() => {});
     }
+    // Spec #3 E1 — admin-published HEADER menu replaces hardcoded items
+    // when present. Items at depth 0 with children become the dropdown;
+    // items without children become inline nav.
+    fetch("/api/menu/header").then((r) => r.json()).then((data) => {
+      const items = Array.isArray(data?.items) ? data.items : [];
+      if (items.length === 0) return;
+      const top: typeof mainNavItems = [{ name: "హోమ్", slug: "/", isHome: true }];
+      const drop: typeof dropdownItems = [];
+      let hasDropdown = false;
+      for (const it of items) {
+        const href = (() => {
+          const t = it.target;
+          if (!t) return "#";
+          if (t.type === "CATEGORY") return `/category/${t.categorySlug}`;
+          if (t.type === "INTERNAL_URL") return t.url;
+          if (t.type === "EXTERNAL_URL") return t.url;
+          if (t.type === "CONTENT" && t.contentSlugCache && t.contentTypeCache) {
+            const prefix: Record<string, string> = {
+              ARTICLE: "/article", VIDEO: "/video", REEL: "/reel",
+              WEB_STORY: "/story", PHOTO_GALLERY: "/gallery", CARTOON: "/cartoon",
+            };
+            return `${prefix[t.contentTypeCache] || ""}/${t.contentSlugCache}`;
+          }
+          return "#";
+        })();
+        if (Array.isArray(it.children) && it.children.length > 0) {
+          hasDropdown = true;
+          for (const c of it.children) {
+            const ct = c.target;
+            const childHref = ct?.type === "CATEGORY" ? `/category/${ct.categorySlug}`
+              : ct?.type === "INTERNAL_URL" || ct?.type === "EXTERNAL_URL" ? ct.url
+              : "#";
+            drop.push({ name: c.label, slug: childHref });
+          }
+        } else {
+          top.push({ name: it.label, slug: href });
+        }
+      }
+      if (hasDropdown) top.push({ name: "మరిన్ని ❯", slug: "#", isDropdown: true });
+      setAdminTop(top);
+      setAdminDrop(drop);
+    }).catch(() => {});
   }, []);
+
+  // Active nav items — admin menu wins when published; otherwise hardcoded.
+  const activeMain = adminTop || mainNavItems;
+  const activeDrop = adminDrop || dropdownItems;
 
   // ⌘K / Ctrl+K opens the search palette — canonical shadcn behaviour.
   useEffect(() => {
@@ -246,7 +297,7 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
       <nav className="nav-gradient shadow-md relative sticky top-0 z-40">
         <div className="container-news">
           <ul className="hidden lg:flex items-center">
-            {mainNavItems.map((item, i) => (
+            {activeMain.map((item, i) => (
               <li key={item.slug} className="relative">
                 {item.isDropdown ? (
                   /* "మరిన్ని" dropdown trigger */
@@ -293,7 +344,7 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
             padding: "8px 0",
           }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
-              {dropdownItems.map((item) => (
+              {activeDrop.map((item) => (
                 <Link
                   key={item.slug}
                   href={item.slug}
@@ -361,7 +412,7 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
             <div className="px-3 py-2 border-b border-gray-100">
               <p className="text-[10px] uppercase tracking-wider text-[var(--color-brand)] font-extrabold mb-2">రాయలసీమ జిల్లాలు</p>
               <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
-                {mainNavItems.filter(i => !i.isDropdown && !i.isHome).map((item) => (
+                {activeMain.filter((i: any) => !i.isDropdown && !i.isHome).map((item: any) => (
                   <Link
                     key={item.slug}
                     href={item.slug}
@@ -378,7 +429,7 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
             <div className="px-3 py-2">
               <p className="text-[10px] uppercase tracking-wider text-gray-500 font-extrabold mb-2">విభాగాలు</p>
               <div className="grid grid-cols-3 gap-1.5">
-                {dropdownItems.map((item) => (
+                {activeDrop.map((item) => (
                   <Link
                     key={item.slug}
                     href={item.slug}

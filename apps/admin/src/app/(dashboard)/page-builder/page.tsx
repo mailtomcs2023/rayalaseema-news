@@ -7,6 +7,11 @@ import Link from "next/link";
 import { Sidebar } from "@/components/sidebar";
 import { prisma } from "@rayalaseema/db";
 
+// Don't prerender — counts must reflect live DB state, and prod DB connection
+// is unavailable at build time in CI. Without this Next 16 attempts static
+// generation and crashes the build.
+export const dynamic = "force-dynamic";
+
 interface Card {
   href: string;
   title: string;
@@ -16,11 +21,16 @@ interface Card {
 }
 
 export default async function PageBuilderHome() {
-  const [tplCount, assignCount, compCount] = await Promise.all([
-    prisma.template.count(),
-    prisma.templateAssignment.count({ where: { active: true } }),
-    prisma.compositeBlock.count(),
-  ]);
+  let tplCount = 0, assignCount = 0, compCount = 0;
+  try {
+    [tplCount, assignCount, compCount] = await Promise.all([
+      prisma.template.count(),
+      prisma.templateAssignment.count({ where: { active: true } }),
+      prisma.compositeBlock.count(),
+    ]);
+  } catch {
+    // Schema may be in flux on first deploy after a migration; degrade gracefully.
+  }
 
   const cards: Card[] = [
     {
