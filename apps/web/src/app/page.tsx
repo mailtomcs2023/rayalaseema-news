@@ -32,7 +32,7 @@ export default async function HomePage() {
   const AF_EXCLUDE = new Set(["rasi-phalalu", "weather", "navyaseema"]);
   const afPool = Object.values(articlesByCategory)
     .flat()
-    .filter((a) => !AF_EXCLUDE.has(a.category.slug))
+    .filter((a) => a.category && !AF_EXCLUDE.has(a.category.slug))
     .sort((x, y) => (y.publishedAt?.getTime() || 0) - (x.publishedAt?.getTime() || 0));
   const afSeen = new Set<string>();
   const afUnique = afPool.filter((a) => (afSeen.has(a.id) ? false : afSeen.add(a.id)));

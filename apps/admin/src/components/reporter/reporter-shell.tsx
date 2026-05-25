@@ -21,7 +21,9 @@ export function ReporterShell({ children }: { children: ReactNode }) {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f3f4f6", display: "flex", flexDirection: "column" }}>
-      {/* Brand header — bottom-rounded red banner matching ScreenHeader in Expo */}
+      {/* Brand header — bottom-rounded red banner matching ScreenHeader in Expo.
+          Sticky so it stays pinned while the page scrolls underneath, the way
+          the native Expo header does. */}
       <header
         style={{
           background: "#FF2C2C",
@@ -31,19 +33,23 @@ export function ReporterShell({ children }: { children: ReactNode }) {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          position: "sticky",
+          top: 0,
+          zIndex: 40,
         }}
       >
         <img src="/logo-inverse.svg" alt="Rayalaseema Express" style={{ height: 32, display: "block" }} />
       </header>
 
-      {/* Page body — leaves room for the fixed bottom tab bar on mobile and the
-          side rail on desktop. */}
+      {/* Page body — leaves room for the fixed bottom tab bar. Pages own
+          their own top padding so layout matches the Expo `paddingTop`
+          values exactly. Headings inside reset their browser-default top/
+          bottom margins (see the global rule in the <style> block below). */}
       <main
         className="reporter-main"
         style={{
           flex: 1,
           paddingBottom: 88,
-          paddingTop: 8,
           maxWidth: 960,
           width: "100%",
           margin: "0 auto",
@@ -101,6 +107,13 @@ export function ReporterShell({ children }: { children: ReactNode }) {
       </nav>
 
       <style>{`
+        /* Reset browser-default vertical margins on headings/paragraphs
+           inside the reporter portal so inline padding controls spacing
+           exactly the way the Expo screens do. */
+        .reporter-main h1,
+        .reporter-main h2,
+        .reporter-main h3,
+        .reporter-main p { margin: 0; }
         .reporter-tabs {
           position: fixed;
           left: 0;

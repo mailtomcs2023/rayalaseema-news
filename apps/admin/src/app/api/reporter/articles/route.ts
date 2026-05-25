@@ -23,7 +23,22 @@ export async function GET(req: NextRequest) {
     const [articles, total] = await Promise.all([
       prisma.article.findMany({
         where: { authorId: reporterId },
-        include: { category: { select: { name: true, nameEn: true, slug: true, color: true } } },
+        // Explicit select — keeps the payload small and avoids any optional
+        // columns (e.g. PIB workflow) that may not be present in every env.
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          summary: true,
+          status: true,
+          featuredImage: true,
+          rejectionNote: true,
+          viewCount: true,
+          createdAt: true,
+          updatedAt: true,
+          categoryId: true,
+          category: { select: { name: true, nameEn: true, slug: true, color: true } },
+        },
         orderBy: { createdAt: "desc" },
         take: limit,
       }),
@@ -101,6 +116,9 @@ export async function POST(req: NextRequest) {
         language: "TELUGU",
         authorId: reporterId,
       },
+      // Narrow the RETURNING clause so callers (Expo + reporter web) never see
+      // optional columns that aren't migrated in every environment.
+      select: { id: true, title: true, slug: true, status: true, createdAt: true },
     });
 
     return NextResponse.json(article, { status: 201 });

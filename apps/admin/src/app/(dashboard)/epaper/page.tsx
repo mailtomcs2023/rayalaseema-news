@@ -11,11 +11,15 @@
 //   5. lock toggle per block (autofill skips locked blocks on regenerate)
 //   6. Render button → /api/epaper/render-v2 builds the vector PDF
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/sidebar";
 import { ToastViewport, useToasts } from "@/components/toast";
 import GridLayout, { type Layout as RGLLayout } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
+import { EditorV2 } from "@/components/epaper/editor-v2";
+import { migrateLegacyLayout } from "@/lib/epaper/migrate-layout";
+import { PreflightPanel, PreflightChip } from "@/components/epaper/preflight-panel";
 
 interface Block {
   id: string;
@@ -103,7 +107,11 @@ const DEFAULT_FILTERS: PickerFilters = {
 
 const STORY_TYPES = new Set(["lead", "major", "secondary", "brief"]);
 
-export default function EpaperEditorPage() {
+export default function EpaperEditorPageWrapper() {
+  return <Suspense fallback={null}><EpaperEditorPage /></Suspense>;
+}
+
+function EpaperEditorPage() {
   const today = new Date().toISOString().slice(0, 10);
   const [date, setDate] = useState(today);
   const [variant, setVariant] = useState<string>("main");
@@ -136,6 +144,11 @@ export default function EpaperEditorPage() {
   // Baseline-grid overlay toggle for the preview iframe — helps editors verify
   // text aligns horizontally across columns on a real print baseline.
   const [showBaseline, setShowBaseline] = useState(false);
+
+  // Preflight panel (#139) — open/close + reload key bumped on render/save
+  // so the chip + panel reflect fresh state.
+  const [preflightOpen, setPreflightOpen] = useState(false);
+  const [preflightReload, setPreflightReload] = useState(0);
 
   const loadEdition = useCallback(async (d: string, v: string = "main") => {
     setError(""); setBusy("loading");
@@ -231,6 +244,8 @@ export default function EpaperEditorPage() {
           toast("warn", `Duplicate: "${d.title.slice(0, 50)}" on pages ${d.placements.map((p: any) => p.pageNumber).join(", ")}`);
         }
       }
+      // Bump preflight reload so chip + panel reflect the just-rendered state.
+      setPreflightReload((n) => n + 1);
       // Quality gates: empty story slots, long English runs, missing-glyph chars, overflow.
       if (Array.isArray(data.qualityWarnings) && data.qualityWarnings.length > 0) {
         setWarnings(data.qualityWarnings);
@@ -251,6 +266,28 @@ export default function EpaperEditorPage() {
   };
 
   const activePage = edition?.pages?.[activePageIdx];
+
+  // Editor version flag. v1 (legacy RGL) is the stable default; v2 is
+  // available behind ?editor=v2 for testing while bugs get worked out.
+  // Toolbar chip flips the flag via the router.
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const editorVersion = searchParams.get("editor") === "v2" ? "v2" : "v1";
+  const flipEditor = () => {
+    const next = new URLSearchParams(searchParams);
+    next.set("editor", editorVersion === "v2" ? "v1" : "v2");
+    router.replace(`?${next.toString()}`);
+  };
+
+  // v2 reads blocks in mm-v2 shape — auto-migrate legacy grid-v1 layouts
+  // on the fly so an operator can flip ?editor=v2 on any existing edition
+  // without manual schema conversion. The migration is purely read-side
+  // here; first save persists the new shape via the existing PATCH path.
+  const v2BlocksForActive = useMemo(() => {
+    if (!activePage) return [];
+    const migrated = migrateLegacyLayout(activePage.layout as unknown);
+    return migrated.blocks as any[];
+  }, [activePage]);
 
   // Set of article ids already placed anywhere in the current edition.
   // Used by the picker to flag duplicates so editors don't re-pick the same
@@ -404,30 +441,60 @@ export default function EpaperEditorPage() {
   const [addBlockOpen, setAddBlockOpen] = useState(false);
   const addBlock = async (type: string) => {
     if (!activePage) return;
-    const defaults: Record<string, { w: number; h: number }> = {
+    // v1 (RGL grid): w in 12-col units, h in 30-row units.
+    // v2 (mm-coord): w in mm (8-col grid → multiples of 44.6mm), h in mm.
+    const V1_DEFAULTS: Record<string, { w: number; h: number }> = {
       lead: { w: 8, h: 12 }, major: { w: 4, h: 6 }, secondary: { w: 3, h: 5 },
       brief: { w: 6, h: 2 }, image: { w: 4, h: 4 }, ad: { w: 12, h: 3 },
       text: { w: 6, h: 2 }, masthead: { w: 12, h: 3 }, "section-band": { w: 12, h: 2 },
-      "story-jump": { w: 4, h: 1 },
-      "pull-quote": { w: 6, h: 3 },
+      "story-jump": { w: 4, h: 1 }, "pull-quote": { w: 6, h: 3 },
     };
-    const d = defaults[type] || { w: 4, h: 4 };
-    const MAX_ROWS = 30; // Indian broadsheet printable rows — see DraggableBlockGrid
-    const maxY = activePage.layout.blocks.reduce((m, b) => Math.max(m, b.y + b.h), 0);
-    if (maxY + d.h > MAX_ROWS) {
-      toast("warn", `Page full (${maxY}/${MAX_ROWS} rows). Move or shrink existing blocks first, or add a new page.`);
+    // v2 mm defaults: width in mm snapped to columns (40.6×N + 4×(N-1));
+    // height in mm. 8-col grid math: 1col=40.6, 2col=85.2, 3col=129.8,
+    // 4col=174.4, 5col=219, 6col=263.6, 7col=308.2, 8col=330. Live=520mm.
+    const V2_DEFAULTS: Record<string, { w: number; h: number }> = {
+      lead: { w: 219, h: 200 },        // 5 cols × 200mm
+      major: { w: 174.4, h: 90 },      // 4 cols × 90mm
+      secondary: { w: 129.8, h: 70 },  // 3 cols × 70mm
+      brief: { w: 263.6, h: 30 },      // 6 cols × 30mm
+      image: { w: 174.4, h: 80 },
+      ad: { w: 330, h: 50 },
+      text: { w: 263.6, h: 30 },
+      masthead: { w: 330, h: 85 },
+      "section-band": { w: 330, h: 18 },
+      "story-jump": { w: 174.4, h: 14 },
+      "pull-quote": { w: 263.6, h: 50 },
+    };
+
+    const isV2 = editorVersion === "v2";
+    const d = (isV2 ? V2_DEFAULTS : V1_DEFAULTS)[type] || (isV2 ? { w: 174.4, h: 80 } : { w: 4, h: 4 });
+
+    // v2 bounds check uses mm (live h = 520); v1 keeps the 30-row cap.
+    const maxBoundary = isV2 ? 520 : 30;
+    const sourceBlocks = isV2 ? (v2BlocksForActive as any[]) : activePage.layout.blocks;
+    const maxY = sourceBlocks.reduce((m, b) => Math.max(m, (b.y ?? 0) + (b.h ?? 0)), 0);
+    if (maxY + d.h > maxBoundary) {
+      toast("warn", `Page full (${maxY.toFixed(0)}/${maxBoundary}${isV2 ? "mm" : " rows"}). Move or shrink existing blocks first, or add a new page.`);
       setAddBlockOpen(false);
       return;
     }
-    const newBlock: Block = {
+    const newBlock: any = {
       id: `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
       type, x: 0, y: maxY, w: d.w, h: d.h,
     };
-    const blocks = [...activePage.layout.blocks, newBlock];
+    const nextBlocks = isV2
+      ? [...(v2BlocksForActive as any[]), newBlock]
+      : [...activePage.layout.blocks, newBlock];
     pushUndo(activePage.id, activePage.layout.blocks);
     setEdition((prev) => prev ? { ...prev, pages: prev.pages.map((p) =>
-      p.id === activePage.id ? { ...p, layout: { blocks } } : p) } : prev);
-    await patchPage({ blocks });
+      p.id === activePage.id ? {
+        ...p,
+        layout: isV2
+          ? { coordSystem: "mm-v2", blocks: nextBlocks }
+          : { blocks: nextBlocks },
+      } : p) } : prev);
+    // Persist via PATCH — include coordSystem so server round-trips it.
+    await patchPage(isV2 ? { blocks: nextBlocks, coordSystem: "mm-v2" } : { blocks: nextBlocks });
     setAddBlockOpen(false);
     toast("success", `Added ${type} block — drag to reposition`);
   };
@@ -550,6 +617,9 @@ export default function EpaperEditorPage() {
   // View mode: edit canvas / split (canvas + preview iframe) / preview-only.
   // Live preview hits /api/epaper/page/[id]/preview which reuses
   // renderLayoutToHtml — no Playwright in the hot path so it's near-instant.
+  // Default Edit because the canvas itself is now WYSIWYG (renders the
+  // real Eenadu-style preview behind the editable blocks). Split + Preview
+  // pills still available for full-bleed preview mode.
   const [viewMode, setViewMode] = useState<"edit" | "split" | "preview">("edit");
 
   // Save-status indicator: tracks every PATCH so the operator can see whether
@@ -753,13 +823,19 @@ export default function EpaperEditorPage() {
   // Persists the full block-layout when react-grid-layout finishes a drag/resize.
   const saveLayout = async (newBlocks: Block[]) => {
     if (!activePage) return;
+    const isV2 = editorVersion === "v2";
     pushUndo(activePage.id, activePage.layout.blocks);
     setEdition((prev) => {
       if (!prev) return prev;
       return { ...prev, pages: prev.pages.map((p) =>
-        p.id === activePage.id ? { ...p, layout: { blocks: newBlocks } } : p) };
+        p.id === activePage.id ? {
+          ...p,
+          layout: isV2
+            ? { coordSystem: "mm-v2", blocks: newBlocks }
+            : { blocks: newBlocks },
+        } : p) };
     });
-    await patchPage({ blocks: newBlocks });
+    await patchPage(isV2 ? { blocks: newBlocks, coordSystem: "mm-v2" } : { blocks: newBlocks });
   };
 
   const undo = useCallback(async () => {
@@ -1005,6 +1081,17 @@ export default function EpaperEditorPage() {
     <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "#f3f4f6" }}>
       <Sidebar />
       <ToastViewport toasts={toasts} onDismiss={dismissToast} />
+      <PreflightPanel
+        editionId={edition?.id ?? null}
+        open={preflightOpen}
+        onClose={() => setPreflightOpen(false)}
+        reloadKey={preflightReload}
+        onFocusBlock={(pageNumber, blockId) => {
+          const idx = edition?.pages.findIndex((p) => p.pageNumber === pageNumber) ?? -1;
+          if (idx >= 0) setActivePageIdx(idx);
+          if (blockId) { setSelectedBlockId(blockId); setSelectedBlockIds(new Set([blockId])); }
+        }}
+      />
       {/* Block style panel — image + columns + headline + colors + spacing */}
       {styleBlockId && (
         <div onClick={() => setStyleBlockId(null)}
@@ -1472,6 +1559,14 @@ export default function EpaperEditorPage() {
               ↩ History
             </button>
           )}
+          {/* Preflight chip (#139) — opens side panel listing every issue. */}
+          {edition && <PreflightChip editionId={edition.id} onClick={() => setPreflightOpen(true)} reloadKey={preflightReload} />}
+          {/* v2 editor flag chip (#135). Click to flip between v1 (RGL) and v2 (mm canvas + moveable). */}
+          <button onClick={flipEditor}
+            title={editorVersion === "v2" ? "Switch back to legacy editor" : "Try the new mm-coord editor (BETA)"}
+            style={{ padding: "6px 12px", background: editorVersion === "v2" ? "#db2777" : "#fff", color: editorVersion === "v2" ? "#fff" : "#db2777", border: "1px solid #db2777", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+            editor: {editorVersion}{editorVersion === "v2" ? " BETA" : ""}
+          </button>
           {edition && (
             <button onClick={() => setCommentsOpen(true)}
               style={{ padding: "8px 16px", background: "#fff", color: "#0891b2", border: "1px solid #0891b2", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
@@ -1693,42 +1788,89 @@ export default function EpaperEditorPage() {
                           </button>
                         </div>
                       )}
-                      <DraggableBlockGrid
-                        layout={activePage.layout}
-                        titles={titles}
-                        warningsByBlock={Object.fromEntries(
-                          warnings.filter((w) => w.pageNumber === activePage.pageNumber)
-                            .reduce((acc: Map<string, QWarning[]>, w) => {
-                              const arr = acc.get(w.blockId) || [];
-                              arr.push(w);
-                              acc.set(w.blockId, arr);
-                              return acc;
-                            }, new Map())
-                        )}
-                        selectedBlockId={selectedBlockId}
-                        multiSelected={selectedBlockIds}
-                        dragOverBlockId={dragOverBlockId}
-                        onDragOverBlock={onBlockDragOver}
-                        onDragLeaveBlock={onBlockDragLeave}
-                        onDropBlock={onBlockDrop}
-                        onRemoveBlock={removeBlock}
-                        onClearOffPage={clearOffPageBlocks}
-                        onSelect={(id, e) => {
-                          if (e?.shiftKey) {
-                            setSelectedBlockIds((prev) => {
-                              const next = new Set(prev);
-                              if (next.has(id)) next.delete(id);
-                              else next.add(id);
-                              return next;
-                            });
-                          } else {
-                            setSelectedBlockId(id);
-                            setSelectedBlockIds(new Set([id]));
-                          }
-                        }}
-                        onToggleLock={toggleLock}
-                        onLayoutChange={saveLayout}
-                      />
+                      {editorVersion === "v2" ? (
+                        <EditorV2
+                          blocks={v2BlocksForActive}
+                          selectedBlockIds={selectedBlockIds}
+                          onSelect={(ids, shift) => {
+                            if (shift) {
+                              setSelectedBlockIds((prev) => {
+                                const next = new Set(prev);
+                                for (const id of ids) {
+                                  if (next.has(id)) next.delete(id);
+                                  else next.add(id);
+                                }
+                                return next;
+                              });
+                            } else {
+                              setSelectedBlockId(ids[0] ?? null);
+                              setSelectedBlockIds(new Set(ids));
+                            }
+                          }}
+                          onLayoutChange={(next) => saveLayout(next as any)}
+                          onDetachMaster={(masterBlock) => {
+                            if (!activePage) return;
+                            // Deep-copy master block into the page layer w/ a fresh id; mark isOverride.
+                            const copy = {
+                              ...masterBlock,
+                              id: `${masterBlock.id}-override-${Date.now().toString(36)}`,
+                              isMaster: false,
+                              isOverride: true,
+                            };
+                            const next = [...v2BlocksForActive, copy];
+                            saveLayout(next as any);
+                            toast("success", `Detached ${masterBlock.type} block — editable on this page only.`);
+                          }}
+                          renderBlockContent={(b) => {
+                            const meta = b.articleId ? titles[b.articleId] : null;
+                            return (
+                              <>
+                                <div style={{ fontSize: 9, color: "#6b7280", fontWeight: 700, textTransform: "uppercase" }}>{b.type}</div>
+                                {meta?.title && <div style={{ fontWeight: 700, marginTop: 3, color: "#111", lineHeight: 1.25 }}>{meta.title.slice(0, 100)}</div>}
+                              </>
+                            );
+                          }}
+                        />
+                      ) : (
+                        <DraggableBlockGrid
+                          layout={activePage.layout}
+                          titles={titles}
+                          warningsByBlock={Object.fromEntries(
+                            warnings.filter((w) => w.pageNumber === activePage.pageNumber)
+                              .reduce((acc: Map<string, QWarning[]>, w) => {
+                                const arr = acc.get(w.blockId) || [];
+                                arr.push(w);
+                                acc.set(w.blockId, arr);
+                                return acc;
+                              }, new Map())
+                          )}
+                          selectedBlockId={selectedBlockId}
+                          multiSelected={selectedBlockIds}
+                          dragOverBlockId={dragOverBlockId}
+                          onDragOverBlock={onBlockDragOver}
+                          onDragLeaveBlock={onBlockDragLeave}
+                          onDropBlock={onBlockDrop}
+                          onRemoveBlock={removeBlock}
+                          onClearOffPage={clearOffPageBlocks}
+                          pageId={activePage.id}
+                          pageVersion={activePage.version}
+                          onSelect={(id, e) => {
+                            if (e?.shiftKey) {
+                              setSelectedBlockIds((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(id)) next.delete(id);
+                                else next.add(id);
+                                return next;
+                              });
+                            } else {
+                              setSelectedBlockId(id);
+                              setSelectedBlockIds(new Set([id]));
+                            }
+                          }}
+                          onToggleLock={toggleLock}
+                          onLayoutChange={saveLayout}
+                        />
+                      )}
                     </div>
                   )}
                   {(viewMode === "split" || viewMode === "preview") && (
@@ -1995,6 +2137,7 @@ function DraggableBlockGrid({
   layout, titles, warningsByBlock, selectedBlockId, multiSelected,
   dragOverBlockId, onDragOverBlock, onDragLeaveBlock, onDropBlock,
   onSelect, onToggleLock, onLayoutChange, onRemoveBlock, onClearOffPage,
+  pageId, pageVersion,
 }: {
   layout: { blocks: Block[] };
   titles: Record<string, { title: string; summary?: string | null; featuredImage?: string | null }>;
@@ -2010,9 +2153,14 @@ function DraggableBlockGrid({
   onLayoutChange: (newBlocks: Block[]) => void;
   onRemoveBlock?: (blockId: string) => void;
   onClearOffPage?: () => void;
+  pageId?: string;
+  pageVersion?: number;
 }) {
   const COLS = 12;
-  const ROW_H = 28;
+  // Row height = 60px so 30 rows × 60 = 1800px tall canvas. Matches the
+  // broadsheet aspect (1480×2760 scaled to 980 wide = 1827px tall) so the
+  // WYSIWYG iframe underlay aligns 1:1 with the grid coordinates.
+  const ROW_H = 60;
   const GRID_WIDTH = 980;
   // Indian broadsheet PDF page is 300x560mm → 1480x2760 px. Render uses 92 px
   // per row → 30 rows fills the printable area exactly. Any block placed past
@@ -2079,7 +2227,37 @@ function DraggableBlockGrid({
         )}
         <span style={{ color: "#6b7280", fontWeight: 500 }}>Indian broadsheet 300×560mm</span>
       </div>
-      <div style={{ position: "relative", background: "#fafafa", borderRadius: 6, padding: 8, backgroundImage: guideBg, backgroundSize: `${colPx}px ${ROW_H}px`, backgroundPosition: "8px 8px" }}>
+      <div style={{ position: "relative", background: "#FCFAF3", borderRadius: 6, padding: 8 }}>
+        {/* WYSIWYG underlay — the actual rendered HTML the PDF will produce.
+            Scale = GRID_WIDTH / 1480 ≈ 0.662 so 1480×2760 page becomes
+            980×1827 ≈ matches the grid's 30×60=1800 footprint. Tiles above
+            stay transparent so the operator sees + edits the real Eenadu-
+            style output in one view. */}
+        {pageId && (
+          <div style={{
+            position: "absolute", top: 8, left: 8,
+            width: GRID_WIDTH,
+            height: MAX_ROWS * ROW_H,
+            overflow: "hidden",
+            background: "#FCFAF3",
+            border: "1px solid #d8d0bd",
+            zIndex: 0,
+          }}>
+            <iframe
+              title="WYSIWYG underlay"
+              src={`/api/epaper/page/${pageId}/preview?v=${pageVersion ?? 0}`}
+              width={1480}
+              height={2760}
+              style={{
+                border: "none",
+                transform: `scale(${GRID_WIDTH / 1480})`,
+                transformOrigin: "0 0",
+                pointerEvents: "none",
+                background: "#FCFAF3",
+              }}
+            />
+          </div>
+        )}
         {/* Red overflow zone — anything below row MAX_ROWS gets clipped on PDF render */}
         {isOverflow && (
           <div style={{ position: "absolute", left: 8, right: 8, top: 8 + MAX_ROWS * ROW_H, height: (usedRows - MAX_ROWS) * ROW_H, background: "repeating-linear-gradient(45deg, rgba(220,38,38,0.12), rgba(220,38,38,0.12) 8px, rgba(220,38,38,0.04) 8px, rgba(220,38,38,0.04) 16px)", borderTop: "2px dashed #dc2626", pointerEvents: "none", zIndex: 1 }}>
@@ -2124,23 +2302,35 @@ function DraggableBlockGrid({
               onDragLeave={() => isStory && onDragLeaveBlock?.(b.id)}
               onDrop={(e) => isStory && onDropBlock?.(e, b.id)}
               style={{
-                background: dragOverBlockId === b.id ? "#fbbf24" : bg, color,
+                // WYSIWYG: tile bg transparent so the rendered iframe behind
+                // shows through. Selection + warnings still visible as
+                // colored borders. Empty story slots get a faint amber hint
+                // so the operator can see what's unfilled.
+                background: dragOverBlockId === b.id
+                  ? "rgba(251,191,36,0.55)"
+                  : isStory && !b.articleId
+                  ? "rgba(254,243,199,0.55)"
+                  : "transparent",
+                color: "#111",
                 border: dragOverBlockId === b.id
                   ? "3px dashed #d97706"
                   : hasOverflow ? "3px solid #dc2626"
-                  : isMulti ? "3px solid #4f46e5" : isSelected ? "2px solid #4f46e5" : "1px solid #e5e7eb",
-                borderRadius: 4, padding: 8, fontSize: 12, overflow: "hidden", position: "relative",
-                // grab cursor makes drag-to-rearrange (RGL) discoverable; grabbing on active drag
+                  : isMulti ? "3px solid #4f46e5"
+                  : isSelected ? "3px solid #4f46e5"
+                  : isStory && !b.articleId ? "2px dashed #f59e0b"
+                  : "1px dashed rgba(0,0,0,0.15)",
+                borderRadius: 4, padding: 0, fontSize: 12, overflow: "hidden", position: "relative",
                 cursor: isStory ? "grab" : "move",
                 display: "flex", flexDirection: "column", justifyContent: "space-between",
                 minHeight: 0, height: "100%",
+                zIndex: isSelected ? 3 : 2,
               }}>
-              {onRemoveBlock && (
+              {onRemoveBlock && b.type !== "masthead" && b.type !== "section-band" && (
                 <button
                   className="lock-btn"
                   onClick={(e) => { e.stopPropagation(); if (confirm(`Delete ${b.type} block?`)) onRemoveBlock(b.id); }}
                   title={`Delete this ${b.type} block`}
-                  style={{ position: "absolute", top: 2, left: 2, background: "rgba(220,38,38,0.85)", color: "#fff", fontSize: 11, fontWeight: 800, width: 18, height: 18, border: "none", borderRadius: 3, cursor: "pointer", zIndex: 5, lineHeight: 1, padding: 0 }}>
+                  style={{ position: "absolute", bottom: 2, right: 2, background: "rgba(220,38,38,0.85)", color: "#fff", fontSize: 11, fontWeight: 800, width: 18, height: 18, border: "none", borderRadius: 3, cursor: "pointer", zIndex: 6, lineHeight: 1, padding: 0 }}>
                   ×
                 </button>
               )}
@@ -2150,34 +2340,20 @@ function DraggableBlockGrid({
                   {hasOverflow ? "⚠ OVERFLOW" : `⚠ ${blockWarnings.length}`}
                 </div>
               )}
-              <div style={{ overflow: "hidden", flex: 1, minHeight: 0, display: "flex", flexDirection: "column", gap: 4 }}>
-                <div style={{ fontSize: 9, opacity: 0.6, textTransform: "uppercase", fontWeight: 700, letterSpacing: 0.3 }}>{b.type}</div>
-                {title && (
-                  <>
-                    {title.featuredImage && b.type !== "brief" && b.type !== "story-jump" && (
-                      <div style={{ width: "100%", flex: "0 0 auto", height: Math.min(80, Math.max(40, b.h * 18)), overflow: "hidden", borderRadius: 3, background: "#e5e7eb" }}>
-                        <img src={title.featuredImage} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                      </div>
-                    )}
-                    <div style={{ fontWeight: 800, lineHeight: 1.25, fontSize: b.type === "lead" ? 14 : 12, color: "#111", fontFamily: "'Noto Serif Telugu', serif" }}>
-                      {(b.overrideTitle?.trim() || title.title).slice(0, 140)}
-                    </div>
-                    {title.summary && b.h >= 4 && (() => {
-                      const cols = b.style?.textColumns ?? (b.type === "lead" ? 2 : 1);
-                      return (
-                        <div style={{
-                          fontSize: 10, lineHeight: 1.35, color: "#4b5563", overflow: "hidden",
-                          columnCount: cols, columnGap: 6,
-                          columnRule: cols > 1 ? "1px solid #d1d5db" : "none",
-                        }}>
-                          {title.summary.slice(0, 320 * cols)}
-                        </div>
-                      );
-                    })()}
-                  </>
-                )}
-                {!title && isStory && <div style={{ fontStyle: "italic", opacity: 0.55 }}>empty — click to pick</div>}
+              {/* Block-type pill (top-left): small label so operator sees
+                  what kind of block this is. iframe behind shows real
+                  rendered content; tile only shows minimal chrome. */}
+              <div style={{ position: "absolute", top: 2, left: 2, fontSize: 9, padding: "1px 6px",
+                background: isSelected ? "#4f46e5" : "rgba(0,0,0,0.55)", color: "#fff",
+                borderRadius: 3, fontWeight: 700, letterSpacing: 0.3, zIndex: 4, lineHeight: 1.3 }}>
+                {b.type}
               </div>
+              {/* Empty-state CTA only when no article and the block is a story */}
+              {!title && isStory && (
+                <div style={{ alignSelf: "center", marginTop: "auto", marginBottom: "auto", color: "#92400e", fontSize: 11, fontStyle: "italic", fontWeight: 700, padding: 4 }}>
+                  empty — click to pick
+                </div>
+              )}
               {isStory && (
                 <button
                   className="lock-btn"

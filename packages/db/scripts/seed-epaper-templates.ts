@@ -75,20 +75,24 @@ const frontPage: TemplateSpec = {
   sortOrder: 1,
   layout: {
     blocks: [
-      // Masthead now carries side ads + bibliographic info + cities band
-      // (#5 Eenadu-style) so it's taller: 4 rows instead of 3.
+      // Masthead block lives in the FRONT page (grid-v1). v2 master is a
+      // mm-v2-only feature that's gated off in render-layout, so v1 pages
+      // need their own masthead block to render the Eenadu-style header.
+      // Layout uses 30 rows total: masthead 4 + ad 2 + lead/majors 12 +
+      // secondaries 5 + briefs 4 + ad 3 = 30. Fits the print page exactly.
       { id: "mh", type: "masthead", x: 0, y: 0, w: 12, h: 4 },
+      { id: "ad-top", type: "ad", x: 0, y: 4, w: 12, h: 2 },
       // Lead — image preferred but not mandatory (so it always fills)
-      { id: "lead", type: "lead", x: 0, y: 4, w: 8, h: 14, slotFilter: { minImages: 1 } },
+      { id: "lead", type: "lead", x: 0, y: 6, w: 8, h: 12, slotFilter: { minImages: 1 } },
       // Right column majors
-      { id: "maj-1", type: "major", x: 8, y: 4, w: 4, h: 7, slotFilter: { minImages: 1 } },
-      { id: "maj-2", type: "major", x: 8, y: 11, w: 4, h: 7, slotFilter: { minImages: 1 } },
+      { id: "maj-1", type: "major", x: 8, y: 6, w: 4, h: 6, slotFilter: { minImages: 1 } },
+      { id: "maj-2", type: "major", x: 8, y: 12, w: 4, h: 6, slotFilter: { minImages: 1 } },
       // Secondary band
       { id: "sec-1", type: "secondary", x: 0, y: 18, w: 3, h: 5 },
       { id: "sec-2", type: "secondary", x: 3, y: 18, w: 3, h: 5 },
       { id: "sec-3", type: "secondary", x: 6, y: 18, w: 3, h: 5 },
       { id: "sec-4", type: "secondary", x: 9, y: 18, w: 3, h: 5 },
-      // Briefs — 2 cols × 3 rows
+      // Briefs — 2 cols × 2 rows
       { id: "br-1", type: "brief", x: 0, y: 23, w: 6, h: 2 },
       { id: "br-2", type: "brief", x: 0, y: 25, w: 6, h: 2 },
       { id: "br-3", type: "brief", x: 6, y: 23, w: 6, h: 2 },

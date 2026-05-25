@@ -127,10 +127,21 @@ async function renderEditionAttempt(
         // matches what the editor shows. renderEpaperPageById loads the
         // legacy + v2 ad assets + masthead bibliographic info from DB.
         const html = await renderEpaperPageById(ep.id);
+        const coordSystem: "grid-v1" | "mm-v2" =
+          (ep.layout as any)?.coordSystem === "mm-v2" ? "mm-v2" : "grid-v1";
+        // v2 (mm-v2): real Indian broadsheet trim 381×578mm at ~125 dpi → 1875×2843 px.
+        // v1 (grid-v1): legacy 300×560mm → 1480×2760 px (kept for back-compat).
+        const viewport = coordSystem === "mm-v2"
+          ? { width: 1875, height: 2843 }
+          : { width: 1480, height: 2760 };
+        const pdfDims = coordSystem === "mm-v2"
+          ? { width: "381mm", height: "578mm" }
+          : { width: "300mm", height: "560mm" };
 
-        // Indian broadsheet single-page side ≈ 300×560 mm. Render at 1480×2760 px
-        // (~125 dpi) so headlines stay sharp when readers zoom in.
-        const page = await browser.newPage({ viewport: { width: 1480, height: 2760 } });
+        // viewport + pdfDims chosen above based on coordSystem (mm-v2 uses
+        // the Eenadu trim 381×578mm; grid-v1 keeps the legacy size for
+        // bit-identical re-renders of the published archive).
+        const page = await browser.newPage({ viewport });
         await page.setContent(html, { waitUntil: "networkidle" });
         // Wait until every <img> has actually decoded (networkidle alone races on
         // Azure Blob CDN-served featured images), then a 300 ms tick for fonts.
@@ -149,10 +160,12 @@ async function renderEditionAttempt(
         });
         await page.waitForTimeout(300);
         const pdfBytes = await page.pdf({
-          width: "300mm",
-          height: "560mm",
+          width: pdfDims.width,
+          height: pdfDims.height,
           printBackground: true,
-          preferCSSPageSize: false,
+          // Honor the @page CSS declaration so we get one PDF page per
+          // edition page (no off-by-padding overflow into a 2nd sheet).
+          preferCSSPageSize: true,
           margin: { top: "0", right: "0", bottom: "0", left: "0" },
         });
 

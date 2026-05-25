@@ -58,6 +58,11 @@ model User {
   journalistProfile JournalistProfile?
   payments          ArticlePayment[]
 
+  // Unified Content (Spec #1) — back-relations parallel to Article side
+  contents          Content[]         @relation("ContentAuthor")
+  contentRevisions  ContentRevision[]
+  contentPayments   ContentPayment[]  @relation("ContentJournalist")
+
   // Profile-change requests this user has reviewed (admin role)
   reviewedProfileUpdateRequests ProfileUpdateRequest[] @relation("ProfileUpdateRequestReviewer")
 
@@ -274,6 +279,7 @@ model Category {
 
   articles    Article[]
   videos      Video[]
+  contents    Content[]
   assignedUsers UserCategory[]
   desk        Desk?      // back-relation: TOPICAL desk auto-derived from category
 
@@ -284,10 +290,11 @@ model Category {
 }
 
 model Tag {
-  id        String       @id @default(cuid())
-  name      String       @unique
-  slug      String       @unique
-  articles  ArticleTag[]
+  id          String       @id @default(cuid())
+  name        String       @unique
+  slug        String       @unique
+  articles    ArticleTag[]
+  contentTags ContentTag[]
 
   @@map("tags")
 }
@@ -454,6 +461,15 @@ model EpaperEdition {
   volumeNumber Int?
   issueNumber  Int?
   priceInPaise Int?    @default(650)  // Rs 6.50 default
+  // v2 editor (#108): per-edition PageGeometry override (defaults apply if
+  // null). Lets ops run a special-format edition (e.g. tabloid Sunday) w/o
+  // re-templating the whole system.
+  pageGeometry Json?
+  // v2 editor (#108): which ad asset fills each masthead slot for THIS edition.
+  // Keyed by slot name from the master block (e.g. { "ad-left": "<assetId>", "ad-right": "<assetId>" }).
+  // Render falls back to auto-pick from EpaperAdAsset library when a slot key
+  // is missing or the asset has been deactivated.
+  mastheadAds  Json?
   pages       EpaperPage[]
   ads         EpaperAd[]
   snapshots   EpaperEditionSnapshot[]
@@ -543,13 +559,20 @@ model EpaperPage {
   pageNumber  Int
   label       String         // "ముఖ్యాంశాలు", "రాజకీయం", ...
   templateSlug String?       // → EpaperTemplate.slug — which template this page was built from
-  // Per-page WYSIWYG layout. Replaces the old slot-dropdown model. Shape:
-  //   { blocks: [{ id, type: "lead"|"major"|"secondary"|"brief"|"image"|"ad"|"text"|"masthead"|"section-band"|"story-jump",
-  //                x, y, w, h,            // grid coords (12-col by N-row)
-  //                articleId?, content?,  // story blocks point at an Article; text/image carry their own
-  //                href?, targetPage?,    // hyperlink target (URL) or internal page-jump
-  //                locked?: boolean,      // operator locked → auto-fill won't replace
-  //                style?: object } ] }
+  // Per-page WYSIWYG layout. v2 editor (#108) shape:
+  //   { coordSystem: "grid-v1" | "mm-v2",
+  //     masterSlug?: string,         // master to inherit (overrides template.masterSlug per-page)
+  //     blocks: [{
+  //       id, type,                  // "lead" | "major" | "secondary" | "brief" | "image" | "ad" | "text" | "masthead" | "section-band" | "story-jump" | "pull-quote" | "folio"
+  //       x, y, w, h,                // mm-v2 = absolute mm coords; grid-v1 = 12-col x 30-row grid units
+  //       articleId?, content?, href?, targetPage?, adAssetId?,
+  //       locked?: boolean,          // operator locked → auto-fill won't replace
+  //       isOverride?: boolean,      // true if detached from master
+  //       slots?: [{ name, x, y, w, h }],  // masthead ad slots
+  //       style?: object,
+  //     }] }
+  // Legacy layouts (no coordSystem field) treated as grid-v1; auto-migrated
+  // to mm-v2 on first save via migrateLegacyLayout().
   layout      Json?
   imageUrl    String         // rendered broadsheet page PNG on Azure Blob (legacy raster path)
   pdfUrl      String?        // per-page vector PDF (new v2 render path)
@@ -658,13 +681,41 @@ model EpaperTemplate {
   fillRules     Json?
   // Block layout — same shape as EpaperPage.layout but with empty articleIds.
   layout        Json
+  // v2 editor (#108): which EpaperMaster the produced pages inherit from.
+  // null = no master (legacy templates / unstyled section pages).
+  masterSlug    String?
   sortOrder     Int                 @default(0)
   active        Boolean             @default(true)
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
 
   @@index([type])
+  @@index([masterSlug])
   @@map("epaper_templates")
+}
+
+/// Reusable master page for the v2 editor (#108). Holds repeating elements
+/// (masthead, folio, cities band, footer) that propagate across every page
+/// inheriting the master. InDesign-style "Parent page" concept.
+///
+/// Block shape inside layout JSON matches EpaperPage.blocks. Special block
+/// type "folio" supports {{pageNumber}} / {{dateLabel}} / {{sectionLabel}}
+/// placeholders that render-layout substitutes at render time.
+///
+/// masthead blocks may carry `slots: [{ name, x, y, w, h }]`. The editor
+/// renders each slot as a click target that opens the ad-asset picker;
+/// per-edition selection lives in EpaperEdition.mastheadAds.
+model EpaperMaster {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  name            String
+  geometryOverride Json?    // optional PageGeometry override (defaults apply if null)
+  layout          Json     // { blocks: Block[] } — every block has isMaster:true
+  version         Int      @default(1)  // bumps on update for optimistic concurrency
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("epaper_masters")
 }
 
 // ============ BREAKING NEWS ============
@@ -757,6 +808,7 @@ model Constituency {
   loksabha    String?  // Which Lok Sabha seat this falls under
   mandals     Mandal[]
   articles    Article[] @relation("ArticleConstituency")
+  contents    Content[] @relation("ContentConstituency")
   desk        Desk?     // back-relation: GEOGRAPHIC desk for this AC (e.g. "ప్రొద్దుటూరు")
   sortOrder   Int      @default(0)
   active      Boolean  @default(true)
@@ -797,6 +849,7 @@ model Desk {
   constituency    Constituency? @relation(fields: [constituencyId], references: [id])
 
   articles        Article[]
+  contents        Content[]
   sortOrder       Int           @default(0)
   active          Boolean       @default(true)
   createdAt       DateTime      @default(now())
@@ -1134,7 +1187,8 @@ model PaymentConfig {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  payments    ArticlePayment[]
+  payments        ArticlePayment[]
+  contentPayments ContentPayment[] @relation("ContentPaymentConfig")
 
   @@map("payment_configs")
 }
@@ -1199,4 +1253,144 @@ model PayoutBatch {
 
   @@unique([month, year])
   @@map("payout_batches")
+}
+
+// ============ UNIFIED CONTENT (Spec #1 — additive, parallel to Article during transition) ============
+// See docs/superpowers/specs/2026-05-25-unified-content-model-design.md
+//
+// One table replaces seven (Article, Video, Reel, WebStory, PhotoGallery,
+// Cartoon, BreakingNews). Type discriminated by `type` enum. Type-specific
+// fields stored in `payload` JSON column (Zod-validated in app layer).
+//
+// During Spec #1 implementation this lives ALONGSIDE the legacy tables.
+// FK migration on dependent tables happens in #188, table drops in #189.
+
+enum ContentType {
+  ARTICLE
+  VIDEO
+  REEL
+  WEB_STORY
+  PHOTO_GALLERY
+  CARTOON
+  BREAKING_NEWS
+}
+
+model Content {
+  id              String        @id @default(cuid())
+  type            ContentType
+  title           String
+  // Null for BREAKING_NEWS (ticker headline, no public URL). All other types require slug.
+  slug            String?       @unique
+  summary         String?       @db.Text
+  // HTML body — ARTICLE only. Other types render from `payload`.
+  body            String?       @db.Text
+  featuredImage   String?
+  // Type-specific blob. Shape validated by Zod schemas in packages/db/src/payload-schemas.ts.
+  payload         Json?
+
+  categoryId      String?
+  category        Category?     @relation(fields: [categoryId], references: [id])
+  authorId        String
+  author          User          @relation("ContentAuthor", fields: [authorId], references: [id])
+  deskId          String?
+  desk            Desk?         @relation(fields: [deskId], references: [id])
+  constituencyId  String?
+  constituency    Constituency? @relation("ContentConstituency", fields: [constituencyId], references: [id])
+
+  status          ArticleStatus @default(DRAFT)
+  featured        Boolean       @default(false)
+  language        Language      @default(TELUGU)
+  viewCount       Int           @default(0)
+
+  publishedAt     DateTime?
+  scheduledAt     DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // PIB approval workflow (preserved from Article — #99)
+  needsPibApproval    Boolean       @default(false)
+  pibApprovedAt       DateTime?
+  pibReferenceNumber  String?
+
+  // Ingestion dedup — source news URL, unique so the same item can't be imported twice
+  sourceUrl       String?       @unique
+
+  tags            ContentTag[]
+  revisions       ContentRevision[]
+  payments        ContentPayment[]
+
+  @@index([type, status, publishedAt])
+  @@index([categoryId, status, publishedAt])
+  @@index([status, publishedAt])
+  @@index([authorId])
+  @@index([constituencyId])
+  @@index([deskId])
+  @@map("contents")
+}
+
+model ContentTag {
+  contentId  String
+  content    Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  tagId      String
+  tag        Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([contentId, tagId])
+  @@map("content_tags")
+}
+
+model ContentRevision {
+  id              String        @id @default(cuid())
+  contentId       String
+  content         Content       @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  title           String
+  slug            String?
+  summary         String?       @db.Text
+  body            String?       @db.Text
+  featuredImage   String?
+  categoryId      String?
+  payload         Json?
+  status          ArticleStatus
+
+  editedById      String
+  editedBy        User          @relation(fields: [editedById], references: [id])
+  editNote        String?
+  bodyLength      Int           @default(0)
+
+  createdAt       DateTime      @default(now())
+
+  @@index([contentId, createdAt])
+  @@index([editedById])
+  @@map("content_revisions")
+}
+
+model ContentPayment {
+  id            String         @id @default(cuid())
+  contentId     String         @unique
+  content       Content        @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  journalistId  String
+  journalist    User           @relation("ContentJournalist", fields: [journalistId], references: [id])
+  configId      String?
+  config        PaymentConfig? @relation("ContentPaymentConfig", fields: [configId], references: [id])
+
+  baseAmount    Float
+  bonusAmount   Float          @default(0)
+  deductions    Float          @default(0)
+  totalAmount   Float
+  currency      String         @default("INR")
+
+  status        PaymentStatus  @default(CALCULATED)
+  approvedById  String?
+  approvedAt    DateTime?
+  paidAt        DateTime?
+  transactionId String?
+  paymentMethod String?
+
+  note          String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([journalistId, status])
+  @@index([status])
+  @@map("content_payments")
 }

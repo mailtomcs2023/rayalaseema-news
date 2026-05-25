@@ -1,6 +1,113 @@
+// Spec #1 #110 — apps/web data layer reads from the unified Content table.
+//
+// Function signatures preserved so consumer components (above-fold, cinema-band,
+// video-section, etc.) don't change. Per-type payload fields are projected to
+// the top level of the returned row so consumers continue reading `v.videoUrl`
+// or `c.rating` without knowing about the JSON payload column.
+//
+// Old per-table queries (prisma.article, prisma.video, prisma.webStory, etc.)
+// are gone from this file. Those tables still exist in the DB but are dormant;
+// they get dropped in #189 once every reader/writer has migrated.
 import { prisma } from "@rayalaseema/db";
 
-// Fetch site config from database
+// ---------- Helpers ----------
+
+// Project ARTICLE-type payload fields onto the row so consumers can read
+// `a.rating` / `a.reviewerName` directly (old Article had them as columns).
+function projectArticle<T extends { payload?: unknown }>(row: T) {
+  const p = (row.payload as Record<string, unknown> | null) || {};
+  return {
+    ...row,
+    rating: typeof p.rating === "number" ? p.rating : null,
+    reviewerName: typeof p.reviewerName === "string" ? p.reviewerName : null,
+    // Old Article column moved into payload by the Spec #1 migration.
+    imageCaption: typeof p.imageCaption === "string" ? p.imageCaption : null,
+  };
+}
+
+// VIDEO payload projection — components want { thumbnailUrl, videoUrl, duration }
+// at the top level. duration was a string ("12:45") on the old Video table; we
+// keep it that way by formatting the integer seconds from the payload.
+function projectVideo<T extends { featuredImage: string | null; viewCount: number; payload?: unknown }>(row: T) {
+  const p = (row.payload as Record<string, unknown> | null) || {};
+  const seconds = typeof p.duration === "number" ? p.duration : 0;
+  const mm = Math.floor(seconds / 60);
+  const ss = String(seconds % 60).padStart(2, "0");
+  return {
+    ...row,
+    thumbnailUrl: (p.thumbnailUrl as string) || row.featuredImage || "",
+    videoUrl: (p.videoUrl as string) || null,
+    duration: seconds > 0 ? `${mm}:${ss}` : null,
+    views: row.viewCount,
+  };
+}
+
+// REEL payload — { clipUrl, duration }. views formatted as string for compat with
+// the old Reel.views (string column like "2.5L").
+function projectReel<T extends { featuredImage: string | null; viewCount: number; payload?: unknown }>(row: T) {
+  const p = (row.payload as Record<string, unknown> | null) || {};
+  return {
+    ...row,
+    thumbnailUrl: row.featuredImage || "",
+    videoUrl: (p.clipUrl as string) || null,
+    views: String(row.viewCount),
+  };
+}
+
+// WEB_STORY — { slides: [{image, caption?}] }. imageUrl maps to featuredImage
+// (cover image); category was a free-text string on the old WebStory.
+function projectWebStory<T extends { featuredImage: string | null; payload?: unknown }>(row: T) {
+  const p = (row.payload as Record<string, unknown> | null) || {};
+  return {
+    ...row,
+    imageUrl: row.featuredImage || "",
+    slides: Array.isArray(p.slides) ? p.slides : [],
+    // `category` on old WebStory was a free-text string ("devotional" / "travel" /
+    // ...). New Content uses the relational Category. Consumers read either; we
+    // expose the relational slug as the string fallback.
+    category: (row as any).category?.slug || null,
+  };
+}
+
+// PHOTO_GALLERY — { photos: [{url, caption?}] }. Old _count.photos was the
+// number of GalleryPhoto rows; we replace it with payload.photos.length.
+function projectPhotoGallery<T extends { featuredImage: string | null; payload?: unknown }>(row: T) {
+  const p = (row.payload as Record<string, unknown> | null) || {};
+  const photos = Array.isArray(p.photos) ? (p.photos as Record<string, unknown>[]) : [];
+  return {
+    ...row,
+    coverImage: row.featuredImage || "",
+    photos,
+    _count: { photos: photos.length },
+  };
+}
+
+// CARTOON — { caption?, date ISO }. Old Cartoon table had imageUrl + caption +
+// date columns; consumers read `.imageUrl`, `.caption`, `.date` directly.
+function projectCartoon<T extends { featuredImage: string | null; payload?: unknown }>(row: T) {
+  const p = (row.payload as Record<string, unknown> | null) || {};
+  return {
+    ...row,
+    imageUrl: row.featuredImage || "",
+    caption: (p.caption as string) || "",
+    date: p.date ? new Date(p.date as string) : new Date(),
+  };
+}
+
+// BREAKING_NEWS — { priority, expiresAt? }. Old BreakingNews used `headline`
+// (we now use `title`) and had priority + expiresAt as columns.
+function projectBreakingNews<T extends { title: string; payload?: unknown }>(row: T) {
+  const p = (row.payload as Record<string, unknown> | null) || {};
+  return {
+    ...row,
+    headline: row.title,
+    priority: typeof p.priority === "number" ? p.priority : 0,
+    expiresAt: p.expiresAt ? new Date(p.expiresAt as string) : null,
+  };
+}
+
+// ---------- Site config ----------
+
 export async function getSiteConfig(): Promise<Record<string, string>> {
   const configs = await prisma.siteConfig.findMany();
   const map: Record<string, string> = {};
@@ -8,10 +115,11 @@ export async function getSiteConfig(): Promise<Record<string, string>> {
   return map;
 }
 
-// Fetch featured/slider articles
+// ---------- Article queries (type=ARTICLE) ----------
+
 export async function getFeaturedArticles(limit = 6) {
-  return prisma.article.findMany({
-    where: { status: "PUBLISHED", featured: true },
+  const rows = await prisma.content.findMany({
+    where: { type: "ARTICLE", status: "PUBLISHED", featured: true },
     include: {
       category: { select: { name: true, nameEn: true, slug: true, color: true } },
       author: { select: { name: true } },
@@ -20,22 +128,21 @@ export async function getFeaturedArticles(limit = 6) {
     orderBy: { publishedAt: "desc" },
     take: limit,
   });
+  return rows.map(projectArticle);
 }
 
-// Fetch latest articles (for sidebar)
 export async function getLatestArticles(limit = 12) {
-  return prisma.article.findMany({
-    where: { status: "PUBLISHED" },
+  return prisma.content.findMany({
+    where: { type: "ARTICLE", status: "PUBLISHED" },
     select: { id: true, title: true, slug: true, publishedAt: true },
     orderBy: { publishedAt: "desc" },
     take: limit,
   });
 }
 
-// Fetch articles by category slug
 export async function getArticlesByCategory(categorySlug: string, limit = 5) {
-  return prisma.article.findMany({
-    where: { status: "PUBLISHED", category: { slug: categorySlug } },
+  const rows = await prisma.content.findMany({
+    where: { type: "ARTICLE", status: "PUBLISHED", category: { slug: categorySlug } },
     include: {
       category: { select: { name: true, nameEn: true, slug: true, color: true } },
       author: { select: { name: true } },
@@ -44,9 +151,11 @@ export async function getArticlesByCategory(categorySlug: string, limit = 5) {
     orderBy: { publishedAt: "desc" },
     take: limit,
   });
+  return rows.map(projectArticle);
 }
 
-// Fetch all published articles grouped by category (for homepage)
+// Homepage articles grouped by category. Returns all-Article window since
+// homepage layout assumes each category has its own rail.
 export async function getHomepageData() {
   const [
     featured,
@@ -57,34 +166,42 @@ export async function getHomepageData() {
   ] = await Promise.all([
     getFeaturedArticles(6),
     getLatestArticles(12),
-    prisma.breakingNews.findMany({
-      where: {
-        active: true,
-        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
-      },
-      orderBy: { priority: "asc" },
+    // Breaking news now lives in Content with type=BREAKING_NEWS. Project to
+    // the old BreakingNews shape so the ticker doesn't have to change.
+    prisma.content.findMany({
+      where: { type: "BREAKING_NEWS", status: "PUBLISHED" },
+      orderBy: { createdAt: "desc" },
+    }).then((rows) => {
+      const now = new Date();
+      return rows
+        .map(projectBreakingNews)
+        .filter((b) => !b.expiresAt || b.expiresAt > now)
+        .sort((a, b) => a.priority - b.priority);
     }),
     prisma.category.findMany({
       where: { active: true },
       orderBy: { sortOrder: "asc" },
     }),
-    prisma.article.findMany({
-      where: { status: "PUBLISHED" },
+    prisma.content.findMany({
+      where: { type: "ARTICLE", status: "PUBLISHED" },
       include: {
         category: { select: { name: true, nameEn: true, slug: true, color: true } },
         author: { select: { name: true } },
       },
       orderBy: { publishedAt: "desc" },
-      // Window must exceed total article count so every category is represented
+      // Window must exceed total content count so every category is represented
       // on the homepage. TODO: switch to per-category queries once volume grows.
       take: 600,
     }),
   ]);
 
-  // Group articles by category slug
-  const articlesByCategory: Record<string, typeof allArticles> = {};
-  for (const article of allArticles) {
-    const slug = article.category.slug;
+  // Group articles by category slug. Each row gets payload projected so
+  // consumers can still read .rating / .reviewerName for movie reviews.
+  const projected = allArticles.map(projectArticle);
+  const articlesByCategory: Record<string, typeof projected> = {};
+  for (const article of projected) {
+    const slug = article.category?.slug;
+    if (!slug) continue;
     if (!articlesByCategory[slug]) articlesByCategory[slug] = [];
     articlesByCategory[slug].push(article);
   }
@@ -98,9 +215,8 @@ export async function getHomepageData() {
   };
 }
 
-// Fetch single article by slug
 export async function getArticleBySlug(slug: string) {
-  return prisma.article.findUnique({
+  const row = await prisma.content.findUnique({
     where: { slug },
     include: {
       category: { select: { name: true, nameEn: true, slug: true, color: true } },
@@ -109,22 +225,71 @@ export async function getArticleBySlug(slug: string) {
       tags: { include: { tag: true } },
     },
   });
+  if (!row || row.type !== "ARTICLE") return null;
+  return projectArticle(row);
 }
 
-// Fetch trending articles (most viewed)
+// Generic detail-page helpers per ContentType (Spec #1 #111). Each returns
+// null when the slug isn't found, the type doesn't match, or the row isn't
+// PUBLISHED — so the calling page can render a clean notFound().
+
+export async function getVideoBySlug(slug: string) {
+  const row = await prisma.content.findUnique({
+    where: { slug },
+    include: { category: { select: { name: true, slug: true, color: true } }, author: { select: { name: true } } },
+  });
+  if (!row || row.type !== "VIDEO" || row.status !== "PUBLISHED") return null;
+  return projectVideo(row);
+}
+
+export async function getReelBySlug(slug: string) {
+  const row = await prisma.content.findUnique({
+    where: { slug },
+    include: { category: { select: { name: true, slug: true, color: true } }, author: { select: { name: true } } },
+  });
+  if (!row || row.type !== "REEL" || row.status !== "PUBLISHED") return null;
+  return projectReel(row);
+}
+
+export async function getWebStoryBySlug(slug: string) {
+  const row = await prisma.content.findUnique({
+    where: { slug },
+    include: { category: { select: { name: true, slug: true } } },
+  });
+  if (!row || row.type !== "WEB_STORY" || row.status !== "PUBLISHED") return null;
+  return projectWebStory(row);
+}
+
+export async function getPhotoGalleryBySlug(slug: string) {
+  const row = await prisma.content.findUnique({
+    where: { slug },
+    include: { category: { select: { name: true, slug: true, color: true } } },
+  });
+  if (!row || row.type !== "PHOTO_GALLERY" || row.status !== "PUBLISHED") return null;
+  return projectPhotoGallery(row);
+}
+
+export async function getCartoonBySlug(slug: string) {
+  const row = await prisma.content.findUnique({
+    where: { slug },
+    include: { category: { select: { name: true, slug: true, color: true } } },
+  });
+  if (!row || row.type !== "CARTOON" || row.status !== "PUBLISHED") return null;
+  return projectCartoon(row);
+}
+
 export async function getTrendingArticles(limit = 10) {
-  return prisma.article.findMany({
-    where: { status: "PUBLISHED" },
+  return prisma.content.findMany({
+    where: { type: "ARTICLE", status: "PUBLISHED" },
     select: { id: true, title: true, slug: true, viewCount: true, publishedAt: true },
     orderBy: { viewCount: "desc" },
     take: limit,
   });
 }
 
-// Increment article view count
-export async function incrementViewCount(articleId: string) {
-  return prisma.article.update({
-    where: { id: articleId },
+export async function incrementViewCount(contentId: string) {
+  return prisma.content.update({
+    where: { id: contentId },
     data: { viewCount: { increment: 1 } },
   });
 }
@@ -162,14 +327,12 @@ async function rapidGet(path: string) {
   }
 }
 
-// Map a cricbuzz-style innings score object to our flat shape.
 function mapInnings(teamName: string, sc: any): { team: string; runs: number; wickets: number; overs: number } {
   const i = sc?.inngs1 || sc || {};
   return { team: teamName, runs: i.runs || 0, wickets: i.wickets || 0, overs: i.overs || 0 };
 }
 
 export async function getCricketScores(): Promise<CricketMatch[]> {
-  // 1. Live matches
   const live = await rapidGet("/cricket-livescores");
   if (Array.isArray(live) && live.length > 0) {
     return live.slice(0, 4).map((m: any) => {
@@ -193,7 +356,6 @@ export async function getCricketScores(): Promise<CricketMatch[]> {
     });
   }
 
-  // 2. Fallback — next upcoming fixtures from schedule
   const sched = await rapidGet("/cricket-schedule");
   const out: CricketMatch[] = [];
   const days = sched?.schedules || [];
@@ -223,82 +385,79 @@ export async function getCricketScores(): Promise<CricketMatch[]> {
   return out;
 }
 
-// Fetch videos (with category for the cinematic video section)
+// ---------- Per-type Content queries (Video, Reel, WebStory, Gallery, Cartoon) ----------
+
 export async function getVideos(limit = 5) {
-  return prisma.video.findMany({
-    where: { active: true },
+  const rows = await prisma.content.findMany({
+    where: { type: "VIDEO", status: "PUBLISHED" },
     orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
     take: limit,
     include: { category: { select: { name: true } } },
   });
+  return rows.map(projectVideo);
 }
 
-// Fetch photo galleries
 export async function getPhotoGalleries(limit = 4) {
-  return prisma.photoGallery.findMany({
-    where: { active: true },
-    include: { _count: { select: { photos: true } } },
+  const rows = await prisma.content.findMany({
+    where: { type: "PHOTO_GALLERY", status: "PUBLISHED" },
     orderBy: { createdAt: "desc" },
     take: limit,
   });
+  return rows.map(projectPhotoGallery);
 }
 
-// Fetch web stories
 export async function getWebStories(limit = 12) {
-  return prisma.webStory.findMany({
-    where: { active: true },
+  const rows = await prisma.content.findMany({
+    where: { type: "WEB_STORY", status: "PUBLISHED" },
     orderBy: { createdAt: "desc" },
     take: limit,
+    include: { category: { select: { slug: true } } },
   });
+  return rows.map(projectWebStory);
 }
 
-// Fetch reels
 export async function getReels(limit = 6) {
-  return prisma.reel.findMany({
-    where: { active: true },
+  const rows = await prisma.content.findMany({
+    where: { type: "REEL", status: "PUBLISHED" },
     orderBy: { createdAt: "desc" },
     take: limit,
   });
+  return rows.map(projectReel);
 }
 
-// Fetch cartoons
 export async function getCartoons(limit = 5) {
-  return prisma.cartoon.findMany({
-    where: { active: true },
-    orderBy: { date: "desc" },
+  const rows = await prisma.content.findMany({
+    where: { type: "CARTOON", status: "PUBLISHED" },
+    orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
     take: limit,
   });
+  return rows.map(projectCartoon);
 }
 
-// Fetch ads by position
+// ---------- Ads (unchanged — Ad is its own table, not unified) ----------
+
 export async function getAdsByPosition(position: string) {
   return prisma.ad.findMany({
     where: {
       position: position as any,
       active: true,
-      OR: [
-        { endDate: null },
-        { endDate: { gt: new Date() } },
-      ],
+      OR: [{ endDate: null }, { endDate: { gt: new Date() } }],
     },
     take: 1,
   });
 }
 
-// Fetch all active ads
 export async function getAllAds() {
   return prisma.ad.findMany({
     where: {
       active: true,
-      OR: [
-        { endDate: null },
-        { endDate: { gt: new Date() } },
-      ],
+      OR: [{ endDate: null }, { endDate: { gt: new Date() } }],
     },
   });
 }
 
-// Fetch district-wise latest articles for homepage
+// ---------- District-wise articles (type=ARTICLE filtered) ----------
+
 // myDistrictSlug: the user's preferred district (from cookie) - gets more articles
 export async function getDistrictArticles(myDistrictSlug?: string | null) {
   const districts = await prisma.district.findMany({
@@ -307,25 +466,22 @@ export async function getDistrictArticles(myDistrictSlug?: string | null) {
     orderBy: { sortOrder: "asc" },
   });
 
-  // Single query for all constituencies
   const allConstituencies = await prisma.constituency.findMany({
     where: { districtId: { in: districts.map((d) => d.id) } },
     select: { id: true, districtId: true },
   });
 
-  // Group constituency IDs by district
   const constByDistrict: Record<string, string[]> = {};
   for (const c of allConstituencies) {
     if (!constByDistrict[c.districtId]) constByDistrict[c.districtId] = [];
     constByDistrict[c.districtId].push(c.id);
   }
 
-  // Build OR conditions for all districts
   const allConstIds = allConstituencies.map((c) => c.id);
 
-  // Single query for all district articles
-  const allArticles = await prisma.article.findMany({
+  const allArticles = await prisma.content.findMany({
     where: {
+      type: "ARTICLE",
       status: "PUBLISHED",
       OR: [
         { constituencyId: { in: allConstIds } },
@@ -344,7 +500,6 @@ export async function getDistrictArticles(myDistrictSlug?: string | null) {
     take: 150,
   });
 
-  // Group articles by district in memory
   const districtArticles: Record<string, { district: typeof districts[0]; articles: typeof allArticles }> = {};
 
   for (const d of districts) {

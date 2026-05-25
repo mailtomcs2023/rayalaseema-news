@@ -74,6 +74,10 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
   const article = await getArticleBySlug(slug);
 
   if (!article) return notFound();
+  // category became nullable in the schema (uncategorised drafts) but every
+  // public article page query relies on it. If it's missing, treat the
+  // article as not found rather than 500.
+  if (!article.category) return notFound();
 
   // P1 #9 — bump view count on every render (fire-and-forget; uses Prisma increment, race-safe)
   incrementViewCount(article.id).catch(() => {});
@@ -197,7 +201,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               className="article-body"
               style={{ marginTop: 24 }}
               dangerouslySetInnerHTML={{
-                __html: injectInlineByline(sanitizeHtml(article.body), article.desk?.name, article.title),
+                __html: injectInlineByline(sanitizeHtml(article.body || ""), article.desk?.name, article.title),
               }}
             />
 
@@ -239,7 +243,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
             {/* Comments */}
             <CommentsSection articleId={article.id} />
           </article>
-          <PaywallModal articleSlug={article.slug} />
+          <PaywallModal articleSlug={article.slug || ""} />
           <DialectGlosser />
 
           {/* Sidebar */}

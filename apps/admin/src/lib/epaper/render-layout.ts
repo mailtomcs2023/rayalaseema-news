@@ -11,6 +11,7 @@
 
 import { prisma } from "@rayalaseema/db";
 import { hyphenateTelugu } from "./telugu-hyphenation";
+import { migrateLegacyLayout, isLegacyLayout } from "./migrate-layout";
 
 const SITE_URL = process.env.SITE_URL || "https://rayalaseemaexpress.com";
 
@@ -28,7 +29,8 @@ export interface Block {
     | "ad"
     | "text"
     | "story-jump"
-    | "pull-quote";   // #103 — emphasized excerpt block
+    | "pull-quote"   // #103 — emphasized excerpt block
+    | "folio";       // #146 — master footer with {{pageNumber}} / {{dateLabel}} / {{sectionLabel}}
   x: number;
   y: number;
   w: number;
@@ -131,13 +133,26 @@ function articleLink(a: ResolvedArticle, inner: string): string {
   return `<a class="story-link" href="${esc(articleHref(a.slug))}">${inner}</a>`;
 }
 
+// Module-scoped layout flag — set by renderLayoutToHtml before iterating
+// blocks. blockStyle reads it to pick grid-v1 vs mm-v2 positioning.
+let CURRENT_COORD_SYSTEM: "grid-v1" | "mm-v2" = "grid-v1";
+
 function blockStyle(b: Block, extra = ""): string {
   // Merge user style overrides for the block's outer wrapper.
   const s = b.style ?? {};
-  const parts: string[] = [
-    `grid-column: ${b.x + 1} / span ${b.w}`,
-    `grid-row: ${b.y + 1} / span ${b.h}`,
-  ];
+  const parts: string[] =
+    CURRENT_COORD_SYSTEM === "mm-v2"
+      ? [
+          `position: absolute`,
+          `left: ${b.x.toFixed(2)}mm`,
+          `top: ${b.y.toFixed(2)}mm`,
+          `width: ${b.w.toFixed(2)}mm`,
+          `height: ${b.h.toFixed(2)}mm`,
+        ]
+      : [
+          `grid-column: ${b.x + 1} / span ${b.w}`,
+          `grid-row: ${b.y + 1} / span ${b.h}`,
+        ];
   if (s.blockBgColor) parts.push(`background-color: ${s.blockBgColor}`);
   if (s.textColor) parts.push(`color: ${s.textColor}`);
   if (typeof s.padding === "number") parts.push(`padding: ${s.padding}px`);
@@ -392,6 +407,19 @@ function textBlock(b: Block): string {
   return `<div class="block text" style="${blockStyle(b)}">${b.content ?? ""}</div>`;
 }
 
+// #146 — folio block: master-defined footer w/ {{pageNumber}}, {{dateLabel}},
+// {{sectionLabel}} placeholders substituted per page at render time. Used by
+// front/district/section masters so the bottom-of-page footer line propagates
+// from the master once and renders per-page content for free.
+function folioBlock(b: Block, ctx: { pageNumber: number; dateLabel: string; sectionLabel: string }): string {
+  const raw = b.content ?? "{{pageNumber}} · {{dateLabel}}";
+  const filled = raw
+    .replace(/\{\{pageNumber\}\}/g, String(ctx.pageNumber))
+    .replace(/\{\{dateLabel\}\}/g, ctx.dateLabel)
+    .replace(/\{\{sectionLabel\}\}/g, ctx.sectionLabel);
+  return `<div class="folio block" style="${blockStyle(b)}">${esc(filled)}</div>`;
+}
+
 function pullQuoteBlock(b: Block): string {
   const text = b.content ?? "";
   const attribution = b.style?.pullQuoteAttribution
@@ -461,6 +489,14 @@ async function resolveArticles(blocks: Block[]): Promise<Map<string, ResolvedArt
  * Playwright and writing the resulting PDF buffer.
  */
 export async function renderLayoutToHtml(input: RenderInput): Promise<string> {
+  // Detect coord system from the layout JSON. Legacy layouts (no field) use
+  // the original CSS-Grid renderer; mm-v2 layouts use absolute mm coords.
+  // The blockStyle() helper reads CURRENT_COORD_SYSTEM to emit correct
+  // positioning syntax for every block.
+  const coordSystem: "grid-v1" | "mm-v2" =
+    (input.layout as any)?.coordSystem === "mm-v2" ? "mm-v2" : "grid-v1";
+  CURRENT_COORD_SYSTEM = coordSystem;
+
   const articles = await resolveArticles(input.layout.blocks);
 
   // Resolve any image-library references attached to image blocks. The block
@@ -536,6 +572,13 @@ export async function renderLayoutToHtml(input: RenderInput): Promise<string> {
       case "pull-quote":
         blockHtml.push(pullQuoteBlock(b));
         break;
+      case "folio":
+        blockHtml.push(folioBlock(b, {
+          pageNumber: input.pageNumber,
+          dateLabel: input.dateLabel,
+          sectionLabel: input.label,
+        }));
+        break;
     }
   }
 
@@ -546,11 +589,16 @@ export async function renderLayoutToHtml(input: RenderInput): Promise<string> {
 <link href="${FONTS_HREF}" rel="stylesheet">
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-  html,body{width:1480px}
+  /* @page declares the exact PDF sheet size; preferCSSPageSize=true in
+     Playwright honors it. Eliminates the ~80px body-padding overflow that
+     caused every edition page to slice into 2 PDF pages (68 instead of
+     34). One sheet per edition page, every time. */
+  @page { size: ${coordSystem === "mm-v2" ? "330mm 520mm" : "300mm 560mm"}; margin: 0; }
+  html,body{width:${coordSystem === "mm-v2" ? "330mm" : "1480px"};height:${coordSystem === "mm-v2" ? "520mm" : "2760px"};overflow:hidden}
   body{
     font-family:'Noto Serif Telugu',serif;
     background:#FCFAF3;color:#14110b;
-    padding:32px 36px;
+    padding:0;
     /* Baseline grid: 6 mm (~23 px @ 125 dpi) — all body line-heights snap to
        a multiple of this so text aligns horizontally across columns. */
     --baseline: 23px;
@@ -604,18 +652,38 @@ export async function renderLayoutToHtml(input: RenderInput): Promise<string> {
     shape-outside: inset(0 round 4px); shape-margin: 6px;
   }
   .lead-dek.has-wrap-image .wrap-img img { width: 100%; height: auto; display: block; border-radius: 4px; }
-  /* 12-col broadsheet grid. Row height is roomy so 28-row templates fill the
-     full 2760-px viewport — leaves space for 12-18 stories per page. */
+  /* Layout container. v2 (mm-v2) uses absolute mm coords inside a
+     330×520mm live area; v1 (grid-v1) uses a 12-col × N-row CSS grid for
+     back-compat with published archive layouts. */
+  .page-mm {
+    width: 330mm;
+    height: 520mm;
+    position: relative;
+    margin: 0 auto;
+  }
+  .page-mm .block { position: absolute; }
   .page {
     display:grid;
     grid-template-columns: repeat(12, 1fr);
     grid-template-rows: repeat(${maxRow}, 92px);
     column-gap: 14px;
     row-gap: 12px;
+    /* Hard contain the page to one PDF sheet (1480×2760px = 300×560mm
+       @ ~125 dpi). 30 rows × 92px = 2760px = exact fit. No padding so
+       the grid math stays clean — visual breathing room is per-block. */
+    width: 1480px;
+    height: 2760px;
+    max-height: 2760px;
+    overflow: hidden;
   }
-  .block { overflow: hidden; }
-  .block .block-inner { width:100%; height:100%; display:flex; flex-direction:column; }
-  .block a.story-link { color: inherit; text-decoration: none; display:block; height:100%; }
+  /* CSS-grid items default to min-height: auto, so any oversized child
+     (e.g. a full-resolution logo image) blew the row past its declared
+     height. Force min-height: 0 so the row sticks to its grid track. */
+  .block { overflow: hidden; min-height: 0; min-width: 0; max-height: 100%; max-width: 100%; }
+  .block .block-inner { width:100%; height:100%; display:flex; flex-direction:column; overflow: hidden; }
+  .block a.story-link { color: inherit; text-decoration: none; display:block; height:100%; overflow: hidden; }
+  /* Belt-and-braces: any image anywhere inside a block can't exceed the block. */
+  .block img { max-width: 100%; max-height: 100%; object-fit: cover; }
 
   /* Masthead */
   /* Eenadu-style masthead: 3-col [ad | logo+tag | ad] band on top,
@@ -628,8 +696,8 @@ export async function renderLayoutToHtml(input: RenderInput): Promise<string> {
   .mast-adslot img { max-width: 100%; max-height: 100%; object-fit: contain; }
   .mast-adslot.empty { font-family: 'Noto Sans Telugu', sans-serif; font-size: 11px;
     color: #b8ad94; text-transform: uppercase; letter-spacing: 2px; background: #faf6ec; }
-  .mast-center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
-  .mast-logo-img { max-height: 80%; max-width: 92%; object-fit: contain; display: block; }
+  .mast-center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-width: 0; min-height: 0; overflow: hidden; }
+  .mast-logo-img { height: 80%; max-width: 92%; width: auto; object-fit: contain; display: block; }
   .mast-logo { font-family: 'Ramabhadra', serif; font-size: 64px; color: #A50D0D; line-height: 1; }
   .mast-tag { font-family: 'Noto Sans Telugu', sans-serif; font-size: 13px; letter-spacing: 4px;
     color: #c2185b; font-style: italic; font-weight: 700; text-transform: uppercase; }
@@ -722,9 +790,14 @@ export async function renderLayoutToHtml(input: RenderInput): Promise<string> {
   /* Jump */
   .jump{display:flex;align-items:center;justify-content:center;background:#fff3e0;border:1px dashed #A50D0D;border-radius:4px;height:100%}
   .jump a{color:#A50D0D;font-weight:700;font-size:12px;text-decoration:none;font-family:'Noto Sans Telugu',sans-serif}
+
+  /* Folio (#146): master footer line. Centered, small, italic. */
+  .folio { display: flex; align-items: center; justify-content: center;
+    font-family: 'Noto Sans Telugu', sans-serif; font-size: 10px; color: #6b6155;
+    border-top: 1px solid #d8d0bd; padding: 4px 8px; letter-spacing: 0.5px; }
 </style></head>
 <body>
-  <div class="page">
+  <div class="${coordSystem === "mm-v2" ? "page-mm" : "page"}">
     ${blockHtml.join("\n    ")}
   </div>
 </body></html>`;
@@ -769,23 +842,120 @@ export async function renderEpaperPageById(pageId: string): Promise<string> {
 
   const pageCount = await prisma.epaperPage.count({ where: { editionId: page.editionId } });
 
-  // Pick two ad assets to flank the masthead. Prefers MASTHEAD-category
-  // image assets when present, else falls back to active ad assets sorted
-  // by validFrom desc.
+  // Master blocks (#108 / #146): only merge masters when the page itself
+  // is on mm-v2. v1 (grid-v1) pages keep their original masthead/section-band
+  // blocks inline — merging an mm-v2 master into a grid-v1 layout caused
+  // duplicate masthead + body-empty render bugs (rolled back as part of the
+  // v2 burn-in).
+  const pageLayout = (page.layout as unknown as { coordSystem?: string; masterSlug?: string; blocks: Block[] }) ?? { blocks: [] };
+  const isMmV2 = pageLayout.coordSystem === "mm-v2";
+  let masterSlug = pageLayout.masterSlug;
+  if (isMmV2 && !masterSlug && page.templateSlug) {
+    const tpl = await prisma.epaperTemplate.findUnique({
+      where: { slug: page.templateSlug },
+      select: { masterSlug: true },
+    });
+    masterSlug = tpl?.masterSlug ?? undefined;
+  }
+  let masterBlocks: Block[] = [];
+  if (isMmV2 && masterSlug) {
+    const m = await prisma.epaperMaster.findUnique({ where: { slug: masterSlug }, select: { layout: true } });
+    masterBlocks = (((m?.layout as unknown as { blocks: Block[] }) ?? { blocks: [] }).blocks || []) as Block[];
+    // Skip master blocks that have been overridden on the page (block id collision).
+    const overriddenIds = new Set(pageLayout.blocks.filter((b: any) => b.isOverride).map((b: any) => b.id.replace(/-override-.*$/, "")));
+    masterBlocks = masterBlocks.filter((b) => !overriddenIds.has(b.id));
+  }
+
+  // Masthead ad slots (#145). Priority:
+  //   1. EpaperEdition.mastheadAds[slot] — operator-selected per edition.
+  //   2. Top 2 active EpaperAdAsset rows by validFrom — auto fallback.
   let mastheadLeft: { imageUrl: string; href?: string | null } | undefined;
   let mastheadRight: { imageUrl: string; href?: string | null } | undefined;
   try {
-    const ads = await prisma.epaperAdAsset.findMany({
-      where: { active: true },
-      orderBy: [{ validFrom: "desc" }, { createdAt: "desc" }],
-      take: 2,
-      select: { imageUrl: true, linkUrl: true },
-    });
-    if (ads[0]) mastheadLeft = { imageUrl: ads[0].imageUrl, href: ads[0].linkUrl };
-    if (ads[1]) mastheadRight = { imageUrl: ads[1].imageUrl, href: ads[1].linkUrl };
+    const editionAds = ((page.edition as any).mastheadAds as Record<string, string> | null) || {};
+    const explicitIds = Array.from(new Set([editionAds["ad-left"], editionAds["ad-right"]].filter((x): x is string => !!x)));
+    const explicitMap = new Map<string, { imageUrl: string; href: string | null }>();
+    if (explicitIds.length > 0) {
+      const rows = await prisma.epaperAdAsset.findMany({
+        where: { id: { in: explicitIds } },
+        select: { id: true, imageUrl: true, linkUrl: true },
+      });
+      for (const r of rows) explicitMap.set(r.id, { imageUrl: r.imageUrl, href: r.linkUrl });
+    }
+    if (editionAds["ad-left"] && explicitMap.has(editionAds["ad-left"])) {
+      mastheadLeft = explicitMap.get(editionAds["ad-left"])!;
+    }
+    if (editionAds["ad-right"] && explicitMap.has(editionAds["ad-right"])) {
+      mastheadRight = explicitMap.get(editionAds["ad-right"])!;
+    }
+    if (!mastheadLeft || !mastheadRight) {
+      const ads = await prisma.epaperAdAsset.findMany({
+        where: { active: true, id: { notIn: explicitIds } },
+        orderBy: [{ validFrom: "desc" }, { createdAt: "desc" }],
+        take: 2,
+        select: { imageUrl: true, linkUrl: true },
+      });
+      if (!mastheadLeft && ads[0]) mastheadLeft = { imageUrl: ads[0].imageUrl, href: ads[0].linkUrl };
+      if (!mastheadRight && ads[!mastheadLeft ? 1 : 0]) {
+        const pick = ads[!mastheadLeft ? 1 : 0];
+        if (pick) mastheadRight = { imageUrl: pick.imageUrl, href: pick.linkUrl };
+      }
+    }
   } catch { /* table optional; ignore */ }
 
   const days = ["ఆదివారం","సోమవారం","మంగళవారం","బుధవారం","గురువారం","శుక్రవారం","శనివారం"];
+
+  // Merge: master blocks first (so they render under page blocks visually),
+  // then page blocks. Master blocks are always mm-v2; if the page is still
+  // grid-v1 we auto-migrate page blocks to mm so the two layers share a
+  // common coord system. Pages with no master keep their original system.
+  let pageBlocksOut = pageLayout.blocks || [];
+  let mergedCoordSystem: string | undefined = pageLayout.coordSystem;
+  if (masterBlocks.length > 0 && isLegacyLayout(pageLayout)) {
+    const migrated = migrateLegacyLayout(pageLayout);
+    pageBlocksOut = migrated.blocks as unknown as Block[];
+    mergedCoordSystem = "mm-v2";
+  } else if (masterBlocks.length > 0) {
+    mergedCoordSystem = "mm-v2";
+  }
+  // When a master provides a block type (masthead / section-band / folio),
+  // drop the page-level duplicates so the renderer doesn't emit both. Old
+  // generated editions still carry these blocks from pre-v2 templates.
+  if (masterBlocks.length > 0) {
+    const masterTypes = new Set(masterBlocks.map((b) => b.type));
+    pageBlocksOut = pageBlocksOut.filter((b) => !masterTypes.has(b.type));
+  }
+  // Offset page blocks below the master header so they don't overlap.
+  // Master "header" = block whose top is in the upper half of the live
+  // area (masthead, section-band). Master "footer" (folio) sits at the
+  // bottom and is left alone.
+  if (masterBlocks.length > 0) {
+    const LIVE_H = 520;
+    const headerBottom = masterBlocks
+      .filter((m) => m.y < LIVE_H / 2)
+      .reduce((max, m) => Math.max(max, m.y + m.h), 0);
+    const footerTop = masterBlocks
+      .filter((m) => m.y >= LIVE_H / 2)
+      .reduce((min, m) => Math.min(min, m.y), LIVE_H);
+    if (headerBottom > 0) {
+      const pad = 4;             // mm visual gap
+      const pageOffsetTop = headerBottom + pad;
+      const pageMaxBottom = footerTop - pad;
+      // Scale page blocks into the [pageOffsetTop, pageMaxBottom] band.
+      const availableH = Math.max(50, pageMaxBottom - pageOffsetTop);
+      const originalH = pageBlocksOut.reduce((m, b) => Math.max(m, b.y + b.h), 0) || LIVE_H;
+      const scale = Math.min(1, availableH / originalH);
+      pageBlocksOut = pageBlocksOut.map((b) => ({
+        ...b,
+        y: pageOffsetTop + b.y * scale,
+        h: b.h * scale,
+      }));
+    }
+  }
+  const mergedLayout = {
+    coordSystem: mergedCoordSystem,
+    blocks: [...masterBlocks, ...pageBlocksOut],
+  };
 
   return renderLayoutToHtml({
     pageNumber: page.pageNumber,
@@ -793,7 +963,7 @@ export async function renderEpaperPageById(pageId: string): Promise<string> {
     label: page.label,
     templateSlug: page.templateSlug,
     dateLabel: page.edition.date.toLocaleDateString("te-IN", { day: "numeric", month: "long", year: "numeric" }),
-    layout: (page.layout as unknown as { blocks: Block[] }) ?? { blocks: [] },
+    layout: mergedLayout as { blocks: Block[] },
     ads: adsByBlockId,
     mastheadInfo: {
       dayLabel: days[page.edition.date.getUTCDay()],

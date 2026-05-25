@@ -27,7 +27,11 @@ function isEditable(status: string): status is EditableStatus {
 async function loadOwned(req: NextRequest, id: string) {
   const reporterId = await getReporterId(req);
   if (!reporterId) return { err: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
-  const article = await prisma.article.findUnique({ where: { id } });
+  // Only fetch the fields needed for the ownership + editability checks.
+  const article = await prisma.article.findUnique({
+    where: { id },
+    select: { id: true, authorId: true, status: true },
+  });
   if (!article || article.authorId !== reporterId) {
     return { err: NextResponse.json({ error: "Article not found" }, { status: 404 }) };
   }
@@ -40,7 +44,21 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (r.err) return r.err;
   const full = await prisma.article.findUnique({
     where: { id },
-    include: {
+    // Explicit select — keeps the response stable across environments and
+    // matches the fields the editor (mobile + web) actually reads.
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      summary: true,
+      body: true,
+      status: true,
+      featuredImage: true,
+      rejectionNote: true,
+      viewCount: true,
+      createdAt: true,
+      updatedAt: true,
+      categoryId: true,
       category: { select: { id: true, name: true, nameEn: true, slug: true, color: true } },
     },
   });
@@ -89,7 +107,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       }
     }
 
-    const updated = await prisma.article.update({ where: { id }, data });
+    const updated = await prisma.article.update({
+      where: { id },
+      data,
+      // Mirror the GET shape so callers can rely on the same field set.
+      select: { id: true, title: true, slug: true, status: true, updatedAt: true },
+    });
     return NextResponse.json(updated);
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Failed to update article";

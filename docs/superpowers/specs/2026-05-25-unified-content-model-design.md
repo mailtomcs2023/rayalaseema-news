@@ -371,7 +371,9 @@ Migration script does:
 
 ## Implementation plan (GitHub issues)
 
-Broken into 10 phases / 23 issues. See epic in GH for live status.
+Broken into 10 phases / 25 issues. See epic #104 for live status.
+
+**Note:** Original A1 (#105) was split into A1 (additive only — add Content tables) + A1B (#188, rename FKs on Comment/SocialPost/HeadlineTest/ArticleReview) + A1C (#189, drop old tables) after the implementation discovery that Article is referenced by ~6 FKs across the codebase, not just Comment as the original issue described. A1B + A1C run at the END of the epic (after all other code repointing is complete) to keep blast radius small and let intermediate phases ship safely.
 
 | Phase | Issue | Title |
 |---|---|---|

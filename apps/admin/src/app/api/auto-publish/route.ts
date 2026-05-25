@@ -128,10 +128,12 @@ export async function POST(req: NextRequest) {
     orderBy: { sortOrder: "asc" },
   });
 
-  // Count existing articles per category
-  const categoryCounts = await prisma.article.groupBy({
+  // Count existing published Content (type=ARTICLE) per category. Spec #1 (#109):
+  // auto-publish now writes Content rows; existing count must read from the
+  // same table so the "enough already" gate doesn't double up.
+  const categoryCounts = await prisma.content.groupBy({
     by: ["categoryId"],
-    where: { status: "PUBLISHED" },
+    where: { type: "ARTICLE", status: "PUBLISHED" },
     _count: { id: true },
   });
   const existingCounts: Record<string, number> = {};
@@ -188,9 +190,10 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
-    // Batch dedup by source URL — the stable, reliable key
+    // Batch dedup by source URL — the stable, reliable key. Read from Content
+    // table (Spec #1 #109) so the same wire story can't get ingested twice.
     const sourceUrls = newsArticles.slice(0, needed).map((n: any) => n.link).filter(Boolean);
-    const existingBySource = sourceUrls.length > 0 ? await prisma.article.findMany({
+    const existingBySource = sourceUrls.length > 0 ? await prisma.content.findMany({
       where: { sourceUrl: { in: sourceUrls } },
       select: { sourceUrl: true },
     }) : [];
@@ -226,9 +229,12 @@ export async function POST(req: NextRequest) {
         // Create slug — sanitized + timestamp for uniqueness
         const slug = sanitizeSlug(`${buildSlugFromTitle(news.title)}-${Date.now()}`);
 
-        // Create article
-        await prisma.article.create({
+        // Create Content row (Spec #1 #109). type=ARTICLE preserves prior
+        // behaviour — auto-fetched wire stories are always articles, never
+        // videos/reels/etc.
+        await prisma.content.create({
           data: {
+            type: "ARTICLE",
             title: translated.title || news.title,
             slug,
             summary: translated.summary || news.description?.substring(0, 200),

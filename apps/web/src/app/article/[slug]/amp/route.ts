@@ -30,7 +30,7 @@ function sanitizeForAmp(html: string): string {
 export async function GET(_: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const article = await getArticleBySlug(slug);
-  if (!article || article.status !== "PUBLISHED") {
+  if (!article || article.status !== "PUBLISHED" || !article.category) {
     return new NextResponse("Not found", { status: 404 });
   }
 

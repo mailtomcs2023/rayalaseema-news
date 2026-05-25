@@ -72,9 +72,9 @@ export async function POST(req: NextRequest) {
       categoryId = defaultCat?.id || "";
     }
 
-    // Dedup — skip if this source article already imported
+    // Dedup — skip if this source URL is already in Content (Spec #1 #109).
     if (sourceUrl) {
-      const dupe = await prisma.article.findUnique({ where: { sourceUrl }, select: { id: true, slug: true } });
+      const dupe = await prisma.content.findUnique({ where: { sourceUrl }, select: { id: true, slug: true } });
       if (dupe) return NextResponse.json({ error: "Already imported", existing: dupe }, { status: 409 });
     }
 
@@ -87,8 +87,9 @@ export async function POST(req: NextRequest) {
     // Create slug from title — sanitized + timestamp for uniqueness
     const slug = sanitizeSlug(`${buildSlugFromTitle(title)}-${Date.now()}`);
 
-    const article = await prisma.article.create({
+    const content = await prisma.content.create({
       data: {
+        type: "ARTICLE",
         title,
         slug,
         summary: description?.substring(0, 200) || null,
@@ -102,7 +103,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json(article, { status: 201 });
+    return NextResponse.json(content, { status: 201 });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

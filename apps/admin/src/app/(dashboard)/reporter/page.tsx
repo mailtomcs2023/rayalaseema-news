@@ -4,14 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@rayalaseema/db";
 import { ReporterShell } from "@/components/reporter/reporter-shell";
 import { KycBanner } from "@/components/reporter/kyc-banner";
-import {
-  FileText,
-  CheckCircle2,
-  Eye,
-  PencilLine,
-  Wallet,
-  ChevronRight,
-} from "lucide-react";
+import { FileText, CheckCircle2, Wallet, ChevronRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 // Reporter-only landing page in the admin portal. The middleware bounces
@@ -36,7 +29,17 @@ export default async function ReporterHome() {
       where: { authorId: userId },
       orderBy: { createdAt: "desc" },
       take: 50,
-      include: { category: { select: { name: true, nameEn: true, color: true } } },
+      // Explicit select — avoids pulling unused columns (and side-steps any
+      // pending schema columns that haven't been migrated to the local DB yet).
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        rejectionNote: true,
+        viewCount: true,
+        createdAt: true,
+        category: { select: { name: true, nameEn: true, color: true } },
+      },
     }),
     prisma.articlePayment.findMany({
       where: { journalistId: userId },
@@ -44,100 +47,53 @@ export default async function ReporterHome() {
     }),
   ]);
 
-  const stats = {
-    total: articles.length,
-    published: articles.filter((a) => a.status === "PUBLISHED").length,
-    inReview: articles.filter((a) => a.status === "SUBMITTED" || a.status === "IN_REVIEW").length,
-    drafts: articles.filter((a) => a.status === "DRAFT").length,
-    earnings: payments.reduce((s, p) => s + (p.totalAmount || 0), 0),
-  };
-
+  const total = articles.length;
+  const approved = articles.filter((a) => a.status === "APPROVED" || a.status === "PUBLISHED").length;
+  const earnings = payments
+    .filter((p) => p.status === "PAID")
+    .reduce((s, p) => s + (p.totalAmount || 0), 0);
   const name = session.user.name || "Reporter";
 
   return (
     <ReporterShell>
-      <div style={{ padding: 16 }}>
-        <KycBanner userId={userId} />
+      {/* Same horizontal padding as the Expo Dashboard (paddingHorizontal: 14
+          for cards, paddingHorizontal: 16 for headings). */}
+      <KycBanner userId={userId} />
 
-        <h1 style={{ fontSize: 17, lineHeight: "24px", fontWeight: 800, color: "#111", paddingTop: 8, marginBottom: 4 }}>
-          Welcome, {name}
-        </h1>
-        <p style={{ fontSize: 13, color: "#888", marginBottom: 16 }}>
-          Your articles, earnings, and KYC at a glance.
-        </p>
+      <h1 style={{ fontSize: 17, lineHeight: "24px", fontWeight: 800, color: "#111", padding: "16px 16px 0" }}>
+        Welcome, {name}
+      </h1>
 
-        {/* KPI grid — tappable cards, mirrors the Expo Dashboard KpiCard */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 24 }}>
-          <Kpi Icon={FileText}     tint="#3b82f6" value={stats.total}     label="Total articles" href="/reporter/articles" />
-          <Kpi Icon={CheckCircle2} tint="#16a34a" value={stats.published} label="Published"      href="/reporter/articles?status=PUBLISHED" />
-          <Kpi Icon={Eye}          tint="#f59e0b" value={stats.inReview}  label="In review"      href="/reporter/articles?status=IN_REVIEW" />
-          <Kpi Icon={PencilLine}   tint="#6b7280" value={stats.drafts}    label="Drafts"         href="/reporter/articles?status=DRAFT" />
-          <Kpi Icon={Wallet}       tint="#FF2C2C" value={`₹${Math.round(stats.earnings).toLocaleString("en-IN")}`} label="Earnings" href="/reporter/earnings" />
-        </div>
-
-        {/* Recent articles */}
-        <div style={{ background: "#fff", borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", padding: 16 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 800, color: "#111", marginBottom: 12 }}>
-            Your articles
-          </h2>
-          {articles.length === 0 ? (
-            <p style={{ fontSize: 13, color: "#aaa", padding: 24, textAlign: "center" }}>
-              No articles yet. Open the mobile app to write your first article.
-            </p>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {articles.slice(0, 20).map((a) => (
-                <div
-                  key={a.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: 12,
-                    padding: "10px 12px",
-                    borderRadius: 8,
-                    background: "#f9fafb",
-                  }}
-                >
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <Link
-                      href={`/articles/${a.id}`}
-                      style={{ fontSize: 14, fontWeight: 700, color: "#111", textDecoration: "none" }}
-                    >
-                      {a.title}
-                    </Link>
-                    <div style={{ marginTop: 4, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                      {a.category && (
-                        <span
-                          style={{
-                            fontSize: 10,
-                            fontWeight: 700,
-                            color: "#fff",
-                            background: a.category.color || "#888",
-                            padding: "2px 8px",
-                            borderRadius: 4,
-                          }}
-                        >
-                          {a.category.nameEn}
-                        </span>
-                      )}
-                      <span style={{ fontSize: 11, color: "#888" }}>
-                        {new Date(a.createdAt).toLocaleDateString()}
-                      </span>
-                      {a.rejectionNote && a.status === "REJECTED" ? (
-                        <span style={{ fontSize: 11, color: "#dc2626", fontStyle: "italic" }}>
-                          Rejected: {a.rejectionNote.slice(0, 80)}
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                  <StatusBadge status={a.status} />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
+      {/* KPI grid — 3 cards in one row, matching the Expo Dashboard. */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, padding: "10px 14px 6px" }}>
+        <Kpi Icon={FileText}     tint="#3b82f6" value={total}    label="Total"    href="/reporter/articles" />
+        <Kpi Icon={CheckCircle2} tint="#16a34a" value={approved} label="Approved" href="/reporter/articles?status=APPROVED" />
+        <Kpi Icon={Wallet}       tint="#FF2C2C" value={`₹${earnings.toLocaleString("en-IN")}`} label="Earnings" href="/reporter/earnings" />
       </div>
+
+      <h2 style={{ fontSize: 16, fontWeight: 800, color: "#111", padding: "10px 16px 10px" }}>
+        My Articles
+      </h2>
+
+      {articles.length === 0 ? (
+        <div
+          style={{
+            margin: "0 14px",
+            padding: 48,
+            background: "#fff",
+            borderRadius: 14,
+            boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+            textAlign: "center",
+          }}
+        >
+          <FileText size={48} color="#d1d5db" style={{ margin: "0 auto 10px" }} />
+          <p style={{ fontSize: 14, color: "#aaa" }}>
+            No articles yet. Tap the red + button to write your first article.
+          </p>
+        </div>
+      ) : (
+        articles.slice(0, 20).map((a) => <ArticleCard key={a.id} article={a} />)
+      )}
     </ReporterShell>
   );
 }
@@ -161,11 +117,12 @@ function Kpi({
       style={{
         background: "#fff",
         borderRadius: 16,
-        padding: 14,
+        padding: 12,
         boxShadow: "0 1px 3px rgba(0,0,0,0.05), 0 4px 12px rgba(0,0,0,0.03)",
         textDecoration: "none",
         color: "inherit",
         display: "block",
+        minWidth: 0,
       }}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
@@ -184,8 +141,8 @@ function Kpi({
         </span>
         <ChevronRight size={16} color="#c4c4c4" />
       </div>
-      <p style={{ fontSize: 22, fontWeight: 900, color: "#111" }}>{value}</p>
-      <p style={{ fontSize: 12, color: "#888", fontWeight: 600, marginTop: 1 }}>{label}</p>
+      <p style={{ fontSize: 22, fontWeight: 900, color: "#111", lineHeight: 1.1 }}>{value}</p>
+      <p style={{ fontSize: 12, color: "#888", fontWeight: 600, marginTop: 2 }}>{label}</p>
     </Link>
   );
 }
@@ -199,21 +156,57 @@ const STATUS_TINT: Record<string, { bg: string; text: string }> = {
   REJECTED: { bg: "#fef2f2", text: "#dc2626" },
 };
 
-function StatusBadge({ status }: { status: string }) {
-  const t = STATUS_TINT[status] || STATUS_TINT.DRAFT;
+// Single article tile — mirrors the Expo Dashboard articleCard:
+// rounded-14, padding 14, shadow, status badge on the right.
+function ArticleCard({ article }: { article: any }) {
+  const sc = STATUS_TINT[article.status] || STATUS_TINT.DRAFT;
   return (
-    <span
+    <div
       style={{
-        fontSize: 10,
-        fontWeight: 800,
-        color: t.text,
-        background: t.bg,
-        padding: "3px 10px",
-        borderRadius: 6,
-        whiteSpace: "nowrap",
+        background: "#fff",
+        margin: "0 14px 10px",
+        borderRadius: 14,
+        padding: 14,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.05), 0 4px 12px rgba(0,0,0,0.03)",
       }}
     >
-      {status}
-    </span>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+        <p style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#111", lineHeight: "20px", marginRight: 8 }}>
+          {article.title}
+        </p>
+        <span
+          style={{
+            fontSize: 9,
+            fontWeight: 800,
+            letterSpacing: 0.4,
+            color: sc.text,
+            background: sc.bg,
+            padding: "3px 8px",
+            borderRadius: 6,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {article.status}
+        </span>
+      </div>
+      <p style={{ fontSize: 11, color: "#999", marginTop: 6 }}>
+        {article.category?.nameEn || ""} • {article.viewCount || 0} views •{" "}
+        {new Date(article.createdAt).toLocaleDateString()}
+      </p>
+      {article.rejectionNote && article.status === "REJECTED" ? (
+        <div
+          style={{
+            marginTop: 10,
+            padding: 9,
+            background: "#fef2f2",
+            borderRadius: 8,
+            borderLeft: "3px solid #dc2626",
+          }}
+        >
+          <p style={{ fontSize: 10, fontWeight: 800, color: "#dc2626" }}>Feedback:</p>
+          <p style={{ fontSize: 12, color: "#666", marginTop: 1 }}>{article.rejectionNote}</p>
+        </div>
+      ) : null}
+    </div>
   );
 }

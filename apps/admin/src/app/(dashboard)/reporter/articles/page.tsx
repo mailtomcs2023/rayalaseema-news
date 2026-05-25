@@ -50,7 +50,17 @@ export default async function ReporterArticlesPage({
     where: { authorId: userId, status: filter },
     orderBy: { createdAt: "desc" },
     take: 100,
-    include: { category: { select: { name: true, nameEn: true, color: true } } },
+    // Explicit select — avoids pulling unused columns (and side-steps any
+    // pending schema columns that haven't been migrated to the local DB yet).
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      rejectionNote: true,
+      viewCount: true,
+      createdAt: true,
+      category: { select: { name: true, nameEn: true, color: true } },
+    },
   });
 
   // Counts per status so the chips show "Submitted (3)" etc. — same UX as
@@ -65,18 +75,11 @@ export default async function ReporterArticlesPage({
 
   return (
     <ReporterShell>
-      <div style={{ padding: 16 }}>
-        <KycBanner userId={userId} />
+      <KycBanner userId={userId} />
 
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: "#111", marginBottom: 4 }}>
-          My Articles
-        </h1>
-        <p style={{ fontSize: 13, color: "#888", marginBottom: 16 }}>
-          Track the status of every article you&apos;ve written.
-        </p>
-
-        {/* Status filter chips */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 18 }}>
+      {/* Status filter chips — Expo Articles screen has no heading, the chips
+          sit directly under the header. */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: "12px 14px" }}>
           {FILTERS.map((f) => {
             const active = filter === f.value;
             const n = countByStatus[f.value] || 0;
@@ -102,36 +105,37 @@ export default async function ReporterArticlesPage({
           })}
         </div>
 
-        {/* Article list */}
-        {articles.length === 0 ? (
-          <div
-            style={{
-              padding: 48,
-              textAlign: "center",
-              background: "#fff",
-              borderRadius: 14,
-              boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-            }}
-          >
-            <FileText size={48} color="#d1d5db" style={{ margin: "0 auto 10px" }} />
-            <p style={{ fontSize: 14, color: "#aaa" }}>
-              No {filter.toLowerCase().replace("_", " ")} articles yet.
-            </p>
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {articles.map((a) => {
-              const sc = STATUS_TINT[a.status] || STATUS_TINT.DRAFT;
-              return (
-                <div
-                  key={a.id}
-                  style={{
-                    backgroundColor: "#fff",
-                    borderRadius: 14,
-                    padding: 14,
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.05), 0 4px 12px rgba(0,0,0,0.03)",
-                  }}
-                >
+      {/* Article list */}
+      {articles.length === 0 ? (
+        <div
+          style={{
+            margin: "0 14px",
+            padding: 48,
+            textAlign: "center",
+            background: "#fff",
+            borderRadius: 14,
+            boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+          }}
+        >
+          <FileText size={48} color="#d1d5db" style={{ margin: "0 auto 10px" }} />
+          <p style={{ fontSize: 14, color: "#aaa" }}>
+            No {filter.toLowerCase().replace("_", " ")} articles yet.
+          </p>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "0 14px" }}>
+          {articles.map((a) => {
+            const sc = STATUS_TINT[a.status] || STATUS_TINT.DRAFT;
+            return (
+              <div
+                key={a.id}
+                style={{
+                  backgroundColor: "#fff",
+                  borderRadius: 14,
+                  padding: 14,
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.05), 0 4px 12px rgba(0,0,0,0.03)",
+                }}
+              >
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
                     <p style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#111", lineHeight: 1.4 }}>
                       {a.title}
@@ -173,7 +177,6 @@ export default async function ReporterArticlesPage({
             })}
           </div>
         )}
-      </div>
     </ReporterShell>
   );
 }

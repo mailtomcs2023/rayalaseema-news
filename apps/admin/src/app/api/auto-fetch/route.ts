@@ -123,10 +123,11 @@ export async function POST(req: NextRequest) {
   const admin = await prisma.user.findFirst({ where: { role: "ADMIN" } });
   if (!admin) return NextResponse.json({ error: "No admin user" }, { status: 500 });
 
-  // Existing slugs (slug uniqueness) + source URLs (article dedup)
-  const existingArticles = await prisma.article.findMany({ select: { slug: true, sourceUrl: true } });
-  const existingSlugs = new Set(existingArticles.map((a) => a.slug));
-  const existingSourceSet = new Set(existingArticles.map((a) => a.sourceUrl).filter(Boolean));
+  // Existing slugs + source URLs in Content (Spec #1 #109). Slug uniqueness +
+  // wire-story dedup both come from the unified Content table now.
+  const existingItems = await prisma.content.findMany({ select: { slug: true, sourceUrl: true } });
+  const existingSlugs = new Set(existingItems.map((a) => a.slug).filter(Boolean) as string[]);
+  const existingSourceSet = new Set(existingItems.map((a) => a.sourceUrl).filter(Boolean));
 
   // Get category IDs
   const dbCategories = await prisma.category.findMany();
@@ -189,9 +190,12 @@ export async function POST(req: NextRequest) {
         // Re-host source image on Azure Blob (publishers block hotlinking)
         const hostedImage = await uploadImageFromUrl(article.image_url);
 
-        // Create article
-        await prisma.article.create({
+        // Create Content row (Spec #1 #109). type=ARTICLE — wire stories are
+        // always articles. `breaking` flag dropped: BREAKING_NEWS is now its
+        // own type, not a boolean on Article.
+        await prisma.content.create({
           data: {
+            type: "ARTICLE",
             title: translated.title,
             slug,
             summary: translated.summary,
@@ -202,7 +206,6 @@ export async function POST(req: NextRequest) {
             sourceUrl: article.link || null,
             status: "PUBLISHED",
             featured: false,
-            breaking: false,
             language: "TELUGU",
             publishedAt: new Date(),
             constituencyId: constituencyId || null,

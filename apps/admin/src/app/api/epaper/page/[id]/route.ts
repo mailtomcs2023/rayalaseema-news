@@ -54,7 +54,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       );
     }
 
-    const layout = (page.layout as unknown as { blocks: Block[] }) ?? { blocks: [] };
+    const layout = (page.layout as unknown as { coordSystem?: string; masterSlug?: string; blocks: Block[] }) ?? { blocks: [] };
+
+    // v2 editor sends coordSystem + (optionally) masterSlug so we tag the
+    // layout JSON and the renderer takes the mm-v2 path on next read.
+    if (body?.coordSystem === "mm-v2" || body?.coordSystem === "grid-v1") {
+      layout.coordSystem = body.coordSystem;
+    }
+    if (typeof body?.masterSlug === "string" || body?.masterSlug === null) {
+      layout.masterSlug = body.masterSlug ?? undefined;
+    }
 
     if (Array.isArray(body?.blocks)) {
       layout.blocks = body.blocks;

@@ -3,6 +3,7 @@ import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 import { logAudit } from "@/lib/audit";
 import { canTransition, transitionMeta } from "@/lib/epaper/workflow";
+import { collectIssues, blockingCount } from "@/lib/epaper/preflight";
 import type { EpaperWorkflowState } from "@prisma/client";
 
 // POST /api/epaper/edition/[id]/transition
@@ -27,6 +28,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const meta = transitionMeta(edition.workflowState, to);
     if (meta?.noteRequired && !note) {
       return NextResponse.json({ error: "This transition requires a note" }, { status: 400 });
+    }
+
+    // Preflight gate (#140): refuse APPROVED → PUBLISHED when any blocking
+    // issue exists, unless body.override === true (CHIEF/ADMIN only path,
+    // audit-logged so the chief can see who waived which gate).
+    if (to === "PUBLISHED" && edition.workflowState === "APPROVED") {
+      const issues = await collectIssues(id);
+      const blocking = blockingCount(issues);
+      if (blocking > 0 && !body?.override) {
+        return NextResponse.json({
+          error: `${blocking} blocking preflight issue${blocking > 1 ? "s" : ""} must be resolved before publish.`,
+          code: "PREFLIGHT_BLOCKING",
+          blocking,
+          totalIssues: issues.length,
+          issues: issues.filter((i) => i.severity === "blocking").slice(0, 10),
+        }, { status: 412 });
+      }
     }
 
     // Stamp kill metadata when transitioning into KILLED. Reverse stamps on
