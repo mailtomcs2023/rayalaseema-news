@@ -114,18 +114,36 @@ export function EditorShell({
     iframeRef.current.src = `${webUrl}/page-builder/preview/${initial.id}?draft=1&_n=${iframeNonce.current}`;
   }, [initial.id, webUrl]);
 
-  // Listen for select messages from the iframe (set by the preview page).
+  // Editor ↔ preview iframe bridge (E3 #165).
   useEffect(() => {
     function onMessage(ev: MessageEvent) {
-      const data = ev.data as { type?: string; blockId?: string } | undefined;
+      const data = ev.data as { type?: string; blockId?: string; ids?: string[] } | undefined;
       if (!data || typeof data !== "object") return;
       if (data.type === "page-builder:select" && data.blockId) {
         setSelectedId(data.blockId);
       }
+      // `page-builder:ready` / `page-builder:blocks` are observed but not
+      // acted on here — H1 (#171) will use them for a "preview ready"
+      // spinner and an orphan-block warning.
     }
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
   }, []);
+
+  // When the user picks a block in the outline, mirror the highlight in
+  // the iframe and scroll the block into view.
+  const lastSelectionSent = useRef<string | null>(null);
+  useEffect(() => {
+    if (selectedId === lastSelectionSent.current) return;
+    lastSelectionSent.current = selectedId;
+    const win = iframeRef.current?.contentWindow;
+    if (!win) return;
+    if (selectedId) {
+      win.postMessage({ type: "page-builder:scroll-to", blockId: selectedId }, "*");
+    } else {
+      win.postMessage({ type: "page-builder:highlight", blockId: null }, "*");
+    }
+  }, [selectedId]);
 
   const selected = useMemo(
     () => layout.blocks.find((b) => b.id === selectedId) || null,

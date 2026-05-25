@@ -46,20 +46,69 @@ export default async function PreviewPage({
           draft={draft}
         />
       </Suspense>
-      {/* Block-selection postMessage hook used by the editor (E3 #165) */}
+      {/* Editor ↔ preview postMessage bridge (E3 #165).
+          - up:    page-builder:ready / page-builder:select / page-builder:blocks
+          - down:  page-builder:highlight / page-builder:scroll-to */}
       <script
         dangerouslySetInnerHTML={{
           __html: `
-            document.addEventListener('click', (e) => {
-              const el = e.target.closest('[data-block-id]');
-              if (!el) return;
-              e.preventDefault();
-              window.parent?.postMessage(
-                { type: 'page-builder:select', blockId: el.dataset.blockId },
-                '*'
-              );
-            }, true);
-            window.parent?.postMessage({ type: 'page-builder:ready' }, '*');
+            (function () {
+              var HL_ID = '__pb_highlight__';
+              function clearHl() {
+                document.querySelectorAll('[data-block-id]').forEach(function (el) {
+                  el.style.outline = '';
+                  el.style.outlineOffset = '';
+                });
+              }
+              function highlight(id) {
+                clearHl();
+                if (!id) return;
+                var el = document.querySelector('[data-block-id="' + id + '"]');
+                if (!el) return;
+                el.style.outline = '2px solid #FF2C2C';
+                el.style.outlineOffset = '2px';
+              }
+              function reportBlocks() {
+                var ids = Array.prototype.map.call(
+                  document.querySelectorAll('[data-block-id]'),
+                  function (el) { return el.getAttribute('data-block-id'); }
+                );
+                window.parent && window.parent.postMessage(
+                  { type: 'page-builder:blocks', ids: ids },
+                  '*'
+                );
+              }
+
+              document.addEventListener('click', function (e) {
+                var t = e.target;
+                while (t && t !== document.body && !t.getAttribute('data-block-id')) {
+                  t = t.parentElement;
+                }
+                if (!t || !t.getAttribute) return;
+                var id = t.getAttribute('data-block-id');
+                if (!id) return;
+                e.preventDefault();
+                e.stopPropagation();
+                window.parent && window.parent.postMessage(
+                  { type: 'page-builder:select', blockId: id },
+                  '*'
+                );
+                highlight(id);
+              }, true);
+
+              window.addEventListener('message', function (ev) {
+                var d = ev.data || {};
+                if (d.type === 'page-builder:highlight') highlight(d.blockId);
+                if (d.type === 'page-builder:scroll-to' && d.blockId) {
+                  var el = document.querySelector('[data-block-id="' + d.blockId + '"]');
+                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  highlight(d.blockId);
+                }
+              });
+
+              window.parent && window.parent.postMessage({ type: 'page-builder:ready' }, '*');
+              reportBlocks();
+            })();
           `,
         }}
       />
