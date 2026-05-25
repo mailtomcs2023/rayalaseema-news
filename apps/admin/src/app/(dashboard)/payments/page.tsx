@@ -45,7 +45,7 @@ export default function PaymentsPage() {
       <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
         <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111", marginBottom: 4 }}>Payment Configuration</h1>
-        <p style={{ fontSize: 13, color: "#888", marginBottom: 20 }}>Set per-article rates for journalists. All rates in INR (₹)</p>
+        <p style={{ fontSize: 13, color: "#888", marginBottom: 20 }}>Set per-article rates for reporters. All rates in INR (₹)</p>
 
         <div style={{ background: "#fff", borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", overflow: "hidden" }}>
           <div className="table-scroll">

@@ -22,7 +22,7 @@ function teluguDate(d: Date): string {
 
 // POST /api/epaper/render?date=YYYY-MM-DD — render the (edited) layout into PDF + page PNGs
 export async function POST(req: NextRequest) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(session)) return session;
   if (!blobConfigured()) {
     return NextResponse.json({ error: "AZURE_STORAGE_CONNECTION_STRING not configured" }, { status: 503 });

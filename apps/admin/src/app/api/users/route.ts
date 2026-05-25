@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Assign categories if SUB_EDITOR
-    if (b.categoryIds?.length && (b.role === "SUB_EDITOR" || b.role === "CHIEF_SUB_EDITOR")) {
+    if (b.categoryIds?.length && (b.role === "SUB_EDITOR" || b.role === "EDITOR")) {
       for (const catId of b.categoryIds) {
         await prisma.userCategory.create({ data: { userId: user.id, categoryId: catId } }).catch(() => {});
       }

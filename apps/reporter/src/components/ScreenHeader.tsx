@@ -1,12 +1,12 @@
 import React from "react";
-import { View, Image, StyleSheet } from "react-native";
+import { View, StyleSheet, Image } from "react-native";
 
 import { LanguageToggle } from "./LanguageToggle";
 
-// Logo asset is red-on-transparent; we tint it white so it sits on the red
-// header bar (the asset is the only logo file checked in, so re-using it
-// keeps the brand mark consistent with the splash/icon).
-const LOGO = require("../../assets/logo.png");
+// White-on-transparent wordmark, rasterised at 4× the rendered size so it
+// stays crisp on xxxhdpi screens. Source SVG was 2.2 MB (embedded font); the
+// PNG is ~14 KB. Re-render via scripts/rasterize-logo.mjs if the SVG returns.
+const logoInverse = require("../../assets/logo-inverse.png");
 
 /**
  * The shared header shown at the top of every tab screen.
@@ -21,7 +21,7 @@ export function ScreenHeader() {
     <View style={styles.header}>
       <View style={styles.row}>
         <Image
-          source={LOGO}
+          source={logoInverse}
           style={styles.logo}
           resizeMode="contain"
           accessibilityLabel="Rayalaseema Express"
@@ -42,8 +42,5 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 20,
   },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", height: 36 },
-  // 5:1 wordmark (PNG is 1200×240); width matches the natural aspect at
-  // height 28 so contain-resize leaves no padding on either side.
-  // Tinted white to read on the red header.
-  logo: { width: 140, height: 28, tintColor: "#fff" },
+  logo: { width: 140, height: 28 },
 });

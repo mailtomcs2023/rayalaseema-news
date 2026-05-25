@@ -31,8 +31,8 @@ export default async function UsersPage() {
             { key: "password", label: "Password (required for new user; leave empty when editing to keep current)", type: "text" },
             { key: "role", label: "Role", type: "select", required: true, options: [
               { value: "ADMIN", label: "Admin" },
-              { value: "CHIEF_SUB_EDITOR", label: "Chief Sub-Editor" },
-              { value: "SUB_EDITOR", label: "Sub-Editor" },
+              { value: "EDITOR", label: "Editor" },
+              { value: "SUB_EDITOR", label: "Sub Editor" },
               { value: "REPORTER", label: "Reporter" },
             ]},
             { key: "bio", label: "Bio", type: "textarea" },

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 
-type Role = "ADMIN" | "CHIEF_SUB_EDITOR" | "SUB_EDITOR" | "REPORTER";
+type Role = "ADMIN" | "EDITOR" | "SUB_EDITOR" | "REPORTER";
 
 interface AuthSession {
   user: { id: string; email: string; name: string; role: Role };
@@ -12,7 +12,7 @@ interface AuthSession {
  * Returns the session if authorized, or a NextResponse error if not.
  */
 export async function requireAuth(
-  allowedRoles: Role[] = ["ADMIN", "CHIEF_SUB_EDITOR", "SUB_EDITOR", "REPORTER"]
+  allowedRoles: Role[] = ["ADMIN", "EDITOR", "SUB_EDITOR", "REPORTER"]
 ): Promise<AuthSession | NextResponse> {
   try {
     const session = await auth();

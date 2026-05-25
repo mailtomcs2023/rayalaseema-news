@@ -203,7 +203,7 @@ function ProfileRequestsPageBody() {
             <span style={{ fontSize: 13, color: "#374151" }}>
               {filteredJournalist
                 ? <>Reviewing requests from <strong>{filteredJournalist.name}</strong> · {filteredJournalist.email}</>
-                : <>Reviewing requests for journalist <code style={{ fontSize: 12 }}>{journalistId}</code> (no requests on file)</>}
+                : <>Reviewing requests for reporter <code style={{ fontSize: 12 }}>{journalistId}</code> (no requests on file)</>}
             </span>
             <Link href="/profile-requests" style={{ marginLeft: "auto" }}>
               <Button variant="ghost" size="sm" className="h-7 gap-1 px-2 text-xs">

@@ -6,7 +6,7 @@ import { logAudit } from "@/lib/audit";
 // POST /api/articles/[id]/revisions/[revId]/restore — overwrite article fields w/ snapshot
 // Snapshots current state to a fresh revision first (so restore itself is reversible).
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string; revId: string }> }) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR", "SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR"]);
   if (isAuthError(session)) return session;
   try {
     const { id, revId } = await params;

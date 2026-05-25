@@ -32,7 +32,7 @@ interface LayoutPage {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(session)) return session;
 
   const sp = new URL(req.url).searchParams;

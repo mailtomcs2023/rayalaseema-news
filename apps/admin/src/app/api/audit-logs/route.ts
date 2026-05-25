@@ -4,9 +4,9 @@ import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 
 // GET /api/audit-logs — filter by actor / action / resource / date range, paginated
 //
-// Admin + CHIEF_SUB_EDITOR can view. Lower roles get 403 (audit data is sensitive).
+// Admin + EDITOR can view. Lower roles get 403 (audit data is sensitive).
 export async function GET(req: NextRequest) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(session)) return session;
   try {
     const { searchParams } = new URL(req.url);

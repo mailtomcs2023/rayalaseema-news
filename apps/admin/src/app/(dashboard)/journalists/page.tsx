@@ -736,12 +736,12 @@ export default function JournalistsPage() {
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>
-                  Deactivate {confirmDelete?.length ?? 0} journalist
+                  Deactivate {confirmDelete?.length ?? 0} reporter
                   {(confirmDelete?.length ?? 0) === 1 ? "" : "s"}?
                 </AlertDialogTitle>
                 <AlertDialogDescription>
                   They&apos;ll be unable to log in to the reporter app. Their articles, payments,
-                  and KYC documents are preserved. To reactivate later, edit the journalist and
+                  and KYC documents are preserved. To reactivate later, edit the reporter and
                   tick &ldquo;Active&rdquo; — or resetting their password also reactivates the
                   account automatically.
                 </AlertDialogDescription>
@@ -800,14 +800,14 @@ function RowActions({
                 className="text-destructive focus:text-destructive"
                 onClick={() => onDelete(row)}
               >
-                Deactivate journalist
+                Deactivate reporter
               </DropdownMenuItem>
             ) : (
               <DropdownMenuItem
                 className="text-green-700 focus:text-green-700"
                 onClick={() => onActivate(row.raw)}
               >
-                Activate journalist
+                Activate reporter
               </DropdownMenuItem>
             )}
           </>
@@ -1392,7 +1392,7 @@ function JournalistFormDialog({
       return;
     }
     if (!isEdit && !form.password.trim()) {
-      setError("A password is required for a new journalist.");
+      setError("A password is required for a new reporter.");
       return;
     }
     setBusy(true);
@@ -1431,7 +1431,7 @@ function JournalistFormDialog({
     <Dialog open={!!target} onOpenChange={(open) => !open && !busy && onClose()}>
       <DialogContent className="max-h-[88vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit journalist" : "Add journalist"}</DialogTitle>
+          <DialogTitle>{isEdit ? "Edit reporter" : "Add reporter"}</DialogTitle>
           <DialogDescription>
             {isEdit
               ? "Update this reporter's account and profile."
@@ -1580,7 +1580,7 @@ function JournalistFormDialog({
             Cancel
           </Button>
           <Button onClick={save} disabled={busy}>
-            {busy ? "Saving..." : isEdit ? "Save changes" : "Create journalist"}
+            {busy ? "Saving..." : isEdit ? "Save changes" : "Create reporter"}
           </Button>
         </DialogFooter>
       </DialogContent>

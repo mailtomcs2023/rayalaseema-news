@@ -1,1 +1,29 @@
-export { ProfilePendingView as default } from "../src/screens/profile/PendingView";
+import React from "react";
+import { TouchableOpacity } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { Stack, useRouter } from "expo-router";
+import { useT } from "../src/i18n";
+import { ProfilePendingView } from "../src/screens/profile/PendingView";
+
+// "Pending Changes" detail screen. Wraps the shared view with a localised
+// title and an explicit back button so it can't be dropped by an option-
+// merge race in react-navigation v7.
+export default function ProfilePendingRoute() {
+  const { t } = useT();
+  const router = useRouter();
+  return (
+    <>
+      <Stack.Screen
+        options={{
+          title: t("profile.pendingRequests"),
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => router.back()} hitSlop={12} style={{ paddingHorizontal: 4 }}>
+              <Ionicons name="chevron-back" size={26} color="#FF2C2C" />
+            </TouchableOpacity>
+          ),
+        }}
+      />
+      <ProfilePendingView />
+    </>
+  );
+}

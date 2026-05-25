@@ -65,20 +65,20 @@ const statusTabs = [
 // the role can perform the action and whether the article status fits.
 function bulkActionsFor(tab: string, role: string): ActionDef[] {
   const out: ActionDef[] = [];
-  if (tab === "SUBMITTED" && ["SUB_EDITOR", "CHIEF_SUB_EDITOR", "ADMIN"].includes(role)) {
+  if (tab === "SUBMITTED" && ["SUB_EDITOR", "EDITOR", "ADMIN"].includes(role)) {
     out.push({ label: "Review", action: "review", color: "#1d4ed8", bg: "#dbeafe" });
     out.push({ label: "Reject", action: "reject", color: "#dc2626", bg: "#fef2f2" });
   }
   if (tab === "IN_REVIEW") {
-    if (["CHIEF_SUB_EDITOR", "ADMIN"].includes(role)) {
+    if (["EDITOR", "ADMIN"].includes(role)) {
       out.push({ label: "Approve", action: "approve", color: "#16a34a", bg: "#dcfce7" });
       out.push({ label: "Publish", action: "publish", color: "#fff", bg: "#FF2C2C" });
     }
-    if (["SUB_EDITOR", "CHIEF_SUB_EDITOR", "ADMIN"].includes(role)) {
+    if (["SUB_EDITOR", "EDITOR", "ADMIN"].includes(role)) {
       out.push({ label: "Reject", action: "reject", color: "#dc2626", bg: "#fef2f2" });
     }
   }
-  if (tab === "APPROVED" && ["CHIEF_SUB_EDITOR", "ADMIN"].includes(role)) {
+  if (tab === "APPROVED" && ["EDITOR", "ADMIN"].includes(role)) {
     out.push({ label: "Publish", action: "publish", color: "#fff", bg: "#FF2C2C" });
   }
   if (tab === "REJECTED" || tab === "DRAFT") {
@@ -185,20 +185,20 @@ export default function ReviewPage() {
   // Per-row actions (same logic as before, used inside the cell renderer).
   const getActions = (article: Article): ActionDef[] => {
     const actions: ActionDef[] = [];
-    if (article.status === "SUBMITTED" && ["SUB_EDITOR", "CHIEF_SUB_EDITOR", "ADMIN"].includes(role)) {
+    if (article.status === "SUBMITTED" && ["SUB_EDITOR", "EDITOR", "ADMIN"].includes(role)) {
       actions.push({ label: "Review", action: "review", color: "#1d4ed8", bg: "#dbeafe" });
       actions.push({ label: "Reject", action: "reject", color: "#dc2626", bg: "#fef2f2" });
     }
     if (article.status === "IN_REVIEW") {
-      if (["CHIEF_SUB_EDITOR", "ADMIN"].includes(role)) {
+      if (["EDITOR", "ADMIN"].includes(role)) {
         actions.push({ label: "Approve", action: "approve", color: "#16a34a", bg: "#dcfce7" });
         actions.push({ label: "Publish", action: "publish", color: "#fff", bg: "#FF2C2C" });
       }
-      if (["SUB_EDITOR", "CHIEF_SUB_EDITOR", "ADMIN"].includes(role)) {
+      if (["SUB_EDITOR", "EDITOR", "ADMIN"].includes(role)) {
         actions.push({ label: "Reject", action: "reject", color: "#dc2626", bg: "#fef2f2" });
       }
     }
-    if (article.status === "APPROVED" && ["CHIEF_SUB_EDITOR", "ADMIN"].includes(role)) {
+    if (article.status === "APPROVED" && ["EDITOR", "ADMIN"].includes(role)) {
       actions.push({ label: "Publish", action: "publish", color: "#fff", bg: "#FF2C2C" });
     }
     if (article.status === "REJECTED" || article.status === "DRAFT") {
