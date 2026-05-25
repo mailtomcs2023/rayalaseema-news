@@ -122,9 +122,9 @@ export async function buildContinuations(editionId: string): Promise<number> {
   }
   if (articleIds.size === 0) return 0;
 
-  // Pull body lengths only — keep payload tiny.
-  const bodies = await prisma.article.findMany({
-    where: { id: { in: [...articleIds] } },
+  // Pull body lengths only — keep payload tiny. (Spec #1 #133 → Content.)
+  const bodies = await prisma.content.findMany({
+    where: { id: { in: [...articleIds] }, type: "ARTICLE" },
     select: { id: true, body: true },
   });
   const bodyLen = new Map<string, number>();

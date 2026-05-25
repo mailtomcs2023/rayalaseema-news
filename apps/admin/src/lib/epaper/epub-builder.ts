@@ -107,8 +107,8 @@ export async function buildEpubForEdition(editionId: string): Promise<{ buffer: 
     for (const b of blocks) if (b.articleId) articleIds.add(b.articleId);
   }
   const articles = articleIds.size > 0
-    ? await prisma.article.findMany({
-        where: { id: { in: [...articleIds] } },
+    ? await prisma.content.findMany({
+        where: { id: { in: [...articleIds] }, type: "ARTICLE" },
         select: { id: true, title: true, summary: true, body: true },
       })
     : [];

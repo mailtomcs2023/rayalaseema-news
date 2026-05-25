@@ -454,8 +454,12 @@ function stripHtml(s: string): string {
 async function resolveArticles(blocks: Block[]): Promise<Map<string, ResolvedArticle>> {
   const ids = Array.from(new Set(blocks.map((b) => b.articleId).filter((x): x is string => !!x)));
   if (ids.length === 0) return new Map();
-  const rows = await prisma.article.findMany({
-    where: { id: { in: ids } },
+  // Spec #1 #133: articles now live on the unified Content table where
+  // type='ARTICLE'. The /api/epaper/article-picker route + /api/articles
+  // shim both read from Content, so the IDs blocks store are Content IDs.
+  // Reading from prisma.article here would silently miss every new pick.
+  const rows = await prisma.content.findMany({
+    where: { id: { in: ids }, type: "ARTICLE" },
     select: {
       id: true,
       slug: true,
@@ -471,7 +475,7 @@ async function resolveArticles(blocks: Block[]): Promise<Map<string, ResolvedArt
   for (const r of rows) {
     map.set(r.id, {
       id: r.id,
-      slug: r.slug,
+      slug: r.slug ?? "",
       title: r.title,
       summary: r.summary,
       featuredImage: r.featuredImage,

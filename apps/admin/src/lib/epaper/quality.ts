@@ -78,7 +78,7 @@ export async function findQualityWarnings(editionId: string): Promise<QualityWar
     pages.flatMap((p) => ((p.layout as unknown as { blocks: Block[] }) ?? { blocks: [] }).blocks.map((b) => b.articleId).filter((x): x is string => !!x))
   ));
   const articles = articleIds.length
-    ? await prisma.article.findMany({ where: { id: { in: articleIds } }, select: { id: true, title: true, summary: true, body: true, deskId: true } })
+    ? await prisma.content.findMany({ where: { id: { in: articleIds }, type: "ARTICLE" }, select: { id: true, title: true, summary: true, body: true, deskId: true } })
     : [];
   const articleById = new Map(articles.map((a) => [a.id, a]));
 

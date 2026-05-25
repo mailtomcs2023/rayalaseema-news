@@ -76,14 +76,18 @@ interface ScoredArticle {
  */
 async function categoryHeatMap(): Promise<Record<string, number>> {
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  const rows = await prisma.article.findMany({
-    where: { status: "PUBLISHED", publishedAt: { gte: since } },
+  // Spec #1 #133: articles live on the unified Content table where type='ARTICLE'.
+  const rows = await prisma.content.findMany({
+    where: { type: "ARTICLE", status: "PUBLISHED", publishedAt: { gte: since } },
     select: { viewCount: true, category: { select: { slug: true } } },
   });
   const sumBySlug: Record<string, number> = {};
   let total = 0;
   for (const r of rows) {
-    sumBySlug[r.category.slug] = (sumBySlug[r.category.slug] || 0) + r.viewCount;
+    // Content.category is nullable — skip uncategorised rows from the heat map.
+    const slug = r.category?.slug;
+    if (!slug) continue;
+    sumBySlug[slug] = (sumBySlug[slug] || 0) + r.viewCount;
     total += r.viewCount;
   }
   if (total === 0) return {};
@@ -114,15 +118,17 @@ async function loadCandidatePool(input: AutofillInput): Promise<ScoredArticle[]>
     };
   }
 
-  const rows = await prisma.article.findMany({
-    where: where as any,
+  // Spec #1 #133: pool reads from Content where type=ARTICLE. Content lacks
+  // the `breaking` boolean (broken-news lives on type='BREAKING_NEWS' rows
+  // now); we set breaking=false for the pool so scoring still runs cleanly.
+  const rows = await prisma.content.findMany({
+    where: { ...(where as any), type: "ARTICLE" },
     select: {
       id: true,
       title: true,
       summary: true,
       body: true,
       featuredImage: true,
-      breaking: true,
       featured: true,
       publishedAt: true,
       viewCount: true,
@@ -137,11 +143,11 @@ async function loadCandidatePool(input: AutofillInput): Promise<ScoredArticle[]>
     id: r.id,
     title: r.title,
     summary: r.summary,
-    categorySlug: r.category.slug,
+    categorySlug: r.category?.slug ?? "",
     districtSlug: r.constituency?.district.slug ?? null,
     hasImage: !!r.featuredImage,
     wordCount: (r.body || "").replace(/<[^>]+>/g, " ").trim().split(/\s+/).filter(Boolean).length,
-    breaking: r.breaking,
+    breaking: false,
     featured: r.featured,
     publishedAt: r.publishedAt,
     viewCount: r.viewCount,

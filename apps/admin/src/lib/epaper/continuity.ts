@@ -45,8 +45,8 @@ export async function findDuplicateArticles(editionId: string): Promise<Duplicat
   }
   if (idsToLookup.length === 0) return duplicates;
 
-  const articles = await prisma.article.findMany({
-    where: { id: { in: idsToLookup } },
+  const articles = await prisma.content.findMany({
+    where: { id: { in: idsToLookup }, type: "ARTICLE" },
     select: { id: true, title: true },
   });
   const titleById = new Map(articles.map((a) => [a.id, a.title]));
