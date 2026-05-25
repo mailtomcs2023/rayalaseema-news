@@ -16,9 +16,9 @@ export default async function DashboardPage() {
   const stats = await getDashboardStats();
 
   const statCards = [
-    { label: "Published", value: stats.publishedArticles, color: "#16a34a", href: "/articles", icon: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" },
-    { label: "Drafts", value: stats.draftArticles, color: "#eab308", href: "/articles", icon: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" },
-    { label: "In Review", value: stats.inReviewArticles, color: "#3b82f6", href: "/articles", icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" },
+    { label: "Published", value: stats.publishedArticles, color: "#16a34a", href: "/content", icon: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" },
+    { label: "Drafts", value: stats.draftArticles, color: "#eab308", href: "/content", icon: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" },
+    { label: "In Review", value: stats.inReviewArticles, color: "#3b82f6", href: "/content", icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" },
     { label: "Categories", value: stats.totalCategories, color: "#8b5cf6", href: "/categories", icon: "M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" },
     { label: "Breaking News", value: stats.breakingNewsCount, color: "#ef4444", href: "/breaking-news", icon: "M13 10V3L4 14h7v7l9-11h-7z" },
     { label: "Videos", value: stats.totalVideos, color: "#ec4899", href: "/videos", icon: "M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" },
@@ -39,7 +39,7 @@ export default async function DashboardPage() {
             <p style={{ fontSize: 13, color: "#888", marginTop: 4 }}>Welcome to Rayalaseema Express CMS</p>
           </div>
           <Link
-            href="/articles/new"
+            href="/content/new"
             style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "10px 20px", background: "#FF2C2C", color: "#fff", borderRadius: 8, fontSize: 14, fontWeight: 700, textDecoration: "none" }}
           >
             + New Article
@@ -66,8 +66,8 @@ export default async function DashboardPage() {
         {/* Quick Actions */}
         <div className="quick-grid">
           {[
-            { label: "New Article", href: "/articles/new", icon: "+" },
-            { label: "Breaking News", href: "/breaking-news", icon: "!" },
+            { label: "New Content", href: "/content/new", icon: "+" },
+            { label: "Breaking News", href: "/content/new", icon: "!" },
             { label: "Upload ePaper", href: "/epaper", icon: "^" },
             { label: "Add Category", href: "/categories", icon: "#" },
           ].map((a) => (
@@ -96,19 +96,19 @@ export default async function DashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {stats.recentArticles.map((article) => (
+              {stats.recentArticles.map((article: any) => (
                 <tr key={article.id} style={{ borderBottom: "1px solid #f9fafb" }}>
                   <td style={{ padding: "12px 20px", fontSize: 13, fontWeight: 600, color: "#111", maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    <Link href={`/articles/${article.id}`} style={{ color: "#111", textDecoration: "none" }}>
+                    <Link href={`/content/${article.id}`} style={{ color: "#111", textDecoration: "none" }}>
                       {article.title.substring(0, 50)}...
                     </Link>
                   </td>
                   <td style={{ padding: "12px 20px" }}>
                     <span style={{ fontSize: 11, fontWeight: 600, color: "#fff", background: "#FF2C2C", padding: "2px 8px", borderRadius: 4 }}>
-                      {article.category.nameEn}
+                      {article.category?.nameEn || "—"}
                     </span>
                   </td>
-                  <td style={{ padding: "12px 20px", fontSize: 12, color: "#888" }}>{article.author.name}</td>
+                  <td style={{ padding: "12px 20px", fontSize: 12, color: "#888" }}>{article.author?.name || ""}</td>
                   <td style={{ padding: "12px 20px" }}>
                     <span style={{
                       fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 4,

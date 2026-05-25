@@ -62,6 +62,9 @@ model User {
   templateVersions  TemplateVersion[]
   composites        CompositeBlock[]   @relation("CompositeCreator")
 
+  // Menu Builder (Spec #3) — back-relation
+  menuVersions      MenuVersion[]      @relation("MenuVersionEditor")
+
   // Profile-change requests this user has reviewed (admin role)
   reviewedProfileUpdateRequests ProfileUpdateRequest[] @relation("ProfileUpdateRequestReviewer")
 
@@ -1218,4 +1221,59 @@ model CompositeBlock {
   updatedAt   DateTime @updatedAt
 
   @@map("composite_blocks")
+}
+
+// ============ MENU BUILDER (Spec #3 — Epic #174) ============
+// Three named menus (HEADER, FOOTER, MOBILE) drive the public navigation.
+// Items are stored as a 2-level recursive JSON tree; Zod validation in
+// packages/db/src/menu-schemas.ts enforces shape + max depth.
+//
+// `items` holds the published tree visitors see; `draftItems` is the
+// in-progress edit. Publish promotes draftItems -> items, snapshots a
+// MenuVersion. Cache invalidated via revalidateTag('menu') on publish.
+
+enum MenuLocation {
+  HEADER
+  FOOTER
+  MOBILE
+}
+
+// Stored on each MenuItem.target.type — kept here so callers in the
+// admin editor can import the enum directly instead of redeclaring it.
+enum MenuItemTargetType {
+  CATEGORY
+  INTERNAL_URL
+  EXTERNAL_URL
+  CONTENT
+}
+
+model Menu {
+  id              String        @id @default(cuid())
+  // One menu per location — UI never needs more than one of each, and the
+  // unique constraint keeps the seed script idempotent.
+  location        MenuLocation  @unique
+  name            String
+  items           Json          // published tree visitors see
+  draftItems      Json?         // in-progress edits; promoted on publish
+  isPublished     Boolean       @default(false)
+  publishedAt     DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  versions        MenuVersion[]
+
+  @@map("menus")
+}
+
+model MenuVersion {
+  id          String   @id @default(cuid())
+  menuId      String
+  menu        Menu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  items       Json
+  editedById  String
+  editedBy    User     @relation("MenuVersionEditor", fields: [editedById], references: [id])
+  editNote    String?
+  createdAt   DateTime @default(now())
+
+  @@index([menuId, createdAt])
+  @@map("menu_versions")
 }
