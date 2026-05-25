@@ -595,7 +595,10 @@ function EpaperEditorPage() {
   // View mode: edit canvas / split (canvas + preview iframe) / preview-only.
   // Live preview hits /api/epaper/page/[id]/preview which reuses
   // renderLayoutToHtml — no Playwright in the hot path so it's near-instant.
-  const [viewMode, setViewMode] = useState<"edit" | "split" | "preview">("edit");
+  // Default to split so editor always sees real Eenadu-style preview
+  // side-by-side with the editable grid. Operator can flip to Edit-only or
+  // Preview-only via the toolbar pill.
+  const [viewMode, setViewMode] = useState<"edit" | "split" | "preview">("split");
 
   // Save-status indicator: tracks every PATCH so the operator can see whether
   // their last action persisted. Three states: saving | saved | failed.
