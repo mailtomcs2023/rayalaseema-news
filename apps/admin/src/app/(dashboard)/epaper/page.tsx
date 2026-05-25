@@ -2250,12 +2250,12 @@ function DraggableBlockGrid({
                 display: "flex", flexDirection: "column", justifyContent: "space-between",
                 minHeight: 0, height: "100%",
               }}>
-              {onRemoveBlock && (
+              {onRemoveBlock && b.type !== "masthead" && b.type !== "section-band" && (
                 <button
                   className="lock-btn"
                   onClick={(e) => { e.stopPropagation(); if (confirm(`Delete ${b.type} block?`)) onRemoveBlock(b.id); }}
                   title={`Delete this ${b.type} block`}
-                  style={{ position: "absolute", top: 2, left: 2, background: "rgba(220,38,38,0.85)", color: "#fff", fontSize: 11, fontWeight: 800, width: 18, height: 18, border: "none", borderRadius: 3, cursor: "pointer", zIndex: 5, lineHeight: 1, padding: 0 }}>
+                  style={{ position: "absolute", bottom: 2, right: 2, background: "rgba(220,38,38,0.85)", color: "#fff", fontSize: 11, fontWeight: 800, width: 18, height: 18, border: "none", borderRadius: 3, cursor: "pointer", zIndex: 6, lineHeight: 1, padding: 0 }}>
                   ×
                 </button>
               )}

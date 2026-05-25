@@ -660,10 +660,22 @@ export async function renderLayoutToHtml(input: RenderInput): Promise<string> {
     grid-template-rows: repeat(${maxRow}, 92px);
     column-gap: 14px;
     row-gap: 12px;
+    /* Hard contain the page to one PDF sheet. Without this the page grew
+       to fit oversized children (mostly the masthead logo image) and
+       Playwright sliced the content into dozens of PDF pages. */
+    width: 1408px;
+    height: ${maxRow * 92}px;
+    max-height: ${maxRow * 92}px;
+    overflow: hidden;
   }
-  .block { overflow: hidden; }
-  .block .block-inner { width:100%; height:100%; display:flex; flex-direction:column; }
-  .block a.story-link { color: inherit; text-decoration: none; display:block; height:100%; }
+  /* CSS-grid items default to min-height: auto, so any oversized child
+     (e.g. a full-resolution logo image) blew the row past its declared
+     height. Force min-height: 0 so the row sticks to its grid track. */
+  .block { overflow: hidden; min-height: 0; min-width: 0; max-height: 100%; max-width: 100%; }
+  .block .block-inner { width:100%; height:100%; display:flex; flex-direction:column; overflow: hidden; }
+  .block a.story-link { color: inherit; text-decoration: none; display:block; height:100%; overflow: hidden; }
+  /* Belt-and-braces: any image anywhere inside a block can't exceed the block. */
+  .block img { max-width: 100%; max-height: 100%; object-fit: cover; }
 
   /* Masthead */
   /* Eenadu-style masthead: 3-col [ad | logo+tag | ad] band on top,
@@ -676,8 +688,8 @@ export async function renderLayoutToHtml(input: RenderInput): Promise<string> {
   .mast-adslot img { max-width: 100%; max-height: 100%; object-fit: contain; }
   .mast-adslot.empty { font-family: 'Noto Sans Telugu', sans-serif; font-size: 11px;
     color: #b8ad94; text-transform: uppercase; letter-spacing: 2px; background: #faf6ec; }
-  .mast-center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
-  .mast-logo-img { max-height: 80%; max-width: 92%; object-fit: contain; display: block; }
+  .mast-center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-width: 0; min-height: 0; overflow: hidden; }
+  .mast-logo-img { height: 80%; max-width: 92%; width: auto; object-fit: contain; display: block; }
   .mast-logo { font-family: 'Ramabhadra', serif; font-size: 64px; color: #A50D0D; line-height: 1; }
   .mast-tag { font-family: 'Noto Sans Telugu', sans-serif; font-size: 13px; letter-spacing: 4px;
     color: #c2185b; font-style: italic; font-weight: 700; text-transform: uppercase; }
