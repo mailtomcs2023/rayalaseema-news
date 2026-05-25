@@ -150,6 +150,54 @@ export function EditorShell({
     [layout.blocks, selectedId],
   );
 
+  // Auto-save (E5 #167) — 5 s of layout inactivity ⇒ flush draft to the
+  // server. Tracks the last-saved JSON so we don't re-PUT identical
+  // payloads (e.g. after a server-driven refresh).
+  const layoutRef = useRef<Layout>(layout);
+  const lastSavedJson = useRef<string>(JSON.stringify(layout));
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [autoSaving, setAutoSaving] = useState(false);
+
+  useEffect(() => {
+    layoutRef.current = layout;
+    const json = JSON.stringify(layout);
+    if (json === lastSavedJson.current) return;
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(async () => {
+      const snapshot = JSON.stringify(layoutRef.current);
+      if (snapshot === lastSavedJson.current) return;
+      setAutoSaving(true);
+      const res = await fetch(`/api/page-builder/templates/${initial.id}/draft`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: snapshot ? `{"draftLayout":${snapshot}}` : "{}",
+      });
+      setAutoSaving(false);
+      if (res.ok) {
+        lastSavedJson.current = snapshot;
+        setSavedAt(new Date());
+      } else {
+        // Bubble the validation error up to the manual error banner so the
+        // operator sees what went wrong (Zod issues from invalid configs).
+        setError((await res.json().catch(() => ({}))).error || "Auto-save failed");
+      }
+    }, 5000);
+    return () => {
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    };
+  }, [layout, initial.id]);
+
+  // Warn before navigating away with an unsaved draft.
+  useEffect(() => {
+    function before(e: BeforeUnloadEvent) {
+      if (JSON.stringify(layoutRef.current) === lastSavedJson.current) return;
+      e.preventDefault();
+      e.returnValue = "";
+    }
+    window.addEventListener("beforeunload", before);
+    return () => window.removeEventListener("beforeunload", before);
+  }, []);
+
   function persistLocal(next: Layout) {
     setLayout(next);
   }
@@ -205,16 +253,18 @@ export function EditorShell({
   async function saveDraft() {
     setError(null);
     setSaving(true);
+    const snapshot = JSON.stringify(layout);
     const res = await fetch(`/api/page-builder/templates/${initial.id}/draft`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ draftLayout: layout }),
+      body: `{"draftLayout":${snapshot}}`,
     });
     setSaving(false);
     if (!res.ok) {
       setError((await res.json().catch(() => ({}))).error || "Save failed");
       return;
     }
+    lastSavedJson.current = snapshot;
     setSavedAt(new Date());
     refreshPreview();
   }
@@ -281,7 +331,13 @@ export function EditorShell({
             History ({initial.versionCount})
           </Link>
           <button onClick={saveDraft} disabled={saving} style={btnSecondary}>
-            {saving ? "Saving…" : savedAt ? `Saved ${savedAt.toLocaleTimeString()}` : "Save Draft"}
+            {saving
+              ? "Saving…"
+              : autoSaving
+              ? "Auto-saving…"
+              : savedAt
+              ? `Saved ${savedAt.toLocaleTimeString()}`
+              : "Save Draft"}
           </button>
           <button onClick={publish} disabled={publishing} style={btnPrimary}>
             {publishing ? "Publishing…" : "Publish"}
