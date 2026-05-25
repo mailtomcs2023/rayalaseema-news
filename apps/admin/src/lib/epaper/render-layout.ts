@@ -11,6 +11,7 @@
 
 import { prisma } from "@rayalaseema/db";
 import { hyphenateTelugu } from "./telugu-hyphenation";
+import { migrateLegacyLayout, isLegacyLayout } from "./migrate-layout";
 
 const SITE_URL = process.env.SITE_URL || "https://rayalaseemaexpress.com";
 
@@ -882,10 +883,55 @@ export async function renderEpaperPageById(pageId: string): Promise<string> {
   const days = ["ఆదివారం","సోమవారం","మంగళవారం","బుధవారం","గురువారం","శుక్రవారం","శనివారం"];
 
   // Merge: master blocks first (so they render under page blocks visually),
-  // then page blocks. Preserves coordSystem from page layout.
+  // then page blocks. Master blocks are always mm-v2; if the page is still
+  // grid-v1 we auto-migrate page blocks to mm so the two layers share a
+  // common coord system. Pages with no master keep their original system.
+  let pageBlocksOut = pageLayout.blocks || [];
+  let mergedCoordSystem: string | undefined = pageLayout.coordSystem;
+  if (masterBlocks.length > 0 && isLegacyLayout(pageLayout)) {
+    const migrated = migrateLegacyLayout(pageLayout);
+    pageBlocksOut = migrated.blocks as Block[];
+    mergedCoordSystem = "mm-v2";
+  } else if (masterBlocks.length > 0) {
+    mergedCoordSystem = "mm-v2";
+  }
+  // When a master provides a block type (masthead / section-band / folio),
+  // drop the page-level duplicates so the renderer doesn't emit both. Old
+  // generated editions still carry these blocks from pre-v2 templates.
+  if (masterBlocks.length > 0) {
+    const masterTypes = new Set(masterBlocks.map((b) => b.type));
+    pageBlocksOut = pageBlocksOut.filter((b) => !masterTypes.has(b.type));
+  }
+  // Offset page blocks below the master header so they don't overlap.
+  // Master "header" = block whose top is in the upper half of the live
+  // area (masthead, section-band). Master "footer" (folio) sits at the
+  // bottom and is left alone.
+  if (masterBlocks.length > 0) {
+    const LIVE_H = 520;
+    const headerBottom = masterBlocks
+      .filter((m) => m.y < LIVE_H / 2)
+      .reduce((max, m) => Math.max(max, m.y + m.h), 0);
+    const footerTop = masterBlocks
+      .filter((m) => m.y >= LIVE_H / 2)
+      .reduce((min, m) => Math.min(min, m.y), LIVE_H);
+    if (headerBottom > 0) {
+      const pad = 4;             // mm visual gap
+      const pageOffsetTop = headerBottom + pad;
+      const pageMaxBottom = footerTop - pad;
+      // Scale page blocks into the [pageOffsetTop, pageMaxBottom] band.
+      const availableH = Math.max(50, pageMaxBottom - pageOffsetTop);
+      const originalH = pageBlocksOut.reduce((m, b) => Math.max(m, b.y + b.h), 0) || LIVE_H;
+      const scale = Math.min(1, availableH / originalH);
+      pageBlocksOut = pageBlocksOut.map((b) => ({
+        ...b,
+        y: pageOffsetTop + b.y * scale,
+        h: b.h * scale,
+      }));
+    }
+  }
   const mergedLayout = {
-    coordSystem: pageLayout.coordSystem,
-    blocks: [...masterBlocks, ...(pageLayout.blocks || [])],
+    coordSystem: mergedCoordSystem,
+    blocks: [...masterBlocks, ...pageBlocksOut],
   };
 
   return renderLayoutToHtml({

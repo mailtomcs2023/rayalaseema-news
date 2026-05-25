@@ -58,6 +58,11 @@ model User {
   journalistProfile JournalistProfile?
   payments          ArticlePayment[]
 
+  // Unified Content (Spec #1) — back-relations parallel to Article side
+  contents          Content[]         @relation("ContentAuthor")
+  contentRevisions  ContentRevision[]
+  contentPayments   ContentPayment[]  @relation("ContentJournalist")
+
   // Profile-change requests this user has reviewed (admin role)
   reviewedProfileUpdateRequests ProfileUpdateRequest[] @relation("ProfileUpdateRequestReviewer")
 
@@ -274,6 +279,7 @@ model Category {
 
   articles    Article[]
   videos      Video[]
+  contents    Content[]
   assignedUsers UserCategory[]
   desk        Desk?      // back-relation: TOPICAL desk auto-derived from category
 
@@ -284,10 +290,11 @@ model Category {
 }
 
 model Tag {
-  id        String       @id @default(cuid())
-  name      String       @unique
-  slug      String       @unique
-  articles  ArticleTag[]
+  id          String       @id @default(cuid())
+  name        String       @unique
+  slug        String       @unique
+  articles    ArticleTag[]
+  contentTags ContentTag[]
 
   @@map("tags")
 }
@@ -801,6 +808,7 @@ model Constituency {
   loksabha    String?  // Which Lok Sabha seat this falls under
   mandals     Mandal[]
   articles    Article[] @relation("ArticleConstituency")
+  contents    Content[] @relation("ContentConstituency")
   desk        Desk?     // back-relation: GEOGRAPHIC desk for this AC (e.g. "ప్రొద్దుటూరు")
   sortOrder   Int      @default(0)
   active      Boolean  @default(true)

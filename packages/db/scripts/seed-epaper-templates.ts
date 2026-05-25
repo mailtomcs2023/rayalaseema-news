@@ -75,9 +75,9 @@ const frontPage: TemplateSpec = {
   sortOrder: 1,
   layout: {
     blocks: [
-      // Masthead now carries side ads + bibliographic info + cities band
-      // (#5 Eenadu-style) so it's taller: 4 rows instead of 3.
-      { id: "mh", type: "masthead", x: 0, y: 0, w: 12, h: 4 },
+      // Masthead REMOVED — handled by front-master (#108). Page starts at
+      // top of live area; ad-top band + lead begin right below the master.
+      { id: "ad-top", type: "ad", x: 0, y: 0, w: 12, h: 2 },
       // Lead — image preferred but not mandatory (so it always fills)
       { id: "lead", type: "lead", x: 0, y: 4, w: 8, h: 14, slotFilter: { minImages: 1 } },
       // Right column majors
@@ -110,7 +110,7 @@ function districtPage(slug: string, nameTe: string, sortOrder: number): Template
     sortOrder,
     layout: {
       blocks: [
-        { id: "band", type: "section-band", x: 0, y: 0, w: 12, h: 2 },
+        // section-band REMOVED — handled by district-master/section-master (#108).
         { id: "lead", type: "lead", x: 0, y: 2, w: 8, h: 11, slotFilter: { districtSlug: slug, minImages: 1 } },
         { id: "maj-1", type: "major", x: 8, y: 2, w: 4, h: 6, slotFilter: { districtSlug: slug, minImages: 1 } },
         { id: "maj-2", type: "major", x: 8, y: 8, w: 4, h: 5, slotFilter: { districtSlug: slug, minImages: 1 } },
@@ -161,7 +161,7 @@ function sectionPage(
     sortOrder,
     layout: {
       blocks: [
-        { id: "band", type: "section-band", x: 0, y: 0, w: 12, h: 2 },
+        // section-band REMOVED — handled by district-master/section-master (#108).
         { id: "lead", type: "lead", x: 0, y: 2, w: 8, h: 11, slotFilter: filter({ minImages: 1 }) },
         { id: "maj-1", type: "major", x: 8, y: 2, w: 4, h: 6, slotFilter: filter({ minImages: 1 }) },
         { id: "maj-2", type: "major", x: 8, y: 8, w: 4, h: 5, slotFilter: filter() },
@@ -194,7 +194,7 @@ const editorialPage: TemplateSpec = {
   sortOrder: 70,
   layout: {
     blocks: [
-      { id: "band", type: "section-band", x: 0, y: 0, w: 12, h: 2 },
+      // section-band REMOVED — handled by section-master (#108).
       { id: "lead", type: "lead", x: 0, y: 2, w: 8, h: 16, slotFilter: { categorySlug: "editorial", minWords: 200 } },
       { id: "opinion-1", type: "major", x: 8, y: 2, w: 4, h: 8, slotFilter: { categorySlug: "editorial" } },
       { id: "opinion-2", type: "major", x: 8, y: 10, w: 4, h: 8, slotFilter: { categorySlug: "editorial" } },
@@ -218,7 +218,7 @@ const utilityPage: TemplateSpec = {
   sortOrder: 90,
   layout: {
     blocks: [
-      { id: "band", type: "section-band", x: 0, y: 0, w: 12, h: 2 },
+      // section-band REMOVED — handled by section-master (#108).
       // Mandi top-left
       { id: "mandi-band", type: "text", x: 0, y: 2, w: 6, h: 1, text: "<b>మండీ ధరలు</b>" },
       { id: "mandi-1", type: "brief", x: 0, y: 3, w: 6, h: 2 },
@@ -257,7 +257,7 @@ const classifiedsPage: TemplateSpec = {
   sortOrder: 80,
   layout: {
     blocks: [
-      { id: "band", type: "section-band", x: 0, y: 0, w: 12, h: 2 },
+      // section-band REMOVED — handled by section-master (#108).
       { id: "ad-1", type: "ad", x: 0, y: 2, w: 4, h: 9 },
       { id: "ad-2", type: "ad", x: 4, y: 2, w: 4, h: 9 },
       { id: "ad-3", type: "ad", x: 8, y: 2, w: 4, h: 9 },
