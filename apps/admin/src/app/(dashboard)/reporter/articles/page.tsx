@@ -79,7 +79,7 @@ export default async function ReporterArticlesPage({
 
       {/* Status filter chips — Expo Articles screen has no heading, the chips
           sit directly under the header. */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: "12px 14px" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, paddingTop: 12, paddingBottom: 12 }}>
           {FILTERS.map((f) => {
             const active = filter === f.value;
             const n = countByStatus[f.value] || 0;
@@ -109,7 +109,6 @@ export default async function ReporterArticlesPage({
       {articles.length === 0 ? (
         <div
           style={{
-            margin: "0 14px",
             padding: 48,
             textAlign: "center",
             background: "#fff",
@@ -123,7 +122,7 @@ export default async function ReporterArticlesPage({
           </p>
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "0 14px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {articles.map((a) => {
             const sc = STATUS_TINT[a.status] || STATUS_TINT.DRAFT;
             return (

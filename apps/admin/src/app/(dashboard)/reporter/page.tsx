@@ -60,25 +60,24 @@ export default async function ReporterHome() {
           for cards, paddingHorizontal: 16 for headings). */}
       <KycBanner userId={userId} />
 
-      <h1 style={{ fontSize: 17, lineHeight: "24px", fontWeight: 800, color: "#111", padding: "16px 16px 0" }}>
+      <h1 style={{ fontSize: 17, lineHeight: "24px", fontWeight: 800, color: "#111", paddingTop: 16 }}>
         Welcome, {name}
       </h1>
 
       {/* KPI grid — 3 cards in one row, matching the Expo Dashboard. */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, padding: "10px 14px 6px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, paddingTop: 10, paddingBottom: 6 }}>
         <Kpi Icon={FileText}     tint="#3b82f6" value={total}    label="Total"    href="/reporter/articles" />
         <Kpi Icon={CheckCircle2} tint="#16a34a" value={approved} label="Approved" href="/reporter/articles?status=APPROVED" />
         <Kpi Icon={Wallet}       tint="#FF2C2C" value={`₹${earnings.toLocaleString("en-IN")}`} label="Earnings" href="/reporter/earnings" />
       </div>
 
-      <h2 style={{ fontSize: 16, fontWeight: 800, color: "#111", padding: "10px 16px 10px" }}>
+      <h2 style={{ fontSize: 16, fontWeight: 800, color: "#111", paddingTop: 10, paddingBottom: 10 }}>
         My Articles
       </h2>
 
       {articles.length === 0 ? (
         <div
           style={{
-            margin: "0 14px",
             padding: 48,
             background: "#fff",
             borderRadius: 14,
@@ -164,7 +163,7 @@ function ArticleCard({ article }: { article: any }) {
     <div
       style={{
         background: "#fff",
-        margin: "0 14px 10px",
+        marginBottom: 10,
         borderRadius: 14,
         padding: 14,
         boxShadow: "0 1px 3px rgba(0,0,0,0.05), 0 4px 12px rgba(0,0,0,0.03)",

@@ -56,7 +56,7 @@ export default async function ReelPage({ params }: { params: Promise<{ slug: str
           </p>
         )}
         <div style={{ marginTop: 16 }}>
-          <ShareBar url={`${SITE_URL}/reel/${slug}`} title={reel.title} />
+          <ShareBar title={reel.title} slug={slug} siteUrl={SITE_URL} />
         </div>
       </main>
       <Footer config={config} />

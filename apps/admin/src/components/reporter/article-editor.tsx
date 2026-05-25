@@ -189,7 +189,7 @@ export function ArticleEditor({ kycVerified }: Props) {
   };
 
   return (
-    <div style={{ padding: 16, maxWidth: 720, margin: "0 auto" }}>
+    <div style={{ maxWidth: 720, margin: "0 auto" }}>
       <h1 style={{ fontSize: 20, fontWeight: 800, color: "#111", marginBottom: 14 }}>
         New Article
       </h1>

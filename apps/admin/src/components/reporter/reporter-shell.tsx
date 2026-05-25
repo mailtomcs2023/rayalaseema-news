@@ -49,6 +49,11 @@ export function ReporterShell({ children }: { children: ReactNode }) {
         className="reporter-main"
         style={{
           flex: 1,
+          // 14px horizontal padding mirrors Expo's `marginHorizontal: 14`.
+          // Each page lays out its children inside this gutter so cards,
+          // headings, and chips all align on the same vertical line.
+          paddingLeft: 14,
+          paddingRight: 14,
           // Tab bar (~56) + FAB clearance (~80 to bottom) — keep the last
           // article card from being hidden behind the floating "+" button.
           paddingBottom: 140,
@@ -61,10 +66,10 @@ export function ReporterShell({ children }: { children: ReactNode }) {
         {children}
       </main>
 
-      {/* Floating "new article" button — mirrors the FAB on the Expo
-          Dashboard/Articles screens. Hidden on the editor itself to avoid a
-          self-link. */}
-      {pathname !== "/reporter/articles/new" && (
+      {/* Floating "new article" button — only shown on Home + Articles, the
+          same two screens that show a FAB in the Expo app. Hidden on
+          Earnings, Profile, and the editor itself. */}
+      {(pathname === "/reporter" || pathname === "/reporter/articles") && (
         <Link
           href="/reporter/articles/new"
           aria-label="New article"
@@ -116,6 +121,14 @@ export function ReporterShell({ children }: { children: ReactNode }) {
         .reporter-main h2,
         .reporter-main h3,
         .reporter-main p { margin: 0; }
+        /* globals.css adds padding-top: 72px to every <main> under 1024px
+           to clear the admin's mobile top-bar. The reporter shell has its
+           own sticky header, so neutralise that rule here. The override is
+           scoped to the same media query so on desktop the inline
+           margin:0 auto keeps centring the 960px content column. */
+        @media (max-width: 1024px) {
+          main.reporter-main { padding-top: 0 !important; }
+        }
         .reporter-tabs {
           position: fixed;
           left: 0;
@@ -130,7 +143,11 @@ export function ReporterShell({ children }: { children: ReactNode }) {
         }
         .reporter-fab {
           position: fixed;
-          right: 16px;
+          /* Track the right edge of the centred 960px content column rather
+             than the viewport. On phones (viewport <= 960) this collapses to
+             the standard 16px gutter; on desktop the FAB sits next to the
+             cards instead of floating off in empty white space. */
+          right: max(16px, calc((100vw - 960px) / 2 + 16px));
           bottom: calc(80px + env(safe-area-inset-bottom, 0));
           width: 56px;
           height: 56px;

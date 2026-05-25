@@ -25,7 +25,7 @@ export default async function NewReporterArticle() {
 
   return (
     <ReporterShell>
-      <div style={{ padding: 16 }}>
+      <div style={{ paddingTop: 16 }}>
         <KycBanner userId={userId} />
         <ArticleEditor kycVerified={kycVerified} />
       </div>

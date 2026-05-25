@@ -37,7 +37,7 @@ export default async function HomePage() {
   const afSeen = new Set<string>();
   const afUnique = afPool.filter((a) => (afSeen.has(a.id) ? false : afSeen.add(a.id)));
 
-  const featuredHard = featured.find((a) => !AF_EXCLUDE.has(a.category.slug));
+  const featuredHard = featured.find((a) => a.category && !AF_EXCLUDE.has(a.category.slug));
   const afLeadSrc = featuredHard || afUnique[0] || null;
   const afLead = afLeadSrc ? toAF(afLeadSrc) : null;
   const afLatest = afLead
@@ -48,7 +48,9 @@ export default async function HomePage() {
     .map((d) => ({
       name: d.district.name,
       slug: d.district.slug,
-      articles: d.articles.map((a) => ({ id: a.id, title: a.title, slug: a.slug })),
+      // Spec #1 migration: Content.slug is nullable. Public articles
+      // always have one, so coerce to "" for the AFDistrict shape.
+      articles: d.articles.map((a) => ({ id: a.id, title: a.title, slug: a.slug || "" })),
     }))
     .sort((x, y) => y.articles.length - x.articles.length)
     .slice(0, 8);
@@ -147,7 +149,9 @@ export default async function HomePage() {
   const videoItems = videos.map((v) => ({
     id: v.id,
     title: v.title,
-    slug: v.slug,
+    // Spec #1: Content.slug nullable; public videos always have one,
+    // coerce for the VideoItem shape.
+    slug: v.slug || "",
     thumbnail: v.thumbnailUrl,
     videoUrl: v.videoUrl,
     duration: v.duration,
