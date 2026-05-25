@@ -63,39 +63,50 @@ const TYPES = [
 
 export default function NewContentPage() {
   const router = useRouter();
-  const [picking, setPicking] = useState<string | null>(null);
+  // Two-step UX: click tile -> reveal title field -> Create button submits.
+  // Previously the tile click POSTed directly, which produced one "Untitled
+  // DRAFT" row per click — making the list page noisy and confusing.
+  const [chosenType, setChosenType] = useState<string | null>(null);
+  const [title, setTitle] = useState("");
+  const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
 
-  const pick = async (type: string) => {
-    setPicking(type);
+  // Slug derived from title (no hyphens for non-ASCII Telugu; falls back to a
+  // timestamp so the API doesn't reject empty slugs).
+  const slugify = (s: string) =>
+    s.toLowerCase().trim().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-").substring(0, 60);
+
+  const create = async () => {
+    if (!chosenType) return;
+    if (!title.trim()) {
+      setError("Title is required before creating.");
+      return;
+    }
+    setCreating(true);
     setError("");
     try {
+      const cleanTitle = title.trim();
+      const baseSlug = slugify(cleanTitle) || `content-${Date.now()}`;
       const res = await fetch("/api/content", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // Slug omitted on purpose. BREAKING_NEWS doesn't need one; the others
-        // pick it up in the editor (F1) where the user actually writes the title.
-        // For now we send a placeholder title so the create succeeds and the
-        // editor can rename.
         body: JSON.stringify({
-          type,
-          title: type === "BREAKING_NEWS" ? "Untitled breaking news" : "Untitled",
-          slug: type === "BREAKING_NEWS"
-            ? `breaking-${Date.now()}`
-            : `untitled-${Date.now()}`,
+          type: chosenType,
+          title: cleanTitle,
+          slug: chosenType === "BREAKING_NEWS" ? `breaking-${Date.now()}` : `${baseSlug}-${Date.now()}`,
         }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         setError(data.error || `Create failed (HTTP ${res.status})`);
-        setPicking(null);
+        setCreating(false);
         return;
       }
       const row = await res.json();
       router.push(`/content/${row.id}`);
     } catch (e: any) {
       setError(e.message || "Create failed");
-      setPicking(null);
+      setCreating(false);
     }
   };
 
@@ -121,25 +132,22 @@ export default function NewContentPage() {
           gap: 12,
         }}>
           {TYPES.map((t) => {
-            const isPicking = picking === t.type;
-            const disabled = picking !== null;
+            const isChosen = chosenType === t.type;
             return (
               <button
                 key={t.type}
-                onClick={() => pick(t.type)}
-                disabled={disabled}
+                onClick={() => { setChosenType(t.type); setError(""); }}
                 style={{
                   textAlign: "left",
                   padding: 20,
                   background: "#fff",
-                  border: `2px solid ${isPicking ? t.fg : "#e5e7eb"}`,
+                  border: `2px solid ${isChosen ? t.fg : "#e5e7eb"}`,
                   borderRadius: 12,
-                  cursor: disabled ? "not-allowed" : "pointer",
-                  opacity: disabled && !isPicking ? 0.5 : 1,
-                  transition: "border-color 0.15s, transform 0.05s",
+                  cursor: "pointer",
+                  transition: "border-color 0.15s",
                 }}
-                onMouseEnter={(e) => { if (!disabled) (e.currentTarget.style.borderColor = t.fg); }}
-                onMouseLeave={(e) => { if (!isPicking) (e.currentTarget.style.borderColor = "#e5e7eb"); }}
+                onMouseEnter={(e) => { if (!isChosen) (e.currentTarget.style.borderColor = t.fg); }}
+                onMouseLeave={(e) => { if (!isChosen) (e.currentTarget.style.borderColor = "#e5e7eb"); }}
               >
                 <div style={{
                   width: 48, height: 48, borderRadius: 10,
@@ -153,15 +161,43 @@ export default function NewContentPage() {
                 <p style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.5, margin: 0 }}>
                   {t.desc}
                 </p>
-                {isPicking && (
-                  <p style={{ marginTop: 10, fontSize: 11, fontWeight: 700, color: t.fg }}>
-                    Creating draft…
-                  </p>
-                )}
               </button>
             );
           })}
         </div>
+
+        {/* Title input + Create button — appears once a type is chosen so we
+            never write an empty-title draft to the DB. */}
+        {chosenType && (
+          <div style={{ marginTop: 24, padding: 20, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12 }}>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#111", marginBottom: 6 }}>
+              Give this {TYPES.find((x) => x.type === chosenType)?.title} a title to create it
+            </label>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input
+                autoFocus
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") create(); }}
+                placeholder="Headline / title…"
+                style={{ flex: 1, padding: "10px 12px", border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 15, outline: "none" }}
+              />
+              <button
+                onClick={create}
+                disabled={creating || !title.trim()}
+                style={{ padding: "10px 20px", background: title.trim() ? "#dc2626" : "#9ca3af", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: creating || !title.trim() ? "not-allowed" : "pointer" }}
+              >
+                {creating ? "Creating…" : "Create + Edit"}
+              </button>
+              <button
+                onClick={() => { setChosenType(null); setTitle(""); setError(""); }}
+                style={{ padding: "10px 14px", background: "#f3f4f6", color: "#6b7280", border: "none", borderRadius: 8, fontSize: 13, cursor: "pointer" }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

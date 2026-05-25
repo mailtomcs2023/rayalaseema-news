@@ -41,6 +41,9 @@ const navItems: { name: string; href: string; icon: string; roles: Role[] }[] = 
   // Page Builder (Spec #2) — admin-editable templates for the public homepage
   // + every /category/<slug> page. Sub-pages live under /page-builder/.
   { name: "Page Builder", href: "/page-builder", roles: EDITORIAL, icon: "M4 5a2 2 0 012-2h12a2 2 0 012 2v3H4V5zM4 10h16v9a2 2 0 01-2 2H6a2 2 0 01-2-2v-9zm4 3h2v2H8v-2zm4 0h6v2h-6v-2z" },
+  // Menu Builder (Spec #3 #177) — three named menus (header / footer /
+  // mobile) editable as a drag-drop tree.
+  { name: "Menu Builder", href: "/menu-builder/header", roles: EDITORIAL, icon: "M4 6h16M4 12h16M4 18h7" },
   { name: "Ads", href: "/ads", roles: ADMIN_ONLY, icon: "M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" },
   { name: "Reporters", href: "/journalists", roles: ADMIN_ONLY, icon: "M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" },
   { name: "Profile Requests", href: "/profile-requests", roles: EDITORIAL, icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" },
