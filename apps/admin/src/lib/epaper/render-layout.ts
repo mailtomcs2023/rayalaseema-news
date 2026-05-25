@@ -822,12 +822,15 @@ export async function renderEpaperPageById(pageId: string): Promise<string> {
 
   const pageCount = await prisma.epaperPage.count({ where: { editionId: page.editionId } });
 
-  // Master blocks (#108 / #146): page may inherit a master via layout.masterSlug
-  // OR via the linked template.masterSlug. Master blocks render BEFORE page
-  // blocks so the operator can layer page-level overrides on top.
+  // Master blocks (#108 / #146): only merge masters when the page itself
+  // is on mm-v2. v1 (grid-v1) pages keep their original masthead/section-band
+  // blocks inline — merging an mm-v2 master into a grid-v1 layout caused
+  // duplicate masthead + body-empty render bugs (rolled back as part of the
+  // v2 burn-in).
   const pageLayout = (page.layout as unknown as { coordSystem?: string; masterSlug?: string; blocks: Block[] }) ?? { blocks: [] };
+  const isMmV2 = pageLayout.coordSystem === "mm-v2";
   let masterSlug = pageLayout.masterSlug;
-  if (!masterSlug && page.templateSlug) {
+  if (isMmV2 && !masterSlug && page.templateSlug) {
     const tpl = await prisma.epaperTemplate.findUnique({
       where: { slug: page.templateSlug },
       select: { masterSlug: true },
@@ -835,7 +838,7 @@ export async function renderEpaperPageById(pageId: string): Promise<string> {
     masterSlug = tpl?.masterSlug ?? undefined;
   }
   let masterBlocks: Block[] = [];
-  if (masterSlug) {
+  if (isMmV2 && masterSlug) {
     const m = await prisma.epaperMaster.findUnique({ where: { slug: masterSlug }, select: { layout: true } });
     masterBlocks = (((m?.layout as unknown as { blocks: Block[] }) ?? { blocks: [] }).blocks || []) as Block[];
     // Skip master blocks that have been overridden on the page (block id collision).

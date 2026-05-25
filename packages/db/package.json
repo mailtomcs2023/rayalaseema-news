@@ -14,7 +14,8 @@
   "dependencies": {
     "@prisma/client": "^6.4.0",
     "@types/bcryptjs": "^2.4.6",
-    "bcryptjs": "^3.0.3"
+    "bcryptjs": "^3.0.3",
+    "zod": "^4"
   },
   "devDependencies": {
     "exceljs": "^4.4.0",

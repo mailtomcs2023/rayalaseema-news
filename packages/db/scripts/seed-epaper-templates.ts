@@ -75,20 +75,24 @@ const frontPage: TemplateSpec = {
   sortOrder: 1,
   layout: {
     blocks: [
-      // Masthead REMOVED — handled by front-master (#108). Page starts at
-      // top of live area; ad-top band + lead begin right below the master.
-      { id: "ad-top", type: "ad", x: 0, y: 0, w: 12, h: 2 },
+      // Masthead block lives in the FRONT page (grid-v1). v2 master is a
+      // mm-v2-only feature that's gated off in render-layout, so v1 pages
+      // need their own masthead block to render the Eenadu-style header.
+      // Layout uses 30 rows total: masthead 4 + ad 2 + lead/majors 12 +
+      // secondaries 5 + briefs 4 + ad 3 = 30. Fits the print page exactly.
+      { id: "mh", type: "masthead", x: 0, y: 0, w: 12, h: 4 },
+      { id: "ad-top", type: "ad", x: 0, y: 4, w: 12, h: 2 },
       // Lead — image preferred but not mandatory (so it always fills)
-      { id: "lead", type: "lead", x: 0, y: 4, w: 8, h: 14, slotFilter: { minImages: 1 } },
+      { id: "lead", type: "lead", x: 0, y: 6, w: 8, h: 12, slotFilter: { minImages: 1 } },
       // Right column majors
-      { id: "maj-1", type: "major", x: 8, y: 4, w: 4, h: 7, slotFilter: { minImages: 1 } },
-      { id: "maj-2", type: "major", x: 8, y: 11, w: 4, h: 7, slotFilter: { minImages: 1 } },
+      { id: "maj-1", type: "major", x: 8, y: 6, w: 4, h: 6, slotFilter: { minImages: 1 } },
+      { id: "maj-2", type: "major", x: 8, y: 12, w: 4, h: 6, slotFilter: { minImages: 1 } },
       // Secondary band
       { id: "sec-1", type: "secondary", x: 0, y: 18, w: 3, h: 5 },
       { id: "sec-2", type: "secondary", x: 3, y: 18, w: 3, h: 5 },
       { id: "sec-3", type: "secondary", x: 6, y: 18, w: 3, h: 5 },
       { id: "sec-4", type: "secondary", x: 9, y: 18, w: 3, h: 5 },
-      // Briefs — 2 cols × 3 rows
+      // Briefs — 2 cols × 2 rows
       { id: "br-1", type: "brief", x: 0, y: 23, w: 6, h: 2 },
       { id: "br-2", type: "brief", x: 0, y: 25, w: 6, h: 2 },
       { id: "br-3", type: "brief", x: 6, y: 23, w: 6, h: 2 },
@@ -110,7 +114,7 @@ function districtPage(slug: string, nameTe: string, sortOrder: number): Template
     sortOrder,
     layout: {
       blocks: [
-        // section-band REMOVED — handled by district-master/section-master (#108).
+        { id: "band", type: "section-band", x: 0, y: 0, w: 12, h: 2 },
         { id: "lead", type: "lead", x: 0, y: 2, w: 8, h: 11, slotFilter: { districtSlug: slug, minImages: 1 } },
         { id: "maj-1", type: "major", x: 8, y: 2, w: 4, h: 6, slotFilter: { districtSlug: slug, minImages: 1 } },
         { id: "maj-2", type: "major", x: 8, y: 8, w: 4, h: 5, slotFilter: { districtSlug: slug, minImages: 1 } },
@@ -161,7 +165,7 @@ function sectionPage(
     sortOrder,
     layout: {
       blocks: [
-        // section-band REMOVED — handled by district-master/section-master (#108).
+        { id: "band", type: "section-band", x: 0, y: 0, w: 12, h: 2 },
         { id: "lead", type: "lead", x: 0, y: 2, w: 8, h: 11, slotFilter: filter({ minImages: 1 }) },
         { id: "maj-1", type: "major", x: 8, y: 2, w: 4, h: 6, slotFilter: filter({ minImages: 1 }) },
         { id: "maj-2", type: "major", x: 8, y: 8, w: 4, h: 5, slotFilter: filter() },
@@ -194,7 +198,7 @@ const editorialPage: TemplateSpec = {
   sortOrder: 70,
   layout: {
     blocks: [
-      // section-band REMOVED — handled by section-master (#108).
+      { id: "band", type: "section-band", x: 0, y: 0, w: 12, h: 2 },
       { id: "lead", type: "lead", x: 0, y: 2, w: 8, h: 16, slotFilter: { categorySlug: "editorial", minWords: 200 } },
       { id: "opinion-1", type: "major", x: 8, y: 2, w: 4, h: 8, slotFilter: { categorySlug: "editorial" } },
       { id: "opinion-2", type: "major", x: 8, y: 10, w: 4, h: 8, slotFilter: { categorySlug: "editorial" } },
@@ -218,7 +222,7 @@ const utilityPage: TemplateSpec = {
   sortOrder: 90,
   layout: {
     blocks: [
-      // section-band REMOVED — handled by section-master (#108).
+      { id: "band", type: "section-band", x: 0, y: 0, w: 12, h: 2 },
       // Mandi top-left
       { id: "mandi-band", type: "text", x: 0, y: 2, w: 6, h: 1, text: "<b>మండీ ధరలు</b>" },
       { id: "mandi-1", type: "brief", x: 0, y: 3, w: 6, h: 2 },
@@ -257,7 +261,7 @@ const classifiedsPage: TemplateSpec = {
   sortOrder: 80,
   layout: {
     blocks: [
-      // section-band REMOVED — handled by section-master (#108).
+      { id: "band", type: "section-band", x: 0, y: 0, w: 12, h: 2 },
       { id: "ad-1", type: "ad", x: 0, y: 2, w: 4, h: 9 },
       { id: "ad-2", type: "ad", x: 4, y: 2, w: 4, h: 9 },
       { id: "ad-3", type: "ad", x: 8, y: 2, w: 4, h: 9 },
