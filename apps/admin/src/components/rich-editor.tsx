@@ -26,6 +26,9 @@ import { Superscript } from "@tiptap/extension-superscript";
 import { Subscript } from "@tiptap/extension-subscript";
 import { Youtube } from "@tiptap/extension-youtube";
 
+// G2 #129 — crop modal opened on image insert + on selected image edit.
+import { ImageCropModal } from "@/components/image-crop-modal";
+
 // Google Transliteration API (free, no key needed, works in 2026)
 async function transliterate(word: string): Promise<string[]> {
   try {
@@ -138,12 +141,21 @@ export const RichEditor = React.forwardRef<RichEditorRef, { content: string; onC
     return () => { el.removeEventListener("drop", onDrop); el.removeEventListener("dragover", onOver); el.removeEventListener("dragleave", onLeave); };
   }, [editor]);
 
-  const uploadFile = useCallback((file: File) => {
+  // Source URL waiting to be cropped, then inserted on confirm.
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+
+  const insertImage = useCallback((src: string) => {
     if (!editor) return;
-    const reader = new FileReader();
-    reader.onload = () => editor.chain().focus().setImage({ src: reader.result as string }).run();
-    reader.readAsDataURL(file);
+    editor.chain().focus().setImage({ src }).run();
   }, [editor]);
+
+  const uploadFile = useCallback((file: File) => {
+    const reader = new FileReader();
+    // Open crop modal with the file as data URL; final insert happens on
+    // crop-confirm. Skipping the modal would lose the crop UX users expect.
+    reader.onload = () => setCropSrc(reader.result as string);
+    reader.readAsDataURL(file);
+  }, []);
 
   if (!editor) return null;
 
@@ -262,9 +274,9 @@ export const RichEditor = React.forwardRef<RichEditorRef, { content: string; onC
             <span style={{ color: "#aaa", fontSize: 12 }}>or</span>
             {/* URL input */}
             <input type="url" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="Paste image URL..."
-              onKeyDown={(e) => { if (e.key === "Enter" && imageUrl) { editor.chain().focus().setImage({ src: imageUrl }).run(); setImageUrl(""); setActivePanel("none"); } if (e.key === "Escape") setActivePanel("none"); }}
+              onKeyDown={(e) => { if (e.key === "Enter" && imageUrl) { setCropSrc(imageUrl); setImageUrl(""); setActivePanel("none"); } if (e.key === "Escape") setActivePanel("none"); }}
               style={{ flex: "1 1 160px", minWidth: 0, padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 13, outline: "none" }} />
-            <button onClick={() => { if (imageUrl) { editor.chain().focus().setImage({ src: imageUrl }).run(); setImageUrl(""); setActivePanel("none"); } }}
+            <button onClick={() => { if (imageUrl) { setCropSrc(imageUrl); setImageUrl(""); setActivePanel("none"); } }}
               style={{ padding: "8px 14px", background: "#16a34a", color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Insert</button>
           </div>
           <p style={{ fontSize: 11, color: "#999", marginTop: 6 }}>You can also drag & drop images directly into the editor</p>
@@ -292,6 +304,15 @@ export const RichEditor = React.forwardRef<RichEditorRef, { content: string; onC
 
       {/* Editor Content */}
       <EditorContent editor={editor} />
+
+      {/* G2 #129 crop modal — opens whenever an image is queued for insert. */}
+      {cropSrc && (
+        <ImageCropModal
+          src={cropSrc}
+          onConfirm={(out) => { insertImage(out); setCropSrc(null); }}
+          onClose={() => setCropSrc(null)}
+        />
+      )}
 
       {/* Styles */}
       <style>{`
