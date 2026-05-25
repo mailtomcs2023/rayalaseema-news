@@ -107,8 +107,18 @@ export function CrudTable({ title, apiPath, columns, data, fields }: CrudTablePr
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this?")) return;
-    await fetch(`/api/${apiPath}/${id}`, { method: "DELETE" });
-    router.refresh();
+    try {
+      const res = await fetch(`/api/${apiPath}/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setToast({ msg: data.error || `Delete failed (HTTP ${res.status})`, type: "error" });
+        return;
+      }
+      setToast({ msg: "Deleted", type: "success" });
+      router.refresh();
+    } catch (e: any) {
+      setToast({ msg: e.message || "Delete failed", type: "error" });
+    }
   };
 
   const handleSave = async () => {

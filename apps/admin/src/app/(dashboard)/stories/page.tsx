@@ -2,6 +2,8 @@ import { Sidebar } from "@/components/sidebar";
 import { CrudTable } from "@/components/crud-table";
 import { prisma } from "@rayalaseema/db";
 
+export const dynamic = "force-dynamic";
+
 export default async function StoriesPage() {
   const data = await prisma.webStory.findMany({ orderBy: { createdAt: "desc" } });
 
