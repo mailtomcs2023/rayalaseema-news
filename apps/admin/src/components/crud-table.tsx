@@ -229,7 +229,7 @@ export function CrudTable({ title, apiPath, columns, data, fields }: CrudTablePr
                           <span style={{ fontSize: 11, fontFamily: "monospace" }}>{val}</span>
                         </div>
                       ) : col.type === "count" ? (
-                        String(val?.articles ?? val?.photos ?? val ?? 0)
+                        String(val?.contents ?? val?.articles ?? val?.photos ?? val ?? 0)
                       ) : col.type === "date" ? (
                         val ? new Date(val).toLocaleDateString() : "-"
                       ) : col.type === "link" ? (

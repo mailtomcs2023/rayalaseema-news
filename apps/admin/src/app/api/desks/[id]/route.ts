@@ -47,9 +47,9 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
   if (isAuthError(session)) return session;
   try {
     const { id } = await params;
-    // Detach articles pointing at this desk so the FK doesn't block deletion.
-    // (Articles fall back to their auto-resolved desk on next save.)
-    await prisma.article.updateMany({ where: { deskId: id }, data: { deskId: null } });
+    // Detach content rows pointing at this desk so the FK doesn't block deletion.
+    // (Rows fall back to their auto-resolved desk on next save.)
+    await prisma.content.updateMany({ where: { deskId: id }, data: { deskId: null } });
     await prisma.desk.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (e) {

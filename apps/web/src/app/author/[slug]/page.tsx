@@ -14,14 +14,14 @@ export default async function AuthorPage({ params }: { params: Promise<{ slug: s
 
   if (!author) return notFound();
 
-  const articles = await prisma.article.findMany({
-    where: { authorId: author.id, status: "PUBLISHED" },
+  const articles = await prisma.content.findMany({
+    where: { type: "ARTICLE", authorId: author.id, status: "PUBLISHED" },
     include: { category: { select: { name: true, nameEn: true, slug: true, color: true } } },
     orderBy: { publishedAt: "desc" },
     take: 30,
   });
 
-  const totalArticles = await prisma.article.count({ where: { authorId: author.id, status: "PUBLISHED" } });
+  const totalArticles = await prisma.content.count({ where: { type: "ARTICLE", authorId: author.id, status: "PUBLISHED" } });
 
   return (
     <div className="min-h-screen bg-gray-50">

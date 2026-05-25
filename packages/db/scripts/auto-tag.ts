@@ -2,8 +2,8 @@ import { prisma } from "../src/index";
 
 async function main() {
   const districts = await prisma.district.findMany({ include: { constituencies: true } });
-  const articles = await prisma.article.findMany({
-    where: { constituencyId: null, status: "PUBLISHED" },
+  const articles = await prisma.content.findMany({
+    where: { type: "ARTICLE", constituencyId: null, status: "PUBLISHED" },
     select: { id: true, title: true, summary: true },
   });
 
@@ -17,7 +17,7 @@ async function main() {
         text.toLowerCase().includes(d.nameEn.toLowerCase()) ||
         text.includes(d.name);
       if (match && d.constituencies[0]) {
-        await prisma.article.update({
+        await prisma.content.update({
           where: { id: a.id },
           data: { constituencyId: d.constituencies[0].id },
         });

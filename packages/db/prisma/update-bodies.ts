@@ -114,7 +114,7 @@ const bodies: Record<string, string> = {
 async function main() {
   let count = 0;
   for (const [slug, body] of Object.entries(bodies)) {
-    await prisma.article.update({ where: { slug }, data: { body } });
+    await prisma.content.update({ where: { slug }, data: { body } });
     count++;
     console.log(`  Updated: ${slug}`);
   }

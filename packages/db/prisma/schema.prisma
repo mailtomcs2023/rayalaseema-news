@@ -36,15 +36,7 @@ model User {
   // Category assignments (for SUB_EDITOR role)
   assignedCategories UserCategory[]
 
-  // Articles authored
-  articles      Article[]
   media         Media[]
-
-  // Articles reviewed/edited by this user
-  reviewedArticles ArticleReview[]
-
-  // Article revisions authored by this user
-  articleRevisions ArticleRevision[]
 
   // ePaper edition snapshots created by this user
   epaperSnapshots EpaperEditionSnapshot[]
@@ -56,9 +48,8 @@ model User {
 
   // Journalist profile (for REPORTER role)
   journalistProfile JournalistProfile?
-  payments          ArticlePayment[]
 
-  // Unified Content (Spec #1) — back-relations parallel to Article side
+  // Unified Content (Spec #1) — Article-side back-relations dropped in A1C.
   contents          Content[]         @relation("ContentAuthor")
   contentRevisions  ContentRevision[]
   contentPayments   ContentPayment[]  @relation("ContentJournalist")
@@ -88,22 +79,8 @@ model UserCategory {
   @@map("user_categories")
 }
 
-// ============ ARTICLE REVIEW LOG ============
-
-model ArticleReview {
-  id        String   @id @default(cuid())
-  articleId String
-  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  action    String   // "submitted", "reviewed", "approved", "rejected", "published", "edited"
-  note      String?  @db.Text
-  createdAt DateTime @default(now())
-
-  @@index([articleId])
-  @@index([userId])
-  @@map("article_reviews")
-}
+// Spec #1 A1C (#189) — ArticleReview dropped. Review actions now logged
+// to AuditLog with action="content.review.<verb>".
 
 // ============ AUDIT LOG (immutable, append-only — compliance + accountability) ============
 
@@ -137,34 +114,8 @@ model AuditLog {
   @@map("audit_logs")
 }
 
-// ============ ARTICLE REVISIONS (version history) ============
-
-model ArticleRevision {
-  id            String        @id @default(cuid())
-  articleId     String
-  article       Article       @relation(fields: [articleId], references: [id], onDelete: Cascade)
-
-  // Snapshot of mutable fields at the moment a save happened
-  title         String
-  slug          String
-  summary       String?       @db.Text
-  body          String        @db.Text
-  featuredImage String?
-  categoryId    String?
-  status        ArticleStatus
-
-  // Metadata
-  editedById    String
-  editedBy      User          @relation(fields: [editedById], references: [id])
-  editNote      String?       // optional comment from editor
-  bodyLength    Int           @default(0) // for lightweight diff stats in list view
-
-  createdAt     DateTime      @default(now())
-
-  @@index([articleId, createdAt])
-  @@index([editedById])
-  @@map("article_revisions")
-}
+// Spec #1 A1C (#189) — ArticleRevision dropped. Content edits snapshot
+// into ContentRevision instead.
 
 // ============ CONTENT ============
 
@@ -184,90 +135,7 @@ enum Language {
   ENGLISH
 }
 
-model Article {
-  id              String        @id @default(cuid())
-  title           String
-  slug            String        @unique
-  summary         String?       @db.Text // Short 60-word summary for app
-  body            String        @db.Text
-  featuredImage   String?
-  imageCaption    String?
-  language        Language      @default(TELUGU)
-  status          ArticleStatus @default(DRAFT)
-  featured        Boolean       @default(false)
-  breaking        Boolean       @default(false)
-
-  // SEO
-  metaTitle       String?
-  metaDescription String?
-  ogImage         String?
-
-  // PIB approval workflow (#99) — when needsPibApproval is true the
-  // publish gate refuses to flip status to PUBLISHED until pibApprovedAt
-  // + pibReferenceNumber are stamped by an ADMIN.
-  needsPibApproval     Boolean   @default(false)
-  pibApprovedAt        DateTime?
-  pibApprovedById      String?
-  pibReferenceNumber   String?
-
-  // Movie review (only set for movie-reviews category articles)
-  rating          Float?        // 0.0 - 5.0 star rating
-  reviewerName    String?       // Critic byline for the review
-
-  // Ingestion dedup — source news URL, unique so the same article can't be imported twice
-  sourceUrl       String?       @unique
-
-  // Scheduling
-  publishedAt     DateTime?
-  scheduledAt     DateTime?
-
-  // Relations
-  authorId        String
-  author          User          @relation(fields: [authorId], references: [id])
-  categoryId      String
-  category        Category      @relation(fields: [categoryId], references: [id])
-  tags            ArticleTag[]
-  socialPosts     SocialPost[]
-  comments        Comment[]
-
-  // Location tagging
-  constituencyId  String?
-  constituency    Constituency? @relation("ArticleConstituency", fields: [constituencyId], references: [id])
-  mandalId        String?
-  mandal          Mandal?       @relation("ArticleMandal", fields: [mandalId], references: [id])
-
-  // Desk byline (auto-picked on save unless editor overrides; see lib/desk-resolver.ts)
-  deskId          String?
-  desk            Desk?         @relation(fields: [deskId], references: [id])
-
-  // Analytics
-  viewCount       Int           @default(0)
-
-  // Editorial workflow
-  rejectionNote   String?       @db.Text  // Feedback when rejected
-  reviewedById    String?                 // Who reviewed this article
-  reviewedAt      DateTime?               // When it was reviewed
-  approvedById    String?                 // Who approved for publish
-  approvedAt      DateTime?               // When approved
-  reviews         ArticleReview[]
-  revisions       ArticleRevision[]
-  payment         ArticlePayment?
-
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-
-  @@index([status, publishedAt])
-  @@index([categoryId])
-  @@index([authorId])
-  @@index([constituencyId])
-  @@index([deskId])
-  @@index([slug])
-  @@index([status, featured, publishedAt])
-  @@index([categoryId, status, publishedAt])
-  @@index([breaking])
-  @@map("articles")
-}
-
+// Spec #1 A1C (#189) — model Article dropped. See Content table for the unified replacement.
 model Category {
   id          String     @id @default(cuid())
   name        String
@@ -282,8 +150,6 @@ model Category {
   parent      Category?  @relation("CategoryTree", fields: [parentId], references: [id])
   children    Category[] @relation("CategoryTree")
 
-  articles    Article[]
-  videos      Video[]
   contents    Content[]
   assignedUsers UserCategory[]
   desk        Desk?      // back-relation: TOPICAL desk auto-derived from category
@@ -298,22 +164,12 @@ model Tag {
   id          String       @id @default(cuid())
   name        String       @unique
   slug        String       @unique
-  articles    ArticleTag[]
   contentTags ContentTag[]
 
   @@map("tags")
 }
 
-model ArticleTag {
-  articleId String
-  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
-  tagId     String
-  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
-
-  @@id([articleId, tagId])
-  @@map("article_tags")
-}
-
+// Spec #1 A1C (#189) — model ArticleTag dropped. See Content table for the unified replacement.
 // ============ MEDIA ============
 
 enum MediaType {
@@ -376,9 +232,10 @@ model DialectGloss {
 /// A/B headline test (#94). Two headline variants for the same article;
 /// push notifications split 50/50, clicks counted via the redirect endpoint.
 /// After a settle window the winner is auto-promoted to Article.title.
+// Spec #1 A1B (#188) — column renamed articleId -> contentId.
 model HeadlineTest {
   id           String   @id @default(cuid())
-  articleId    String
+  contentId    String
   variantA     String
   variantB     String
   sentAt       DateTime?
@@ -389,7 +246,7 @@ model HeadlineTest {
   createdById  String?
   createdAt    DateTime @default(now())
 
-  @@index([articleId])
+  @@index([contentId])
   @@index([winnerVariant])
   @@map("headline_tests")
 }
@@ -725,20 +582,7 @@ model EpaperMaster {
 
 // ============ BREAKING NEWS ============
 
-model BreakingNews {
-  id          String   @id @default(cuid())
-  headline    String
-  headlineEn  String?
-  url         String?  // optional link to article
-  priority    Int      @default(0)
-  active      Boolean  @default(true)
-  expiresAt   DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@map("breaking_news")
-}
-
+// Spec #1 A1C (#189) — model BreakingNews dropped. See Content table for the unified replacement.
 // ============ SOCIAL MEDIA ============
 
 enum SocialPlatform {
@@ -756,10 +600,11 @@ enum SocialPostStatus {
   FAILED
 }
 
+// Spec #1 A1B (#188) — articleId renamed to contentId. Relation now Content.
 model SocialPost {
   id          String           @id @default(cuid())
-  articleId   String
-  article     Article          @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  contentId   String
+  content     Content          @relation(fields: [contentId], references: [id], onDelete: Cascade)
   platform    SocialPlatform
   status      SocialPostStatus @default(QUEUED)
   postUrl     String?
@@ -767,7 +612,7 @@ model SocialPost {
   postedAt    DateTime?
   createdAt   DateTime         @default(now())
 
-  @@unique([articleId, platform])
+  @@unique([contentId, platform])
   @@map("social_posts")
 }
 
@@ -812,7 +657,6 @@ model Constituency {
   district    District @relation(fields: [districtId], references: [id])
   loksabha    String?  // Which Lok Sabha seat this falls under
   mandals     Mandal[]
-  articles    Article[] @relation("ArticleConstituency")
   contents    Content[] @relation("ContentConstituency")
   desk        Desk?     // back-relation: GEOGRAPHIC desk for this AC (e.g. "ప్రొద్దుటూరు")
   sortOrder   Int      @default(0)
@@ -853,7 +697,6 @@ model Desk {
   constituencyId  String?       @unique
   constituency    Constituency? @relation(fields: [constituencyId], references: [id])
 
-  articles        Article[]
   contents        Content[]
   sortOrder       Int           @default(0)
   active          Boolean       @default(true)
@@ -873,7 +716,6 @@ model Mandal {
   code            Int?         @unique  // Official AP mandal code (e.g. 5259 = Kurnool)
   constituencyId  String
   constituency    Constituency @relation(fields: [constituencyId], references: [id])
-  articles        Article[]    @relation("ArticleMandal")
   sortOrder       Int          @default(0)
   active          Boolean      @default(true)
   createdAt       DateTime     @default(now())
@@ -884,100 +726,20 @@ model Mandal {
 
 // ============ VIDEOS ============
 
-model Video {
-  id          String   @id @default(cuid())
-  title       String
-  slug        String   @unique
-  description String?  @db.Text
-  thumbnailUrl String
-  videoUrl    String?  // YouTube/external URL
-  duration    String?  // "12:45"
-  views       Int      @default(0)
-  featured    Boolean  @default(false)
-  active      Boolean  @default(true)
-  categoryId  String?
-  category    Category? @relation(fields: [categoryId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([active, featured])
-  @@map("videos")
-}
-
+// Spec #1 A1C (#189) — model Video dropped. See Content table for the unified replacement.
 // ============ PHOTO GALLERY ============
 
-model PhotoGallery {
-  id          String        @id @default(cuid())
-  title       String
-  slug        String        @unique
-  description String?
-  coverImage  String
-  active      Boolean       @default(true)
-  photos      GalleryPhoto[]
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-
-  @@map("photo_galleries")
-}
-
-model GalleryPhoto {
-  id          String       @id @default(cuid())
-  galleryId   String
-  gallery     PhotoGallery @relation(fields: [galleryId], references: [id], onDelete: Cascade)
-  imageUrl    String
-  caption     String?
-  sortOrder   Int          @default(0)
-
-  @@map("gallery_photos")
-}
-
+// Spec #1 A1C (#189) — model PhotoGallery dropped. See Content table for the unified replacement.
+// Spec #1 A1C (#189) — model GalleryPhoto dropped. See Content table for the unified replacement.
 // ============ WEB STORIES ============
 
-model WebStory {
-  id          String   @id @default(cuid())
-  title       String
-  slug        String   @unique
-  imageUrl    String
-  category    String?  // devotional, travel, food, history, etc.
-  active      Boolean  @default(true)
-  views       Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@map("web_stories")
-}
-
+// Spec #1 A1C (#189) — model WebStory dropped. See Content table for the unified replacement.
 // ============ REELS ============
 
-model Reel {
-  id          String   @id @default(cuid())
-  title       String
-  slug        String   @unique
-  thumbnailUrl String
-  videoUrl    String?
-  views       String   @default("0") // "2.5L", "95K" etc.
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@map("reels")
-}
-
+// Spec #1 A1C (#189) — model Reel dropped. See Content table for the unified replacement.
 // ============ CARTOON (YETTETA) ============
 
-model Cartoon {
-  id          String   @id @default(cuid())
-  title       String
-  caption     String
-  imageUrl    String
-  date        DateTime @db.Date
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-
-  @@unique([date])
-  @@map("cartoons")
-}
-
+// Spec #1 A1C (#189) — model Cartoon dropped. See Content table for the unified replacement.
 // ============ ADS ============
 
 enum AdPosition {
@@ -1014,17 +776,19 @@ model Ad {
 
 // ============ COMMENTS ============
 
+// Spec #1 A1B (#188) — articleId -> contentId. Relation field named `parent`
+// to avoid clashing with the existing `content` text column.
 model Comment {
   id        String   @id @default(cuid())
-  articleId String
-  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  contentId String
+  parent    Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
   name      String
   email     String?
   content   String   @db.Text
   approved  Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  @@index([articleId, approved])
+  @@index([contentId, approved])
   @@index([approved, createdAt])
   @@map("comments")
 }
@@ -1192,7 +956,6 @@ model PaymentConfig {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  payments        ArticlePayment[]
   contentPayments ContentPayment[] @relation("ContentPaymentConfig")
 
   @@map("payment_configs")
@@ -1208,38 +971,7 @@ enum PaymentStatus {
   DISPUTED    // Journalist raised dispute
 }
 
-model ArticlePayment {
-  id            String        @id @default(cuid())
-  articleId     String        @unique
-  article       Article       @relation(fields: [articleId], references: [id], onDelete: Cascade)
-  journalistId  String
-  journalist    User          @relation(fields: [journalistId], references: [id])
-  configId      String?
-  config        PaymentConfig? @relation(fields: [configId], references: [id])
-
-  // Payment details
-  baseAmount    Float         // Rate from config
-  bonusAmount   Float         @default(0)  // View-based bonus
-  deductions    Float         @default(0)  // Any deductions
-  totalAmount   Float         // Final amount
-  currency      String        @default("INR")
-
-  status        PaymentStatus @default(CALCULATED)
-  approvedById  String?
-  approvedAt    DateTime?
-  paidAt        DateTime?
-  transactionId String?       // UPI/bank ref number
-  paymentMethod String?       // "UPI", "bank_transfer"
-
-  note          String?       // Admin note
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-
-  @@index([journalistId, status])
-  @@index([status])
-  @@map("article_payments")
-}
-
+// Spec #1 A1C (#189) — model ArticlePayment dropped. See Content table for the unified replacement.
 // ============ PAYOUT BATCH ============
 
 model PayoutBatch {
@@ -1320,9 +1052,20 @@ model Content {
   // Ingestion dedup — source news URL, unique so the same item can't be imported twice
   sourceUrl       String?       @unique
 
+  // Editorial review trail (Spec #1 A1C #189 — promoted from Article columns
+  // so existing UI keeps showing rejection notes + reviewer stamps).
+  rejectionNote   String?       @db.Text
+  reviewedById    String?
+  reviewedAt      DateTime?
+  approvedById    String?
+  approvedAt      DateTime?
+
   tags            ContentTag[]
   revisions       ContentRevision[]
   payments        ContentPayment[]
+  // Spec #1 A1B (#188) — back-relations from tables whose FK moved to Content.
+  comments        Comment[]
+  socialPosts     SocialPost[]
 
   @@index([type, status, publishedAt])
   @@index([categoryId, status, publishedAt])

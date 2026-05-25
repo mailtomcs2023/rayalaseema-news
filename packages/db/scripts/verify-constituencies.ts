@@ -28,8 +28,8 @@ async function main() {
 
   // Check for orphan mandals or articles (FK should prevent this but verify)
   const allMandals = await prisma.mandal.count();
-  const allArticles = await prisma.article.count();
-  const articlesWithConst = await prisma.article.count({ where: { constituencyId: { not: null } } });
+  const allArticles = await prisma.content.count({ where: { type: "ARTICLE" } });
+  const articlesWithConst = await prisma.content.count({ where: { type: "ARTICLE", constituencyId: { not: null } } });
   console.log(`\nMandals total in DB: ${allMandals} (all should be attached to one of the 55 ACs)`);
   console.log(`Articles total: ${allArticles}, with constituency: ${articlesWithConst}`);
 

@@ -5,7 +5,7 @@ import { prisma } from "@rayalaseema/db";
 export default async function DesksPage() {
   const data = await prisma.desk.findMany({
     orderBy: [{ branch: "asc" }, { sortOrder: "asc" }, { nameEn: "asc" }],
-    include: { _count: { select: { articles: true } } },
+    include: { _count: { select: { contents: true } } },
   });
 
   return (

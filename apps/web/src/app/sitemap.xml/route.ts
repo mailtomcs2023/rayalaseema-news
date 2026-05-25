@@ -4,8 +4,8 @@ export async function GET() {
   const siteUrl = process.env.SITE_URL || "https://rayalaseemaexpress.com";
 
   const [articles, categories] = await Promise.all([
-    prisma.article.findMany({
-      where: { status: "PUBLISHED" },
+    prisma.content.findMany({
+      where: { type: "ARTICLE", status: "PUBLISHED" },
       select: { slug: true, updatedAt: true },
       orderBy: { updatedAt: "desc" },
     }),

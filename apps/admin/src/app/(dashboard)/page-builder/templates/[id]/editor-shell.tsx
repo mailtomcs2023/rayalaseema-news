@@ -543,6 +543,20 @@ function dropZone(active: boolean): React.CSSProperties {
   };
 }
 
+// --- Config panel: per-type forms (E4 #166) ---
+
+const AD_POSITIONS = [
+  "HEADER_LEFT",
+  "HEADER_RIGHT",
+  "HEADER_LEADERBOARD",
+  "BANNER_MID",
+  "SIDEBAR_SQUARE",
+  "SIDEBAR_TALL",
+  "LEADERBOARD",
+  "IN_FEED",
+  "VERTICAL_STRIP",
+] as const;
+
 function ConfigPanel({
   block,
   composites,
@@ -554,35 +568,9 @@ function ConfigPanel({
   onChange: (patch: Partial<Block>) => void;
   onDelete: () => void;
 }) {
-  // E4 (#166) replaces this with per-type forms. For E1 we expose a raw
-  // JSON config editor + mobileVariant so the editor is usable end-to-end
-  // before the per-type forms land.
-  const [json, setJson] = useState(() =>
-    block.type === "Composite"
-      ? JSON.stringify({ compositeId: block.compositeId }, null, 2)
-      : JSON.stringify(block.config || {}, null, 2),
-  );
-
-  useEffect(() => {
-    setJson(
-      block.type === "Composite"
-        ? JSON.stringify({ compositeId: block.compositeId }, null, 2)
-        : JSON.stringify(block.config || {}, null, 2),
-    );
-  }, [block.id, block.type, block.compositeId, block.config]);
-
-  function commitJson() {
-    try {
-      const parsed = JSON.parse(json);
-      if (block.type === "Composite") {
-        onChange({ compositeId: parsed.compositeId });
-      } else {
-        onChange({ config: parsed });
-      }
-    } catch (e) {
-      alert("Invalid JSON: " + (e as Error).message);
-    }
-  }
+  const cfg = (block.config || {}) as Record<string, unknown>;
+  const setCfg = (patch: Record<string, unknown>) =>
+    onChange({ config: { ...cfg, ...patch } });
 
   return (
     <div>
@@ -624,15 +612,8 @@ function ConfigPanel({
 
       {block.type !== "Composite" && (
         <>
-          <Label>Config (JSON)</Label>
-          <textarea
-            value={json}
-            onChange={(e) => setJson(e.target.value)}
-            onBlur={commitJson}
-            rows={10}
-            style={{ ...inp, fontFamily: "ui-monospace, SFMono-Regular, monospace", fontSize: 12, resize: "vertical" }}
-          />
-          <button onClick={commitJson} style={btnSecondary}>Apply</button>
+          <Label>Config</Label>
+          <BlockConfigForm block={block} cfg={cfg} setCfg={setCfg} />
         </>
       )}
 
@@ -641,6 +622,233 @@ function ConfigPanel({
         Delete block
       </button>
     </div>
+  );
+}
+
+function BlockConfigForm({
+  block,
+  cfg,
+  setCfg,
+}: {
+  block: Block;
+  cfg: Record<string, unknown>;
+  setCfg: (patch: Record<string, unknown>) => void;
+}) {
+  switch (block.type) {
+    case "ReturnVisitBanner":
+      return <div style={paletteHint}>No configuration.</div>;
+    case "AdHeaderLeaderboard":
+    case "AdBannerMid":
+    case "AdLeaderboard":
+    case "AdInFeedBanner":
+      return (
+        <SmallSelect
+          label="Position"
+          value={(cfg.position as string) || ""}
+          onChange={(v) => setCfg({ position: v })}
+          options={AD_POSITIONS.map((p) => ({ value: p, label: p }))}
+        />
+      );
+    case "AboveFold":
+      return (
+        <>
+          <SmallNumber label="District count" value={(cfg.districtCount as number) ?? 6} onChange={(v) => setCfg({ districtCount: v })} min={0} max={20} />
+          <SmallNumber label="Latest count" value={(cfg.latestCount as number) ?? 10} onChange={(v) => setCfg({ latestCount: v })} min={0} max={50} />
+          <SmallText
+            label="Exclude categories (comma-separated slugs)"
+            value={Array.isArray(cfg.excludeCategories) ? (cfg.excludeCategories as string[]).join(", ") : ""}
+            onChange={(v) =>
+              setCfg({
+                excludeCategories: v.split(",").map((s) => s.trim()).filter(Boolean),
+              })
+            }
+            placeholder="rasi-phalalu, weather"
+          />
+        </>
+      );
+    case "VideoSection":
+      return (
+        <>
+          <SmallNumber label="Count" value={(cfg.count as number) ?? 6} onChange={(v) => setCfg({ count: v })} min={0} max={30} />
+          <SmallCheckbox label="Featured only" value={Boolean(cfg.featuredOnly)} onChange={(v) => setCfg({ featuredOnly: v })} />
+        </>
+      );
+    case "WebStories":
+      return <SmallNumber label="Count" value={(cfg.count as number) ?? 8} onChange={(v) => setCfg({ count: v })} min={0} max={20} />;
+    case "PhotoGallery":
+      return <SmallNumber label="Count" value={(cfg.count as number) ?? 6} onChange={(v) => setCfg({ count: v })} min={0} max={20} />;
+    case "CinemaBand":
+      return (
+        <>
+          <SmallNumber label="Lead count" value={(cfg.leadCount as number) ?? 1} onChange={(v) => setCfg({ leadCount: v })} min={0} max={10} />
+          <SmallNumber label="Grid count" value={(cfg.gridCount as number) ?? 4} onChange={(v) => setCfg({ gridCount: v })} min={0} max={20} />
+          <SmallNumber label="Reviews count" value={(cfg.reviewsCount as number) ?? 4} onChange={(v) => setCfg({ reviewsCount: v })} min={0} max={20} />
+          <SmallCheckbox
+            label="Include movie-reviews category"
+            value={cfg.includeMovieReviews !== false}
+            onChange={(v) => setCfg({ includeMovieReviews: v })}
+          />
+        </>
+      );
+    case "SectionBand":
+      return (
+        <>
+          <SmallText label="Brand (Telugu)" value={(cfg.brand as string) || ""} onChange={(v) => setCfg({ brand: v })} placeholder="leave blank ⇒ derived from category" />
+          <SmallText label="Brand href" value={(cfg.brandHref as string) || ""} onChange={(v) => setCfg({ brandHref: v })} placeholder="/category/sports" />
+          <SmallText label="Category slug" value={(cfg.categorySlug as string) || ""} onChange={(v) => setCfg({ categorySlug: v })} placeholder="sports (blank ⇒ uses page context)" />
+          <SmallNumber label="Lead count" value={(cfg.leadCount as number) ?? 1} onChange={(v) => setCfg({ leadCount: v })} min={0} max={10} />
+          <SmallNumber label="Grid count" value={(cfg.gridCount as number) ?? 4} onChange={(v) => setCfg({ gridCount: v })} min={0} max={20} />
+          <SmallNumber label="Trending count" value={(cfg.trendingCount as number) ?? 6} onChange={(v) => setCfg({ trendingCount: v })} min={0} max={20} />
+          <SmallCheckbox label="Show politics cartoon" value={Boolean(cfg.showCartoon)} onChange={(v) => setCfg({ showCartoon: v })} />
+          <SmallCheckbox label="Show cricket scores" value={Boolean(cfg.showScores)} onChange={(v) => setCfg({ showScores: v })} />
+          <JsonField
+            label="Tabs (array of { label, href })"
+            value={Array.isArray(cfg.tabs) ? cfg.tabs : []}
+            onChange={(v) => setCfg({ tabs: v })}
+          />
+        </>
+      );
+    case "CategoryPair":
+      return (
+        <JsonField
+          label="Columns (array of { title, slug, leadCount, itemsCount })"
+          value={Array.isArray(cfg.columns) ? cfg.columns : []}
+          onChange={(v) => setCfg({ columns: v })}
+        />
+      );
+    default:
+      return (
+        <JsonField
+          label="Config (JSON)"
+          value={cfg}
+          onChange={(v) => setCfg(v as Record<string, unknown>)}
+        />
+      );
+  }
+}
+
+function SmallText({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <>
+      <Label>{label}</Label>
+      <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} style={inp} />
+    </>
+  );
+}
+
+function SmallNumber({
+  label,
+  value,
+  onChange,
+  min,
+  max,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  min?: number;
+  max?: number;
+}) {
+  return (
+    <>
+      <Label>{label}</Label>
+      <input
+        type="number"
+        value={value}
+        min={min}
+        max={max}
+        onChange={(e) => onChange(Number(e.target.value))}
+        style={inp}
+      />
+    </>
+  );
+}
+
+function SmallCheckbox({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, marginBottom: 8, marginTop: 4 }}>
+      <input type="checkbox" checked={value} onChange={(e) => onChange(e.target.checked)} />
+      {label}
+    </label>
+  );
+}
+
+function SmallSelect({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+}) {
+  return (
+    <>
+      <Label>{label}</Label>
+      <select value={value} onChange={(e) => onChange(e.target.value)} style={inp}>
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </>
+  );
+}
+
+function JsonField<T>({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  onChange: (v: T) => void;
+}) {
+  const [text, setText] = useState(() => JSON.stringify(value, null, 2));
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => {
+    setText(JSON.stringify(value, null, 2));
+  }, [value]);
+  return (
+    <>
+      <Label>{label}</Label>
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={() => {
+          try {
+            onChange(JSON.parse(text));
+            setErr(null);
+          } catch (e) {
+            setErr((e as Error).message);
+          }
+        }}
+        rows={6}
+        style={{ ...inp, fontFamily: "ui-monospace, SFMono-Regular, monospace", fontSize: 12, resize: "vertical" }}
+      />
+      {err && <div style={{ color: "#B91C1C", fontSize: 11, marginTop: -8, marginBottom: 8 }}>{err}</div>}
+    </>
   );
 }
 

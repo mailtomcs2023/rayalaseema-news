@@ -31,14 +31,16 @@ export default async function ReporterEarningsPage() {
   });
   const locked = !profile || profile.kycStatus !== "VERIFIED";
 
+  // Spec #1 A1C (#189) — payments live in ContentPayment, content lives in
+  // Content. Same shape projected so the UI doesn't change.
   const payments = locked
     ? []
-    : await prisma.articlePayment.findMany({
+    : await prisma.contentPayment.findMany({
         where: { journalistId: userId },
         orderBy: { createdAt: "desc" },
         take: 50,
         include: {
-          article: { select: { title: true, slug: true } },
+          content: { select: { title: true, slug: true } },
           config: { select: { name: true, articleType: true } },
         },
       });
@@ -158,7 +160,7 @@ export default async function ReporterEarningsPage() {
                             whiteSpace: "nowrap",
                           }}
                         >
-                          {p.article?.title || "Article"}
+                          {p.content?.title || "Article"}
                         </p>
                         <p style={{ fontSize: 11, color: "#999", marginTop: 3 }}>
                           {p.config?.name || p.config?.articleType || ""} · {new Date(p.createdAt).toLocaleDateString()}

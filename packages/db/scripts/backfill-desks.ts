@@ -38,21 +38,21 @@ async function resolveDeskId(input: {
 }
 
 async function main() {
-  const articles = await prisma.article.findMany({
-    where: { deskId: null },
+  const articles = await prisma.content.findMany({
+    where: { type: "ARTICLE", deskId: null },
     select: { id: true, categoryId: true, constituencyId: true },
   });
-  console.log(`Articles missing deskId: ${articles.length}`);
+  console.log(`Content missing deskId: ${articles.length}`);
   if (articles.length === 0) return;
 
   let updated = 0;
   for (const a of articles) {
     const deskId = await resolveDeskId({ categoryId: a.categoryId, constituencyId: a.constituencyId });
     if (!deskId) continue;
-    await prisma.article.update({ where: { id: a.id }, data: { deskId } });
+    await prisma.content.update({ where: { id: a.id }, data: { deskId } });
     updated++;
   }
-  console.log(`Backfilled ${updated}/${articles.length} articles`);
+  console.log(`Backfilled ${updated}/${articles.length} content rows`);
 }
 
 main()

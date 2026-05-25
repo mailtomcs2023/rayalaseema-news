@@ -28,11 +28,11 @@ async function loadOwned(req: NextRequest, id: string) {
   const reporterId = await getReporterId(req);
   if (!reporterId) return { err: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
   // Only fetch the fields needed for the ownership + editability checks.
-  const article = await prisma.article.findUnique({
+  const article = await prisma.content.findUnique({
     where: { id },
-    select: { id: true, authorId: true, status: true },
+    select: { id: true, type: true, authorId: true, status: true },
   });
-  if (!article || article.authorId !== reporterId) {
+  if (!article || article.type !== "ARTICLE" || article.authorId !== reporterId) {
     return { err: NextResponse.json({ error: "Article not found" }, { status: 404 }) };
   }
   return { article };
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const { id } = await params;
   const r = await loadOwned(req, id);
   if (r.err) return r.err;
-  const full = await prisma.article.findUnique({
+  const full = await prisma.content.findUnique({
     where: { id },
     // Explicit select — keeps the response stable across environments and
     // matches the fields the editor (mobile + web) actually reads.
@@ -107,7 +107,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       }
     }
 
-    const updated = await prisma.article.update({
+    const updated = await prisma.content.update({
       where: { id },
       data,
       // Mirror the GET shape so callers can rely on the same field set.
@@ -131,7 +131,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     );
   }
   try {
-    await prisma.article.delete({ where: { id } });
+    await prisma.content.delete({ where: { id } });
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Failed to delete article";

@@ -90,7 +90,7 @@ async function main() {
 
   // Counts before
   const beforeMandals = await prisma.mandal.count({ where: { constituencyId: { in: [...remap.keys()] } } });
-  const beforeArticles = await prisma.article.count({ where: { constituencyId: { in: [...remap.keys()] } } });
+  const beforeArticles = await prisma.content.count({ where: { type: "ARTICLE", constituencyId: { in: [...remap.keys()] } } });
   console.log(`Will remap: ${beforeMandals} mandals, ${beforeArticles} articles`);
 
   // Do it. Single transaction so any failure rolls back.
@@ -103,9 +103,9 @@ async function main() {
       });
     }
 
-    // 2. Remap articles
+    // 2. Remap content rows (was Article in Spec #0)
     for (const [oldId, t] of remap) {
-      await tx.article.updateMany({
+      await tx.content.updateMany({
         where: { constituencyId: oldId },
         data: { constituencyId: t.newId },
       });

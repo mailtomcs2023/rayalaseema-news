@@ -1,5 +1,7 @@
 import { prisma } from "@rayalaseema/db";
 
+// Dashboard stats — Spec #1 A1C (#189): every count reads Content with a type
+// filter. Replaces the per-table counts (prisma.article.count, prisma.video.count, ...).
 export async function getDashboardStats() {
   const [
     totalArticles,
@@ -15,21 +17,22 @@ export async function getDashboardStats() {
     totalCartoons,
     totalAds,
   ] = await Promise.all([
-    prisma.article.count(),
-    prisma.article.count({ where: { status: "PUBLISHED" } }),
-    prisma.article.count({ where: { status: "DRAFT" } }),
-    prisma.article.count({ where: { status: "IN_REVIEW" } }),
+    prisma.content.count({ where: { type: "ARTICLE" } }),
+    prisma.content.count({ where: { type: "ARTICLE", status: "PUBLISHED" } }),
+    prisma.content.count({ where: { type: "ARTICLE", status: "DRAFT" } }),
+    prisma.content.count({ where: { type: "ARTICLE", status: "IN_REVIEW" } }),
     prisma.category.count(),
     prisma.user.count(),
-    prisma.breakingNews.count({ where: { active: true } }),
-    prisma.video.count(),
-    prisma.webStory.count(),
-    prisma.reel.count(),
-    prisma.cartoon.count(),
+    prisma.content.count({ where: { type: "BREAKING_NEWS", status: "PUBLISHED" } }),
+    prisma.content.count({ where: { type: "VIDEO" } }),
+    prisma.content.count({ where: { type: "WEB_STORY" } }),
+    prisma.content.count({ where: { type: "REEL" } }),
+    prisma.content.count({ where: { type: "CARTOON" } }),
     prisma.ad.count({ where: { active: true } }),
   ]);
 
-  const recentArticles = await prisma.article.findMany({
+  const recentArticles = await prisma.content.findMany({
+    where: { type: "ARTICLE" },
     include: {
       category: { select: { name: true, nameEn: true, slug: true } },
       author: { select: { name: true } },
@@ -58,14 +61,15 @@ export async function getDashboardStats() {
 export async function getAllCategories() {
   return prisma.category.findMany({
     orderBy: { sortOrder: "asc" },
-    include: { _count: { select: { articles: true } } },
+    include: { _count: { select: { contents: true } } },
   });
 }
 
 export async function getAllArticles(page = 1, limit = 20) {
   const offset = (page - 1) * limit;
   const [articles, total] = await Promise.all([
-    prisma.article.findMany({
+    prisma.content.findMany({
+      where: { type: "ARTICLE" },
       include: {
         category: { select: { name: true, nameEn: true, slug: true, color: true } },
         author: { select: { name: true } },
@@ -74,13 +78,29 @@ export async function getAllArticles(page = 1, limit = 20) {
       take: limit,
       skip: offset,
     }),
-    prisma.article.count(),
+    prisma.content.count({ where: { type: "ARTICLE" } }),
   ]);
   return { articles, total, page, limit };
 }
 
+// Breaking ticker list for admin dashboard — reads Content where type=BREAKING_NEWS,
+// sorts by payload.priority ASC (matches old BreakingNews.priority).
 export async function getBreakingNewsList() {
-  return prisma.breakingNews.findMany({
-    orderBy: { priority: "asc" },
+  const rows = await prisma.content.findMany({
+    where: { type: "BREAKING_NEWS" },
+    orderBy: { createdAt: "desc" },
   });
+  return rows
+    .map((r) => {
+      const p = (r.payload as Record<string, unknown> | null) || {};
+      return {
+        id: r.id,
+        headline: r.title,
+        priority: typeof p.priority === "number" ? p.priority : 0,
+        active: r.status === "PUBLISHED",
+        expiresAt: p.expiresAt ? new Date(p.expiresAt as string) : null,
+        createdAt: r.createdAt,
+      };
+    })
+    .sort((a, b) => a.priority - b.priority);
 }

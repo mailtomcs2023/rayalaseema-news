@@ -26,10 +26,10 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const payments = await prisma.articlePayment.findMany({
+    const payments = await prisma.contentPayment.findMany({
       where: { journalistId: reporterId },
       include: {
-        article: { select: { title: true, slug: true } },
+        content: { select: { title: true, slug: true } },
         config: { select: { name: true, articleType: true } },
       },
       orderBy: { createdAt: "desc" },

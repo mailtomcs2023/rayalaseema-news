@@ -24,13 +24,12 @@ export default async function ReporterHome() {
   if (role && role !== "REPORTER") redirect("/");
   if (!userId) redirect("/login");
 
+  // Spec #1 A1C (#189) — read Content where type=ARTICLE + ContentPayment.
   const [articles, payments] = await Promise.all([
-    prisma.article.findMany({
-      where: { authorId: userId },
+    prisma.content.findMany({
+      where: { type: "ARTICLE", authorId: userId },
       orderBy: { createdAt: "desc" },
       take: 50,
-      // Explicit select — avoids pulling unused columns (and side-steps any
-      // pending schema columns that haven't been migrated to the local DB yet).
       select: {
         id: true,
         title: true,
@@ -41,7 +40,7 @@ export default async function ReporterHome() {
         category: { select: { name: true, nameEn: true, color: true } },
       },
     }),
-    prisma.articlePayment.findMany({
+    prisma.contentPayment.findMany({
       where: { journalistId: userId },
       select: { totalAmount: true, status: true },
     }),

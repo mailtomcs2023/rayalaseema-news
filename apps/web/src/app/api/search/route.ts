@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
   const offset = (page - 1) * limit;
 
   const where = {
+    type: "ARTICLE" as const,
     status: "PUBLISHED" as const,
     OR: [
       { title: { contains: q, mode: "insensitive" as const } },
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest) {
   };
 
   const [articles, total] = await Promise.all([
-    prisma.article.findMany({
+    prisma.content.findMany({
       where,
       select: {
         id: true, title: true, slug: true, summary: true, featuredImage: true, publishedAt: true,
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
       take: limit,
       skip: offset,
     }),
-    prisma.article.count({ where }),
+    prisma.content.count({ where }),
   ]);
 
   return NextResponse.json({ articles, total, page }, {

@@ -16,8 +16,9 @@ export async function GET(req: NextRequest) {
   const limit = Math.max(5, Math.min(100, parseInt(sp.get("limit") || "30", 10)));
   if (!q || q.length < 2) return NextResponse.json({ hits: [] });
 
-  const articles = await prisma.article.findMany({
+  const articles = await prisma.content.findMany({
     where: {
+      type: "ARTICLE",
       status: "PUBLISHED",
       OR: [
         { title: { contains: q, mode: "insensitive" } },

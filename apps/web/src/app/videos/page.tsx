@@ -12,26 +12,34 @@ export const metadata: Metadata = {
 };
 
 export default async function VideosPage() {
-  const [config, videos] = await Promise.all([
+  // Spec #1 A1C (#189) — reads Content where type=VIDEO. payload fields
+  // (videoUrl, duration sec, thumbnailUrl) projected onto the item shape.
+  const [config, videoRows] = await Promise.all([
     getSiteConfig(),
-    prisma.video.findMany({
-      where: { active: true },
+    prisma.content.findMany({
+      where: { type: "VIDEO", status: "PUBLISHED" },
       orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
       take: 60,
       include: { category: { select: { name: true } } },
     }),
   ]);
 
-  const items = videos.map((v) => ({
-    id: v.id,
-    title: v.title,
-    slug: v.slug,
-    thumbnail: v.thumbnailUrl,
-    videoUrl: v.videoUrl,
-    duration: v.duration,
-    views: v.views,
-    category: v.category?.name || null,
-  }));
+  const items = videoRows.map((v) => {
+    const p = (v.payload as Record<string, unknown> | null) || {};
+    const seconds = typeof p.duration === "number" ? p.duration : 0;
+    const mm = Math.floor(seconds / 60);
+    const ss = String(seconds % 60).padStart(2, "0");
+    return {
+      id: v.id,
+      title: v.title,
+      slug: v.slug || "",
+      thumbnail: (p.thumbnailUrl as string) || v.featuredImage || "",
+      videoUrl: (p.videoUrl as string) || null,
+      duration: seconds > 0 ? `${mm}:${ss}` : null,
+      views: v.viewCount,
+      category: v.category?.name || null,
+    };
+  });
 
   return (
     <div className="min-h-screen" style={{ background: "#fff" }}>

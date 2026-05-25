@@ -38,8 +38,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
     const [articlesAuthored, comments, auditEvents] = await Promise.all([
-      prisma.article.findMany({
-        where: { authorId: id },
+      prisma.content.findMany({
+        where: { type: "ARTICLE", authorId: id },
         select: { id: true, slug: true, title: true, status: true, createdAt: true, publishedAt: true },
         orderBy: { createdAt: "desc" },
         take: 1000,

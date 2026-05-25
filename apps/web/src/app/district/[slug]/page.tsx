@@ -37,8 +37,9 @@ export default async function DistrictPage({ params }: { params: Promise<{ slug:
 
   const [config, tagged, trending] = await Promise.all([
     getSiteConfig(),
-    prisma.article.findMany({
+    prisma.content.findMany({
       where: {
+        type: "ARTICLE",
         status: "PUBLISHED",
         OR: [
           { constituencyId: { in: district.constituencies.map((c) => c.id) } },
@@ -59,8 +60,8 @@ export default async function DistrictPage({ params }: { params: Promise<{ slug:
   let showingGeneral = false;
   if (tagged.length < 3) {
     showingGeneral = true;
-    articles = await prisma.article.findMany({
-      where: { status: "PUBLISHED" },
+    articles = await prisma.content.findMany({
+      where: { type: "ARTICLE", status: "PUBLISHED" },
       orderBy: { publishedAt: "desc" },
       take: 15,
       select: { id: true, title: true, slug: true, summary: true, featuredImage: true, category: { select: { name: true } } },

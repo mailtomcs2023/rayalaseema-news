@@ -1,8 +1,8 @@
 import { prisma } from "@rayalaseema/db";
 
 export async function GET() {
-  const articles = await prisma.article.findMany({
-    where: { status: "PUBLISHED" },
+  const articles = await prisma.content.findMany({
+    where: { type: "ARTICLE", status: "PUBLISHED" },
     select: { slug: true, title: true, publishedAt: true, category: { select: { nameEn: true } } },
     orderBy: { publishedAt: "desc" },
     take: 1000,
@@ -22,7 +22,7 @@ ${articles.map((a) => `  <url>
       </news:publication>
       <news:publication_date>${(a.publishedAt || new Date()).toISOString()}</news:publication_date>
       <news:title>${escXml(a.title)}</news:title>
-      <news:keywords>${escXml(a.category.nameEn || "")}</news:keywords>
+      <news:keywords>${escXml(a.category?.nameEn || "")}</news:keywords>
     </news:news>
   </url>`).join("\n")}
 </urlset>`;

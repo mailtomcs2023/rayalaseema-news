@@ -12,9 +12,9 @@ export const runtime = "nodejs";
 
 export async function GET(_: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const article = await prisma.article.findUnique({
+  const article = await prisma.content.findUnique({
     where: { slug },
-    select: { title: true, summary: true, category: { select: { name: true } } },
+    select: { title: true, summary: true, type: true, category: { select: { name: true } } },
   });
   const title = article?.title || "రాయలసీమ ఎక్స్‌ప్రెస్";
   const category = article?.category?.name || "వార్తలు";

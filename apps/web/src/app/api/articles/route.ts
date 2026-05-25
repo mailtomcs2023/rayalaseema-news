@@ -9,12 +9,12 @@ export async function GET(req: NextRequest) {
   const limit = parseInt(searchParams.get("limit") || "20");
   const offset = parseInt(searchParams.get("offset") || "0");
 
-  const where: any = { status: "PUBLISHED" };
+  const where: any = { type: "ARTICLE", status: "PUBLISHED" };
   if (category) where.category = { slug: category };
   if (featured === "true") where.featured = true;
 
   const [articles, total] = await Promise.all([
-    prisma.article.findMany({
+    prisma.content.findMany({
       where,
       include: {
         category: { select: { id: true, name: true, nameEn: true, slug: true, color: true } },
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
       take: limit,
       skip: offset,
     }),
-    prisma.article.count({ where }),
+    prisma.content.count({ where }),
   ]);
 
   return NextResponse.json({ articles, total, limit, offset }, {

@@ -3,7 +3,7 @@ import { CrudTable } from "@/components/crud-table";
 import { prisma } from "@rayalaseema/db";
 
 export default async function CategoriesPage() {
-  const data = await prisma.category.findMany({ orderBy: { sortOrder: "asc" }, include: { _count: { select: { articles: true } } } });
+  const data = await prisma.category.findMany({ orderBy: { sortOrder: "asc" }, include: { _count: { select: { contents: true } } } });
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>

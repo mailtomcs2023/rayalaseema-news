@@ -17,12 +17,11 @@ export default async function ConstituencyPage({ params }: { params: Promise<{ s
 
   if (!constituency) return notFound();
 
-  const articles = await prisma.article.findMany({
-    where: { status: "PUBLISHED", constituencyId: constituency.id },
+  const articles = await prisma.content.findMany({
+    where: { type: "ARTICLE", status: "PUBLISHED", constituencyId: constituency.id },
     include: {
       category: { select: { name: true, color: true } },
       author: { select: { name: true } },
-      mandal: { select: { nameEn: true } },
     },
     orderBy: { publishedAt: "desc" },
     take: 20,
@@ -71,7 +70,7 @@ export default async function ConstituencyPage({ params }: { params: Promise<{ s
                     <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 6 }}>
                       <svg width="12" height="12" fill="var(--color-brand)" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
                       <span style={{ fontSize: 11, fontWeight: 700, color: "var(--color-brand)" }}>
-                        {article.mandal?.nameEn || constituency.nameEn}
+                        {constituency.nameEn}
                       </span>
                     </div>
                     <h3 style={{ fontSize: 15, fontWeight: 800, color: "#000", lineHeight: 1.5 }}>{article.title}</h3>

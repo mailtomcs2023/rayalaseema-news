@@ -19,8 +19,9 @@ export async function POST(req: NextRequest) {
   const limit = Math.min(parseInt(new URL(req.url).searchParams.get("limit") || "20"), 40);
 
   // Articles whose image is still an external URL (not yet on our blob)
-  const pending = await prisma.article.findMany({
+  const pending = await prisma.content.findMany({
     where: {
+      type: "ARTICLE",
       featuredImage: { not: null },
       NOT: { featuredImage: { contains: ".blob.core.windows.net/" } },
     },
@@ -33,17 +34,18 @@ export async function POST(req: NextRequest) {
   for (const a of pending) {
     const hosted = await uploadImageFromUrl(a.featuredImage);
     if (hosted) {
-      await prisma.article.update({ where: { id: a.id }, data: { featuredImage: hosted } });
+      await prisma.content.update({ where: { id: a.id }, data: { featuredImage: hosted } });
       rehosted++;
     } else {
       // Source unreachable (403/expired) — null it so the UI shows a clean placeholder
-      await prisma.article.update({ where: { id: a.id }, data: { featuredImage: null } });
+      await prisma.content.update({ where: { id: a.id }, data: { featuredImage: null } });
       failed++;
     }
   }
 
-  const remaining = await prisma.article.count({
+  const remaining = await prisma.content.count({
     where: {
+      type: "ARTICLE",
       featuredImage: { not: null },
       NOT: { featuredImage: { contains: ".blob.core.windows.net/" } },
     },

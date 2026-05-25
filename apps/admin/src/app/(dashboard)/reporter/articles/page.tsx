@@ -31,8 +31,8 @@ export default async function ReporterArticlesPage({
   const status = sp.status && VALID.includes(sp.status) ? sp.status : "SUBMITTED";
 
   const [articles, counts, categories] = await Promise.all([
-    prisma.article.findMany({
-      where: { authorId: userId, status: status as any },
+    prisma.content.findMany({
+      where: { type: "ARTICLE", authorId: userId, status: status as any },
       orderBy: { createdAt: "desc" },
       take: 200,
       select: {
@@ -47,10 +47,10 @@ export default async function ReporterArticlesPage({
         category: { select: { name: true, nameEn: true, color: true } },
       },
     }),
-    prisma.article.groupBy({
+    prisma.content.groupBy({
       by: ["status"],
       _count: { _all: true },
-      where: { authorId: userId },
+      where: { type: "ARTICLE", authorId: userId },
     }),
     prisma.category.findMany({
       where: { active: true },

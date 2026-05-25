@@ -21,8 +21,8 @@ export async function GET(req: NextRequest) {
     const limit = Math.min(parseInt(searchParams.get("limit") || "50") || 50, 100);
 
     const [articles, total] = await Promise.all([
-      prisma.article.findMany({
-        where: { authorId: reporterId },
+      prisma.content.findMany({
+        where: { type: "ARTICLE", authorId: reporterId },
         // Explicit select — keeps the payload small and avoids any optional
         // columns (e.g. PIB workflow) that may not be present in every env.
         select: {
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
         orderBy: { createdAt: "desc" },
         take: limit,
       }),
-      prisma.article.count({ where: { authorId: reporterId } }),
+      prisma.content.count({ where: { type: "ARTICLE", authorId: reporterId } }),
     ]);
 
     return NextResponse.json({ articles, total });
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
     // Sanitize the slug; if it's taken, suffix a timestamp so a reporter never
     // hits a "slug already exists" error from the app.
     let cleanSlug = sanitizeSlug(slug || title) || `news-${Date.now()}`;
-    if (await prisma.article.findUnique({ where: { slug: cleanSlug }, select: { id: true } })) {
+    if (await prisma.content.findUnique({ where: { slug: cleanSlug }, select: { id: true } })) {
       cleanSlug = `${cleanSlug}-${Date.now()}`;
     }
 
@@ -103,8 +103,9 @@ export async function POST(req: NextRequest) {
       constituencyId: null,
     });
 
-    const article = await prisma.article.create({
+    const article = await prisma.content.create({
       data: {
+        type: "ARTICLE",
         title: String(title).trim(),
         slug: cleanSlug,
         summary: summary ? String(summary).trim() : null,

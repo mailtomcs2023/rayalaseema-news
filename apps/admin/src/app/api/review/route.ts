@@ -24,7 +24,8 @@ export async function GET(req: NextRequest) {
     }
     // EDITOR and ADMIN see all
 
-    const articles = await prisma.article.findMany({
+    where.type = "ARTICLE";
+    const articles = await prisma.content.findMany({
       where,
       include: {
         category: { select: { name: true, nameEn: true, color: true } },
@@ -34,12 +35,9 @@ export async function GET(req: NextRequest) {
       take: 50,
     });
 
-    // Counts must respect the same category-scope as the list — otherwise
-    // a sub editor sees "Submitted (3)" but an empty table because those
-    // articles aren't in any of their assigned categories.
-    const countWhere: any = {};
+    const countWhere: any = { type: "ARTICLE" };
     if (where.categoryId) countWhere.categoryId = where.categoryId;
-    const counts = await prisma.article.groupBy({
+    const counts = await prisma.content.groupBy({
       by: ["status"],
       where: countWhere,
       _count: true,
@@ -61,11 +59,13 @@ export async function POST(req: NextRequest) {
     const userId = session.user.id;
     const role = session.user.role;
 
-    const { articleId, action, note } = await req.json();
-    if (!articleId || !action) return NextResponse.json({ error: "articleId and action required" }, { status: 400 });
+    const body = await req.json();
+    const articleId: string | undefined = body.articleId || body.contentId;
+    const { action, note } = body;
+    if (!articleId || !action) return NextResponse.json({ error: "articleId/contentId and action required" }, { status: 400 });
 
-    const article = await prisma.article.findUnique({ where: { id: articleId } });
-    if (!article) return NextResponse.json({ error: "Article not found" }, { status: 404 });
+    const article = await prisma.content.findUnique({ where: { id: articleId } });
+    if (!article || article.type !== "ARTICLE") return NextResponse.json({ error: "Article not found" }, { status: 404 });
 
     // Status transitions based on action
     const transitions: Record<string, { newStatus: string; allowedRoles: string[] }> = {
@@ -95,11 +95,18 @@ export async function POST(req: NextRequest) {
     if (action === "approve") updateData.approvedAt = new Date();
     if (action === "publish") updateData.publishedAt = new Date();
 
-    await prisma.article.update({ where: { id: articleId }, data: updateData });
+    await prisma.content.update({ where: { id: articleId }, data: updateData });
 
-    // Log the review action
-    await prisma.articleReview.create({
-      data: { articleId, userId, action, note },
+    // Spec #1 A1C (#189) — ArticleReview table dropped. Log review actions
+    // to AuditLog (the system-wide trail) instead.
+    await prisma.auditLog.create({
+      data: {
+        actorId: userId,
+        action: `content.review.${action}`,
+        resource: "content",
+        resourceId: articleId,
+        meta: { note: note || null, newStatus: transition.newStatus },
+      },
     });
 
     return NextResponse.json({ success: true, newStatus: transition.newStatus });

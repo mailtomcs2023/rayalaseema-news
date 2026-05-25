@@ -75,38 +75,46 @@ export default async function CinemaPage({
     tv: ["టీవీ", "TV", "సీరియల్", "OTT"],
   };
 
-  const where: any = { status: "PUBLISHED", categoryId: { in: catIds } };
+  // Spec #1 A1C (#189) — reads Content where type=ARTICLE. rating + reviewerName
+  // come from payload now, projected after fetch.
+  const where: any = { type: "ARTICLE", status: "PUBLISHED", categoryId: { in: catIds } };
   if (tab === "reviews" && revId) {
     where.categoryId = revId;
   } else if (KEYWORDS[tab]) {
     where.OR = KEYWORDS[tab].map((k) => ({ title: { contains: k, mode: "insensitive" as const } }));
   }
 
-  const [articles, reviews] = await Promise.all([
-    prisma.article.findMany({
+  const projectRating = <T extends { payload?: unknown }>(row: T) => {
+    const p = (row.payload as Record<string, unknown> | null) || {};
+    return {
+      ...row,
+      rating: typeof p.rating === "number" ? p.rating : null,
+      reviewerName: typeof p.reviewerName === "string" ? p.reviewerName : null,
+    };
+  };
+
+  const [articlesRaw, reviewsRaw] = await Promise.all([
+    prisma.content.findMany({
       where,
       orderBy: { publishedAt: "desc" },
       take: 24,
       select: {
-        id: true,
-        title: true,
-        slug: true,
-        summary: true,
-        featuredImage: true,
-        rating: true,
-        reviewerName: true,
+        id: true, title: true, slug: true, summary: true, featuredImage: true,
+        payload: true,
         category: { select: { slug: true } },
       },
     }),
     revId
-      ? prisma.article.findMany({
-          where: { status: "PUBLISHED", categoryId: revId },
+      ? prisma.content.findMany({
+          where: { type: "ARTICLE", status: "PUBLISHED", categoryId: revId },
           orderBy: { publishedAt: "desc" },
           take: 10,
-          select: { id: true, title: true, slug: true, rating: true, reviewerName: true },
+          select: { id: true, title: true, slug: true, payload: true },
         })
       : Promise.resolve([]),
   ]);
+  const articles = articlesRaw.map(projectRating);
+  const reviews = reviewsRaw.map(projectRating);
 
   const lead = articles[0];
   const rest = articles.slice(1);

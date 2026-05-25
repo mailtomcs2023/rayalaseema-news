@@ -117,7 +117,7 @@ async function main() {
   console.log(`  ${districts.length} districts upserted (constituencies handled by rebuild-constituencies.ts)`);
 
   // ========== BREAKING NEWS ==========
-  await prisma.breakingNews.deleteMany({});
+  await prisma.content.deleteMany({ where: { type: "BREAKING_NEWS" } });
   console.log("  Breaking news cleared (add real ones from admin)");
 
   // ========== SITE CONFIG ==========
