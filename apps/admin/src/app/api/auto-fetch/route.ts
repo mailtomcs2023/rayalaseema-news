@@ -191,8 +191,9 @@ export async function POST(req: NextRequest) {
         const hostedImage = await uploadImageFromUrl(article.image_url);
 
         // Create Content row (Spec #1 #109). type=ARTICLE — wire stories are
-        // always articles. `breaking` flag dropped: BREAKING_NEWS is now its
-        // own type, not a boolean on Article.
+        // always articles. Auto-fetched rows land as DRAFT so an editor must
+        // sanity-check the machine translation before it goes live (the UI
+        // copy promised this; previously the code wrote PUBLISHED + now()).
         await prisma.content.create({
           data: {
             type: "ARTICLE",
@@ -204,10 +205,10 @@ export async function POST(req: NextRequest) {
             authorId: admin.id,
             featuredImage: hostedImage,
             sourceUrl: article.link || null,
-            status: "PUBLISHED",
+            status: "DRAFT",
             featured: false,
             language: "TELUGU",
-            publishedAt: new Date(),
+            publishedAt: null,
             constituencyId: constituencyId || null,
           },
         });
