@@ -1079,6 +1079,12 @@ model Content {
   // Spec #1 A1B (#188) — back-relations from tables whose FK moved to Content.
   comments        Comment[]
   socialPosts     SocialPost[]
+  // Spec #4 A1 (#192) — many-to-many to District/Constituency/Mandal via the
+  // polymorphic ContentLocation join. `Content.constituencyId` above remains
+  // as a denormalized fast-path for the primary constituency tag; the join
+  // table is the source of truth for ALL tagged locations (incl. mandal-level
+  // tags + multi-location articles).
+  locations       ContentLocation[]
 
   @@index([type, status, publishedAt])
   @@index([categoryId, status, publishedAt])
@@ -1284,4 +1290,51 @@ model MenuVersion {
 
   @@index([menuId, createdAt])
   @@map("menu_versions")
+}
+
+// ============ CONTENT × LOCATION (Spec #4 A1 #192) ============
+//
+// Polymorphic many-to-many join between Content and the three location levels
+// (District, Constituency, Mandal). Prisma can't natively express a FK that
+// targets one of N tables, so `locationId` is a bare String + `locationType`
+// discriminator — referential integrity is enforced at the application layer
+// (admin publish hook + NER auto-tagger validate the referenced row exists).
+//
+// `primary=true` marks the single location used to build the article's
+// canonical URL via articleHref(). Exactly one ContentLocation per Content
+// should carry `primary=true`; enforced in app code rather than via a partial
+// unique index (Prisma 6 doesn't surface partial uniqueness in the schema
+// DSL, so the constraint would need a raw migration that we're deferring).
+//
+// `confidence`: HIGH = location named in headline, MEDIUM = named in lede,
+// LOW = body-only mention. Feeds into hub-page article ranking and helps NER
+// detect mislabels.
+
+enum LocationType {
+  DISTRICT
+  CONSTITUENCY
+  MANDAL
+}
+
+enum LocationConfidence {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+model ContentLocation {
+  contentId    String
+  content      Content            @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  // FK targets District.id / Constituency.id / Mandal.id depending on `locationType`.
+  // No DB FK constraint (polymorphic); app code MUST validate before insert.
+  locationId   String
+  locationType LocationType
+  confidence   LocationConfidence @default(MEDIUM)
+  primary      Boolean            @default(false)
+  createdAt    DateTime           @default(now())
+
+  @@id([contentId, locationId, locationType])
+  @@index([locationId, locationType])
+  @@index([contentId, primary])
+  @@map("content_locations")
 }
