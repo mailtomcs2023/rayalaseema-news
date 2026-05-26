@@ -1,4 +1,5 @@
 import { BlobServiceClient } from "@azure/storage-blob";
+import { processImageBuffer } from "./image-process";
 
 const CONN = process.env.AZURE_STORAGE_CONNECTION_STRING;
 const CONTAINER = "uploads";
@@ -54,7 +55,18 @@ export async function uploadImageFromUrl(srcUrl: string | null | undefined): Pro
     const buffer = Buffer.from(await res.arrayBuffer());
     if (buffer.length === 0 || buffer.length > 8 * 1024 * 1024) return null;
 
-    return await uploadBuffer(buffer, EXT_BY_TYPE[ct] || "jpg", ct);
+    // Strip third-party EXIF + stamp Rayalaseema Express. Defaults: resize
+    // to 1600px wide, JPEG q85 (PNG if source had alpha).
+    try {
+      const processed = await processImageBuffer(buffer);
+      return await uploadBuffer(processed.buffer, processed.ext, processed.contentType);
+    } catch (e) {
+      // If sharp chokes on the format (rare — animated GIF, exotic AVIF),
+      // fall back to uploading the original bytes. Better a clean republish
+      // than a 404 on the public site.
+      console.warn("[uploadImageFromUrl] processImageBuffer failed, uploading raw:", e);
+      return await uploadBuffer(buffer, EXT_BY_TYPE[ct] || "jpg", ct);
+    }
   } catch {
     return null;
   }

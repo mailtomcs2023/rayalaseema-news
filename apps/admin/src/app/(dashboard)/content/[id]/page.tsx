@@ -16,6 +16,7 @@ import { RichEditor, type RichEditorRef } from "@/components/rich-editor";
 import { ImageUpload } from "@/components/image-upload";
 import { ContentPayloadEditor } from "@/components/content-payload-editor";
 import { ImageSearchModal } from "@/components/image-search-modal";
+import { ImageCropModal } from "@/components/image-crop-modal";
 
 interface Category { id: string; name: string; nameEn: string; slug: string }
 
@@ -58,6 +59,9 @@ export default function ContentEditorPage() {
   const [tagsInput, setTagsInput] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
   const [imageSearchOpen, setImageSearchOpen] = useState(false);
+  // After picking from search OR pasting a URL, hand the (already EXIF-
+  // stripped, RE-stamped) image to the crop modal so the user can frame it.
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
 
   // ARTICLE-specific (payload)
   const [rating, setRating] = useState<string>("");
@@ -503,8 +507,33 @@ export default function ContentEditorPage() {
         open={imageSearchOpen}
         initialQuery={title.replace(/<[^>]+>/g, "").trim().slice(0, 80)}
         onClose={() => setImageSearchOpen(false)}
-        onPick={(url) => setFeaturedImage(url)}
+        onPick={(url) => { setFeaturedImage(url); setCropSrc(url); }}
       />
+
+      {cropSrc && (
+        <ImageCropModal
+          src={cropSrc}
+          onClose={() => setCropSrc(null)}
+          onConfirm={async (dataUrl) => {
+            // Crop modal returns a data URL. If user skipped crop the data
+            // URL == the original Azure URL we passed in — bail out without
+            // re-uploading.
+            if (!dataUrl.startsWith("data:")) { setCropSrc(null); return; }
+            try {
+              const blob = await (await fetch(dataUrl)).blob();
+              const form = new FormData();
+              form.append("file", blob, "cropped.jpg");
+              const res = await fetch("/api/upload", { method: "POST", body: form });
+              const data = await res.json();
+              if (res.ok && data.url) setFeaturedImage(data.url);
+              else setError(data.error || "Upload failed");
+            } catch (e: any) {
+              setError(e.message || "Crop upload failed");
+            }
+            setCropSrc(null);
+          }}
+        />
+      )}
     </div>
   );
 }

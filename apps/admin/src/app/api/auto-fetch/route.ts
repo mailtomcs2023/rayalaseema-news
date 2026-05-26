@@ -189,31 +189,50 @@ export async function POST(req: NextRequest) {
         // attach a stock image later via the editor's image-search modal.
         const hostedImage = article.image_url ? await uploadImageFromUrl(article.image_url) : null;
 
-        // Create Content row (Spec #1 #109). type=ARTICLE — wire stories are
-        // always articles. Auto-fetched rows land as DRAFT so an editor must
-        // sanity-check the machine translation before it goes live (the UI
-        // copy promised this; previously the code wrote PUBLISHED + now()).
-        await prisma.content.create({
-          data: {
-            type: "ARTICLE",
-            title: translated.title,
-            slug,
-            summary: translated.summary,
-            // Source attribution is captured in the `sourceUrl` DB column —
-            // no inline "Source: …" footer in the body itself (editors asked
-            // to keep the article clean of upstream branding).
-            body: translated.body,
-            categoryId,
-            authorId: admin.id,
-            featuredImage: hostedImage,
-            sourceUrl: article.link || null,
-            status: "DRAFT",
-            featured: false,
-            language: "TELUGU",
-            publishedAt: null,
-            constituencyId: constituencyId || null,
-          },
-        });
+        // Create Content row (Spec #1 #109). DRAFT so editors can review.
+        //
+        // Slug-collision retry: the existingSlugs set built at line 129 only
+        // covers non-soft-deleted rows (the prisma client extension filters
+        // deletedAt: null). DB unique index spans ALL rows incl trash, so a
+        // previously-trashed row with the same slug fails the constraint.
+        // Two retries with timestamp suffix cover the gap.
+        let finalSlug = slug;
+        let created = false;
+        for (let attempt = 0; attempt < 3 && !created; attempt++) {
+          try {
+            await prisma.content.create({
+              data: {
+                type: "ARTICLE",
+                title: translated.title,
+                slug: finalSlug,
+                summary: translated.summary,
+                body: translated.body,
+                categoryId,
+                authorId: admin.id,
+                featuredImage: hostedImage,
+                sourceUrl: article.link || null,
+                status: "DRAFT",
+                featured: false,
+                language: "TELUGU",
+                publishedAt: null,
+                constituencyId: constituencyId || null,
+              },
+            });
+            created = true;
+          } catch (e: any) {
+            const msg = String(e?.message || "");
+            if (msg.includes("Unique constraint") && msg.includes("slug")) {
+              finalSlug = `${slug}-${Date.now()}-${attempt + 1}`;
+              continue;
+            }
+            throw e;
+          }
+        }
+        if (!created) {
+          // Three retries exhausted — skip this article rather than throwing
+          // (don't want one bad slug to abort the whole category batch).
+          continue;
+        }
         if (article.link) existingSourceSet.add(article.link);
 
         published++;

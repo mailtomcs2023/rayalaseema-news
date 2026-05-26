@@ -27,6 +27,7 @@ export function ImageSearchModal({ open, initialQuery = "", onClose, onPick }: P
   const [loading, setLoading] = useState(false);
   const [hits, setHits] = useState<Hit[]>([]);
   const [error, setError] = useState("");
+  const [picking, setPicking] = useState<string | null>(null);
 
   if (!open) return null;
 
@@ -52,6 +53,34 @@ export function ImageSearchModal({ open, initialQuery = "", onClose, onPick }: P
   const switchProvider = (p: "pexels" | "google") => {
     setProvider(p);
     if (query.trim()) run(query, p);
+  };
+
+  // Pick = download via the server, strip third-party EXIF (GPS, camera body,
+  // original photographer), stamp our own copyright + artist, re-host on
+  // Azure Blob, then hand the hosted URL back to the editor. Doing this server
+  // side avoids exposing the Pexels CDN / Google image-source domain as the
+  // final URL on the public site.
+  const pickImage = async (fullUrl: string) => {
+    setPicking(fullUrl);
+    setError("");
+    try {
+      const res = await fetch("/api/images/process", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: fullUrl }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.url) {
+        setError(data.error || `Process failed (${res.status})`);
+        setPicking(null);
+        return;
+      }
+      onPick(data.url);
+      onClose();
+    } catch (e: any) {
+      setError(e.message || "Process failed");
+    }
+    setPicking(null);
   };
 
   return (
@@ -145,10 +174,11 @@ export function ImageSearchModal({ open, initialQuery = "", onClose, onPick }: P
                   <div style={{ marginTop: 2 }} title={h.license}>{h.license.slice(0, 30)}…</div>
                 </div>
                 <button
-                  onClick={() => { onPick(h.fullUrl); onClose(); }}
-                  style={{ width: "100%", padding: "6px 0", background: "#dc2626", color: "#fff", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                  onClick={() => pickImage(h.fullUrl)}
+                  disabled={picking !== null}
+                  style={{ width: "100%", padding: "6px 0", background: picking === h.fullUrl ? "#6b7280" : "#dc2626", color: "#fff", border: "none", fontSize: 12, fontWeight: 700, cursor: picking ? "not-allowed" : "pointer", opacity: picking && picking !== h.fullUrl ? 0.5 : 1 }}
                 >
-                  Use this image
+                  {picking === h.fullUrl ? "Processing…" : "Use this image"}
                 </button>
               </div>
             ))}

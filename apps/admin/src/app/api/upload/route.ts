@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 import { uploadBuffer, blobConfigured } from "@/lib/blob";
+import { processImageBuffer } from "@/lib/image-process";
 
 const EXT_BY_TYPE: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -30,10 +31,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "File too large (max 5MB)" }, { status: 400 });
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const url = await uploadBuffer(buffer, EXT_BY_TYPE[file.type], file.type);
+    const inBuf: Buffer = Buffer.from(await file.arrayBuffer());
 
-    return NextResponse.json({ url, size: file.size });
+    // Strip EXIF (GPS / camera body / original photographer) + stamp our
+    // copyright + force orientation upright. GIFs skip processing — sharp
+    // would collapse the animation to a single frame.
+    let outBuf: Buffer = inBuf;
+    let outCt: string = file.type;
+    let outExt: string = EXT_BY_TYPE[file.type];
+    if (file.type !== "image/gif") {
+      try {
+        const p = await processImageBuffer(inBuf);
+        outBuf = p.buffer;
+        outCt = p.contentType;
+        outExt = p.ext;
+      } catch (e) {
+        console.warn("[upload] processImageBuffer failed, uploading raw:", e);
+      }
+    }
+    const url = await uploadBuffer(outBuf, outExt, outCt);
+
+    return NextResponse.json({ url, size: outBuf.length });
   } catch (error) {
     return apiError(error);
   }

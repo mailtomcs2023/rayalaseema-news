@@ -42,7 +42,21 @@ async function searchGoogle(query: string): Promise<Hit[]> {
   if (!key || !cx) throw new Error("GOOGLE_CSE_KEY / GOOGLE_CSE_ID not configured");
   const url = `https://www.googleapis.com/customsearch/v1?key=${key}&cx=${cx}&searchType=image&num=10&safe=active&q=${encodeURIComponent(query)}`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`Google CSE ${res.status}: ${await res.text()}`);
+  if (!res.ok) {
+    // Surface Google's actual error message — common cases:
+    //   "API key not valid" -> wrong / unset GOOGLE_CSE_KEY
+    //   "Custom Search API has not been used in project ..." -> API not enabled
+    //   "Invalid Value" -> cx (engine ID) is wrong
+    //   "Image search is not enabled" -> engine has image search toggle OFF
+    let detail = "";
+    try {
+      const body = await res.json();
+      detail = body?.error?.message || JSON.stringify(body).slice(0, 300);
+    } catch {
+      detail = (await res.text()).slice(0, 300);
+    }
+    throw new Error(`Google CSE ${res.status}: ${detail}`);
+  }
   const data = await res.json();
   return (data.items || []).map((i: any) => ({
     thumbUrl: i.image?.thumbnailLink || i.link,
@@ -75,6 +89,9 @@ export async function GET(req: NextRequest) {
     if (/not configured/i.test(e?.message || "")) {
       return NextResponse.json({ error: e.message }, { status: 503 });
     }
-    return apiError(e);
+    // Image search upstream errors are not sensitive — surface the message so
+    // the admin can see "API not enabled / wrong cx / image search off" etc.
+    console.error("[images/search]", e);
+    return NextResponse.json({ error: e?.message || "Image search failed" }, { status: 502 });
   }
 }
