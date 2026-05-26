@@ -123,9 +123,21 @@ export async function POST(req: NextRequest) {
   const admin = await prisma.user.findFirst({ where: { role: "ADMIN" } });
   if (!admin) return NextResponse.json({ error: "No admin user" }, { status: 500 });
 
-  // Existing slugs + source URLs in Content (Spec #1 #109). Slug uniqueness +
-  // wire-story dedup both come from the unified Content table now.
-  const existingItems = await prisma.content.findMany({ select: { slug: true, sourceUrl: true } });
+  // Existing slugs + source URLs across ALL Content rows including trashed.
+  // The DB unique indexes on (slug) and (sourceUrl) span every row regardless
+  // of soft-delete state, so dedup must too. The prisma client extension
+  // (packages/db/src/index.ts) auto-injects `deletedAt: null` on findMany,
+  // hiding trashed rows from the default query — we work around it by
+  // running a second findMany with an EXPLICIT deletedAt filter (any
+  // explicit deletedAt key in where bypasses the auto-inject) and merging.
+  const [activeItems, trashedItems] = await Promise.all([
+    prisma.content.findMany({ select: { slug: true, sourceUrl: true } }),
+    prisma.content.findMany({
+      where: { deletedAt: { not: null } },
+      select: { slug: true, sourceUrl: true },
+    }),
+  ]);
+  const existingItems = [...activeItems, ...trashedItems];
   const existingSlugs = new Set(existingItems.map((a) => a.slug).filter(Boolean) as string[]);
   const existingSourceSet = new Set(existingItems.map((a) => a.sourceUrl).filter(Boolean));
 
@@ -224,6 +236,12 @@ export async function POST(req: NextRequest) {
             if (msg.includes("Unique constraint") && msg.includes("slug")) {
               finalSlug = `${slug}-${Date.now()}-${attempt + 1}`;
               continue;
+            }
+            // sourceUrl collision — article already in DB (possibly soft-
+            // deleted, hence missed by our dedup set). Skip silently;
+            // editor can restore the trashed row if they want it back.
+            if (msg.includes("Unique constraint") && msg.includes("sourceUrl")) {
+              break;
             }
             throw e;
           }
