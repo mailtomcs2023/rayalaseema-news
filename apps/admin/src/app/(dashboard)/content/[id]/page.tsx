@@ -15,6 +15,7 @@ import { Sidebar } from "@/components/sidebar";
 import { RichEditor, type RichEditorRef } from "@/components/rich-editor";
 import { ImageUpload } from "@/components/image-upload";
 import { ContentPayloadEditor } from "@/components/content-payload-editor";
+import { ImageSearchModal } from "@/components/image-search-modal";
 
 interface Category { id: string; name: string; nameEn: string; slug: string }
 
@@ -56,6 +57,7 @@ export default function ContentEditorPage() {
   const [language, setLanguage] = useState("TELUGU");
   const [tagsInput, setTagsInput] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
+  const [imageSearchOpen, setImageSearchOpen] = useState(false);
 
   // ARTICLE-specific (payload)
   const [rating, setRating] = useState<string>("");
@@ -127,38 +129,38 @@ export default function ContentEditorPage() {
     setAiLoading("fetch");
     setError("");
     try {
-      const res = await fetch("/api/fetch-news", {
+      // Single AI call: scrapes URL + translates + extracts og:image +
+      // suggests English SEO slug + keywords + meta-description. Replaces
+      // the older /api/fetch-news POST which required a title up-front and
+      // saved a row on every click (the dummy-draft bug).
+      const res = await fetch("/api/ai/rewrite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sourceUrl: pasteUrl.trim(),
-          categoryId: categoryId || (categories[0]?.id || ""),
-        }),
+        body: JSON.stringify({ sourceUrl: pasteUrl.trim(), action: "full-import" }),
       });
       const data = await res.json();
-      if (!res.ok) {
+      if (!res.ok || data.error) {
         setError(data.error || `Fetch failed (${res.status})`);
         setAiLoading(null);
         return;
       }
-      // Populate the form from the newly-fetched draft. We don't navigate
-      // away — the user sees what landed and can polish before saving.
       if (data.title) setTitle(data.title);
       if (data.summary) setSummary(data.summary);
       if (data.body) {
         setBody(data.body);
         editorRef.current?.setContent(data.body);
       }
-      if (data.featuredImage) setFeaturedImage(data.featuredImage);
+      if (data.ogImage && !featuredImage) setFeaturedImage(data.ogImage);
       if (data.slug) setSlug(data.slug);
       setSourceUrl(pasteUrl.trim());
       setPasteUrl("");
-      setSuccess("Fetched + translated. Review + Save Draft when ready.");
+      const kw = Array.isArray(data.keywords) && data.keywords.length ? ` Keywords: ${data.keywords.join(", ")}.` : "";
+      setSuccess(`Fetched + translated.${kw} Review + Save Draft when ready.`);
     } catch (e: any) {
       setError(e.message || "Fetch failed");
     }
     setAiLoading(null);
-    setTimeout(() => setSuccess(""), 5000);
+    setTimeout(() => setSuccess(""), 8000);
   };
 
   useEffect(() => {
@@ -479,10 +481,28 @@ export default function ContentEditorPage() {
 
             <Section title="Featured image">
               <ImageUpload value={featuredImage} onChange={setFeaturedImage} />
+              <button
+                type="button"
+                onClick={() => setImageSearchOpen(true)}
+                style={{
+                  marginTop: 8, padding: "6px 12px", background: "#fff", color: "#374151",
+                  border: "1px solid #d1d5db", borderRadius: 6, fontSize: 12, fontWeight: 600,
+                  cursor: "pointer", width: "100%",
+                }}
+              >
+                🔍 Search free / web images
+              </button>
             </Section>
           </div>
         </div>
       </main>
+
+      <ImageSearchModal
+        open={imageSearchOpen}
+        initialQuery={title.replace(/<[^>]+>/g, "").trim().slice(0, 80)}
+        onClose={() => setImageSearchOpen(false)}
+        onPick={(url) => setFeaturedImage(url)}
+      />
     </div>
   );
 }

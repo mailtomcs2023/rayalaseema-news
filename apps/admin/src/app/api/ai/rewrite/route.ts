@@ -46,19 +46,19 @@ DIALECT WORDS (use sparingly):
 లెక్క=డబ్బు, పైపైమాటలు=hollow promises, సీమ=రాయలసీమ,
 గాంధారి వాన=భారీ వర్షం, మోడం=మొబ్బు, కసురు=అరవడం, రావిడి=గోల`;
 
-// Scrape full article from source URL.
+// Scrape full article + og:image from source URL.
 //
 // SSRF guard: prefix-checking the hostname misses cloud metadata endpoints
 // (169.254.169.254 → Azure/AWS creds), IPv6 loopback (::1), IPv4-mapped IPv6,
 // and DNS-rebinding tricks (evil.com → 127.0.0.1). isUrlSafeToFetch does a
 // real DNS lookup and rejects any hostname whose A/AAAA records land in a
 // private/loopback/link-local/multicast range — see lib/ssrf-guard.ts.
-async function scrapeSource(url: string): Promise<string> {
+async function scrapeSource(url: string): Promise<{ text: string; ogImage: string | null; ogTitle: string | null }> {
   try {
     const safety = await isUrlSafeToFetch(url);
     if (!safety.safe) {
       console.error("[ai/rewrite] Refusing to scrape", url, "→", safety.reason);
-      return "";
+      return { text: "", ogImage: null, ogTitle: null };
     }
 
     const res = await fetch(url, {
@@ -66,7 +66,22 @@ async function scrapeSource(url: string): Promise<string> {
       signal: AbortSignal.timeout(10000),
     });
     const html = await res.text();
-    return html
+
+    // Meta extraction BEFORE stripping tags — og:image / twitter:image /
+    // og:title. Tolerant of attribute order; honors both " and '.
+    const pickMeta = (re: RegExp): string | null => {
+      const m = html.match(re);
+      return m ? m[1].trim() : null;
+    };
+    const ogImage =
+      pickMeta(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) ||
+      pickMeta(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i) ||
+      pickMeta(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+    const ogTitle =
+      pickMeta(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i) ||
+      pickMeta(/<title[^>]*>([^<]+)<\/title>/i);
+
+    const text = html
       .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
       .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, "")
@@ -78,7 +93,12 @@ async function scrapeSource(url: string): Promise<string> {
       .replace(/\s+/g, " ")
       .trim()
       .substring(0, 5000);
-  } catch (e) { console.error("[ai/rewrite] Scrape error:", e); return ""; }
+
+    return { text, ogImage, ogTitle };
+  } catch (e) {
+    console.error("[ai/rewrite] Scrape error:", e);
+    return { text: "", ogImage: null, ogTitle: null };
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -98,13 +118,86 @@ export async function POST(req: NextRequest) {
     const { text, action, sourceUrl } = await req.json();
     if (!text && !sourceUrl) return NextResponse.json({ error: "Text or source URL required" }, { status: 400 });
 
-    // Scrape source URL for full content
+    // Scrape source URL for full content + og:image.
     let fullText = text || "";
+    let scrapedOgImage: string | null = null;
+    let scrapedOgTitle: string | null = null;
     if (sourceUrl) {
       const scraped = await scrapeSource(sourceUrl);
-      if (scraped.length > 100) {
-        fullText = `SOURCE ARTICLE:\n${scraped}\n\nDESCRIPTION:\n${text}`;
+      scrapedOgImage = scraped.ogImage;
+      scrapedOgTitle = scraped.ogTitle;
+      if (scraped.text.length > 100) {
+        fullText = `SOURCE ARTICLE:\n${scraped.text}\n\nDESCRIPTION:\n${text}`;
       }
+    }
+
+    // action="full-import" — single AI call returns a structured JSON envelope
+    // (title_te, slug_en, summary_te, body_te_html, keywords_en). Used by the
+    // editor's "Fetch + translate" button so the form populates atomically
+    // instead of needing one round-trip per field.
+    if (action === "full-import") {
+      const fullImportSystem = `You are a professional Telugu newspaper editor. Translate news from any source language into clean, standard Telugu.
+
+OUTPUT FORMAT — return STRICT JSON only (no prose, no markdown fences, no leading/trailing text):
+{
+  "title_te": "<Telugu newspaper-style headline, 5-12 words>",
+  "slug_en": "<URL slug in lowercase English ASCII, kebab-case, 4-10 words, no diacritics, no punctuation except hyphens>",
+  "summary_te": "<60-80 word Telugu summary, plain text, no HTML>",
+  "body_te_html": "<full Telugu article body as HTML: <h2> headline, <p> paragraphs, <blockquote> for ACTUAL direct quotes only>",
+  "keywords_en": ["english", "seo", "keyword", "list", "5-10 items"],
+  "meta_description_en": "<one-sentence 150-char English SEO meta description>"
+}
+
+RULES:
+- title_te + body_te_html + summary_te are TELUGU. slug_en + keywords_en + meta_description_en are ENGLISH.
+- slug_en: transliterate or summarize the topic in English. Lowercase, kebab-case (hyphens only). Example: "hyderabad-water-supply-ktr". NEVER include the source URL verbatim.
+- body_te_html: standard Telugu, Eenadu/Sakshi quality. Keep proper nouns (names, places) as-is.
+- PRIMARY vs SECONDARY speech: <blockquote> ONLY for text that is quoted ("..." or "...") in the source. Reporter narration stays third-person <p>. NEVER invent first-person statements.
+- No English in title_te or body_te_html except proper nouns.
+- JSON must be valid — no trailing commas, no comments.`;
+
+      const fullImportUser = `Source article:\n\n${fullText}${scrapedOgTitle ? `\n\nOriginal headline (for context): ${scrapedOgTitle}` : ""}`;
+
+      const res = await fetch(
+        `${ENDPOINT}openai/deployments/${DEPLOYMENT}/chat/completions?api-version=${API_VERSION}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "api-key": KEY },
+          body: JSON.stringify({
+            messages: [
+              { role: "system", content: fullImportSystem },
+              { role: "user", content: fullImportUser },
+            ],
+            max_completion_tokens: 2500,
+            temperature: 0.3,
+            response_format: { type: "json_object" },
+          }),
+        }
+      );
+      const data = await res.json();
+      if (data.error) return NextResponse.json({ error: data.error.message }, { status: 500 });
+
+      let parsed: any = null;
+      const raw = data.choices?.[0]?.message?.content || "{}";
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        // Sometimes model wraps JSON in ```json fences despite response_format.
+        const m = raw.match(/\{[\s\S]*\}/);
+        if (m) { try { parsed = JSON.parse(m[0]); } catch {} }
+      }
+      if (!parsed) return NextResponse.json({ error: "AI returned unparseable JSON", raw }, { status: 500 });
+
+      return NextResponse.json({
+        title: parsed.title_te || scrapedOgTitle || "",
+        slug: parsed.slug_en || "",
+        summary: parsed.summary_te || "",
+        body: parsed.body_te_html || "",
+        keywords: Array.isArray(parsed.keywords_en) ? parsed.keywords_en : [],
+        metaDescription: parsed.meta_description_en || "",
+        ogImage: scrapedOgImage,
+        tokens: data.usage || {},
+      });
     }
 
     // Choose prompt based on action

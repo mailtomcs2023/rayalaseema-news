@@ -6,29 +6,81 @@ import { uploadImageFromUrl } from "@/lib/blob";
 
 const NEWSDATA_API_KEY = process.env.NEWSDATA_API_KEY;
 
-// GET /api/fetch-news - fetch latest news from NewsData.io
+// GET /api/fetch-news?provider=newsdata|googlenews&q=...
+//
+// Two free providers shipped:
+//   newsdata   — NewsData.io REST API. Requires NEWSDATA_API_KEY.
+//   googlenews — Google News RSS endpoint. No key required, no rate limit
+//                docs but treated as zero-trust public surface.
+//
+// Both return the same shape: { articles: [{ externalId, title, description,
+// imageUrl, sourceUrl, source, language, publishedAt, keywords }] }. POST
+// /api/fetch-news (further down this file) imports a result row as a draft.
 export async function GET(req: NextRequest) {
   const session = await requireAuth(["ADMIN", "EDITOR", "CHIEF_SUB_EDITOR", "SUB_EDITOR", "REPORTER"]);
   if (isAuthError(session)) return session;
-  if (!NEWSDATA_API_KEY) return NextResponse.json({ error: "NEWSDATA_API_KEY not configured" }, { status: 503 });
   const { searchParams } = new URL(req.url);
+  const provider = (searchParams.get("provider") || "newsdata").toLowerCase();
   const query = searchParams.get("q") || "Rayalaseema OR Kurnool OR Anantapur OR Kadapa OR Tirupati OR Chittoor";
-  const category = searchParams.get("category") || "";
   const language = searchParams.get("language") || "te,en";
-  const size = Math.min(parseInt(searchParams.get("size") || "10"), 10).toString();
+  const size = Math.min(parseInt(searchParams.get("size") || "10"), 20);
 
   try {
-    let url = `https://newsdata.io/api/1/latest?apikey=${NEWSDATA_API_KEY}&q=${encodeURIComponent(query)}&language=${language}&size=${size}`;
-    if (category) url += `&category=${category}`;
+    if (provider === "googlenews") {
+      // Google News RSS — no auth, no key. hl/gl/ceid pick UI lang + region.
+      // We default to Telugu; UI can switch to English via ?language=en.
+      const hl = language.startsWith("te") ? "te" : "en-IN";
+      const ceid = language.startsWith("te") ? "IN:te" : "IN:en";
+      const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=${hl}&gl=IN&ceid=${ceid}`;
+      const res = await fetch(url, { headers: { "User-Agent": "RayalaseemaExpress/1.0 (+admin)" } });
+      if (!res.ok) return NextResponse.json({ error: `Google News ${res.status}` }, { status: 502 });
+      const xml = await res.text();
 
-    const res = await fetch(url);
-    const data = await res.json();
-
-    if (data.status !== "success") {
-      return NextResponse.json({ error: "API error", details: data }, { status: 500 });
+      // Lightweight RSS parser — Google News RSS is well-formed XML so a few
+      // anchored regexes are fine here (no need to pull in a full DOM lib).
+      const items: any[] = [];
+      const itemRe = /<item>([\s\S]*?)<\/item>/g;
+      let m: RegExpExecArray | null;
+      while ((m = itemRe.exec(xml)) && items.length < size) {
+        const block = m[1];
+        const pick = (re: RegExp) => { const x = block.match(re); return x ? x[1].trim() : ""; };
+        const decode = (s: string) =>
+          s.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+           .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+           .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, " ");
+        const title = decode(pick(/<title>([\s\S]*?)<\/title>/));
+        const link = decode(pick(/<link>([\s\S]*?)<\/link>/));
+        const pubDate = pick(/<pubDate>([\s\S]*?)<\/pubDate>/);
+        const sourceMatch = block.match(/<source[^>]*>([\s\S]*?)<\/source>/);
+        const source = sourceMatch ? decode(sourceMatch[1]) : "";
+        const desc = decode(pick(/<description>([\s\S]*?)<\/description>/)).replace(/<[^>]+>/g, " ").trim();
+        items.push({
+          externalId: link,
+          title, description: desc,
+          content: null,
+          imageUrl: null,
+          sourceUrl: link,
+          source,
+          language: hl,
+          category: "general",
+          publishedAt: pubDate,
+          keywords: [],
+        });
+      }
+      return NextResponse.json({ total: items.length, articles: items, provider: "googlenews" });
     }
 
-    // Map to our format
+    // Default: NewsData.io
+    if (!NEWSDATA_API_KEY) return NextResponse.json({ error: "NEWSDATA_API_KEY not configured" }, { status: 503 });
+    const category = searchParams.get("category") || "";
+    const sizeStr = Math.min(size, 10).toString();
+    let url = `https://newsdata.io/api/1/latest?apikey=${NEWSDATA_API_KEY}&q=${encodeURIComponent(query)}&language=${language}&size=${sizeStr}`;
+    if (category) url += `&category=${category}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.status !== "success") {
+      return NextResponse.json({ error: "NewsData API error", details: data }, { status: 502 });
+    }
     const articles = (data.results || []).map((r: any) => ({
       externalId: r.article_id,
       title: r.title,
@@ -42,12 +94,7 @@ export async function GET(req: NextRequest) {
       publishedAt: r.pubDate,
       keywords: r.keywords || [],
     }));
-
-    return NextResponse.json({
-      total: data.totalResults,
-      articles,
-      nextPage: data.nextPage,
-    });
+    return NextResponse.json({ total: data.totalResults, articles, nextPage: data.nextPage, provider: "newsdata" });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
