@@ -171,9 +171,6 @@ export async function POST(req: NextRequest) {
         const content = article.content || article.description || article.title || "";
         if (!article.title || content.length < 20) continue;
 
-        // Skip articles without images
-        if (!article.image_url) continue;
-
         // Skip if this source article already imported
         if (article.link && existingSourceSet.has(article.link)) continue;
 
@@ -187,8 +184,10 @@ export async function POST(req: NextRequest) {
         }
         const slug = generateSlug(article.title, existingSlugs);
 
-        // Re-host source image on Azure Blob (publishers block hotlinking)
-        const hostedImage = await uploadImageFromUrl(article.image_url);
+        // Re-host source image on Azure Blob (publishers block hotlinking).
+        // Image is OPTIONAL — articles without one still import; admin can
+        // attach a stock image later via the editor's image-search modal.
+        const hostedImage = article.image_url ? await uploadImageFromUrl(article.image_url) : null;
 
         // Create Content row (Spec #1 #109). type=ARTICLE — wire stories are
         // always articles. Auto-fetched rows land as DRAFT so an editor must

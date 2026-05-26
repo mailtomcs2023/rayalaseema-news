@@ -54,6 +54,7 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
   const [progress, setProgress] = useState("");
+  const [perCategory, setPerCategory] = useState<{ cat: string; fetched: number; published: number; error?: string }[]>([]);
 
   if (!open) return null;
 
@@ -76,14 +77,12 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
     if (selected.size === 0) { setError("Pick at least one category."); return; }
     setRunning(true);
     setError("");
+    setPerCategory([]);
 
-    // Client-side per-category loop. Running all 8+ categories in one server
-    // request blew past the proxy timeout — the response came back as the
-    // nginx HTML error page ("Unexpected token '<' …"). Looping client-side
-    // keeps each request under ~15s and surfaces per-category progress.
+    // Client-side per-category loop — see commit 7b12278 for why.
     const list = [...selected];
     let total = 0;
-    const errors: string[] = [];
+    const live: typeof perCategory = [];
     for (let i = 0; i < list.length; i++) {
       const cat = list[i];
       setProgress(`Fetching ${i + 1} / ${list.length}: ${cat} — running AI translate…`);
@@ -97,23 +96,36 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
         let data: any = null;
         try { data = JSON.parse(text); } catch { /* HTML error page */ }
         if (!res.ok || !data) {
-          errors.push(`${cat}: ${data?.error || `HTTP ${res.status} (proxy timeout?)`}`);
-          continue;
+          live.push({ cat, fetched: 0, published: 0, error: data?.error || `HTTP ${res.status} (proxy timeout?)` });
+        } else {
+          // /api/auto-fetch returns { results: [{ category, fetched,
+          // published, error? }], totalPublished }. We only sent one
+          // category so the first row IS our row.
+          const row = data.results?.[0];
+          live.push({
+            cat,
+            fetched: row?.fetched ?? 0,
+            published: row?.published ?? 0,
+            error: row?.error,
+          });
+          total += data.totalPublished || 0;
         }
-        total += data.totalPublished || 0;
       } catch (e: any) {
-        errors.push(`${cat}: ${e.message || "network error"}`);
+        live.push({ cat, fetched: 0, published: 0, error: e.message || "network error" });
       }
+      setPerCategory([...live]);
     }
 
     setRunning(false);
-    if (errors.length) {
-      setError(`Completed with ${errors.length} error${errors.length === 1 ? "" : "s"}: ${errors.slice(0, 3).join(" · ")}${errors.length > 3 ? ` …+${errors.length - 3} more` : ""}`);
-      setProgress(`Imported ${total} article${total === 1 ? "" : "s"} from ${list.length - errors.length} / ${list.length} categories.`);
-      return;
+    setProgress(`Done. Imported ${total} new article${total === 1 ? "" : "s"} from ${list.length} categor${list.length === 1 ? "y" : "ies"}.`);
+
+    // Only auto-close on a clean run with at least one import. Zero imports
+    // usually means dedup (same source URLs already in DB), missing images,
+    // or NewsData rate-limit — user wants to read the per-category table.
+    if (total > 0 && !live.some((r) => r.error)) {
+      onDone(total);
+      onClose();
     }
-    onDone(total);
-    onClose();
   };
 
   const allTopicSlugs = TOPICS.map((t) => t.slug);
@@ -157,6 +169,27 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
           {error && (
             <div style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", padding: "10px 14px", borderRadius: 8, fontSize: 13, marginTop: 12 }}>
               {error}
+            </div>
+          )}
+
+          {perCategory.length > 0 && (
+            <div style={{ marginTop: 14, border: "1px solid #e5e7eb", borderRadius: 8, overflow: "hidden" }}>
+              <div style={{ background: "#f9fafb", padding: "6px 12px", fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: 0.4, display: "grid", gridTemplateColumns: "1fr 80px 90px 1fr", gap: 8 }}>
+                <span>Category</span><span style={{ textAlign: "right" }}>Returned</span><span style={{ textAlign: "right" }}>Imported</span><span>Reason</span>
+              </div>
+              {perCategory.map((r) => {
+                const skipped = r.fetched > 0 && r.published === 0;
+                return (
+                  <div key={r.cat} style={{ padding: "6px 12px", fontSize: 12, color: "#111", display: "grid", gridTemplateColumns: "1fr 80px 90px 1fr", gap: 8, borderTop: "1px solid #f3f4f6", background: r.error ? "#fef2f2" : skipped ? "#fef3c7" : "#fff" }}>
+                    <span style={{ fontFamily: "monospace" }}>{r.cat}</span>
+                    <span style={{ textAlign: "right" }}>{r.fetched}</span>
+                    <span style={{ textAlign: "right", fontWeight: 700, color: r.published > 0 ? "#16a34a" : "#6b7280" }}>{r.published}</span>
+                    <span style={{ fontSize: 11, color: "#6b7280" }}>
+                      {r.error ? r.error : skipped ? "all results either had no image or were already imported (dedup)" : ""}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
