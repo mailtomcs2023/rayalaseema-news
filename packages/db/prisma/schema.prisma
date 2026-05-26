@@ -660,6 +660,11 @@ model District {
   loksabhaSeats   String?         // Comma-separated Lok Sabha constituency names
   sortOrder       Int             @default(0)
   active          Boolean         @default(true)
+  // Spec #4 A3 (#194) — feeds spatialCoverage on NewsArticle JSON-LD.
+  lat             Float?
+  lng             Float?
+  population      Int?
+  metaDescription String?         @db.Text
   constituencies  Constituency[]
   desk            Desk?           // back-relation: GEOGRAPHIC desk for this district
   createdAt       DateTime        @default(now())
@@ -681,6 +686,11 @@ model Constituency {
   mandals     Mandal[]
   contents    Content[] @relation("ContentConstituency")
   desk        Desk?     // back-relation: GEOGRAPHIC desk for this AC (e.g. "ప్రొద్దుటూరు")
+  // Spec #4 A3 (#194) — feeds spatialCoverage on NewsArticle JSON-LD.
+  lat             Float?
+  lng             Float?
+  population      Int?
+  metaDescription String?  @db.Text
   sortOrder   Int      @default(0)
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -738,6 +748,11 @@ model Mandal {
   code            Int?         @unique  // Official AP mandal code (e.g. 5259 = Kurnool)
   constituencyId  String
   constituency    Constituency @relation(fields: [constituencyId], references: [id])
+  // Spec #4 A3 (#194) — feeds spatialCoverage on NewsArticle JSON-LD.
+  lat             Float?
+  lng             Float?
+  population      Int?
+  metaDescription String?      @db.Text
   sortOrder       Int          @default(0)
   active          Boolean      @default(true)
   createdAt       DateTime     @default(now())
