@@ -9,41 +9,15 @@
 //   { articles: [{categorySlug, title, link, image_url, ...}] } -> step 3 data
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-const TOPICS: { slug: string; label: string }[] = [
-  { slug: "politics", label: "Politics" },
-  { slug: "crime", label: "Crime" },
-  { slug: "sports", label: "Sports" },
-  { slug: "business", label: "Business" },
-  { slug: "entertainment", label: "Entertainment" },
-  { slug: "education", label: "Education" },
-  { slug: "agriculture", label: "Agriculture" },
-  { slug: "national", label: "National" },
-  { slug: "international", label: "International" },
-  { slug: "technology", label: "Technology" },
-  { slug: "health", label: "Health" },
-  { slug: "devotional", label: "Devotional" },
-  { slug: "jobs", label: "Jobs" },
-  { slug: "movie-reviews", label: "Movie reviews" },
-  { slug: "exam-results", label: "Exam results" },
-  { slug: "nri", label: "NRI" },
-  { slug: "navyaseema", label: "Navyaseema" },
-  { slug: "real-estate", label: "Real estate" },
-  { slug: "editorial", label: "Editorial" },
-  { slug: "weather", label: "Weather" },
-];
-
-const DISTRICTS: { slug: string; label: string }[] = [
-  { slug: "district-kurnool", label: "Kurnool" },
-  { slug: "district-nandyal", label: "Nandyal" },
-  { slug: "district-ananthapuramu", label: "Anantapur" },
-  { slug: "district-kadapa", label: "Kadapa (YSR)" },
-  { slug: "district-tirupati", label: "Tirupati" },
-  { slug: "district-chittoor", label: "Chittoor" },
-  { slug: "district-sri-sathya-sai", label: "Sri Sathya Sai" },
-  { slug: "district-annamayya", label: "Annamayya" },
-];
+// Topics + Districts are loaded from the DB (Category + District tables) when
+// the modal opens — no hardcoded list. Admin edits to /categories or
+// /locations propagate here on the next open. The auto-fetch backend has a
+// curated `categoryQueries` map with richer NewsData query strings for the
+// classic slugs; any slug NOT in that map falls back to using the slug
+// itself (or label) as the NewsData q parameter.
+interface OptionRow { slug: string; label: string }
 
 interface Props {
   open: boolean;
@@ -84,6 +58,40 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
   const [progress, setProgress] = useState("");
   const [forceReimport, setForceReimport] = useState(false);
 
+  // Categories + districts pulled from DB. district-news is excluded from the
+  // topic list because the dedicated district group already covers every
+  // district sub-feed.
+  const [topics, setTopics] = useState<OptionRow[]>([]);
+  const [districts, setDistricts] = useState<OptionRow[]>([]);
+  const [optsLoaded, setOptsLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!open || optsLoaded) return;
+    let alive = true;
+    (async () => {
+      try {
+        const [catRes, locRes] = await Promise.all([
+          fetch("/api/categories"),
+          fetch("/api/locations"),
+        ]);
+        const cats = catRes.ok ? await catRes.json() : [];
+        const locs = locRes.ok ? await locRes.json() : [];
+        if (!alive) return;
+        const t: OptionRow[] = (Array.isArray(cats) ? cats : [])
+          .filter((c: any) => c.active !== false && c.slug !== "district-news")
+          .map((c: any) => ({ slug: c.slug, label: c.nameEn || c.name || c.slug }));
+        const d: OptionRow[] = (Array.isArray(locs) ? locs : [])
+          .map((l: any) => ({ slug: `district-${l.slug}`, label: l.nameEn || l.name || l.slug }));
+        setTopics(t);
+        setDistricts(d);
+        setOptsLoaded(true);
+      } catch {
+        setOptsLoaded(true);
+      }
+    })();
+    return () => { alive = false; };
+  }, [open, optsLoaded]);
+
   // step 2 state
   const [buckets, setBuckets] = useState<PreviewBucket[]>([]);
   // Articles are keyed by their `link` (sourceUrl) — the only globally-unique
@@ -92,6 +100,55 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
 
   // step 3 state
   const [perCategory, setPerCategory] = useState<ImportResult[]>([]);
+
+  // Inline single-row import state. URLs we're currently sending to the
+  // import endpoint (loading state) and URLs already imported in this
+  // session (✓ badge replaces the Import button).
+  const [inlineImporting, setInlineImporting] = useState<Set<string>>(new Set());
+
+  // Inline single-article import. Hits the same /api/auto-fetch with a
+  // 1-element articles[] so the backend path is identical to the bulk
+  // case. On success the row is marked alreadyImported in-place so the
+  // checkbox + button disappear without disturbing the picker state.
+  const importInline = async (article: RawArticle, categorySlug: string) => {
+    if (!article.link) return;
+    const link = article.link;
+    setInlineImporting((prev) => new Set(prev).add(link));
+    setError("");
+    try {
+      const res = await fetch("/api/auto-fetch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ articles: [{ ...article, categorySlug }], forceReimport }),
+      });
+      const data = await res.json().catch(() => ({}));
+      const published = data?.results?.[0]?.published || 0;
+      if (!res.ok || published === 0) {
+        setError(data?.results?.[0]?.error || data?.error || `Import failed for "${article.title?.slice(0, 60)}…"`);
+      } else {
+        // Mark this row's alreadyImported = true so the UI flips to the
+        // imported state without re-fetching the preview.
+        setBuckets((prev) => prev.map((b) => ({
+          ...b,
+          results: b.results.map((a) => (a.link === link ? { ...a, alreadyImported: true } : a)),
+        })));
+        // Drop from pickedLinks since it's now imported (and dim-state
+        // pre-uncheck rule).
+        setPickedLinks((prev) => {
+          const next = new Set(prev);
+          next.delete(link);
+          return next;
+        });
+      }
+    } catch (e: any) {
+      setError(e.message || "Import failed");
+    }
+    setInlineImporting((prev) => {
+      const next = new Set(prev);
+      next.delete(link);
+      return next;
+    });
+  };
 
   if (!open) return null;
 
@@ -219,10 +276,10 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
     }
   };
 
-  const allTopicSlugs = TOPICS.map((t) => t.slug);
-  const allDistrictSlugs = DISTRICTS.map((d) => d.slug);
-  const topicAllOn = allTopicSlugs.every((s) => selected.has(s));
-  const districtAllOn = allDistrictSlugs.every((s) => selected.has(s));
+  const allTopicSlugs = topics.map((t) => t.slug);
+  const allDistrictSlugs = districts.map((d) => d.slug);
+  const topicAllOn = allTopicSlugs.length > 0 && allTopicSlugs.every((s) => selected.has(s));
+  const districtAllOn = allDistrictSlugs.length > 0 && allDistrictSlugs.every((s) => selected.has(s));
 
   return (
     <div onClick={onClose}
@@ -247,16 +304,23 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
                 Pick categories. Next step shows individual NewsData hits and
                 lets you check which ones to import. Articles land as <b>DRAFT</b>.
               </p>
-              <Section title="Topics" allOn={topicAllOn} onToggleAll={(on) => selectGroup(allTopicSlugs, on)} disabled={running}>
-                {TOPICS.map((t) => (
-                  <Check key={t.slug} label={t.label} on={selected.has(t.slug)} onClick={() => toggleCat(t.slug)} disabled={running} />
-                ))}
-              </Section>
-              <Section title="Districts" allOn={districtAllOn} onToggleAll={(on) => selectGroup(allDistrictSlugs, on)} disabled={running}>
-                {DISTRICTS.map((d) => (
-                  <Check key={d.slug} label={d.label} on={selected.has(d.slug)} onClick={() => toggleCat(d.slug)} disabled={running} />
-                ))}
-              </Section>
+              {!optsLoaded && <p style={{ fontSize: 13, color: "#6b7280", padding: 12 }}>Loading categories…</p>}
+              {optsLoaded && (
+                <>
+                  <Section title={`Topics (${topics.length})`} allOn={topicAllOn} onToggleAll={(on) => selectGroup(allTopicSlugs, on)} disabled={running}>
+                    {topics.length === 0 && <p style={{ fontSize: 12, color: "#9ca3af" }}>No categories in DB yet.</p>}
+                    {topics.map((t) => (
+                      <Check key={t.slug} label={t.label} on={selected.has(t.slug)} onClick={() => toggleCat(t.slug)} disabled={running} />
+                    ))}
+                  </Section>
+                  <Section title={`Districts (${districts.length})`} allOn={districtAllOn} onToggleAll={(on) => selectGroup(allDistrictSlugs, on)} disabled={running}>
+                    {districts.length === 0 && <p style={{ fontSize: 12, color: "#9ca3af" }}>No districts in DB yet.</p>}
+                    {districts.map((d) => (
+                      <Check key={d.slug} label={d.label} on={selected.has(d.slug)} onClick={() => toggleCat(d.slug)} disabled={running} />
+                    ))}
+                  </Section>
+                </>
+              )}
             </>
           )}
 
@@ -296,23 +360,26 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
                       const link = a.link || "";
                       const picked = link && pickedLinks.has(link);
                       const dim = a.alreadyImported;
+                      const importingNow = link && inlineImporting.has(link);
                       return (
-                        <label key={link || a.article_id}
+                        <div key={link || a.article_id}
                           style={{
-                            display: "grid", gridTemplateColumns: "24px 64px 1fr",
+                            display: "grid", gridTemplateColumns: "24px 64px 1fr auto",
                             gap: 10, alignItems: "center", padding: "6px 8px",
                             background: dim ? "#f3f4f6" : picked ? "#eff6ff" : "#fff",
                             border: `1px solid ${picked ? "#93c5fd" : "#e5e7eb"}`,
-                            borderRadius: 6, cursor: "pointer", opacity: dim ? 0.7 : 1,
-                          }}
-                          onClick={(e) => { e.preventDefault(); if (!link) return;
-                            setPickedLinks((prev) => {
-                              const next = new Set(prev);
-                              next.has(link) ? next.delete(link) : next.add(link);
-                              return next;
-                            });
+                            borderRadius: 6, opacity: dim ? 0.7 : 1,
                           }}>
-                          <input type="checkbox" checked={!!picked} readOnly style={{ pointerEvents: "none" }} />
+                          <input type="checkbox" checked={!!picked} disabled={dim || !link}
+                            onChange={() => {
+                              if (!link) return;
+                              setPickedLinks((prev) => {
+                                const next = new Set(prev);
+                                next.has(link) ? next.delete(link) : next.add(link);
+                                return next;
+                              });
+                            }}
+                            style={{ cursor: dim || !link ? "not-allowed" : "pointer" }} />
                           {a.image_url ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={a.image_url} alt="" style={{ width: 64, height: 40, objectFit: "cover", borderRadius: 4 }} />
@@ -327,7 +394,28 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
                               {a.source_id} {a.pubDate && `· ${new Date(a.pubDate).toLocaleString()}`}
                             </div>
                           </div>
-                        </label>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "stretch", minWidth: 100 }}>
+                            {link && (
+                              <a
+                                href={link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="Open original source in a new tab — read before importing"
+                                style={{ fontSize: 11, color: "#2563eb", textDecoration: "none", padding: "3px 8px", border: "1px solid #bfdbfe", borderRadius: 4, textAlign: "center", fontWeight: 600, background: "#eff6ff" }}>
+                                Source ↗
+                              </a>
+                            )}
+                            {!dim && link && (
+                              <button
+                                onClick={() => importInline(a, b.category)}
+                                disabled={importingNow || running}
+                                style={{ fontSize: 11, padding: "3px 8px", background: importingNow ? "#6b7280" : "#16a34a", color: "#fff", border: "none", borderRadius: 4, cursor: importingNow || running ? "not-allowed" : "pointer", fontWeight: 700, opacity: running ? 0.5 : 1 }}>
+                                {importingNow ? "Importing…" : "Import"}
+                              </button>
+                            )}
+                            {dim && <span style={{ fontSize: 10, color: "#16a34a", fontWeight: 700, textAlign: "center" }}>✓ Imported</span>}
+                          </div>
+                        </div>
                       );
                     })}
                   </div>

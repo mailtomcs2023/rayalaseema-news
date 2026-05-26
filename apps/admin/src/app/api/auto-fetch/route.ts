@@ -262,7 +262,12 @@ export async function POST(req: NextRequest) {
       error?: string;
     }> = [];
     for (const catSlug of categoriesToFetch) {
-      const config = categoryQueries[catSlug];
+      // Categories the admin added in /categories aren't in our curated
+      // categoryQueries map — fall back to using the slug itself (cleaned
+      // of district- prefix and dashes) as the NewsData search query.
+      const config = categoryQueries[catSlug] || {
+        q: catSlug.replace(/^district-/, "").replace(/-/g, " "),
+      };
       try {
         let url = `https://newsdata.io/api/1/latest?apikey=${NEWSDATA_KEY}&q=${encodeURIComponent(config.q)}&language=en,te&size=10`;
         if (config.newsCategory) url += `&category=${config.newsCategory}`;
@@ -323,7 +328,10 @@ export async function POST(req: NextRequest) {
   }
 
   for (const catSlug of categoriesToFetch) {
-    const config = categoryQueries[catSlug];
+    // Same fallback as the preview branch — admin-created categories.
+    const config = categoryQueries[catSlug] || {
+      q: catSlug.replace(/^district-/, "").replace(/-/g, " "),
+    };
     // District queries use district-news category
     const actualCatSlug = catSlug.startsWith("district-") ? "district-news" : catSlug;
     const categoryId = categoryMap[actualCatSlug];
