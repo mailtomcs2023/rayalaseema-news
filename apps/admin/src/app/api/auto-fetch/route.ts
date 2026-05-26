@@ -109,17 +109,116 @@ function generateSlug(title: string, existingSlugs: Set<string>): string {
   return final;
 }
 
+// Import one article into Content. Shared by both the bulk path and the
+// curated "import these N articles" path. Returns true on success.
+async function importOneArticle(
+  article: RawArticle,
+  categoryId: string,
+  constituencyId: string | undefined,
+  existingSourceSet: Set<unknown>,
+  existingSlugs: Set<string>,
+  adminId: string,
+  forceReimport: boolean,
+): Promise<boolean> {
+  const content = article.content || article.description || article.title || "";
+  if (!article.title || content.length < 20) return false;
+
+  // Dedup. Skip (default) or hard-delete + recreate (forceReimport).
+  if (article.link && existingSourceSet.has(article.link)) {
+    if (!forceReimport) return false;
+    const existing = await prisma.content.findFirst({
+      where: { sourceUrl: article.link, deletedAt: { not: undefined } },
+      select: { id: true, slug: true },
+    });
+    if (existing) {
+      await prisma.content.delete({ where: { id: existing.id } });
+      existingSourceSet.delete(article.link);
+      if (existing.slug) existingSlugs.delete(existing.slug);
+    }
+  }
+
+  let translated;
+  try {
+    translated = await translateToTelugu(article.title, content);
+  } catch {
+    translated = { title: article.title, summary: content.substring(0, 200), body: `<p>${content}</p>` };
+  }
+  const slug = generateSlug(article.title, existingSlugs);
+  const hostedImage = article.image_url ? await uploadImageFromUrl(article.image_url) : null;
+
+  let finalSlug = slug;
+  let created = false;
+  for (let attempt = 0; attempt < 3 && !created; attempt++) {
+    try {
+      await prisma.content.create({
+        data: {
+          type: "ARTICLE",
+          title: translated.title,
+          slug: finalSlug,
+          summary: translated.summary,
+          body: translated.body,
+          categoryId,
+          authorId: adminId,
+          featuredImage: hostedImage,
+          sourceUrl: article.link || null,
+          status: "DRAFT",
+          featured: false,
+          language: "TELUGU",
+          publishedAt: null,
+          constituencyId: constituencyId || null,
+        },
+      });
+      created = true;
+    } catch (e: any) {
+      const msg = String(e?.message || "");
+      if (msg.includes("Unique constraint") && msg.includes("slug")) {
+        finalSlug = `${slug}-${Date.now()}-${attempt + 1}`;
+        continue;
+      }
+      if (msg.includes("Unique constraint") && msg.includes("sourceUrl")) {
+        return false;
+      }
+      throw e;
+    }
+  }
+  if (created && article.link) existingSourceSet.add(article.link);
+  return created;
+}
+
+// Shape coming back from NewsData.io — the subset we use.
+interface RawArticle {
+  article_id?: string;
+  title?: string;
+  description?: string;
+  content?: string;
+  image_url?: string | null;
+  link?: string;
+  source_id?: string;
+  pubDate?: string;
+}
+
+// Two-phase API. Phase 1 (action="preview") fetches NewsData and returns
+// articles with dedup flags without importing anything. Phase 2 (action=
+// "import" or articles[] provided) imports a caller-curated list.
+// Backward-compat: old shape { categories, forceReimport? } still works and
+// behaves like "fetch + auto-import everything" — the modal's bulk mode.
 export async function POST(req: NextRequest) {
   const session = await requireAuth(["ADMIN"]); if (isAuthError(session)) return session;
   if (!NEWSDATA_KEY) return NextResponse.json({ error: "NEWSDATA_API_KEY not configured" }, { status: 503 });
+  const body = await req.json().catch(() => ({}));
   const {
+    action,
     categories: requestedCategories,
-    // forceReimport=true → for every NewsData hit whose sourceUrl already
-    // exists in Content (live OR soft-deleted), hard-delete the existing
-    // row first and re-create. Lets editors refresh a category after
-    // trashing earlier imports without manually purging trash.
+    articles: pickedArticles,
+    // forceReimport=true → for every sourceUrl already in Content (live OR
+    // soft-deleted), hard-delete the existing row before re-creating.
     forceReimport,
-  } = await req.json().catch(() => ({ categories: null, forceReimport: false }));
+  } = body as {
+    action?: "preview" | "import";
+    categories?: string[] | null;
+    articles?: Array<RawArticle & { categorySlug: string }>;
+    forceReimport?: boolean;
+  };
 
   // Which categories to fetch
   const categoriesToFetch = requestedCategories
@@ -153,8 +252,75 @@ export async function POST(req: NextRequest) {
   const categoryMap: Record<string, string> = {};
   dbCategories.forEach((c) => (categoryMap[c.slug] = c.id));
 
+  // Phase 1 — preview. Pull NewsData hits for each selected category and
+  // return them WITHOUT importing. Each result is flagged `alreadyImported`
+  // so the picker UI can dim / pre-uncheck them.
+  if (action === "preview") {
+    const previews: Array<{
+      category: string;
+      results: Array<RawArticle & { alreadyImported: boolean }>;
+      error?: string;
+    }> = [];
+    for (const catSlug of categoriesToFetch) {
+      const config = categoryQueries[catSlug];
+      try {
+        let url = `https://newsdata.io/api/1/latest?apikey=${NEWSDATA_KEY}&q=${encodeURIComponent(config.q)}&language=en,te&size=10`;
+        if (config.newsCategory) url += `&category=${config.newsCategory}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.status !== "success") {
+          previews.push({ category: catSlug, results: [], error: data.message || "NewsData error" });
+          continue;
+        }
+        const out = (data.results as RawArticle[] || []).map((a) => ({
+          ...a,
+          alreadyImported: !!(a.link && existingSourceSet.has(a.link)),
+        }));
+        previews.push({ category: catSlug, results: out });
+      } catch (e: any) {
+        previews.push({ category: catSlug, results: [], error: e?.message || "fetch error" });
+      }
+    }
+    return NextResponse.json({ preview: previews });
+  }
+
   const results: { category: string; fetched: number; published: number; error?: string }[] = [];
   let totalPublished = 0;
+
+  // Phase 2 — import a curated list. Skip the NewsData fetch entirely; the
+  // caller already picked the articles in the preview step.
+  if (Array.isArray(pickedArticles) && pickedArticles.length > 0) {
+    // Group by category so we share the same constituency lookup per group.
+    const byCat = new Map<string, typeof pickedArticles>();
+    for (const a of pickedArticles) {
+      if (!byCat.has(a.categorySlug)) byCat.set(a.categorySlug, []);
+      byCat.get(a.categorySlug)!.push(a);
+    }
+    for (const [catSlug, list] of byCat) {
+      const actualCatSlug = catSlug.startsWith("district-") ? "district-news" : catSlug;
+      const categoryId = categoryMap[actualCatSlug];
+      if (!categoryId) { results.push({ category: catSlug, fetched: list.length, published: 0, error: "Category not found" }); continue; }
+      let constituencyId: string | undefined;
+      if (catSlug.startsWith("district-")) {
+        const districtSlug = catSlug.replace("district-", "");
+        const district = await prisma.district.findUnique({ where: { slug: districtSlug }, include: { constituencies: { take: 1 } } });
+        constituencyId = district?.constituencies[0]?.id;
+      }
+      let published = 0;
+      for (const article of list) {
+        const ok = await importOneArticle(article, categoryId, constituencyId, existingSourceSet, existingSlugs, admin.id, !!forceReimport);
+        if (ok) { published++; totalPublished++; }
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+      results.push({ category: catSlug, fetched: list.length, published });
+    }
+    return NextResponse.json({
+      success: true,
+      totalPublished,
+      results,
+      message: `Imported ${totalPublished} of ${pickedArticles.length} selected article${pickedArticles.length === 1 ? "" : "s"}`,
+    });
+  }
 
   for (const catSlug of categoriesToFetch) {
     const config = categoryQueries[catSlug];
