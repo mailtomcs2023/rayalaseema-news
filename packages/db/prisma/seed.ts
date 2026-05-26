@@ -135,6 +135,40 @@ async function main() {
   }
   console.log(`  ${configs.length} site config entries created`);
 
+  // ========== SPEC #4 A2 — Author profile slug backfill ==========
+  // Idempotent: only populates publicProfileSlug for users that don't have
+  // one yet. Runs on every deploy via deploy.yml's `bunx tsx prisma/seed.ts`,
+  // a no-op once everyone has a slug. New users get a slug auto-assigned
+  // by the admin user create flow (separate change in Spec #4 A2 follow-up).
+  const usersNeedingSlugs = await prisma.user.findMany({
+    where: { publicProfileSlug: null, active: true },
+    select: { id: true, name: true, email: true },
+  });
+  if (usersNeedingSlugs.length > 0) {
+    console.log(`\nBackfilling publicProfileSlug for ${usersNeedingSlugs.length} active user(s)...`);
+    for (const u of usersNeedingSlugs) {
+      const baseSlug = (u.name || u.email.split("@")[0])
+        .toLowerCase()
+        .normalize("NFKD")
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "")
+        .slice(0, 50) || "author";
+      // Resolve collisions by suffixing -1, -2, ...
+      let slug = baseSlug;
+      let n = 1;
+      // eslint-disable-next-line no-await-in-loop
+      while (await prisma.user.findUnique({ where: { publicProfileSlug: slug } })) {
+        slug = `${baseSlug}-${n++}`;
+      }
+      await prisma.user.update({ where: { id: u.id }, data: { publicProfileSlug: slug } });
+      console.log(`  ${u.email} -> /author/${slug}`);
+    }
+  } else {
+    console.log("\nAll active users already have publicProfileSlug — skipping backfill.");
+  }
+
   console.log("\nSeed complete! (No dummy articles/videos/reels - add real content from admin)");
   console.log("  Admin: admin@rayalaseemaexpress.com / admin123");
 }

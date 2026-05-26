@@ -1,31 +1,93 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { prisma } from "@rayalaseema/db";
 import { articleHref } from "@/lib/article-href";
 
+const SITE_URL = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+
+// Phase A2 (#193) — route now keys on User.publicProfileSlug, not User.id.
+// Old /author/<cuid> URLs return 404 (clean cutover; same approach as A0 article
+// migration since the old URLs had no GSC equity to preserve).
+async function fetchAuthor(slug: string) {
+  return prisma.user.findFirst({
+    where: { publicProfileSlug: slug, active: true },
+    select: {
+      id: true, name: true, bio: true, avatar: true, role: true,
+      publicProfileSlug: true, twitterHandle: true, linkedinUrl: true,
+      facebookUrl: true, expertise: true, affiliations: true, yearsExperience: true,
+    },
+  });
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const author = await fetchAuthor(slug);
+  if (!author) return { title: "Author not found" };
+  return {
+    title: `${author.name} | Rayalaseema Express`,
+    description: author.bio || `${author.name}, ${author.role} at Rayalaseema Express. Read all articles by ${author.name}.`,
+    alternates: { canonical: `${SITE_URL}/author/${author.publicProfileSlug}` },
+    openGraph: {
+      title: author.name,
+      description: author.bio || undefined,
+      url: `${SITE_URL}/author/${author.publicProfileSlug}`,
+      type: "profile",
+      locale: "te_IN",
+      images: author.avatar ? [{ url: author.avatar }] : undefined,
+    },
+  };
+}
+
 export default async function AuthorPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-
-  const author = await prisma.user.findFirst({
-    where: { id: slug, active: true },
-    select: { id: true, name: true, bio: true, avatar: true, role: true },
-  });
-
+  const author = await fetchAuthor(slug);
   if (!author) return notFound();
 
-  const articles = await prisma.content.findMany({
-    where: { type: "ARTICLE", authorId: author.id, status: "PUBLISHED" },
-    include: { category: { select: { name: true, nameEn: true, slug: true, color: true } } },
-    orderBy: { publishedAt: "desc" },
-    take: 30,
-  });
+  const [articles, totalArticles] = await Promise.all([
+    prisma.content.findMany({
+      where: { type: "ARTICLE", authorId: author.id, status: "PUBLISHED" },
+      include: {
+        category: { select: { name: true, nameEn: true, slug: true, color: true } },
+        constituency: { select: { slug: true, district: { select: { slug: true } } } },
+      },
+      orderBy: { publishedAt: "desc" },
+      take: 30,
+    }),
+    prisma.content.count({ where: { type: "ARTICLE", authorId: author.id, status: "PUBLISHED" } }),
+  ]);
 
-  const totalArticles = await prisma.content.count({ where: { type: "ARTICLE", authorId: author.id, status: "PUBLISHED" } });
+  // Minimal Person JSON-LD. Phase B4 (#200) replaces with full generator from
+  // @rayalaseema/seo-schema once that package ships. For now ship at least
+  // the basics so the page isn't author-attribution-bare.
+  const sameAs = [
+    author.twitterHandle ? `https://twitter.com/${author.twitterHandle.replace(/^@/, "")}` : null,
+    author.linkedinUrl || null,
+    author.facebookUrl || null,
+  ].filter((u): u is string => Boolean(u));
+  const personLd = {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name: author.name,
+    url: `${SITE_URL}/author/${author.publicProfileSlug}`,
+    image: author.avatar || undefined,
+    description: author.bio || undefined,
+    jobTitle: author.role,
+    knowsAbout: author.expertise.length > 0 ? author.expertise : undefined,
+    alumniOf: author.affiliations.length > 0 ? author.affiliations : undefined,
+    sameAs: sameAs.length > 0 ? sameAs : undefined,
+    worksFor: {
+      "@type": "NewsMediaOrganization",
+      name: "Rayalaseema Express",
+      url: SITE_URL,
+    },
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(personLd) }} />
       <Header />
       <main style={{ maxWidth: 900, margin: "0 auto", padding: "30px 16px" }}>
         {/* Author Card */}
@@ -42,7 +104,7 @@ export default async function AuthorPage({ params }: { params: Promise<{ slug: s
               author.name.charAt(0)
             )}
           </div>
-          <div>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111" }}>{author.name}</h1>
             <span style={{
               fontSize: 11, fontWeight: 700, padding: "2px 10px", borderRadius: 4,
@@ -52,6 +114,28 @@ export default async function AuthorPage({ params }: { params: Promise<{ slug: s
               {author.role}
             </span>
             {author.bio && <p style={{ fontSize: 14, color: "#666", marginTop: 8, lineHeight: 1.7 }}>{author.bio}</p>}
+            {author.expertise.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                {author.expertise.map((tag) => (
+                  <span key={tag} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 12, background: "#f3f4f6", color: "#555" }}>
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+            {sameAs.length > 0 && (
+              <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                {sameAs.map((url) => {
+                  const host = (() => { try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return url; } })();
+                  return (
+                    <a key={url} href={url} target="_blank" rel="noopener noreferrer me"
+                       style={{ fontSize: 11, padding: "3px 10px", borderRadius: 4, background: "#eef2ff", color: "#3730a3", textDecoration: "none" }}>
+                      {host}
+                    </a>
+                  );
+                })}
+              </div>
+            )}
             <p style={{ fontSize: 13, color: "#888", marginTop: 6 }}>{totalArticles} articles published</p>
           </div>
         </div>

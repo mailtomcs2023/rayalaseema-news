@@ -36,6 +36,22 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  // Spec #4 A2 (#193) — Author profile / E-E-A-T fields. Populated for active
+  // editorial users; REPORTER role typically lives in JournalistProfile and
+  // these can stay null until they're publishing under a real byline.
+  //
+  // publicProfileSlug is the URL segment for /author/<slug>; backfilled from
+  // `name` by prisma/seed.ts. Required for Person JSON-LD output (B4 #200).
+  // sameAs links + expertise feed schema.org Person; without them Discover
+  // and AI-search citation drops sharply per Feb 2026 core update analysis.
+  publicProfileSlug String?  @unique
+  twitterHandle     String?
+  linkedinUrl       String?
+  facebookUrl       String?
+  expertise         String[] @default([])
+  affiliations      String[] @default([])
+  yearsExperience   Int?
+
   // Category assignments (for SUB_EDITOR role)
   assignedCategories UserCategory[]
 
