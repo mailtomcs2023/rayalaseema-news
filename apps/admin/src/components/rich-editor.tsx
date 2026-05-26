@@ -59,7 +59,11 @@ export const RichEditor = React.forwardRef<RichEditorRef, { content: string; onC
     immediatelyRender: false,
     extensions: [
       // H1-H6 all enabled (industry-standard editor expects every level).
-      StarterKit.configure({ heading: { levels: [1, 2, 3, 4, 5, 6] } }),
+      // Tiptap v3 StarterKit now bundles Link + Underline; disable here so
+      // our custom-configured TiptapLink (openOnClick: false, autolink: true)
+      // and Underline don't double-register (was throwing "Duplicate
+      // extension names found: ['link', 'underline']" in console).
+      StarterKit.configure({ heading: { levels: [1, 2, 3, 4, 5, 6] }, link: false, underline: false }),
       TiptapImage.configure({ inline: false, allowBase64: true }),
       TiptapLink.configure({ openOnClick: false, autolink: true }),
       Placeholder.configure({ placeholder: "Start writing your article..." }),
