@@ -59,8 +59,16 @@ const sections: { title: string; icon: string; fields: SettingField[] }[] = [
     fields: [
       { key: "google_analytics_id", label: "Google Analytics ID", type: "text", placeholder: "G-XXXXXXXXXX" },
       { key: "google_adsense_id", label: "Google AdSense Publisher ID", type: "text", placeholder: "ca-pub-XXXXXXXXXX" },
+      { key: "google_tag_manager_id", label: "Google Tag Manager ID", type: "text", placeholder: "GTM-XXXXXXX" },
       { key: "meta_keywords", label: "Default Meta Keywords", type: "text", placeholder: "Telugu news, Rayalaseema, Kurnool..." },
       { key: "onesignal_app_id", label: "OneSignal App ID", type: "text", placeholder: "From onesignal.com dashboard" },
+      // Spec #4 A4 (#195) — new SEO/analytics provider IDs.
+      { key: "bing_webmaster_id", label: "Bing Webmaster verification", type: "text", placeholder: "msvalidate.01 content (no quotes)" },
+      { key: "clarity_project_id", label: "Microsoft Clarity Project ID", type: "text", placeholder: "From clarity.microsoft.com" },
+      { key: "sentry_dsn_web", label: "Sentry DSN — apps/web", type: "password", placeholder: "https://...@o0.ingest.sentry.io/0" },
+      { key: "sentry_dsn_admin", label: "Sentry DSN — apps/admin", type: "password", placeholder: "https://...@o0.ingest.sentry.io/0" },
+      { key: "indexnow_key", label: "IndexNow API key (Bing/Yandex/Naver)", type: "text", placeholder: "32-char hex; saved to /.well-known/<key>.txt" },
+      { key: "google_news_publisher_id", label: "Google News Publisher Center publication id", type: "text", placeholder: "From publishercenter.google.com" },
     ],
   },
   {

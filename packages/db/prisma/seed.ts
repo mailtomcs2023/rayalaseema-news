@@ -129,6 +129,15 @@ async function main() {
     { key: "homepage_layout", value: "eenadu" },
     { key: "ticker_speed", value: "60" },
     { key: "logo_url", value: "/logo.svg" },
+    // Spec #4 A4 (#195) — analytics + indexing IDs. Default to empty; editor
+    // populates via /settings → SEO & Analytics section. Frontend code already
+    // gates script loading on truthy value (see apps/web/src/app/layout.tsx).
+    { key: "bing_webmaster_id", value: "" },          // <meta name="msvalidate.01">
+    { key: "clarity_project_id", value: "" },         // Microsoft Clarity heatmaps
+    { key: "sentry_dsn_web", value: "" },             // apps/web error tracking
+    { key: "sentry_dsn_admin", value: "" },           // apps/admin error tracking
+    { key: "indexnow_key", value: "" },               // Bing IndexNow protocol
+    { key: "google_news_publisher_id", value: "" },   // Google News Publisher Center publication id
   ];
   for (const cfg of configs) {
     await prisma.siteConfig.upsert({ where: { key: cfg.key }, update: {}, create: cfg });
