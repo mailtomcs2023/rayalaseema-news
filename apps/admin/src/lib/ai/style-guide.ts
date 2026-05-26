@@ -50,13 +50,17 @@ HARD RULES — break any of these and the article is rejected.
    - First mention: full name + designation. Second mention onward: surname or designation alone
    - Designations follow name with comma: "కేటీఆర్, బీఆర్‌ఎస్ కార్యనిర్వాహక అధ్యక్షుడు"
 
-7. LANGUAGE REGISTER — formal newsroom Telugu
+7. LANGUAGE REGISTER — modern Eenadu newsroom Telugu
    - Use literary verb forms (పేర్కొన్నారు, తెలిపారు, వెల్లడించారు, ప్రకటించారు, స్పష్టం చేశారు)
    - AVOID colloquial verbs (చెప్పారు is OK; చెప్పిండు / అన్నాడు are not)
    - AVOID dialect words unless writing an editorial (no కొల్ల / బిరీన / జాస్తి in news copy)
-   - English words ONLY for proper nouns. Common nouns must use Telugu equivalents.
-     BAD: "ఈ company లో"  →  GOOD: "ఈ సంస్థలో"
-     BAD: "ఒక event లో"  →  GOOD: "ఒక కార్యక్రమంలో"
+   - English loanwords in TELUGU SCRIPT are FINE and PREFERRED when they are the standard newsroom term. Eenadu, Sakshi, Andhra Jyothi use these every day:
+     OK: విజన్ ప్లాన్, బ్లూ ఎకానమీ, మిషన్ భాగీరథ, ప్రాజెక్ట్, బడ్జెట్, బోర్డు, మెట్రో, పోర్ట్, ఎయిర్‌పోర్ట్, రోడ్డు, బస్సు, ట్రాఫిక్, పోలీసు, స్టేషన్, కాన్ఫరెన్స్, మీటింగ్, రిపోర్ట్, రిపోర్టర్
+   - Do NOT force a Sanskrit-academic translation when the modern Telugu term is already an English loanword in common newsroom use.
+     BAD (too literary): "దృష్టిపథకం", "నీలి ఆర్థిక వ్యవస్థ", "విమానాశ్రయం" when the everyday word is "విజన్ ప్లాన్", "బ్లూ ఎకానమీ", "ఎయిర్‌పోర్ట్"
+   - For ENGLISH WORDS IN LATIN SCRIPT inside Telugu prose — convert to Telugu script transliteration. Latin script inside Telugu body is BAD:
+     BAD: "ఈ company లో"  →  GOOD: "ఈ కంపెనీలో"
+     BAD: "ఒక event లో"  →  GOOD: "ఒక ఈవెంట్‌లో"
 
 8. EDITORIALIZING — banned
    - No "ఈ సందర్భంలో" / "ఈ ప్రకటన అత్యంత ముఖ్యమైనది" / "ఈ చర్య ప్రజలకు లాభం చేకూర్చనుంది" unless the source explicitly says so
@@ -75,6 +79,13 @@ HARD RULES — break any of these and the article is rejected.
     - <h3> for sub-heads inside body
     - <blockquote><p>...</p><cite>— Name, designation</cite></blockquote> for direct quotes
     - No inline styles, no <br>, no <div>, no class attributes other than "dek"
+
+11. SCRIPT INTEGRITY — CRITICAL
+    - Telugu output uses ONLY Telugu Unicode (block U+0C00 - U+0C7F).
+    - NEVER mix in Devanagari (U+0900-097F), Tamil (U+0B80-0BFF), Kannada (U+0C80-0CFF), or any other Indic script.
+    - Common failure: Devanagari conjunct त्र leaking into ముఖ్యమంత్రి — that conjunct must be Telugu త్ర throughout.
+    - Common failure: any single non-Telugu glyph anywhere in the body (Devanagari, Tamil, Kannada) is a defect — re-check character by character before emitting.
+    - Latin script (English) is allowed ONLY for output JSON keys + slug_en + keywords_en + meta_description_en. Body / title / summary / dek must be 100% Telugu script with optional ASCII digits + ₹ symbol + standard punctuation.
 `;
 
 // Few-shot example. Real Eenadu-style article paired with its English source.
