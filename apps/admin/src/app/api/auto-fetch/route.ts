@@ -112,7 +112,14 @@ function generateSlug(title: string, existingSlugs: Set<string>): string {
 export async function POST(req: NextRequest) {
   const session = await requireAuth(["ADMIN"]); if (isAuthError(session)) return session;
   if (!NEWSDATA_KEY) return NextResponse.json({ error: "NEWSDATA_API_KEY not configured" }, { status: 503 });
-  const { categories: requestedCategories } = await req.json().catch(() => ({ categories: null }));
+  const {
+    categories: requestedCategories,
+    // forceReimport=true → for every NewsData hit whose sourceUrl already
+    // exists in Content (live OR soft-deleted), hard-delete the existing
+    // row first and re-create. Lets editors refresh a category after
+    // trashing earlier imports without manually purging trash.
+    forceReimport,
+  } = await req.json().catch(() => ({ categories: null, forceReimport: false }));
 
   // Which categories to fetch
   const categoriesToFetch = requestedCategories
@@ -183,8 +190,24 @@ export async function POST(req: NextRequest) {
         const content = article.content || article.description || article.title || "";
         if (!article.title || content.length < 20) continue;
 
-        // Skip if this source article already imported
-        if (article.link && existingSourceSet.has(article.link)) continue;
+        // Dedup. If sourceUrl already exists in Content (live or trashed),
+        // either skip (default) or hard-delete + recreate (forceReimport).
+        if (article.link && existingSourceSet.has(article.link)) {
+          if (!forceReimport) continue;
+          // Purge the existing row so this article can be re-imported fresh.
+          // Bypass the soft-delete extension by querying with explicit
+          // deletedAt filter (any explicit deletedAt key disables the
+          // auto-injected `deletedAt: null` filter).
+          const existing = await prisma.content.findFirst({
+            where: { sourceUrl: article.link, deletedAt: { not: undefined } },
+            select: { id: true, slug: true },
+          });
+          if (existing) {
+            await prisma.content.delete({ where: { id: existing.id } });
+            existingSourceSet.delete(article.link);
+            if (existing.slug) existingSlugs.delete(existing.slug);
+          }
+        }
 
         // Translate to Telugu
         let translated;

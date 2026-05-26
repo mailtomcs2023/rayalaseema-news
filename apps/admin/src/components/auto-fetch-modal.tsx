@@ -55,6 +55,7 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
   const [error, setError] = useState("");
   const [progress, setProgress] = useState("");
   const [perCategory, setPerCategory] = useState<{ cat: string; fetched: number; published: number; error?: string }[]>([]);
+  const [forceReimport, setForceReimport] = useState(false);
 
   if (!open) return null;
 
@@ -90,7 +91,7 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
         const res = await fetch("/api/auto-fetch", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ categories: [cat] }),
+          body: JSON.stringify({ categories: [cat], forceReimport }),
         });
         const text = await res.text();
         let data: any = null;
@@ -194,8 +195,19 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
           )}
         </div>
 
-        <div style={{ padding: "12px 16px", borderTop: "1px solid #e5e7eb", display: "flex", gap: 8, justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: 12, color: "#6b7280" }}>{selected.size} selected</span>
+        <div style={{ padding: "12px 16px", borderTop: "1px solid #e5e7eb", display: "flex", gap: 8, justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
+            <span style={{ fontSize: 12, color: "#6b7280" }}>{selected.size} selected</span>
+            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#374151", cursor: running ? "not-allowed" : "pointer", fontWeight: 600 }}>
+              <input
+                type="checkbox"
+                checked={forceReimport}
+                onChange={(e) => setForceReimport(e.target.checked)}
+                disabled={running}
+              />
+              Force re-import (purge existing rows with same URL)
+            </label>
+          </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={onClose} disabled={running}
               style={{ padding: "8px 16px", background: "#f3f4f6", color: "#374151", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: running ? "not-allowed" : "pointer" }}>
