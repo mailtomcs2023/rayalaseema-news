@@ -362,18 +362,20 @@ export default function ContentEditorPage() {
                   <input
                     value={pasteUrl}
                     onChange={(e) => setPasteUrl(e.target.value)}
-                    placeholder="Paste a source URL — we'll fetch + translate it"
+                    placeholder="Paste a source URL (optional) — తెలుగులో రాయండి will fetch + translate it"
                     style={{ ...inpStyle, fontSize: 12 }}
                   />
-                  <button onClick={fetchFromUrl} disabled={aiLoading !== null || !pasteUrl.trim()}
-                    style={{ padding: "8px 14px", background: "#16a34a", color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: aiLoading || !pasteUrl.trim() ? "not-allowed" : "pointer" }}>
-                    {aiLoading === "fetch" ? "Fetching…" : "Fetch + translate"}
-                  </button>
                 </div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  <button onClick={() => runAI("translate")} disabled={aiLoading !== null}
-                    style={{ padding: "6px 12px", background: aiLoading === "translate" ? "#4b5563" : "#3b82f6", color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: aiLoading ? "not-allowed" : "pointer" }}>
-                    {aiLoading === "translate" ? "Translating…" : "తెలుగులో రాయండి"}
+                  {/* Unified Telugu button: if URL pasted -> scrape + translate
+                      (was the separate "Fetch + translate" button); else translate
+                      the existing title/summary/body in place. */}
+                  <button
+                    onClick={() => (pasteUrl.trim() ? fetchFromUrl() : runAI("translate"))}
+                    disabled={aiLoading !== null}
+                    style={{ padding: "6px 12px", background: aiLoading === "translate" || aiLoading === "fetch" ? "#4b5563" : "#3b82f6", color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: aiLoading ? "not-allowed" : "pointer" }}
+                  >
+                    {aiLoading === "translate" || aiLoading === "fetch" ? "Translating…" : "తెలుగులో రాయండి"}
                   </button>
                   <button onClick={() => runAI("editorial")} disabled={aiLoading !== null}
                     style={{ padding: "6px 12px", background: aiLoading === "editorial" ? "#4b5563" : "#dc2626", color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: aiLoading ? "not-allowed" : "pointer" }}>
