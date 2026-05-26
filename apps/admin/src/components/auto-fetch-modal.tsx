@@ -76,25 +76,44 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
     if (selected.size === 0) { setError("Pick at least one category."); return; }
     setRunning(true);
     setError("");
-    setProgress(`Fetching ${selected.size} categor${selected.size === 1 ? "y" : "ies"} — 1-2 sec per article + AI translate. Hold tight…`);
-    try {
-      const res = await fetch("/api/auto-fetch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ categories: [...selected] }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || `Fetch failed (${res.status})`);
-        setRunning(false);
-        return;
+
+    // Client-side per-category loop. Running all 8+ categories in one server
+    // request blew past the proxy timeout — the response came back as the
+    // nginx HTML error page ("Unexpected token '<' …"). Looping client-side
+    // keeps each request under ~15s and surfaces per-category progress.
+    const list = [...selected];
+    let total = 0;
+    const errors: string[] = [];
+    for (let i = 0; i < list.length; i++) {
+      const cat = list[i];
+      setProgress(`Fetching ${i + 1} / ${list.length}: ${cat} — running AI translate…`);
+      try {
+        const res = await fetch("/api/auto-fetch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ categories: [cat] }),
+        });
+        const text = await res.text();
+        let data: any = null;
+        try { data = JSON.parse(text); } catch { /* HTML error page */ }
+        if (!res.ok || !data) {
+          errors.push(`${cat}: ${data?.error || `HTTP ${res.status} (proxy timeout?)`}`);
+          continue;
+        }
+        total += data.totalPublished || 0;
+      } catch (e: any) {
+        errors.push(`${cat}: ${e.message || "network error"}`);
       }
-      onDone(data.totalPublished || 0);
-      onClose();
-    } catch (e: any) {
-      setError(e.message || "Fetch failed");
-      setRunning(false);
     }
+
+    setRunning(false);
+    if (errors.length) {
+      setError(`Completed with ${errors.length} error${errors.length === 1 ? "" : "s"}: ${errors.slice(0, 3).join(" · ")}${errors.length > 3 ? ` …+${errors.length - 3} more` : ""}`);
+      setProgress(`Imported ${total} article${total === 1 ? "" : "s"} from ${list.length - errors.length} / ${list.length} categories.`);
+      return;
+    }
+    onDone(total);
+    onClose();
   };
 
   const allTopicSlugs = TOPICS.map((t) => t.slug);

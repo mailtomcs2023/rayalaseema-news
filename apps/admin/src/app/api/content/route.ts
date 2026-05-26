@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "15");
+    const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "15"), 1), 200);
     const search = searchParams.get("search") || "";
     const type = searchParams.get("type") || "";
     const status = searchParams.get("status") || "";

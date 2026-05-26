@@ -54,7 +54,17 @@ export default function ContentListPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
   const [autoFetchOpen, setAutoFetchOpen] = useState(false);
-  const limit = 15;
+  // Page size: persisted to localStorage so it sticks across visits. The
+  // /api/content GET caps server-side at whatever the route accepts, but
+  // 15 → 100 is a reasonable range for an editorial list.
+  const [limit, setLimit] = useState<number>(() => {
+    if (typeof window === "undefined") return 15;
+    const stored = parseInt(window.localStorage.getItem("contentListLimit") || "");
+    return [10, 15, 25, 50, 100].includes(stored) ? stored : 15;
+  });
+  useEffect(() => {
+    if (typeof window !== "undefined") window.localStorage.setItem("contentListLimit", String(limit));
+  }, [limit]);
 
   useEffect(() => {
     // Guard against non-array responses (e.g. {error: "Unauthorized"} when the
@@ -81,7 +91,7 @@ export default function ContentListPage() {
         setLoading(false);
         setSelected(new Set());
       });
-  }, [page, search, typeFilter, statusFilter, categoryFilter]);
+  }, [page, search, typeFilter, statusFilter, categoryFilter, limit]);
 
   const totalPages = Math.ceil(total / limit);
   const allSelected = rows.length > 0 && selected.size === rows.length;
@@ -232,6 +242,16 @@ export default function ContentListPage() {
             style={{ padding: "8px 12px", border: "1px solid #eee", borderRadius: 8, fontSize: 13, outline: "none", maxWidth: 200 }}>
             <option value="">All Categories</option>
             {categories.map((c: any) => <option key={c.id} value={c.id}>{c.nameEn}</option>)}
+          </select>
+          <select
+            value={limit}
+            onChange={(e) => { setLimit(parseInt(e.target.value) || 15); setPage(1); }}
+            style={{ padding: "8px 12px", border: "1px solid #eee", borderRadius: 8, fontSize: 13, outline: "none" }}
+            title="Rows per page"
+          >
+            {[10, 15, 25, 50, 100].map((n) => (
+              <option key={n} value={n}>{n} / page</option>
+            ))}
           </select>
         </div>
 

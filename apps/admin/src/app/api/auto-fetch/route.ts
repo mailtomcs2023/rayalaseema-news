@@ -200,7 +200,10 @@ export async function POST(req: NextRequest) {
             title: translated.title,
             slug,
             summary: translated.summary,
-            body: `${translated.body}\n<p style="font-size:11px;color:#999;margin-top:16px;">Source: <a href="${article.link || "#"}" target="_blank">${article.source_id || "External"}</a></p>`,
+            // Source attribution is captured in the `sourceUrl` DB column —
+            // no inline "Source: …" footer in the body itself (editors asked
+            // to keep the article clean of upstream branding).
+            body: translated.body,
             categoryId,
             authorId: admin.id,
             featuredImage: hostedImage,
