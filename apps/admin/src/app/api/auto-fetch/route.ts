@@ -3,6 +3,7 @@ import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError } from "@/lib/api-utils";
 import { buildSlugFromTitle, uniqueSlug } from "@/lib/slug";
 import { uploadImageFromUrl } from "@/lib/blob";
+import { runPipeline } from "@/lib/ai/pipeline";
 
 const NEWSDATA_KEY = process.env.NEWSDATA_API_KEY;
 const AZURE_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT || "https://rayalaseema-ai.openai.azure.com/";
@@ -137,10 +138,27 @@ async function importOneArticle(
     }
   }
 
-  let translated;
+  // Wire-stories now go through the Eenadu-grade 3-step pipeline (extract
+  // → compose → fact-check) instead of the old single-pass translate. The
+  // pipeline returns a pre-formed dek + body + summary so we don't need
+  // separate fields from the model.
+  const sourceForPipeline = `${article.title}\n\n${content}`;
+  let translated: { title: string; summary: string; body: string };
   try {
-    translated = await translateToTelugu(article.title, content);
-  } catch {
+    const result = await runPipeline(sourceForPipeline);
+    const dekPrefix = result.article.dek_te
+      ? `<p class="dek">${result.article.dek_te}</p>\n`
+      : "";
+    translated = {
+      title: result.article.title_te || article.title,
+      summary: result.article.summary_te || content.substring(0, 200),
+      body: `${dekPrefix}${result.article.body_html_te}`,
+    };
+  } catch (e) {
+    // Pipeline failure (rate limit, transient model error) → fall back to
+    // a minimal English-as-Telugu placeholder so the row at least lands
+    // in DRAFT and the editor can fix it manually.
+    console.error("[auto-fetch] pipeline failed:", e);
     translated = { title: article.title, summary: content.substring(0, 200), body: `<p>${content}</p>` };
   }
   const slug = generateSlug(article.title, existingSlugs);
@@ -383,12 +401,20 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // Translate to Telugu
+        // Translate to Telugu via the Eenadu-grade pipeline. Same path as
+        // importOneArticle — kept inlined here so the bulk-all branch
+        // produces identical quality copy to the curated-picker branch.
         let translated;
         try {
-          translated = await translateToTelugu(article.title, content);
+          const r = await runPipeline(`${article.title}\n\n${content}`);
+          const dekPrefix = r.article.dek_te ? `<p class="dek">${r.article.dek_te}</p>\n` : "";
+          translated = {
+            title: r.article.title_te || article.title,
+            summary: r.article.summary_te || content.substring(0, 200),
+            body: `${dekPrefix}${r.article.body_html_te}`,
+          };
         } catch (e) {
-          // If translation fails, use original
+          console.error("[auto-fetch] pipeline failed:", e);
           translated = { title: article.title, summary: content.substring(0, 200), body: `<p>${content}</p>` };
         }
         const slug = generateSlug(article.title, existingSlugs);

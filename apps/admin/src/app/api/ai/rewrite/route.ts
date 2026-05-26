@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 import { getReporterId } from "@/lib/reporter-auth";
 import { isUrlSafeToFetch } from "@/lib/ssrf-guard";
+import { runPipeline } from "@/lib/ai/pipeline";
 
 const ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT;
 const KEY = process.env.AZURE_OPENAI_KEY;
@@ -131,73 +132,35 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // action="full-import" — single AI call returns a structured JSON envelope
-    // (title_te, slug_en, summary_te, body_te_html, keywords_en). Used by the
-    // editor's "Fetch + translate" button so the form populates atomically
-    // instead of needing one round-trip per field.
+    // action="full-import" — Eenadu-grade pipeline (extract → compose →
+    // fact-check + repair up to 2x). Each step lives in lib/ai/. The
+    // pipeline returns the composed article PLUS any fact-check issues
+    // remaining after retries, so the editor UI can surface them.
     if (action === "full-import") {
-      const fullImportSystem = `You are a professional Telugu newspaper editor. Translate news from any source language into clean, standard Telugu.
-
-OUTPUT FORMAT — return STRICT JSON only (no prose, no markdown fences, no leading/trailing text):
-{
-  "title_te": "<Telugu newspaper-style headline, 5-12 words>",
-  "slug_en": "<URL slug in lowercase English ASCII, kebab-case, 4-10 words, no diacritics, no punctuation except hyphens>",
-  "summary_te": "<60-80 word Telugu summary, plain text, no HTML>",
-  "body_te_html": "<full Telugu article body as HTML: <h2> headline, <p> paragraphs, <blockquote> for ACTUAL direct quotes only>",
-  "keywords_en": ["english", "seo", "keyword", "list", "5-10 items"],
-  "meta_description_en": "<one-sentence 150-char English SEO meta description>"
-}
-
-RULES:
-- title_te + body_te_html + summary_te are TELUGU. slug_en + keywords_en + meta_description_en are ENGLISH.
-- slug_en: transliterate or summarize the topic in English. Lowercase, kebab-case (hyphens only). Example: "hyderabad-water-supply-ktr". NEVER include the source URL verbatim.
-- body_te_html: standard Telugu, Eenadu/Sakshi quality. Keep proper nouns (names, places) as-is.
-- PRIMARY vs SECONDARY speech: <blockquote> ONLY for text that is quoted ("..." or "...") in the source. Reporter narration stays third-person <p>. NEVER invent first-person statements.
-- No English in title_te or body_te_html except proper nouns.
-- JSON must be valid — no trailing commas, no comments.`;
-
-      const fullImportUser = `Source article:\n\n${fullText}${scrapedOgTitle ? `\n\nOriginal headline (for context): ${scrapedOgTitle}` : ""}`;
-
-      const res = await fetch(
-        `${ENDPOINT}openai/deployments/${DEPLOYMENT}/chat/completions?api-version=${API_VERSION}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "api-key": KEY },
-          body: JSON.stringify({
-            messages: [
-              { role: "system", content: fullImportSystem },
-              { role: "user", content: fullImportUser },
-            ],
-            max_completion_tokens: 2500,
-            temperature: 0.3,
-            response_format: { type: "json_object" },
-          }),
-        }
-      );
-      const data = await res.json();
-      if (data.error) return NextResponse.json({ error: data.error.message }, { status: 500 });
-
-      let parsed: any = null;
-      const raw = data.choices?.[0]?.message?.content || "{}";
       try {
-        parsed = JSON.parse(raw);
-      } catch {
-        // Sometimes model wraps JSON in ```json fences despite response_format.
-        const m = raw.match(/\{[\s\S]*\}/);
-        if (m) { try { parsed = JSON.parse(m[0]); } catch {} }
+        const sourceForPipeline = scrapedOgTitle
+          ? `Original headline: ${scrapedOgTitle}\n\n${fullText}`
+          : fullText;
+        const result = await runPipeline(sourceForPipeline);
+        return NextResponse.json({
+          title: result.article.title_te || scrapedOgTitle || "",
+          slug: result.article.slug_en || "",
+          summary: result.article.summary_te || "",
+          // Include the dek as the opening element so it sits above body
+          // paragraphs in the editor preview.
+          body:
+            (result.article.dek_te ? `<p class="dek">${result.article.dek_te}</p>` : "") +
+            (result.article.body_html_te || ""),
+          keywords: Array.isArray(result.article.keywords_en) ? result.article.keywords_en : [],
+          metaDescription: result.article.meta_description_en || "",
+          ogImage: scrapedOgImage,
+          factCheck: result.factCheck,
+          extracted: { quotes: result.facts.quotes.length, people: result.facts.who.length },
+        });
+      } catch (e: any) {
+        console.error("[ai/rewrite] pipeline failed:", e);
+        return NextResponse.json({ error: e?.message || "Pipeline failed" }, { status: 500 });
       }
-      if (!parsed) return NextResponse.json({ error: "AI returned unparseable JSON", raw }, { status: 500 });
-
-      return NextResponse.json({
-        title: parsed.title_te || scrapedOgTitle || "",
-        slug: parsed.slug_en || "",
-        summary: parsed.summary_te || "",
-        body: parsed.body_te_html || "",
-        keywords: Array.isArray(parsed.keywords_en) ? parsed.keywords_en : [],
-        metaDescription: parsed.meta_description_en || "",
-        ogImage: scrapedOgImage,
-        tokens: data.usage || {},
-      });
     }
 
     // Choose prompt based on action
