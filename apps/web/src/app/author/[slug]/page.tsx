@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { prisma } from "@rayalaseema/db";
+import { articleHref } from "@/lib/article-href";
 
 export default async function AuthorPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -59,7 +60,7 @@ export default async function AuthorPage({ params }: { params: Promise<{ slug: s
         <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 16, color: "#111" }}>Published Articles</h2>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {articles.map((a) => (
-            <Link key={a.id} href={`/article/${a.slug}`} style={{ textDecoration: "none" }}>
+            <Link key={a.id} href={articleHref(a)} style={{ textDecoration: "none" }}>
               <div style={{
                 background: "#fff", borderRadius: 8, padding: "12px 16px", boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
                 display: "flex", alignItems: "center", gap: 14, transition: "box-shadow 0.15s",

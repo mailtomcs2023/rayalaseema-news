@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Badge } from "@rayalaseema/ui";
+import { articleHref } from "@/lib/article-href";
 
 interface Article {
   id: string;
@@ -49,7 +50,7 @@ function byline(a: Article): string {
 
 function ArticleCardLarge({ article, color }: { article: Article; color: string }) {
   return (
-    <Link href={`/article/${article.slug}`} className="group block">
+    <Link href={articleHref(article)} className="group block">
       <div className="relative aspect-[16/10] rounded-xl overflow-hidden mb-3">
         {article.featuredImage ? (
           <img
@@ -86,7 +87,7 @@ function ArticleCardLarge({ article, color }: { article: Article; color: string 
 
 function ArticleCardSmall({ article, color }: { article: Article; color: string }) {
   return (
-    <Link href={`/article/${article.slug}`} className="group block">
+    <Link href={articleHref(article)} className="group block">
       <div className="relative aspect-video rounded-lg overflow-hidden mb-2.5">
         {article.featuredImage ? (
           <img
@@ -117,7 +118,7 @@ function ArticleCardSmall({ article, color }: { article: Article; color: string 
 function ArticleCardList({ article, color }: { article: Article; color: string }) {
   return (
     <Link
-      href={`/article/${article.slug}`}
+      href={articleHref(article)}
       className="group flex gap-4 py-4 border-b border-gray-100 last:border-0"
     >
       <div className="w-36 h-24 shrink-0 rounded-lg overflow-hidden">

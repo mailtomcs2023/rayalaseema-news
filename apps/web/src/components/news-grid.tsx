@@ -1,3 +1,4 @@
+import { articleHref } from "@/lib/article-href";
 import Link from "next/link";
 
 interface NewsGridItem {
@@ -20,7 +21,7 @@ export function NewsGrid({ items }: { items: NewsGridItem[] }) {
           className="border-b border-r border-gray-200 bg-white p-2.5 news-card"
         >
           <Link
-            href={`/article/${item.slug}`}
+            href={articleHref(item)}
             className="flex gap-3 group"
           >
             {/* Thumbnail */}

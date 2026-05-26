@@ -4,6 +4,7 @@ import { prisma } from "@rayalaseema/db";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { getSiteConfig } from "@/lib/db-queries";
+import { articleHref } from "@/lib/article-href";
 
 export const metadata: Metadata = {
   title: "సినిమా | రాయలసీమ ఎక్స్‌ప్రెస్",
@@ -181,7 +182,7 @@ export default async function CinemaPage({
           )}
 
           {lead && (
-            <Link href={`/article/${lead.slug}`} style={{ display: "block", textDecoration: "none", marginBottom: 20 }}>
+            <Link href={articleHref(lead)} style={{ display: "block", textDecoration: "none", marginBottom: 20 }}>
               {lead.featuredImage && (
                 <img
                   src={lead.featuredImage}
@@ -212,7 +213,7 @@ export default async function CinemaPage({
           {/* Grid */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 18 }}>
             {rest.map((a) => (
-              <Link key={a.id} href={`/article/${a.slug}`} style={{ textDecoration: "none" }}>
+              <Link key={a.id} href={articleHref(a)} style={{ textDecoration: "none" }}>
                 {a.featuredImage ? (
                   <img
                     src={a.featuredImage}
@@ -278,7 +279,7 @@ export default async function CinemaPage({
             {reviews.map((rv) => (
               <Link
                 key={rv.id}
-                href={`/article/${rv.slug}`}
+                href={articleHref(rv)}
                 style={{
                   display: "block",
                   textDecoration: "none",

@@ -1,3 +1,4 @@
+import { articleHref } from "@/lib/article-href";
 import Link from "next/link";
 
 interface ColArticle {
@@ -31,10 +32,10 @@ export function CategoryColumn({
 
       {/* LEAD — headline left, image right */}
       <div className="cc-lead">
-        <Link href={`/article/${lead.slug}`} className="cc-lead-link">
+        <Link href={articleHref(lead)} className="cc-lead-link">
           <h3 className="cc-lead-title">{lead.title}</h3>
         </Link>
-        <Link href={`/article/${lead.slug}`} className="cc-lead-img" aria-label={lead.title}>
+        <Link href={articleHref(lead)} className="cc-lead-img" aria-label={lead.title}>
           {lead.featuredImage ? (
             <img src={lead.featuredImage} alt={lead.title} loading="lazy" />
           ) : (
@@ -47,7 +48,7 @@ export function CategoryColumn({
       {items.length > 0 && (
         <div className="cc-grid">
           {items.map((a) => (
-            <Link key={a.id} href={`/article/${a.slug}`} className="cc-grid-item">
+            <Link key={a.id} href={articleHref(a)} className="cc-grid-item">
               {a.title}
             </Link>
           ))}

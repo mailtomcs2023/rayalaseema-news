@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { articleHref } from "@/lib/article-href";
 
 interface Hotspot { slug: string; x: number; y: number; w: number; h: number; }
 interface EpaperPage {
@@ -172,7 +173,7 @@ export function EpaperViewer({
 
             {!clipMode &&
               cur.hotspots.map((h, i) => (
-                <a key={i} className="ev-hotspot" href={`/article/${h.slug}`}
+                <a key={i} className="ev-hotspot" href={articleHref(h)}
                   onClick={() => {
                     if (editionId) {
                       fetch("/api/epaper/track", {

@@ -1,3 +1,4 @@
+import { articleHref } from "@/lib/article-href";
 import Link from "next/link";
 
 interface AFArticle {
@@ -57,7 +58,7 @@ export function AboveFold({
         <div className="af-main">
           {/* LEAD */}
           <div className="af-lead">
-            <Link href={`/article/${lead.slug}`} className="af-lead-img" aria-label={lead.title}>
+            <Link href={articleHref(lead)} className="af-lead-img" aria-label={lead.title}>
               {lead.featuredImage ? (
                 <img src={lead.featuredImage} alt={lead.title} loading="eager" />
               ) : (
@@ -68,7 +69,7 @@ export function AboveFold({
               <Link href={`/category/${lead.category.slug}`} className="af-cat">
                 {lead.category.name}
               </Link>
-              <Link href={`/article/${lead.slug}`} className="af-lead-link">
+              <Link href={articleHref(lead)} className="af-lead-link">
                 <h2 className="af-lead-title">{lead.title}</h2>
               </Link>
               {lead.summary && <p className="af-lead-dek">{lead.summary}</p>}
@@ -89,11 +90,11 @@ export function AboveFold({
                   </Link>
                   {top ? (
                     <>
-                      <Link href={`/article/${top.slug}`} className="af-dist-lead">
+                      <Link href={articleHref(top)} className="af-dist-lead">
                         <h3>{top.title}</h3>
                       </Link>
                       {d.articles.slice(1, 3).map((a) => (
-                        <Link key={a.id} href={`/article/${a.slug}`} className="af-dist-sub">
+                        <Link key={a.id} href={articleHref(a)} className="af-dist-sub">
                           {a.title}
                         </Link>
                       ))}
@@ -122,7 +123,7 @@ export function AboveFold({
             తాజా వార్తలు <span aria-hidden="true">›</span>
           </div>
           {latest.map((a) => (
-            <Link key={a.id} href={`/article/${a.slug}`} className="af-rail-item">
+            <Link key={a.id} href={articleHref(a)} className="af-rail-item">
               <div className="af-rail-meta">
                 {/* Newspaper front-page convention: no timestamps in the trending rail.
                     Stale "40 రోజులు" labels on every item read as misleading. */}

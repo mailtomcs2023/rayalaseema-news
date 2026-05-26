@@ -6,6 +6,7 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { ConstituencyFilter } from "./filter";
 import { getSiteConfig, getTrendingArticles } from "@/lib/db-queries";
+import { articleHref } from "@/lib/article-href";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -121,7 +122,7 @@ export default async function DistrictPage({ params }: { params: Promise<{ slug:
             )}
 
             {lead && (
-              <Link href={`/article/${lead.slug}`} style={{ display: "block", textDecoration: "none", marginBottom: 18 }}>
+              <Link href={articleHref(lead)} style={{ display: "block", textDecoration: "none", marginBottom: 18 }}>
                 {lead.featuredImage && (
                   <img
                     src={lead.featuredImage}
@@ -160,7 +161,7 @@ export default async function DistrictPage({ params }: { params: Promise<{ slug:
                 }}
               >
                 {grid.map((a) => (
-                  <Link key={a.id} href={`/article/${a.slug}`} style={{ display: "flex", gap: 12, textDecoration: "none" }}>
+                  <Link key={a.id} href={articleHref(a)} style={{ display: "flex", gap: 12, textDecoration: "none" }}>
                     {a.featuredImage && (
                       <img
                         src={a.featuredImage}
@@ -191,7 +192,7 @@ export default async function DistrictPage({ params }: { params: Promise<{ slug:
                 {rest.map((a) => (
                   <Link
                     key={a.id}
-                    href={`/article/${a.slug}`}
+                    href={articleHref(a)}
                     style={{
                       display: "flex",
                       gap: 14,
@@ -265,7 +266,7 @@ export default async function DistrictPage({ params }: { params: Promise<{ slug:
             {trending.map((t, i) => (
               <Link
                 key={t.id}
-                href={`/article/${t.slug}`}
+                href={articleHref(t)}
                 style={{ display: "flex", gap: 10, padding: "11px 0", borderBottom: "1px dotted rgba(0,0,0,0.18)", textDecoration: "none" }}
               >
                 <span style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 22, fontWeight: 700, color: "var(--brand, #E01B1B)", lineHeight: 1, flexShrink: 0 }}>

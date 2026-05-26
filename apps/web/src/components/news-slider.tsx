@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { articleHref } from "@/lib/article-href";
 
 interface SliderItem {
   id: string;
@@ -94,7 +95,7 @@ export function NewsSlider({ items }: { items: SliderItem[] }) {
               {item.category.name}
             </span>
           </Link>
-          <Link href={`/article/${item.slug}`} style={{ textDecoration: "none" }}>
+          <Link href={articleHref(item)} style={{ textDecoration: "none" }}>
             <h2 className="news-slider-title">
               <span className="news-slider-title-highlight">{item.title.split(" ").slice(0, 3).join(" ")}</span>{" "}
               {item.title.split(" ").slice(3).join(" ")}

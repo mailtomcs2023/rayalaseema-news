@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { prisma } from "@rayalaseema/db";
+import { articleHref } from "@/lib/article-href";
 
 export default async function ConstituencyPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -61,7 +62,7 @@ export default async function ConstituencyPage({ params }: { params: Promise<{ s
         {articles.length > 0 ? (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
             {articles.map((article) => (
-              <Link key={article.id} href={`/article/${article.slug}`} style={{ textDecoration: "none" }}>
+              <Link key={article.id} href={articleHref(article)} style={{ textDecoration: "none" }}>
                 <div style={{ background: "#fff", borderRadius: 8, overflow: "hidden", border: "1px solid #eee" }}>
                   {article.featuredImage && (
                     <img src={article.featuredImage} alt="" style={{ width: "100%", aspectRatio: "16/10", objectFit: "cover" }} />
