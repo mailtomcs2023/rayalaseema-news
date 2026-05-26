@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { articleHref } from "@/lib/article-href";
 
 interface DistrictNews {
   district: { name: string; nameEn: string; slug: string };
@@ -13,6 +14,9 @@ interface DistrictNews {
     featuredImage: string | null;
     publishedAt: string | null;
     category: { name: string; color: string };
+    // Optional — only populated when the upstream API includes constituency.
+    // Falls through to /news/ fallback URL otherwise.
+    constituency?: { slug: string; district: { slug: string } } | null;
   }[];
 }
 
@@ -58,7 +62,7 @@ export function DistrictNewsGrid({ districts }: { districts: DistrictNews[] }) {
           <div className="my-district-body">
             {/* Left: big featured article */}
             <div className="my-district-main">
-              <Link href={`/article/${myData.articles[0].slug}`} style={{ textDecoration: "none" }}>
+              <Link href={articleHref(myData.articles[0])} style={{ textDecoration: "none" }}>
                 {myData.articles[0].featuredImage ? (
                   <img src={myData.articles[0].featuredImage} alt="" className="my-district-img" loading="lazy" />
                 ) : (
@@ -75,7 +79,7 @@ export function DistrictNewsGrid({ districts }: { districts: DistrictNews[] }) {
             {/* Right: list of more articles */}
             <div className="my-district-list">
               {myData.articles.slice(1).map((a) => (
-                <Link key={a.id} href={`/article/${a.slug}`} style={{ textDecoration: "none" }}>
+                <Link key={a.id} href={articleHref(a)} style={{ textDecoration: "none" }}>
                   <div className="my-district-item">
                     <span className="my-district-bullet" />
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -113,7 +117,7 @@ export function DistrictNewsGrid({ districts }: { districts: DistrictNews[] }) {
 
               {main ? (
                 <>
-                  <Link href={`/article/${main.slug}`} style={{ textDecoration: "none" }}>
+                  <Link href={articleHref(main)} style={{ textDecoration: "none" }}>
                     <div style={{ padding: "0 10px" }}>
                       {main.featuredImage ? (
                         <img src={main.featuredImage} alt="" style={{ width: "100%", aspectRatio: "16/10", objectFit: "cover", borderRadius: 4, display: "block" }} loading="lazy" />
@@ -126,7 +130,7 @@ export function DistrictNewsGrid({ districts }: { districts: DistrictNews[] }) {
                     </div>
                   </Link>
                   {rest.map((a) => (
-                    <Link key={a.id} href={`/article/${a.slug}`} style={{ textDecoration: "none" }}>
+                    <Link key={a.id} href={articleHref(a)} style={{ textDecoration: "none" }}>
                       <div className="district-news-item">
                         <span className="district-news-bullet" />
                         <span className="district-news-item-title">{a.title}</span>

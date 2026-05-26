@@ -5,6 +5,7 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { getSiteConfig } from "@/lib/db-queries";
 import type { Metadata } from "next";
+import { articleHref } from "@/lib/article-href";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -73,7 +74,7 @@ export default async function TagPage({ params }: Props) {
             {articles.map((a) => (
               <Link
                 key={a.id}
-                href={`/article/${a.slug}`}
+                href={articleHref(a)}
                 className="category-card"
                 style={{ display: "flex", flexDirection: "column", textDecoration: "none", color: "inherit" }}
               >

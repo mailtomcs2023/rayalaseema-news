@@ -4,8 +4,10 @@ import { useState } from "react";
 
 interface Props {
   title: string;
-  slug: string;
-  siteUrl: string;
+  // Canonical article URL — caller passes `${siteUrl}${articleHref(article)}`.
+  // Replaced the older { slug, siteUrl } pair so URL pattern lives in one
+  // place (apps/web/src/lib/article-href.ts) — Phase A0 URL migration.
+  articleUrl: string;
   body?: string;
   featuredImage?: string | null;
   deskName?: string | null;
@@ -26,9 +28,8 @@ interface Props {
  *
  * Desktop browsers without Web Share open the WhatsApp web URL as a fallback.
  */
-export function ShareBar({ title, slug, siteUrl, featuredImage: _featuredImage, deskName: _deskName }: Props) {
+export function ShareBar({ title, articleUrl, featuredImage: _featuredImage, deskName: _deskName }: Props) {
   const [busy, setBusy] = useState(false);
-  const articleUrl = `${siteUrl}/article/${slug}`;
   const waText = `${title}\n\n${articleUrl}?utm_source=whatsapp\n\nరాయలసీమ ఎక్స్‌ప్రెస్ లో చదవండి`;
 
   const onShare = async () => {

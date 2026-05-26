@@ -1,5 +1,8 @@
+// Shared article-detail body, rendered by both the legacy /article/[slug]
+// route and the new /[district]/[constituency]/[slugid] + /news/[slugid]
+// routes (Phase A0 URL migration). Pure server component — no client state.
+
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { Badge } from "@rayalaseema/ui";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
@@ -9,73 +12,58 @@ import { ScrollShareNudge } from "@/components/scroll-share-nudge";
 import { ShareBar } from "@/components/share-bar";
 import { PaywallModal } from "@/components/paywall-modal";
 import { DialectGlosser } from "@/components/dialect-glosser";
-import { getArticleBySlug, getTrendingArticles, getArticlesByCategory, incrementViewCount } from "@/lib/db-queries";
 import { injectInlineByline, formatRelativeTelugu } from "@/lib/byline";
 import { sanitizeArticleHtml } from "@/lib/sanitize";
-import type { Metadata } from "next";
+import { articleHref } from "@/lib/article-href";
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const { slug } = await params;
-  const article = await getArticleBySlug(slug);
-  if (!article) return { title: "Not found" };
-  const siteUrl = process.env.SITE_URL || "https://rayalaseemaexpress.com";
-  // Per-article SEO overrides w/ sensible fallbacks
-  const metaTitle = (article as any).metaTitle || article.title;
-  const metaDescription = (article as any).metaDescription || article.summary || article.title;
-  // OG image priority: editor-set ogImage > article's featured image >
-  // auto-generated branded card from /api/og/<slug> (#95). The autogen falls
-  // out as the default so every article ships a branded social preview even
-  // without a featured image.
-  const ogImage = (article as any).ogImage || article.featuredImage || `${siteUrl}/api/og/${slug}`;
-  const canonical = `${siteUrl}/article/${slug}`;
-  const noindex = article.status !== "PUBLISHED";
-  return {
-    title: `${metaTitle} | రాయలసీమ ఎక్స్‌ప్రెస్`,
-    description: metaDescription,
-    alternates: {
-      canonical,
-      types: { "text/html+amp": `${canonical}/amp` }, // Google AMP discovery
-    },
-    robots: noindex ? { index: false, follow: false } : { index: true, follow: true },
-    openGraph: {
-      title: metaTitle,
-      description: metaDescription,
-      url: canonical,
-      type: "article",
-      locale: "te_IN",
-      images: ogImage ? [{ url: ogImage }] : undefined,
-      publishedTime: article.publishedAt?.toISOString(),
-      modifiedTime: article.updatedAt?.toISOString(),
-      authors: [article.desk?.name ?? article.author.name],
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: metaTitle,
-      description: metaDescription,
-      images: ogImage ? [ogImage] : undefined,
-    },
-  };
+// Loose type — matches the projected shape returned by
+// getArticleBySlug + getTrendingArticles + getArticlesByCategory in db-queries.
+// Components never read every field; we accept anything that has the keys we
+// touch and let TypeScript widen elsewhere.
+type ArticleLike = {
+  id: string;
+  slug: string | null;
+  title: string;
+  summary: string | null;
+  body: string | null;
+  featuredImage: string | null;
+  imageCaption?: string | null;
+  publishedAt: Date | null;
+  updatedAt: Date | null;
+  viewCount: number;
+  category: { name: string; slug: string; color?: string | null };
+  author: { id?: string; name: string };
+  desk?: { name: string } | null;
+  tags: { tag: { slug: string; name: string } }[];
+  constituency?: { slug: string; district: { slug: string } } | null;
+};
+
+type Related = {
+  id: string;
+  slug: string | null;
+  title: string;
+  featuredImage: string | null;
+  publishedAt: Date | null;
+  constituency?: { slug: string; district: { slug: string } } | null;
+};
+
+type Trending = {
+  id: string;
+  slug: string | null;
+  title: string;
+  viewCount: number;
+  constituency?: { slug: string; district: { slug: string } } | null;
+};
+
+interface Props {
+  article: ArticleLike;
+  related: Related[];
+  trending: Trending[];
+  siteUrl: string;
 }
 
-export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
-  const article = await getArticleBySlug(slug);
-
-  if (!article) return notFound();
-  // category became nullable in the schema (uncategorised drafts) but every
-  // public article page query relies on it. If it's missing, treat the
-  // article as not found rather than 500.
-  if (!article.category) return notFound();
-
-  // P1 #9 — bump view count on every render (fire-and-forget; uses Prisma increment, race-safe)
-  incrementViewCount(article.id).catch(() => {});
-
-  const [trending, related] = await Promise.all([
-    getTrendingArticles(8),
-    getArticlesByCategory(article.category.slug, 4),
-  ]);
-
-  const siteUrl = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+export function ArticleView({ article, related, trending, siteUrl }: Props) {
+  const canonical = `${siteUrl}${articleHref(article)}`;
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "NewsArticle",
@@ -84,9 +72,6 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     image: article.featuredImage || undefined,
     datePublished: article.publishedAt?.toISOString(),
     dateModified: article.updatedAt?.toISOString(),
-    // Desk byline is treated as an Organization for schema.org; falls back to the
-    // individual author's Person name only if the article wasn't assigned a desk
-    // (shouldn't happen for new articles — auto-resolver always assigns one).
     author: article.desk
       ? { "@type": "Organization", name: article.desk.name }
       : { "@type": "Person", name: article.author.name },
@@ -95,8 +80,8 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
       name: "Rayalaseema Express",
       logo: { "@type": "ImageObject", url: `${siteUrl}/logo.png` },
     },
-    mainEntityOfPage: { "@type": "WebPage", "@id": `${siteUrl}/article/${slug}` },
-    articleSection: article.category.nameEn,
+    mainEntityOfPage: { "@type": "WebPage", "@id": canonical },
+    articleSection: article.category.name,
     inLanguage: "te",
   };
 
@@ -110,15 +95,19 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     ],
   };
 
+  // Headline-only fallback for ScrollShareNudge / PaywallModal which need a
+  // stable identifier across the migration. They take the canonical slug
+  // (Content.slug) not the full URL.
+  const slug = article.slug || "";
+
   return (
     <div className="min-h-screen bg-gray-50">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
-      <ScrollShareNudge title={article.title} slug={slug} />
+      <ScrollShareNudge title={article.title} slug={slug} articleUrl={canonical} />
       <Header />
 
       <main style={{ maxWidth: 1280, margin: "0 auto", padding: "20px 12px" }}>
-        {/* Breadcrumb */}
         <nav style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#888", marginBottom: 16 }}>
           <Link href="/" style={{ color: "#888", textDecoration: "none" }}>Home</Link>
           <span>/</span>
@@ -128,19 +117,13 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
         </nav>
 
         <div className="article-layout" style={{ display: "flex", gap: 24 }}>
-          {/* Article Content */}
           <article style={{ flex: 1, minWidth: 0 }}>
-            {/* Category badge */}
             <Badge color={article.category.color || "#FF2C2C"}>{article.category.name}</Badge>
-
-            {/* Title */}
             <h1 style={{ fontSize: 28, fontWeight: 900, color: "#000", lineHeight: 1.4, marginTop: 10 }}>
               {article.title}
             </h1>
 
-            {/* Byline strip — desk name + (published / updated) timestamps.
-                If updatedAt is materially later than publishedAt we surface "నవీకరించబడింది" so
-                readers see when the article was last edited (Sakshi/Eenadu convention). */}
+            {/* Byline strip — desk name + (published / updated) timestamps. */}
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 12, paddingBottom: 12, borderBottom: "1px solid #eee" }}>
               <div>
                 <div style={{ fontFamily: "var(--font-telugu-heading), serif", fontSize: 15, fontWeight: 800, color: "#1a1a1a" }}>
@@ -162,20 +145,17 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               </div>
             </div>
 
-            {/* TTS + Share */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0" }}>
               <TTSButton text={article.body || ""} />
             </div>
             <ShareBar
               title={article.title}
-              slug={slug}
-              siteUrl={siteUrl}
+              articleUrl={canonical}
               body={article.body || ""}
               featuredImage={article.featuredImage}
               deskName={article.desk?.name ?? null}
             />
 
-            {/* Featured Image */}
             {article.featuredImage && (
               <div style={{ marginTop: 20 }}>
                 <img src={article.featuredImage} alt={article.title} style={{ width: "100%", borderRadius: 8, maxHeight: 500, objectFit: "cover" }} />
@@ -183,8 +163,6 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               </div>
             )}
 
-            {/* Article Body — first paragraph gets an inline newspaper-style byline:
-                "రాయలసీమ ఎక్స్‌ప్రెస్, బనగానపల్లె: <body>" */}
             <div
               className="article-body"
               style={{ marginTop: 24 }}
@@ -193,7 +171,6 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               }}
             />
 
-            {/* Tags */}
             {article.tags.length > 0 && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 24, paddingTop: 16, borderTop: "1px solid #eee" }}>
                 <span style={{ fontSize: 13, color: "#888" }}>Tags:</span>
@@ -205,15 +182,14 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               </div>
             )}
 
-            {/* Related Articles */}
             {related.length > 0 && (
               <div style={{ marginTop: 32 }}>
                 <h3 style={{ fontSize: 20, fontWeight: 800, color: "#000", marginBottom: 16, paddingBottom: 8, borderBottom: "2px solid var(--color-brand)" }}>
                   Related Articles
                 </h3>
                 <div className="related-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                  {related.filter((r) => r.slug !== slug).slice(0, 4).map((r) => (
-                    <Link key={r.id} href={`/article/${r.slug}`} style={{ display: "flex", gap: 10, textDecoration: "none" }}>
+                  {related.filter((r) => r.id !== article.id).slice(0, 4).map((r) => (
+                    <Link key={r.id} href={articleHref(r)} style={{ display: "flex", gap: 10, textDecoration: "none" }}>
                       {r.featuredImage && (
                         <img src={r.featuredImage} alt="" style={{ width: 100, height: 70, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} />
                       )}
@@ -228,21 +204,19 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                 </div>
               </div>
             )}
-            {/* Comments */}
+
             <CommentsSection articleId={article.id} />
           </article>
-          <PaywallModal articleSlug={article.slug || ""} />
+          <PaywallModal articleSlug={slug} />
           <DialectGlosser />
 
-          {/* Sidebar */}
           <aside className="article-sidebar" style={{ width: 320, flexShrink: 0 }}>
-            {/* Trending */}
             <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #eee", padding: 16 }}>
               <h3 style={{ fontSize: 18, fontWeight: 800, color: "var(--color-brand)", marginBottom: 12, paddingBottom: 8, borderBottom: "2px solid var(--color-brand)" }}>
                 Trending
               </h3>
               {trending.map((t, i) => (
-                <Link key={t.id} href={`/article/${t.slug}`} style={{ display: "flex", gap: 8, padding: "8px 0", borderBottom: "1px solid #f5f5f5", textDecoration: "none" }}>
+                <Link key={t.id} href={articleHref(t)} style={{ display: "flex", gap: 8, padding: "8px 0", borderBottom: "1px solid #f5f5f5", textDecoration: "none" }}>
                   <span style={{ fontSize: 20, fontWeight: 900, color: i < 3 ? "var(--color-brand)" : "#ddd", width: 28, flexShrink: 0 }}>
                     {String(i + 1).padStart(2, "0")}
                   </span>

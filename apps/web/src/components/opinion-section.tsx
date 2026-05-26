@@ -1,3 +1,4 @@
+import { articleHref } from "@/lib/article-href";
 interface OpinionArticle {
   id: string;
   title: string;
@@ -22,7 +23,7 @@ export function OpinionSection({ articles }: { articles: OpinionArticle[] }) {
         {articles.map((article) => (
           <a
             key={article.id}
-            href={`/article/${article.slug}`}
+            href={articleHref(article)}
             className="block group py-3 border-b border-gray-50 last:border-0"
           >
             <h4 className="text-sm font-semibold text-gray-900 font-telugu group-hover:text-orange-600 transition-colors line-clamp-2 leading-relaxed">

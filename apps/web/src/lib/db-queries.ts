@@ -142,6 +142,8 @@ export async function getFeaturedArticles(limit = 6) {
       category: { select: { name: true, nameEn: true, slug: true, color: true } },
       author: { select: { name: true } },
       desk: { select: { name: true, nameEn: true } },
+      // Constituency + district needed so articleHref() can build /[district]/[constituency]/<slug>-<id>
+      constituency: { select: { slug: true, district: { select: { slug: true } } } },
     },
     orderBy: { publishedAt: "desc" },
     take: limit,
@@ -152,7 +154,10 @@ export async function getFeaturedArticles(limit = 6) {
 export async function getLatestArticles(limit = 12) {
   return prisma.content.findMany({
     where: { type: "ARTICLE", status: "PUBLISHED", createdAt: { gte: NEW_TEMPLATE_ARTICLE_CUTOFF } },
-    select: { id: true, title: true, slug: true, publishedAt: true },
+    select: {
+      id: true, title: true, slug: true, publishedAt: true,
+      constituency: { select: { slug: true, district: { select: { slug: true } } } },
+    },
     orderBy: { publishedAt: "desc" },
     take: limit,
   });
@@ -165,6 +170,7 @@ export async function getArticlesByCategory(categorySlug: string, limit = 5) {
       category: { select: { name: true, nameEn: true, slug: true, color: true } },
       author: { select: { name: true } },
       desk: { select: { name: true, nameEn: true } },
+      constituency: { select: { slug: true, district: { select: { slug: true } } } },
     },
     orderBy: { publishedAt: "desc" },
     take: limit,
@@ -205,6 +211,7 @@ export async function getHomepageData() {
       include: {
         category: { select: { name: true, nameEn: true, slug: true, color: true } },
         author: { select: { name: true } },
+        constituency: { select: { slug: true, district: { select: { slug: true } } } },
       },
       orderBy: { publishedAt: "desc" },
       // Window must exceed total content count so every category is represented
@@ -241,6 +248,7 @@ export async function getArticleBySlug(slug: string) {
       author: { select: { id: true, name: true, bio: true, avatar: true } },
       desk: { select: { name: true, nameEn: true, branch: true } },
       tags: { include: { tag: true } },
+      constituency: { select: { slug: true, district: { select: { slug: true } } } },
     },
   });
   if (!row || row.type !== "ARTICLE") return null;
@@ -299,7 +307,10 @@ export async function getCartoonBySlug(slug: string) {
 export async function getTrendingArticles(limit = 10) {
   return prisma.content.findMany({
     where: { type: "ARTICLE", status: "PUBLISHED" },
-    select: { id: true, title: true, slug: true, viewCount: true, publishedAt: true },
+    select: {
+      id: true, title: true, slug: true, viewCount: true, publishedAt: true,
+      constituency: { select: { slug: true, district: { select: { slug: true } } } },
+    },
     orderBy: { viewCount: "desc" },
     take: limit,
   });

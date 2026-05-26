@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { articleHref } from "@/lib/article-href";
 
 interface Article {
   id: string;
@@ -178,7 +179,7 @@ export default function SearchPage() {
             </p>
 
             {articles.map((a) => (
-              <Link key={a.id} href={`/article/${a.slug}`} style={{ textDecoration: "none" }}>
+              <Link key={a.id} href={articleHref(a)} style={{ textDecoration: "none" }}>
                 <div style={{
                   display: "flex", gap: 16, padding: 16, background: "#fff", borderRadius: 10,
                   marginBottom: 10, boxShadow: "0 1px 2px rgba(0,0,0,0.04)", transition: "box-shadow 0.15s",

@@ -1,3 +1,4 @@
+import { articleHref } from "@/lib/article-href";
 import Link from "next/link";
 
 interface BandArticle {
@@ -93,12 +94,12 @@ export function SectionBand({
           <div className="sb-lead">
             <div className="sb-lead-text">
               {lead.label && <span className="sb-kicker">{lead.label}</span>}
-              <Link href={`/article/${lead.slug}`} className="sb-lead-link">
+              <Link href={articleHref(lead)} className="sb-lead-link">
                 <h3 className="sb-lead-title">{lead.title}</h3>
               </Link>
               {lead.summary && <p className="sb-lead-dek">{lead.summary}</p>}
             </div>
-            <Link href={`/article/${lead.slug}`} className="sb-lead-img" aria-label={lead.title}>
+            <Link href={articleHref(lead)} className="sb-lead-img" aria-label={lead.title}>
               {lead.featuredImage ? (
                 <img src={lead.featuredImage} alt={lead.title} loading="lazy" />
               ) : (
@@ -109,7 +110,7 @@ export function SectionBand({
 
           <div className="sb-grid">
             {grid.map((a) => (
-              <Link key={a.id} href={`/article/${a.slug}`} className="sb-grid-item">
+              <Link key={a.id} href={articleHref(a)} className="sb-grid-item">
                 <div className="sb-grid-text">
                   {a.label && <span className="sb-kicker">{a.label}</span>}
                   <h4 className="sb-grid-title">{a.title}</h4>
@@ -162,7 +163,7 @@ export function SectionBand({
             {trendingLabel} <span aria-hidden="true">›</span>
           </div>
           {trending.map((a, i) => (
-            <Link key={a.id} href={`/article/${a.slug}`} className="sb-rail-item">
+            <Link key={a.id} href={articleHref(a)} className="sb-rail-item">
               <span className="sb-rail-num">{String(i + 1).padStart(2, "0")}</span>
               <div>
                 <h4 className="sb-rail-title">{a.title}</h4>

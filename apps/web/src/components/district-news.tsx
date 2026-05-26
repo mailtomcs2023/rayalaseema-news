@@ -1,3 +1,4 @@
+import { articleHref } from "@/lib/article-href";
 import { Badge } from "@rayalaseema/ui";
 
 interface DistrictArticle {
@@ -57,7 +58,7 @@ export function DistrictNews({ articles }: { articles: DistrictArticle[] }) {
         {articles.map((article) => (
           <a
             key={article.id}
-            href={`/article/${article.slug}`}
+            href={articleHref(article)}
             className="flex gap-3 group py-2 border-b border-gray-50 last:border-0"
           >
             <div className="w-20 h-16 shrink-0 rounded-lg overflow-hidden">

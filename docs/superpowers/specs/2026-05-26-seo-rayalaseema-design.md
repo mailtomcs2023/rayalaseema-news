@@ -61,7 +61,7 @@ Strategic framing: [`feedback_seo_strategy.md`](../../../C:/Users/reddygs/.claud
 6. **AI bot policy:** robots.txt blocks GPTBot, ClaudeBot, CCBot, PerplexityBot, Google-Extended. Allows Googlebot, Googlebot-News, Bingbot.
 7. **IndexNow:** ship it (Bing + Yandex + Naver + Seznam value, despite Google not supporting).
 8. **llms.txt:** skip (no consumer).
-9. **AMP:** keep (already shipped; migrate to new URL pattern in A0).
+9. **AMP:** DROP (reversed). AMP-for-news is effectively dead since 2021; major publishers removed it 2022–2024. A0 deletes the AMP route + alternate links; legacy AMP traffic 301s to canonical.
 10. **Cache Components:** use `cacheLife` profiles + `cacheTag` + `updateTag`. Avoid mixing with legacy `revalidate: <n>`.
 11. **CWV targets:** LCP < 2.5s, INP < 200ms, CLS < 0.1 at p75. Block deploy if regression > 10%.
 12. **Trust pages:** all 12 must exist with real (not lorem) content. AI-drafted, editor-reviewed.
@@ -194,7 +194,7 @@ model SiteConfig {
 | Surface | URL pattern | Notes |
 |---|---|---|
 | Article | `/[district-slug]/[mandal-or-town-slug]/<slug>-<id>` | Slug preserved from `Content.slug`; `id` is the numeric portion of `Content.id` (cuid → take last 8 chars). |
-| Article AMP | `/[district-slug]/[mandal-or-town-slug]/<slug>-<id>/amp` | Mirrors article URL. |
+| Article AMP | **REMOVED** | Legacy `/article/<slug>/amp` 301s to canonical (no AMP on new pattern). |
 | District hub | `/[district-slug]` | E.g. `/kurnool`. Conflicts with existing `/about`, `/api`, etc. — Phase A0 reserves a slug-blocklist. |
 | Constituency hub | `/[district-slug]/[constituency-slug]` | E.g. `/kurnool/nandikotkur-141`. |
 | Mandal hub | `/[district-slug]/[constituency-slug]/[mandal-slug]` | Phase F3. Optional — may launch with just district + constituency. |

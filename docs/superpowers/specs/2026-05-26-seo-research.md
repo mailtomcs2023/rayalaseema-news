@@ -127,13 +127,28 @@ This file is the source of truth for "why we made the calls we made". When the s
 
 ---
 
-## 8. AMP — keep or drop?
+## 8. AMP — DROP (reversed 2026-05-26)
 
-**Findings:** No definitive new guidance in 2026. Google still indexes AMP, but Top Stories no longer requires it (since 2021). However, the [Google News best-practices page](https://support.google.com/news/publisher-center/answer/9607104) does not deprecate it.
+**Initial decision:** keep (sunk cost — already shipped at [`apps/web/src/app/article/[slug]/amp/route.ts`](../../../apps/web/src/app/article/%5Bslug%5D/amp/route.ts)).
 
-**Existing state:** [`apps/web/src/app/article/[slug]/amp/route.ts`](../../../apps/web/src/app/article/%5Bslug%5D/amp/route.ts) is live, and article metadata includes `alternates.types["text/html+amp"]`. Spec's Final Rule #3 says "push back if asked to drop schema/AMP/URL changes that hurt SEO".
+**Reversed after Daisy push-back:** "why AMP, AMP is outdated right."
 
-**Decision:** **Keep AMP variant.** Marginal upside, sunk cost. URL migration Phase A0 must redirect both `/article/<slug>` AND `/article/<slug>/amp` to the new URLs (`/[district]/[town]/<slug>-<id>` + `/[district]/[town]/<slug>-<id>/amp`).
+**Findings on review:**
+
+- 2021: Google removed AMP requirement for Top Stories — the original ranking incentive for AMP collapsed.
+- 2022–2024: Major publishers removed AMP — NYTimes, Washington Post, BBC, Vox, The Guardian.
+- 2025–2026: AMP project is in maintenance mode; not recommended for new builds.
+- Spec author's Final Rule #3 explicitly lists "AMP" as an example of something that HURTS SEO (alongside URL pattern changes and removing schema). My initial reading inverted this.
+
+**Decision:** **Drop AMP entirely as part of Phase A0.**
+
+1. Delete `apps/web/src/app/article/[slug]/amp/route.ts`.
+2. Remove `alternates.types["text/html+amp"]` from article page metadata.
+3. Middleware redirects `/article/<slug>/amp` → new canonical URL (no AMP suffix on the new pattern; legacy AMP traffic lands on canonical HTML).
+4. No AMP variant on the new `/[district]/[town]/<slug>-<id>` pattern.
+5. Sitemap + news-sitemap emit canonical URLs only (no AMP rels).
+
+**Maintenance saved:** AMP-validate-on-CI step never needs to ship; no AMP-specific styling rules; one fewer route to keep in sync.
 
 ---
 

@@ -1,3 +1,4 @@
+import { articleHref } from "@/lib/article-href";
 import Link from "next/link";
 
 interface CinemaArticle {
@@ -69,12 +70,12 @@ export function CinemaBand({
           <div className="cb-lead">
             <div className="cb-lead-text">
               {lead.label && <span className="cb-kicker">{lead.label}</span>}
-              <Link href={`/article/${lead.slug}`} className="cb-lead-link">
+              <Link href={articleHref(lead)} className="cb-lead-link">
                 <h3 className="cb-lead-title">{lead.title}</h3>
               </Link>
               {lead.summary && <p className="cb-lead-dek">{lead.summary}</p>}
             </div>
-            <Link href={`/article/${lead.slug}`} className="cb-lead-img" aria-label={lead.title}>
+            <Link href={articleHref(lead)} className="cb-lead-img" aria-label={lead.title}>
               {lead.featuredImage ? (
                 <img src={lead.featuredImage} alt={lead.title} loading="lazy" />
               ) : (
@@ -86,7 +87,7 @@ export function CinemaBand({
           {/* 2x2 GRID */}
           <div className="cb-grid">
             {grid.map((a) => (
-              <Link key={a.id} href={`/article/${a.slug}`} className="cb-grid-item">
+              <Link key={a.id} href={articleHref(a)} className="cb-grid-item">
                 <div className="cb-grid-text">
                   {a.label && <span className="cb-kicker">{a.label}</span>}
                   <h4 className="cb-grid-title">{a.title}</h4>
@@ -109,7 +110,7 @@ export function CinemaBand({
             మూవీ రివ్యూ <span aria-hidden="true">›</span>
           </div>
           {reviews.map((rv) => (
-            <Link key={rv.id} href={`/article/${rv.slug}`} className="cb-rail-item">
+            <Link key={rv.id} href={articleHref(rv)} className="cb-rail-item">
               <h4 className="cb-rail-title">{rv.title}</h4>
               <div className="cb-rail-meta">
                 {rv.reviewerName && <span className="cb-reviewer">{rv.reviewerName}</span>}

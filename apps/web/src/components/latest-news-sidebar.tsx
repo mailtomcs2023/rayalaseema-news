@@ -1,3 +1,4 @@
+import { articleHref } from "@/lib/article-href";
 import Link from "next/link";
 
 interface NewsItem {
@@ -28,7 +29,7 @@ export function LatestNewsSidebar({ items }: { items: NewsItem[] }) {
           {items.map((item) => (
             <li key={item.id} style={{ borderBottom: "1px solid var(--paper-edge)" }}>
               <Link
-                href={`/article/${item.slug}`}
+                href={articleHref(item)}
                 className="group hover-brand"
                 style={{ display: "flex", alignItems: "flex-start", gap: "var(--sp-2)", padding: "var(--sp-2) 0" }}
               >

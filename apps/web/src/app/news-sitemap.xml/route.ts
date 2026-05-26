@@ -1,10 +1,17 @@
 import { prisma } from "@rayalaseema/db";
+import { articleHref } from "@/lib/article-href";
 
 export async function GET() {
   const articles = await prisma.content.findMany({
     where: { type: "ARTICLE", status: "PUBLISHED" },
-    select: { slug: true, title: true, publishedAt: true, category: { select: { nameEn: true } } },
+    select: {
+      id: true, slug: true, title: true, publishedAt: true,
+      category: { select: { nameEn: true } },
+      constituency: { select: { slug: true, district: { select: { slug: true } } } },
+    },
     orderBy: { publishedAt: "desc" },
+    // Hard cap kept while Phase D2 (last-48h filter) is pending — once D2
+    // ships this becomes `where.publishedAt: { gte: 48hAgo }`.
     take: 1000,
   });
 
@@ -14,7 +21,7 @@ export async function GET() {
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">
 ${articles.map((a) => `  <url>
-    <loc>${siteUrl}/article/${a.slug}</loc>
+    <loc>${siteUrl}${articleHref(a)}</loc>
     <news:news>
       <news:publication>
         <news:name>Rayalaseema Express</news:name>

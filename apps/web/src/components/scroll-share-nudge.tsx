@@ -2,7 +2,10 @@
 
 import { useState, useEffect, useRef } from "react";
 
-export function ScrollShareNudge({ title, slug }: { title: string; slug: string }) {
+// `slug` stays as the GA-event identifier (stable across the URL migration).
+// `articleUrl` is the canonical share URL the WhatsApp nudge points at — caller
+// passes `${siteUrl}${articleHref(article)}`.
+export function ScrollShareNudge({ title, slug, articleUrl }: { title: string; slug: string; articleUrl?: string }) {
   const [show, setShow] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const firedRef = useRef(false);
@@ -42,8 +45,12 @@ export function ScrollShareNudge({ title, slug }: { title: string; slug: string 
 
   if (!show || dismissed) return null;
 
-  const siteUrl = typeof window !== "undefined" ? window.location.origin : "https://rayalaseemaexpress.com";
-  const shareUrl = `${siteUrl}/article/${slug}?utm_source=whatsapp&utm_medium=share_nudge`;
+  // Prefer the canonical articleUrl passed in by the parent (built via
+  // articleHref so URL pattern lives in one place). Fall back to the legacy
+  // /article/<slug> path — middleware will 301 to canonical, costing one
+  // extra hop only on shares from very old client bundles.
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://rayalaseemaexpress.com";
+  const shareUrl = (articleUrl || `${origin}/article/${slug}`) + "?utm_source=whatsapp&utm_medium=share_nudge";
   const shareText = `${title}\n\n${shareUrl}\n\nRayalaseema Express లో చదవండి`;
   const waLink = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
 
