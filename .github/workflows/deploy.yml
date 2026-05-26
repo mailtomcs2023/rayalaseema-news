@@ -114,6 +114,9 @@ jobs:
             AZURE_OPENAI_DEPLOYMENT="gpt51"
             AZURE_OPENAI_API_VERSION="2024-10-21"
             NEWSDATA_API_KEY="${{ secrets.NEWSDATA_API_KEY }}"
+            PEXELS_API_KEY="${{ secrets.PEXELS_API_KEY }}"
+            GOOGLE_CSE_KEY="${{ secrets.GOOGLE_CSE_KEY }}"
+            GOOGLE_CSE_ID="${{ secrets.GOOGLE_CSE_ID }}"
             AZURE_STORAGE_CONNECTION_STRING="${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}"
             ENV
 
