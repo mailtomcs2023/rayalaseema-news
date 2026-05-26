@@ -359,7 +359,11 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
                     {b.results.map((a) => {
                       const link = a.link || "";
                       const picked = link && pickedLinks.has(link);
+                      // When force-reimport is ON, already-imported rows
+                      // become re-pickable (server will purge + recreate).
+                      // dim = visually-greyed; locked = cannot be ticked.
                       const dim = a.alreadyImported;
+                      const locked = dim && !forceReimport;
                       const importingNow = link && inlineImporting.has(link);
                       return (
                         <div key={link || a.article_id}
@@ -370,7 +374,7 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
                             border: `1px solid ${picked ? "#93c5fd" : "#e5e7eb"}`,
                             borderRadius: 6, opacity: dim ? 0.7 : 1,
                           }}>
-                          <input type="checkbox" checked={!!picked} disabled={dim || !link}
+                          <input type="checkbox" checked={!!picked} disabled={locked || !link}
                             onChange={() => {
                               if (!link) return;
                               setPickedLinks((prev) => {
@@ -379,7 +383,7 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
                                 return next;
                               });
                             }}
-                            style={{ cursor: dim || !link ? "not-allowed" : "pointer" }} />
+                            style={{ cursor: locked || !link ? "not-allowed" : "pointer" }} />
                           {a.image_url ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={a.image_url} alt="" style={{ width: 64, height: 40, objectFit: "cover", borderRadius: 4 }} />
@@ -405,15 +409,16 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
                                 Source ↗
                               </a>
                             )}
-                            {!dim && link && (
+                            {link && (!dim || forceReimport) && (
                               <button
                                 onClick={() => importInline(a, b.category)}
                                 disabled={importingNow || running}
-                                style={{ fontSize: 11, padding: "3px 8px", background: importingNow ? "#6b7280" : "#16a34a", color: "#fff", border: "none", borderRadius: 4, cursor: importingNow || running ? "not-allowed" : "pointer", fontWeight: 700, opacity: running ? 0.5 : 1 }}>
-                                {importingNow ? "Importing…" : "Import"}
+                                style={{ fontSize: 11, padding: "3px 8px", background: importingNow ? "#6b7280" : (dim ? "#ea580c" : "#16a34a"), color: "#fff", border: "none", borderRadius: 4, cursor: importingNow || running ? "not-allowed" : "pointer", fontWeight: 700, opacity: running ? 0.5 : 1 }}
+                                title={dim ? "Will purge the existing row + create a fresh import" : "Import as draft"}>
+                                {importingNow ? "Importing…" : dim ? "Re-import" : "Import"}
                               </button>
                             )}
-                            {dim && <span style={{ fontSize: 10, color: "#16a34a", fontWeight: 700, textAlign: "center" }}>✓ Imported</span>}
+                            {dim && !forceReimport && <span style={{ fontSize: 10, color: "#16a34a", fontWeight: 700, textAlign: "center" }}>✓ Imported</span>}
                           </div>
                         </div>
                       );
