@@ -75,6 +75,13 @@ jobs:
             echo "=== Backfill Telugu mandal names ==="
             bunx tsx scripts/backfill-mandal-telugu.ts
 
+            echo "=== Backfill OSM lat/lng for districts/constituencies/mandals (Spec #4 A3) ==="
+            # Idempotent: skips rows with both lat+lng set; only hits Nominatim
+            # for newly-added rows. Rate-limited at 1.5s/req per OSM fair-use
+            # policy. First-time full run is ~6 min; subsequent deploys ~5 sec
+            # (no rows to query). Safe to leave in the deploy hot path.
+            bunx tsx scripts/backfill-osm-coords.ts || echo "OSM backfill failed — non-fatal, manual re-run later"
+
             echo "=== Seed e-paper v2 templates (front + 8 district + 4 section) ==="
             bunx tsx scripts/seed-epaper-templates.ts
             echo "=== Seed e-paper v2 masters (#108: front/district/section) ==="
