@@ -6,3 +6,4 @@
 
 export * from "./types";
 export { detectLocations } from "./location-ner";
+export { teluguToAscii, teluguTitleToSlug } from "./transliterate";
