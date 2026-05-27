@@ -9,6 +9,7 @@ import { logAudit, diffSummary } from "@/lib/audit";
 import { sanitizeSlug } from "@/lib/slug";
 import { resolveDeskId } from "@/lib/desk-resolver";
 import { pingIndexNow } from "@/lib/indexnow";
+import { tagContentLocations } from "@/lib/location-ner-hook";
 
 // Build the canonical article URL the same way articleHref() does in apps/web.
 // Kept inline here so admin doesn't take a cross-app import; logic is small
@@ -273,11 +274,22 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     });
 
     // Spec #4 D5 (#218) — fire-and-forget IndexNow ping on publish so Bing /
-    // Yandex / Naver pick up the new URL in minutes instead of waiting for
-    // a crawl. Hub URLs (district / constituency / category) also re-ping so
-    // their article-list freshens too. Failure is non-fatal.
+    // Yandex / Naver pick up the new URL in minutes. Hub URLs also re-ping
+    // so their article-list freshens. Failure is non-fatal.
     if (action === "content.publish" && content.type === "ARTICLE" && content.slug) {
       void pingArticlePublish(content.id, content.slug);
+    }
+
+    // Spec #4 G2 (#232) — run location NER on publish + write ContentLocation
+    // rows. Replace-all semantics so re-publishes converge to the freshest
+    // gazetteer pass. Failure is non-fatal — publish still succeeds; the
+    // editor can manually re-tag from the admin UI if NER missed something.
+    if (action === "content.publish" && content.type === "ARTICLE") {
+      try {
+        await tagContentLocations(content.id, content.title, content.body || "");
+      } catch (err) {
+        console.warn("[content publish] location NER failed (non-fatal):", (err as Error).message);
+      }
     }
 
     return NextResponse.json(content);

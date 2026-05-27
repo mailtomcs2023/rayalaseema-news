@@ -21,6 +21,7 @@
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@rayalaseema/db": "*",
+    "@rayalaseema/nlp": "*",
     "@rayalaseema/seo-schema": "*",
     "@rayalaseema/ui": "*",
     "@tanstack/react-table": "^8.21.3",
