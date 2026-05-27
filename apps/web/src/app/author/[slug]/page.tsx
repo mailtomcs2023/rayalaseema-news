@@ -42,23 +42,40 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
-export default async function AuthorPage({ params }: { params: Promise<{ slug: string }> }) {
+const ARTICLES_PER_PAGE = 30;
+
+export default async function AuthorPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ page?: string }>;
+}) {
   const { slug } = await params;
+  // Spec #4 F5 (#229) — pagination via ?page=N (1-indexed). Cap at the
+  // floor of count / ARTICLES_PER_PAGE so deep ?page numbers don't fall
+  // through to empty pages with no canonical signal.
+  const sp = (await searchParams) || {};
+  const pageRaw = Number(sp.page ?? 1);
+  const page = Number.isFinite(pageRaw) && pageRaw >= 1 ? Math.floor(pageRaw) : 1;
   const author = await fetchAuthor(slug);
   if (!author) return notFound();
 
-  const [articles, totalArticles] = await Promise.all([
-    prisma.content.findMany({
-      where: { type: "ARTICLE", authorId: author.id, status: "PUBLISHED" },
-      include: {
-        category: { select: { name: true, nameEn: true, slug: true, color: true } },
-        constituency: { select: { slug: true, district: { select: { slug: true } } } },
-      },
-      orderBy: { publishedAt: "desc" },
-      take: 30,
-    }),
-    prisma.content.count({ where: { type: "ARTICLE", authorId: author.id, status: "PUBLISHED" } }),
-  ]);
+  const totalArticles = await prisma.content.count({
+    where: { type: "ARTICLE", authorId: author.id, status: "PUBLISHED" },
+  });
+  const totalPages = Math.max(1, Math.ceil(totalArticles / ARTICLES_PER_PAGE));
+  const currentPage = Math.min(page, totalPages);
+  const articles = await prisma.content.findMany({
+    where: { type: "ARTICLE", authorId: author.id, status: "PUBLISHED" },
+    include: {
+      category: { select: { name: true, nameEn: true, slug: true, color: true } },
+      constituency: { select: { slug: true, district: { select: { slug: true } } } },
+    },
+    orderBy: { publishedAt: "desc" },
+    skip: (currentPage - 1) * ARTICLES_PER_PAGE,
+    take: ARTICLES_PER_PAGE,
+  });
 
   // Person JSON-LD via shared generator (Phase B4 #200). Sidebar pills below
   // also need the visible sameAs list; compute it once.
@@ -144,7 +161,14 @@ export default async function AuthorPage({ params }: { params: Promise<{ slug: s
         </div>
 
         {/* Articles */}
-        <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 16, color: "#111" }}>Published Articles</h2>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 16, color: "#111" }}>
+          Published Articles
+          {totalArticles > ARTICLES_PER_PAGE && (
+            <span style={{ fontSize: 13, fontWeight: 500, color: "#888", marginLeft: 8 }}>
+              · Page {currentPage} of {totalPages}
+            </span>
+          )}
+        </h2>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {articles.map((a) => (
             <Link key={a.id} href={articleHref(a)} style={{ textDecoration: "none" }}>
@@ -170,6 +194,34 @@ export default async function AuthorPage({ params }: { params: Promise<{ slug: s
             </Link>
           ))}
         </div>
+
+        {/* Pagination (F5 #229). Hide when single page; emit prev/next links
+            with rel=prev/next semantics so crawlers walk the archive. */}
+        {totalPages > 1 && (
+          <nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 24, gap: 12 }}>
+            {currentPage > 1 ? (
+              <a
+                href={`/author/${author.publicProfileSlug}${currentPage > 2 ? `?page=${currentPage - 1}` : ""}`}
+                rel="prev"
+                style={{ padding: "8px 14px", border: "1px solid #d1d5db", borderRadius: 6, color: "var(--color-brand)", textDecoration: "none", fontSize: 14 }}
+              >
+                ← Previous
+              </a>
+            ) : <span />}
+            <span style={{ fontSize: 13, color: "#666" }}>
+              {totalArticles} total · showing {ARTICLES_PER_PAGE * (currentPage - 1) + 1}–{Math.min(ARTICLES_PER_PAGE * currentPage, totalArticles)}
+            </span>
+            {currentPage < totalPages ? (
+              <a
+                href={`/author/${author.publicProfileSlug}?page=${currentPage + 1}`}
+                rel="next"
+                style={{ padding: "8px 14px", border: "1px solid #d1d5db", borderRadius: 6, color: "var(--color-brand)", textDecoration: "none", fontSize: 14 }}
+              >
+                Next →
+              </a>
+            ) : <span />}
+          </nav>
+        )}
       </main>
       <Footer />
     </div>
