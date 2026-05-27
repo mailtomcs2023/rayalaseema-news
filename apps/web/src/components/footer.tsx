@@ -129,42 +129,26 @@ export function Footer({ config: initialConfig = {} }: FooterProps) {
             <h4 className="text-white font-semibold mb-4 text-sm uppercase tracking-wider">
               లింకులు
             </h4>
+            {/* Spec #4 C9 (#212) — site-wide trust + policy link bar. All 12
+                E-E-A-T pages are reachable from every page on the site so
+                Google + AI-search crawlers see consistent organization-level
+                signals. */}
             <ul className="space-y-2 text-sm">
-              <li>
-                <Link href="/epaper" className="hover:text-white transition-colors font-telugu">
-                  ePaper
-                </Link>
-              </li>
-              <li>
-                <Link href="/about" className="hover:text-white transition-colors font-telugu">
-                  మా గురించి
-                </Link>
-              </li>
-              <li>
-                <Link href="/contact" className="hover:text-white transition-colors font-telugu">
-                  సంప్రదించండి
-                </Link>
-              </li>
-              <li>
-                <a href="mailto:ads@rayalaseemaexpress.com" className="hover:text-white transition-colors font-telugu">
-                  ప్రకటనలు
-                </a>
-              </li>
-              <li>
-                <Link href="/privacy" className="hover:text-white transition-colors">
-                  Privacy Policy
-                </Link>
-              </li>
-              <li>
-                <Link href="/terms" className="hover:text-white transition-colors">
-                  Terms of Service
-                </Link>
-              </li>
-              <li>
-                <a href="/sitemap.xml" className="hover:text-white transition-colors">
-                  Sitemap
-                </a>
-              </li>
+              <li><Link href="/epaper" className="hover:text-white transition-colors font-telugu">ePaper</Link></li>
+              <li><Link href="/about" className="hover:text-white transition-colors font-telugu">మా గురించి (About)</Link></li>
+              <li><Link href="/mission" className="hover:text-white transition-colors">Mission</Link></li>
+              <li><Link href="/masthead" className="hover:text-white transition-colors">Masthead</Link></li>
+              <li><Link href="/ownership" className="hover:text-white transition-colors">Ownership &amp; Funding</Link></li>
+              <li><Link href="/ethics-policy" className="hover:text-white transition-colors">Ethics Policy</Link></li>
+              <li><Link href="/editorial-standards" className="hover:text-white transition-colors">Editorial Standards</Link></li>
+              <li><Link href="/corrections-policy" className="hover:text-white transition-colors">Corrections Policy</Link></li>
+              <li><Link href="/diversity-policy" className="hover:text-white transition-colors">Diversity Policy</Link></li>
+              <li><Link href="/feedback-policy" className="hover:text-white transition-colors">Feedback Policy</Link></li>
+              <li><Link href="/contact" className="hover:text-white transition-colors font-telugu">సంప్రదించండి (Contact)</Link></li>
+              <li><a href="mailto:ads@rayalaseemaexpress.com" className="hover:text-white transition-colors font-telugu">ప్రకటనలు (Advertise)</a></li>
+              <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
+              <li><Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
+              <li><a href="/sitemap.xml" className="hover:text-white transition-colors">Sitemap</a></li>
             </ul>
 
             {/* Download App */}
