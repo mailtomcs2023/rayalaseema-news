@@ -78,6 +78,10 @@ export default async function RootLayout({
   const gaId = config.google_analytics_id;
   const adsenseId = config.google_adsense_id;
   const gtmId = config.google_tag_manager_id;
+  // Spec #4 H3 (#236) — Bing Webmaster verification meta tag.
+  const bingVerify = config.bing_webmaster_id;
+  // Spec #4 H5 (#238) — Microsoft Clarity heatmap + session replay.
+  const clarityId = config.clarity_project_id;
 
   // NewsMediaOrganization JSON-LD (Spec #4 B2 #198). Fields source from
   // SiteConfig — empty values fall through to undefined and get stripped by
@@ -124,6 +128,7 @@ export default async function RootLayout({
   return (
     <html lang="te" className={cn("font-sans", geist.variable, notoTelugu.variable, notoSerifTelugu.variable, mandali.variable)}>
       <head>
+        {bingVerify && <meta name="msvalidate.01" content={bingVerify} />}
         {/* JSON-LD structured data — search-engine metadata. Uses
             next/script so React 19 doesn't warn about raw <script>
             tags inside components, but renders as an inline script in
@@ -163,6 +168,11 @@ export default async function RootLayout({
         {gtmId && (
           <Script id="gtm" strategy="afterInteractive">
             {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${gtmId}');`}
+          </Script>
+        )}
+        {clarityId && (
+          <Script id="clarity" strategy="afterInteractive">
+            {`(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","${clarityId}");`}
           </Script>
         )}
         {gaId && (
