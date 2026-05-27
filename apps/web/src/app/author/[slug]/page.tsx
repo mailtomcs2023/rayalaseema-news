@@ -155,8 +155,8 @@ export default async function AuthorPage({ params }: { params: Promise<{ slug: s
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <h3 style={{ fontSize: 14, fontWeight: 700, color: "#111", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.title}</h3>
                   <div style={{ display: "flex", gap: 10, marginTop: 4, alignItems: "center" }}>
-                    <span style={{ fontSize: 10, fontWeight: 600, color: "#fff", background: a.category.color || "#888", padding: "1px 6px", borderRadius: 3 }}>
-                      {a.category.nameEn}
+                    <span style={{ fontSize: 10, fontWeight: 600, color: "#fff", background: a.category?.color || "#888", padding: "1px 6px", borderRadius: 3 }}>
+                      {a.category?.nameEn ?? a.category?.name ?? ""}
                     </span>
                     <span style={{ fontSize: 11, color: "#888" }}>
                       {a.publishedAt ? new Date(a.publishedAt).toLocaleDateString("te-IN") : ""}

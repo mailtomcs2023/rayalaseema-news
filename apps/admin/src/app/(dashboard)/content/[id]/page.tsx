@@ -11,12 +11,15 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Sidebar } from "@/components/sidebar";
 import { RichEditor, type RichEditorRef } from "@/components/rich-editor";
 import { ImageUpload } from "@/components/image-upload";
 import { ContentPayloadEditor } from "@/components/content-payload-editor";
 import { ImageSearchModal } from "@/components/image-search-modal";
 import { ImageCropModal } from "@/components/image-crop-modal";
+import { PaymentPanel } from "@/components/content/payment-panel";
+import { ReviewerPanel } from "@/components/content/reviewer-panel";
 
 interface Category { id: string; name: string; nameEn: string; slug: string }
 
@@ -34,6 +37,13 @@ export default function ContentEditorPage() {
   const router = useRouter();
   const params = useParams();
   const contentId = params.id as string;
+
+  // Role gate — only EDITOR/ADMIN can move content into PUBLISHED / SCHEDULED /
+  // APPROVED. Sub-editor + reporter see Save Draft only, and the Status
+  // dropdown hides the gated values so they can't bypass via the select.
+  const { data: session } = useSession();
+  const role = (session?.user as any)?.role || "REPORTER";
+  const canPublish = ["EDITOR", "ADMIN"].includes(role);
 
   const [type, setType] = useState<string>("ARTICLE");
   const [categories, setCategories] = useState<Category[]>([]);
@@ -327,10 +337,15 @@ export default function ContentEditorPage() {
             style={{ padding: "8px 16px", background: "#fff", color: "#374151", border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: saving ? "not-allowed" : "pointer" }}>
             {saving ? "Saving…" : "Save Draft"}
           </button>
-          <button onClick={() => handleSave("PUBLISHED")} disabled={saving}
-            style={{ padding: "8px 16px", background: "#dc2626", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>
-            Publish
-          </button>
+          {/* Publish is gated to Editor/Admin — sub-editors approve to APPROVED
+              (handled from /review), editors do the final publish from there
+              or from this button. Reporters and sub-editors don't see it. */}
+          {canPublish && (
+            <button onClick={() => handleSave("PUBLISHED")} disabled={saving}
+              style={{ padding: "8px 16px", background: "#dc2626", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>
+              Publish
+            </button>
+          )}
         </div>
 
         {error && (
@@ -343,6 +358,23 @@ export default function ContentEditorPage() {
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 320px", gap: 20 }}>
           {/* Main column */}
           <div style={{ background: "#fff", borderRadius: 10, padding: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+            {/* Featured image — pinned at the top so the hero visual is the
+                first thing the editor sees and confirms before scrolling down
+                to title/body. */}
+            <label style={lblStyle}>Featured image</label>
+            <ImageUpload value={featuredImage} onChange={setFeaturedImage} />
+            <button
+              type="button"
+              onClick={() => setImageSearchOpen(true)}
+              style={{
+                marginTop: 8, marginBottom: 16, padding: "6px 12px", background: "#fff", color: "#374151",
+                border: "1px solid #d1d5db", borderRadius: 6, fontSize: 12, fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              🔍 Search free / web images
+            </button>
+
             {/* Common */}
             <label style={lblStyle}>Title *</label>
             <input value={title} onChange={(e) => setTitle(e.target.value)}
@@ -445,9 +477,15 @@ export default function ContentEditorPage() {
             <Section title="Publishing">
               <label style={lblStyle}>Status</label>
               <select value={status} onChange={(e) => setStatus(e.target.value)} style={inpStyle}>
-                {["DRAFT", "SUBMITTED", "IN_REVIEW", "APPROVED", "SCHEDULED", "PUBLISHED", "REJECTED", "ARCHIVED"].map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
+                {/* APPROVED / SCHEDULED / PUBLISHED hidden for non-publishers so
+                    a sub-editor can't bypass the editorial workflow by picking
+                    them from the dropdown + clicking Save. The server-side PUT
+                    is the authoritative gate; this just keeps the UI honest. */}
+                {(["DRAFT", "SUBMITTED", "IN_REVIEW", "APPROVED", "SCHEDULED", "PUBLISHED", "REJECTED", "ARCHIVED"] as const)
+                  .filter((s) => canPublish || !["APPROVED", "SCHEDULED", "PUBLISHED"].includes(s))
+                  .map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
               </select>
               <label style={lblStyle}>Schedule for</label>
               <input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} style={inpStyle} />
@@ -456,6 +494,15 @@ export default function ContentEditorPage() {
                 Featured
               </label>
             </Section>
+
+            {/* Payment panel — only meaningful for ARTICLE type. Shows the
+                per-article amount + status, with edit pencil for Editors. */}
+            {type === "ARTICLE" && <div className="shadcn-scope"><PaymentPanel contentId={contentId} /></div>}
+
+            {/* Assigned reviewer (Stage 2) — Editor/Admin can override the
+                auto-assigned sub-editor. Hidden for non-editors via the
+                component's own role gate. */}
+            {type === "ARTICLE" && <div className="shadcn-scope"><ReviewerPanel contentId={contentId} /></div>}
 
             <Section title="Classification">
               <label style={lblStyle}>Category</label>
@@ -485,20 +532,6 @@ export default function ContentEditorPage() {
                 placeholder="elections, politics, ap" style={inpStyle} />
             </Section>
 
-            <Section title="Featured image">
-              <ImageUpload value={featuredImage} onChange={setFeaturedImage} />
-              <button
-                type="button"
-                onClick={() => setImageSearchOpen(true)}
-                style={{
-                  marginTop: 8, padding: "6px 12px", background: "#fff", color: "#374151",
-                  border: "1px solid #d1d5db", borderRadius: 6, fontSize: 12, fontWeight: 600,
-                  cursor: "pointer", width: "100%",
-                }}
-              >
-                🔍 Search free / web images
-              </button>
-            </Section>
           </div>
         </div>
       </main>

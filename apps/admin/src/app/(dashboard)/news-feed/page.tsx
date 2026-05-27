@@ -7,6 +7,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/sidebar";
+import { WithTooltip } from "@/components/ui/tooltip";
 
 interface NewsItem {
   externalId: string;
@@ -105,20 +106,20 @@ export default function NewsFeedPage() {
         {/* Provider tabs */}
         <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
           {PROVIDERS.map((p) => (
-            <button
-              key={p.value}
-              onClick={() => { setProvider(p.value); fetchNews(undefined, p.value); }}
-              style={{
-                padding: "6px 14px",
-                background: provider === p.value ? "#111827" : "#fff",
-                color: provider === p.value ? "#fff" : "#374151",
-                border: "1px solid #e5e7eb",
-                borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: "pointer",
-              }}
-              title={p.note}
-            >
-              {p.label}
-            </button>
+            <WithTooltip key={p.value} text={p.note}>
+              <button
+                onClick={() => { setProvider(p.value); fetchNews(undefined, p.value); }}
+                style={{
+                  padding: "6px 14px",
+                  background: provider === p.value ? "#111827" : "#fff",
+                  color: provider === p.value ? "#fff" : "#374151",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: "pointer",
+                }}
+              >
+                {p.label}
+              </button>
+            </WithTooltip>
           ))}
         </div>
 

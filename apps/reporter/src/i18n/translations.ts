@@ -26,6 +26,7 @@ export const translations = {
     validation: {
       required: "This field is required",
       email: "Enter a valid email address",
+      emailMismatch: "Emails don't match — re-type the same address",
       phone: "Enter a valid 10-digit phone number",
       password: "Password must be at least 8 characters",
       pincode: "Pincode must be 6 digits",
@@ -117,6 +118,8 @@ export const translations = {
       // the input itself stays unambiguous when it's empty.
       fullNamePlaceholder: "Enter your full name",
       emailPlaceholder: "Enter your email id",
+      emailConfirm: "Re-type Email *",
+      emailConfirmPlaceholder: "Re-type your email id",
       phonePlaceholder: "Enter your phone number",
       passwordPlaceholder: "Enter your password",
       pincodePlaceholder: "Enter your pincode",
@@ -256,14 +259,60 @@ export const translations = {
       },
     },
     earnings: {
-      totalEarnings: "Total Earnings",
-      thisMonth: "This Month",
-      pending: "Pending",
-      paid: "Paid",
-      paymentHistory: "Payment History",
-      articleFallback: "Article",
-      ref: "Ref: ",
-      empty: "No earnings yet. Publish articles to start earning!",
+      // Hero
+      totalEarned: "Total earned",
+      earnedIn: "Earned · {label}",
+      // Hero hint: "Top: <category> · <amount> (3 articles)". `articles` is
+      // a separate translation key so it inflects naturally per language.
+      topHint: "Top: {name} · {amount} ({count} {articles})",
+      article: "article",
+      articles: "articles",
+      // Date filter
+      dateRange: "DATE RANGE",
+      presets: {
+        all: "All",
+        today: "Today",
+        yesterday: "Yesterday",
+        last7: "Last 7 days",
+        thisMonth: "This month",
+        lastMonth: "Last month",
+        custom: "Custom",
+      },
+      from: "FROM",
+      to: "TO",
+      startDate: "Start date",
+      endDate: "End date",
+      clear: "Clear",
+      // Tabs
+      tabs: {
+        pending: "Pending",
+        approved: "Approved",
+        settled: "Settled",
+        cancelled: "Cancelled",
+      },
+      // By category
+      byCategory: "By category",
+      byCategorySub: "Only counts paid articles in the selected range",
+      // List header
+      pendingPayments: "Pending payments",
+      approvedPayments: "Approved payments",
+      settledPayments: "Settled payments",
+      cancelledPayments: "Cancelled payments",
+      item: "item",
+      items: "items",
+      itemsCount: "{count} {word}",
+      // Empty states (filtered vs per-tab unfiltered)
+      emptyFiltered: "No {tab} payments in this date range.",
+      emptyPending: "Nothing pending. Submit an article to start.",
+      emptyApproved: "No approved payments yet.",
+      emptySettled: "No settled payments yet. Earnings appear here after admin pays out.",
+      emptyCancelled: "No cancelled payments — every payment has stayed on track.",
+      // Row meta
+      whyRejected: "Why it was rejected",
+      // iOS date-picker sheet
+      pickerFrom: "From",
+      pickerTo: "To",
+      pickerDone: "Done",
     },
     profile: {
       title: "Profile",
@@ -432,6 +481,7 @@ export const translations = {
     validation: {
       required: "ఈ ఫీల్డ్ తప్పనిసరి",
       email: "సరైన ఇమెయిల్ చిరునామా నమోదు చేయండి",
+      emailMismatch: "ఇమెయిల్‌లు సరిపోలడం లేదు — అదే చిరునామాను మళ్లీ టైప్ చేయండి",
       phone: "సరైన 10-అంకెల ఫోన్ నంబర్ నమోదు చేయండి",
       password: "పాస్‌వర్డ్ కనీసం 8 అక్షరాలు ఉండాలి",
       pincode: "పిన్‌కోడ్ 6 అంకెలు ఉండాలి",
@@ -520,6 +570,8 @@ export const translations = {
       submittedMsg: "మీ KYC పత్రాలు పరిశీలనలో ఉన్నాయి. ధృవీకరించిన తర్వాత మీకు తెలియజేయబడుతుంది.",
       fullNamePlaceholder: "మీ పూర్తి పేరు నమోదు చేయండి",
       emailPlaceholder: "మీ ఇమెయిల్ ID నమోదు చేయండి",
+      emailConfirm: "ఇమెయిల్ మళ్లీ టైప్ చేయండి *",
+      emailConfirmPlaceholder: "మీ ఇమెయిల్ ID మళ్లీ టైప్ చేయండి",
       phonePlaceholder: "మీ ఫోన్ నంబర్ నమోదు చేయండి",
       passwordPlaceholder: "మీ పాస్‌వర్డ్ నమోదు చేయండి",
       pincodePlaceholder: "మీ పిన్‌కోడ్ నమోదు చేయండి",
@@ -659,14 +711,58 @@ export const translations = {
       },
     },
     earnings: {
-      totalEarnings: "మొత్తం ఆదాయం",
-      thisMonth: "ఈ నెల",
-      pending: "పెండింగ్",
-      paid: "చెల్లించబడింది",
-      paymentHistory: "చెల్లింపు చరిత్ర",
-      articleFallback: "వార్త",
-      ref: "సూచన: ",
-      empty: "ఇంకా ఆదాయం లేదు. ఆదాయం పొందడానికి వార్తలను ప్రచురించండి!",
+      // Hero
+      totalEarned: "మొత్తం ఆదాయం",
+      earnedIn: "ఆదాయం · {label}",
+      topHint: "మొదటిది: {name} · {amount} ({count} {articles})",
+      article: "వార్త",
+      articles: "వార్తలు",
+      // Date filter
+      dateRange: "తేదీ పరిధి",
+      presets: {
+        all: "అన్నీ",
+        today: "ఈ రోజు",
+        yesterday: "నిన్న",
+        last7: "గత 7 రోజులు",
+        thisMonth: "ఈ నెల",
+        lastMonth: "గత నెల",
+        custom: "అనుకూలం",
+      },
+      from: "నుండి",
+      to: "వరకు",
+      startDate: "ప్రారంభ తేదీ",
+      endDate: "ముగింపు తేదీ",
+      clear: "క్లియర్",
+      // Tabs
+      tabs: {
+        pending: "పెండింగ్",
+        approved: "ఆమోదితం",
+        settled: "చెల్లించబడింది",
+        cancelled: "రద్దు చేయబడింది",
+      },
+      // By category
+      byCategory: "విభాగాల వారీగా",
+      byCategorySub: "ఎంచుకున్న పరిధిలో చెల్లించబడిన వార్తలను మాత్రమే లెక్కిస్తుంది",
+      // List header
+      pendingPayments: "పెండింగ్ చెల్లింపులు",
+      approvedPayments: "ఆమోదిత చెల్లింపులు",
+      settledPayments: "చెల్లించబడిన చెల్లింపులు",
+      cancelledPayments: "రద్దు చేయబడిన చెల్లింపులు",
+      item: "అంశం",
+      items: "అంశాలు",
+      itemsCount: "{count} {word}",
+      // Empty states (filtered vs per-tab unfiltered)
+      emptyFiltered: "ఈ తేదీ పరిధిలో {tab} చెల్లింపులు లేవు.",
+      emptyPending: "పెండింగ్‌లో ఏదీ లేదు. ప్రారంభించడానికి ఒక వార్తను సమర్పించండి.",
+      emptyApproved: "ఇంకా ఆమోదిత చెల్లింపులు లేవు.",
+      emptySettled: "ఇంకా చెల్లించబడిన చెల్లింపులు లేవు. అడ్మిన్ చెల్లించిన తర్వాత ఆదాయం ఇక్కడ కనిపిస్తుంది.",
+      emptyCancelled: "రద్దు చేయబడిన చెల్లింపులు లేవు — ప్రతి చెల్లింపు సరిగ్గా జరిగింది.",
+      // Row meta
+      whyRejected: "ఎందుకు తిరస్కరించబడింది",
+      // iOS date-picker sheet
+      pickerFrom: "నుండి",
+      pickerTo: "వరకు",
+      pickerDone: "పూర్తయింది",
     },
     profile: {
       title: "ప్రొఫైల్",

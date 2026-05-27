@@ -28,9 +28,9 @@ async function resolveArticle(slugid: string) {
   const canonicalPath = articleHref(article);
   const requestedPath = `/news/${slugid}`;
   if (canonicalPath !== requestedPath) {
-    return { article: null as const, redirectTo: canonicalPath };
+    return { article: null, redirectTo: canonicalPath };
   }
-  return { article, redirectTo: null as const };
+  return { article, redirectTo: null };
 }
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {

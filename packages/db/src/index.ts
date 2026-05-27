@@ -44,7 +44,38 @@ export const prisma = globalForPrisma.prisma ?? buildClient();
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
-export * from "@prisma/client";
+// Re-export named enums + the `Prisma` namespace from @prisma/client.
+//
+// We previously used `export * from "@prisma/client"`, but Turbopack can't
+// statically analyse a CommonJS module's exports, so every Next.js route
+// that imports `@rayalaseema/db` printed an `unexpected export *` warning
+// on each compile. Listing names explicitly tells the bundler exactly what
+// is re-exported and silences the warning.
+//
+// Add a name here when a consumer needs to import a new Prisma enum / type
+// via `@rayalaseema/db`.
+export {
+  Prisma,
+  PrismaClient,
+  Role,
+  ArticleStatus,
+  Language,
+  MediaType,
+  EpaperWorkflowState,
+  EpaperImageAssetCategory,
+  EpaperTemplateType,
+  SocialPlatform,
+  SocialPostStatus,
+  DeskBranch,
+  AdPosition,
+  KycStatus,
+  ProfileUpdateRequestStatus,
+  PaymentStatus,
+  ContentType,
+  MenuLocation,
+  MenuItemTargetType,
+} from "@prisma/client";
+
 export * from "./payload-schemas";
 export * from "./menu-schemas";
 export * from "./page-builder-schemas";

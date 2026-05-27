@@ -480,7 +480,7 @@ async function resolveArticles(blocks: Block[]): Promise<Map<string, ResolvedArt
       summary: r.summary,
       featuredImage: r.featuredImage,
       bodyText: stripHtml(r.body || ""),
-      categoryName: r.category.name,
+      categoryName: r.category?.name ?? "",
       deskName: r.desk?.name ?? null,
     });
   }

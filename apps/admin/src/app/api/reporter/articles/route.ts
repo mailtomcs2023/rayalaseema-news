@@ -3,6 +3,7 @@ import { prisma } from "@rayalaseema/db";
 import { getReporterId } from "@/lib/reporter-auth";
 import { sanitizeSlug } from "@/lib/slug";
 import { resolveDeskId } from "@/lib/desk-resolver";
+import { pickLeastLoadedReviewer } from "@/lib/reviewer-assignment";
 
 // Articles for the reporter (Expo) app — scoped to ONE reporter.
 //
@@ -20,7 +21,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const limit = Math.min(parseInt(searchParams.get("limit") || "50") || 50, 100);
 
-    const [articles, total] = await Promise.all([
+    const [rows, total] = await Promise.all([
       prisma.content.findMany({
         where: { type: "ARTICLE", authorId: reporterId },
         // Explicit select — keeps the payload small and avoids any optional
@@ -38,12 +39,25 @@ export async function GET(req: NextRequest) {
           updatedAt: true,
           categoryId: true,
           category: { select: { name: true, nameEn: true, slug: true, color: true } },
+          // Inline payment so the reporter's list shows ₹amount + status next
+          // to each article. 1-1 in practice via contentId @unique.
+          payments: {
+            select: { totalAmount: true, status: true, currency: true, paidAt: true, paymentMethod: true },
+            take: 1,
+          },
         },
         orderBy: { createdAt: "desc" },
         take: limit,
       }),
       prisma.content.count({ where: { type: "ARTICLE", authorId: reporterId } }),
     ]);
+
+    // Flatten `payments[0]` to `payment` so callers don't deal with the
+    // 1-to-many array shape that Prisma returns for a 1-1 relation.
+    const articles = rows.map(({ payments, ...rest }) => ({
+      ...rest,
+      payment: payments[0] ?? null,
+    }));
 
     return NextResponse.json({ articles, total });
   } catch (e: any) {
@@ -103,6 +117,15 @@ export async function POST(req: NextRequest) {
       constituencyId: null,
     });
 
+    // Auto-assign a sub-editor at submit time so the article lands directly
+    // in the right reviewer's queue. For drafts (status=DRAFT) we skip
+    // assignment — no point reserving a reviewer for an article that may
+    // never be submitted.
+    const assignedReviewerId =
+      finalStatus === "SUBMITTED"
+        ? await pickLeastLoadedReviewer(prisma, categoryId)
+        : null;
+
     const article = await prisma.content.create({
       data: {
         type: "ARTICLE",
@@ -116,6 +139,7 @@ export async function POST(req: NextRequest) {
         deskId: resolvedDeskId,
         language: "TELUGU",
         authorId: reporterId,
+        assignedReviewerId,
       },
       // Narrow the RETURNING clause so callers (Expo + reporter web) never see
       // optional columns that aren't migrated in every environment.

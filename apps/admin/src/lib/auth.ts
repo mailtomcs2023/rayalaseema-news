@@ -3,6 +3,7 @@ import type { NextAuthResult } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@rayalaseema/db";
 import { compare } from "bcryptjs";
+import { normalizeEmail } from "./email";
 
 interface ExtendedUser {
   id: string;
@@ -20,8 +21,11 @@ const nextAuth = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
+        // Lookup by the canonical form so signing in with "Foo@Gmail.com"
+        // finds the row stored as "foo@gmail.com". Without this, casing-
+        // mismatch on login would 401 the user even though the account exists.
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
+          where: { email: normalizeEmail(credentials.email) },
         });
 
         if (!user || !user.active) return null;

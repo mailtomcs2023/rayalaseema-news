@@ -22,6 +22,14 @@ export default function TabsLayout() {
       // colour (white + a primary overlay → looks slightly purple). Force pure
       // white on Android only; iOS keeps its native liquid-glass material.
       backgroundColor={Platform.OS === "android" ? "#FFFFFF" : undefined}
+      // Material 3 always renders an indicator pill behind the active tab on
+      // Android — trying to hide it (transparent, white-on-white) still runs
+      // the M3 selection animation, which read as a one-frame purple blink
+      // on every tab switch. Instead, tint it to a subtle on-brand red so
+      // the pill is intentional and matches the active icon. Same idea for
+      // the press ripple. Both props are Android-only and no-ops on iOS.
+      indicatorColor="rgba(255, 44, 44, 0.10)"
+      rippleColor="rgba(255, 44, 44, 0.10)"
     >
       <NativeTabs.Trigger name="home">
         <Icon sf="house.fill" androidSrc={<VectorIcon family={Ionicons} name="home" />} />

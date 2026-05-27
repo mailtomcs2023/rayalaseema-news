@@ -35,7 +35,12 @@
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Mid-gray (~70% lightness) to match the current shadcn light theme — the
+     * old default was 222.2 84% 4.9% (basically black), which made every input
+     * focus border look near-black instead of the expected soft gray. The
+     * Input now uses focus-visible:border-ring + focus-visible:ring-ring/50,
+     * so a softer ring keeps the focus state subtle. */
+    --ring: 220 13% 71%;
     --radius: 0.5rem;
   }
   /* shadcn components rely on the default border colour being the token.
@@ -256,4 +261,43 @@
     border-bottom: 1px solid #eee;
     max-height: 40vh;
   }
+}
+
+/* ===== Dialog animation =====
+   Replaces the shadcn default (fade + 95→100 zoom over 200 ms linear) which
+   felt like a flicker. The new motion eases from 92% to 100% with a soft
+   spring-style cubic-bezier, and the overlay fades on its own timeline so
+   the content arrives before the dimmer settles. Used by every Dialog/
+   DialogContent across the admin app via the rep-dialog-* keyframes. */
+@keyframes rep-dialog-content-in {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.92); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes rep-dialog-content-out {
+  from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  to   { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
+}
+@keyframes rep-dialog-overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes rep-dialog-overlay-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+[data-slot="dialog-content"][data-state="open"],
+.rep-dialog-content[data-state="open"] {
+  animation: rep-dialog-content-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+[data-slot="dialog-content"][data-state="closed"],
+.rep-dialog-content[data-state="closed"] {
+  animation: rep-dialog-content-out 160ms cubic-bezier(0.7, 0, 0.84, 0);
+}
+[data-slot="dialog-overlay"][data-state="open"],
+.rep-dialog-overlay[data-state="open"] {
+  animation: rep-dialog-overlay-in 220ms ease-out;
+}
+[data-slot="dialog-overlay"][data-state="closed"],
+.rep-dialog-overlay[data-state="closed"] {
+  animation: rep-dialog-overlay-out 160ms ease-in;
 }

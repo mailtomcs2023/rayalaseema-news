@@ -56,7 +56,7 @@ export default async function CartoonPage({ params }: { params: Promise<{ slug: 
         )}
 
         <div style={{ marginTop: 24 }}>
-          <ShareBar title={cartoon.title} slug={slug} siteUrl={SITE_URL} />
+          <ShareBar title={cartoon.title} articleUrl={`${SITE_URL}/cartoon/${slug}`} />
         </div>
       </main>
       <Footer config={config} />

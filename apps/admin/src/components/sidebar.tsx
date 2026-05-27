@@ -58,7 +58,12 @@ const navItems: { name: string; href: string; icon: string; roles: Role[] }[] = 
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  // `status` tells us whether NextAuth has finished its session probe. During
+  // the loading state we render every item so the sidebar isn't visibly
+  // empty for ~200–500 ms after every page load — the API still 403s any
+  // route the user shouldn't reach, so this is a UX optimisation, not a
+  // security boundary.
+  const { data: session, status } = useSession();
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
 
@@ -97,7 +102,11 @@ export function Sidebar() {
         {/* Logo */}
         <div style={{ padding: "16px 20px", borderBottom: "1px solid #1f2937", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
           <div>
-            <img src="/logo.png" alt="RE" style={{ height: 28 }} />
+            {/* White-on-transparent wordmark — the sidebar background is
+                dark (#111827) so the inverse logo reads cleanly. Mirror copy
+                already exists at apps/admin/public/logo-inverse.svg. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-inverse.svg" alt="Rayalaseema Express" style={{ height: 32, width: "auto" }} />
             <p style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>Content Management System</p>
           </div>
           <button
@@ -115,10 +124,16 @@ export function Sidebar() {
             user doesn't see a link that would 403 when clicked. */}
         <nav className="sidebar-nav" style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
           {navItems.filter((item) => {
+            // While the session is still loading, render NOTHING. Previously
+            // we rendered every item to avoid an empty-sidebar flash, but
+            // that caused a worse UX issue: a SUB_EDITOR refreshing on /
+            // would briefly see admin-only items (Users, Categories, Desks,
+            // Settings) before NextAuth resolved and the list collapsed.
+            // Showing wrong items is more confusing than a sub-second gap,
+            // especially since the footer card already shows the role.
+            if (status === "loading") return false;
+            if (status !== "authenticated") return false;
             const role = (session?.user as any)?.role as Role | undefined;
-            // If we don't know the role yet (session still loading), show
-            // nothing rather than every item — avoids a brief flash of links
-            // a sub editor isn't allowed to see.
             if (!role) return false;
             return item.roles.includes(role);
           }).map((item) => {

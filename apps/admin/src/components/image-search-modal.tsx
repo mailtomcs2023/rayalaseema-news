@@ -5,6 +5,7 @@
 "use client";
 
 import { useState } from "react";
+import { WithTooltip } from "@/components/ui/tooltip";
 
 interface Hit {
   thumbUrl: string;
@@ -171,7 +172,9 @@ export function ImageSearchModal({ open, initialQuery = "", onClose, onPick }: P
                 />
                 <div style={{ padding: 6, fontSize: 11, color: "#6b7280" }}>
                   {h.photographer && <div style={{ fontWeight: 600, color: "#374151" }}>{h.photographer}</div>}
-                  <div style={{ marginTop: 2 }} title={h.license}>{h.license.slice(0, 30)}…</div>
+                  <WithTooltip text={h.license}>
+                    <div style={{ marginTop: 2 }}>{h.license.slice(0, 30)}…</div>
+                  </WithTooltip>
                 </div>
                 <button
                   onClick={() => pickImage(h.fullUrl)}

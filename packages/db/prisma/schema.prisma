@@ -72,6 +72,8 @@ model User {
   contents          Content[]         @relation("ContentAuthor")
   contentRevisions  ContentRevision[]
   contentPayments   ContentPayment[]  @relation("ContentJournalist")
+  // Stage 2 — articles auto-assigned to this sub-editor's review queue.
+  assignedReviews   Content[]         @relation("ContentAssignedReviewer")
 
   // Page Builder (Spec #2) — back-relations
   templates         Template[]         @relation("TemplateCreator")
@@ -1001,11 +1003,15 @@ model PaymentConfig {
 // ============ ARTICLE PAYMENT ============
 
 enum PaymentStatus {
-  CALCULATED  // Auto-calculated when article published
-  APPROVED    // Admin approved for payout
-  PROCESSING  // Payment being processed
-  PAID        // Money transferred
-  DISPUTED    // Journalist raised dispute
+  CALCULATED  // Sub-editor set the amount when moving SUBMITTED → IN_REVIEW.
+              // Reporter sees this as "Pending" in their app.
+  APPROVED    // Article was published. Awaiting payout from admin.
+  PROCESSING  // Bank transfer initiated, not yet confirmed. (Unused in v1.)
+  PAID        // Money transferred. Reporter sees this as "Settled".
+  CANCELLED   // Article was rejected → payment cancelled. Row kept for the
+              // audit trail; flipped back to CALCULATED if the reporter
+              // re-submits and a sub-editor re-claims it.
+  DISPUTED    // Journalist raised dispute. (Unused in v1.)
 }
 
 // Spec #1 A1C (#189) — model ArticlePayment dropped. See Content table for the unified replacement.
@@ -1099,10 +1105,25 @@ model Content {
   // Editorial review trail (Spec #1 A1C #189 — promoted from Article columns
   // so existing UI keeps showing rejection notes + reviewer stamps).
   rejectionNote   String?       @db.Text
+  // Editor → Sub-editor return-with-feedback note. Distinct from rejectionNote
+  // (which is reporter-facing). Set when the Editor uses "Return to SE" on
+  // an IN_REVIEW row; cleared on the next forward transition (review/reject/
+  // approve/publish/archive) so a stale note never leaks into a fresh cycle.
+  editorNote      String?       @db.Text
   reviewedById    String?
   reviewedAt      DateTime?
   approvedById    String?
   approvedAt      DateTime?
+
+  // Auto-assigned sub-editor when the article enters SUBMITTED. Set by the
+  // load-balancing algorithm (least-loaded sub-editor in the article's
+  // category) on the reporter's POST /api/reporter/articles → SUBMITTED.
+  // First-come claim on /api/review action="review" uses this to prevent
+  // two sub-editors picking up the same row (atomic conditional UPDATE).
+  // Nullable so legacy rows + the "no sub-editor in this category" fallback
+  // both work without errors.
+  assignedReviewerId String?
+  assignedReviewer   User?   @relation("ContentAssignedReviewer", fields: [assignedReviewerId], references: [id])
 
   tags            ContentTag[]
   revisions       ContentRevision[]

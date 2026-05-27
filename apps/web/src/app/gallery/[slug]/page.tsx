@@ -73,7 +73,7 @@ export default async function GalleryPage({ params }: { params: Promise<{ slug: 
         </div>
 
         <div style={{ marginTop: 24 }}>
-          <ShareBar title={gallery.title} slug={slug} siteUrl={SITE_URL} />
+          <ShareBar title={gallery.title} articleUrl={`${SITE_URL}/gallery/${slug}`} />
         </div>
       </main>
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { hash } from "bcryptjs";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
+import { normalizeEmail } from "@/lib/email";
 
 export async function GET() {
   const session = await requireAuth(["ADMIN"]);
@@ -10,7 +11,7 @@ export async function GET() {
     const users = await prisma.user.findMany({
       select: {
         id: true, email: true, name: true, role: true, active: true, phone: true,
-        createdAt: true,
+        createdAt: true, mustChangePassword: true,
         _count: { select: { contents: true } },
         assignedCategories: { include: { category: { select: { id: true, name: true, nameEn: true } } } },
       },
@@ -37,14 +38,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Invalid role '${role}'. Must be one of: ${VALID_ROLES.join(", ")}` }, { status: 400 });
     }
 
-    const existing = await prisma.user.findUnique({ where: { email: b.email } });
+    // Canonicalise email — see lib/email.ts. Stops case-only duplicates
+    // (Foo@x.com / foo@x.com) and trailing-whitespace duplicates.
+    const cleanEmail = normalizeEmail(b.email);
+    if (!cleanEmail) return NextResponse.json({ error: "Email required" }, { status: 400 });
+
+    const existing = await prisma.user.findUnique({ where: { email: cleanEmail } });
     if (existing) return NextResponse.json({ error: "Email already exists" }, { status: 400 });
 
     const passwordHash = await hash(b.password, 12);
     const user = await prisma.user.create({
       data: {
-        email: b.email, name: b.name, passwordHash,
+        email: cleanEmail, name: b.name, passwordHash,
         role: role as any, bio: b.bio, phone: b.phone,
+        // Force-change-on-first-login flag: admin-set when creating an
+        // account with a temporary password the user should rotate.
+        mustChangePassword: !!b.mustChangePassword,
       },
     });
 

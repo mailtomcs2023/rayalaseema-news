@@ -140,6 +140,9 @@ export function EditArticleScreen() {
       const data = await api("/api/ai/rewrite", {
         method: "POST",
         body: { text: `Title: ${title}\n\nBody: ${body}`, action: "translate" },
+        // AI calls to Anthropic routinely take 15–30s on a multi-paragraph
+        // body. The default 10s would alias every translation to a timeout.
+        timeoutMs: 60000,
       });
       if (data.result) {
         const h2Match = data.result.match(/<h2[^>]*>(.*?)<\/h2>/);
@@ -297,6 +300,24 @@ export function EditArticleScreen() {
         )}
       </View>
 
+      {/* Photo — moved to the top so the hero anchors the screen. Only the
+          pickers are gated on `editable`; the preview always renders so the
+          reporter can see what's attached even on read-only statuses. */}
+      <Text style={styles.label}>{t("newArticle.featuredImage")}</Text>
+      {editable && (
+        <View style={styles.photoRow}>
+          <TouchableOpacity style={styles.photoBtn} onPress={takePhoto}>
+            <Ionicons name="camera-outline" size={16} color="#555" />
+            <Text style={styles.photoBtnText}>{t("common.camera")}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.photoBtn} onPress={pickImage}>
+            <Ionicons name="images-outline" size={16} color="#555" />
+            <Text style={styles.photoBtnText}>{t("newArticle.gallery")}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      {previewImage ? <Image source={{ uri: previewImage }} style={styles.preview} /> : null}
+
       {/* Title */}
       <Text style={styles.label}>{t("newArticle.headline")}</Text>
       <TextInput
@@ -394,22 +415,6 @@ export function EditArticleScreen() {
         </View>
       )}
       <FieldError message={errors.categoryId} />
-
-      {/* Photo — only swappable when editable; the existing image is always shown */}
-      <Text style={styles.label}>{t("newArticle.featuredImage")}</Text>
-      {editable && (
-        <View style={styles.photoRow}>
-          <TouchableOpacity style={styles.photoBtn} onPress={takePhoto}>
-            <Ionicons name="camera-outline" size={16} color="#555" />
-            <Text style={styles.photoBtnText}>{t("common.camera")}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.photoBtn} onPress={pickImage}>
-            <Ionicons name="images-outline" size={16} color="#555" />
-            <Text style={styles.photoBtnText}>{t("newArticle.gallery")}</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-      {previewImage ? <Image source={{ uri: previewImage }} style={styles.preview} /> : null}
 
       {/* Action buttons — only when editable.
           SUBMITTED: [Delete] + [Save Changes].

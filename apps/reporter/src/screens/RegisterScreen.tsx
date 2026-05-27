@@ -83,7 +83,7 @@ export function RegisterScreen() {
     { status: "ok" | "outside"; district?: string } | null
   >(null);
   const [form, setForm] = useState({
-    fullName: "", email: "", phone: "", password: "",
+    fullName: "", email: "", emailConfirm: "", phone: "", password: "",
     dateOfBirth: "", gender: "", address: "", city: "", pincode: "",
     primaryDistrict: "kurnool",
     aadhaarNumber: "", panNumber: "",
@@ -427,6 +427,22 @@ export function RegisterScreen() {
           <FieldLabel style={styles.label}>{t("register.email")}</FieldLabel>
           <TextInput style={[styles.input, errors.email ? styles.inputError : null]} placeholder={t("register.emailPlaceholder")} value={form.email} onChangeText={(v) => update("email", v)} keyboardType="email-address" autoCapitalize="none" onFocus={handleInputFocus} />
           <FieldError message={errors.email} />
+          <FieldLabel style={styles.label}>{t("register.emailConfirm")}</FieldLabel>
+          <TextInput
+            style={[styles.input, errors.emailConfirm ? styles.inputError : null]}
+            placeholder={t("register.emailConfirmPlaceholder")}
+            value={form.emailConfirm}
+            onChangeText={(v) => update("emailConfirm", v)}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            onFocus={handleInputFocus}
+            // Disable copy/paste so a reporter can't paste the same typo'd
+            // email into both fields — the confirmation step has to mean
+            // something. Long-press menu is still available on iOS but the
+            // friction is enough to make a deliberate match the norm.
+            contextMenuHidden
+          />
+          <FieldError message={errors.emailConfirm} />
           <FieldLabel style={styles.label}>{t("register.phone")}</FieldLabel>
           <TextInput style={[styles.input, errors.phone ? styles.inputError : null]} placeholder={t("register.phonePlaceholder")} value={form.phone} onChangeText={(v) => update("phone", v.replace(/[^0-9]/g, "").slice(0, 10))} keyboardType="phone-pad" maxLength={10} onFocus={handleInputFocus} />
           <FieldError message={errors.phone} />

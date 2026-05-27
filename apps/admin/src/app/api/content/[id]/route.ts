@@ -56,6 +56,16 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     }
     if (data.constituencyId === "") data.constituencyId = null;
 
+    // Admin override for auto-assignment (Stage 2). EDITOR + ADMIN can move
+    // an article to a different sub-editor (or unassign with null). REPORTER
+    // + SUB_EDITOR can't touch this field even when passed in the body.
+    if (body.assignedReviewerId !== undefined) {
+      const role = (session.user as any).role;
+      if (role === "ADMIN" || role === "EDITOR") {
+        data.assignedReviewerId = body.assignedReviewerId === "" ? null : body.assignedReviewerId;
+      }
+    }
+
     // Re-resolve desk if category/constituency touched or if editor passed deskId.
     const needsDeskResolve =
       body.deskId !== undefined ||

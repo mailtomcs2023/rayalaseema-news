@@ -1,7 +1,7 @@
 // Page Builder (Spec #2) — single-composite endpoint.
 
 import { NextRequest, NextResponse } from "next/server";
-import { prisma, compositeBlocksSchema } from "@rayalaseema/db";
+import { prisma, compositeBlocksSchema, Prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -23,7 +23,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     const { id } = await params;
     const body = await req.json();
-    const data: { name?: string; description?: string | null; blocks?: unknown } = {};
+    const data: Prisma.CompositeBlockUpdateInput = {};
     if (typeof body.name === "string") data.name = body.name.trim();
     if (Object.prototype.hasOwnProperty.call(body, "description")) {
       data.description = body.description ? String(body.description) : null;
@@ -36,7 +36,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
           { status: 400 },
         );
       }
-      data.blocks = parsed.data;
+      data.blocks = parsed.data as unknown as Prisma.InputJsonValue;
     }
     if (Object.keys(data).length === 0) {
       return NextResponse.json({ error: "Nothing to update" }, { status: 400 });

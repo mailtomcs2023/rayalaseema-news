@@ -1,116 +1,314 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Sidebar } from "@/components/sidebar";
+// /payments — admin payouts dashboard. Lists every ContentPayment row with a
+// status filter, totals per status, and a "Mark Paid" action for APPROVED
+// rows. Per-article rate cards (PaymentConfig) are intentionally not part of
+// this v1 — the CEO-approved flow has sub-editors set per-article amounts
+// during review, not derive from a category-level rate card.
 
-interface PaymentConfig {
-  id: string; articleType: string; name: string; nameTE?: string;
-  rate: number; minWords: number; requiresImage: boolean; requiresVideo: boolean;
-  bonusRate: number; active: boolean;
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Sidebar } from "@/components/sidebar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+type Status = "CALCULATED" | "APPROVED" | "PROCESSING" | "PAID" | "DISPUTED" | "CANCELLED";
+
+interface Payment {
+  id: string;
+  baseAmount: number;
+  totalAmount: number;
+  currency: string;
+  status: Status;
+  approvedAt: string | null;
+  paidAt: string | null;
+  paymentMethod: string | null;
+  transactionId: string | null;
+  note: string | null;
+  createdAt: string;
+  updatedAt: string;
+  content: {
+    id: string;
+    title: string;
+    slug: string | null;
+    status: string;
+    category: { name: string; nameEn: string; slug: string; color: string | null } | null;
+  };
+  journalist: { id: string; name: string; email: string };
 }
 
-const defaultTypes = [
-  { articleType: "text_news", name: "Text News (300+ words)", nameTE: "టెక్స్ట్ వార్త", minWords: 300 },
-  { articleType: "photo_news", name: "Photo + News", nameTE: "ఫోటో వార్త", minWords: 200, requiresImage: true },
-  { articleType: "video_story", name: "Video Story", nameTE: "వీడియో స్టోరీ", minWords: 100, requiresVideo: true },
-  { articleType: "exclusive", name: "Exclusive / Investigation", nameTE: "ఎక్స్‌క్లూసివ్", minWords: 500 },
-  { articleType: "breaking", name: "Breaking News", nameTE: "బ్రేకింగ్ న్యూస్", minWords: 50 },
-  { articleType: "opinion", name: "Opinion / Column", nameTE: "అభిప్రాయం", minWords: 400 },
+const FILTERS: { value: "ALL" | Status; label: string }[] = [
+  { value: "ALL",        label: "All" },
+  { value: "CALCULATED", label: "Pending" },
+  { value: "APPROVED",   label: "Approved" },
+  { value: "PAID",       label: "Settled" },
+  { value: "CANCELLED",  label: "Cancelled" },
 ];
 
+const STATUS_UI: Record<Status, { label: string; bg: string; fg: string }> = {
+  CALCULATED: { label: "Pending",        bg: "#fef3c7", fg: "#92400e" },
+  APPROVED:   { label: "Awaiting payout", bg: "#dbeafe", fg: "#1e3a8a" },
+  PROCESSING: { label: "Processing",     bg: "#ede9fe", fg: "#5b21b6" },
+  PAID:       { label: "Settled",        bg: "#dcfce7", fg: "#166534" },
+  CANCELLED:  { label: "Cancelled",      bg: "#f3f4f6", fg: "#6b7280" },
+  DISPUTED:   { label: "Disputed",       bg: "#fee2e2", fg: "#991b1b" },
+};
+
+function formatINR(n: number) {
+  return `₹${new Intl.NumberFormat("en-IN").format(Math.round(n))}`;
+}
+function formatDate(iso: string | null) {
+  if (!iso) return "—";
+  try { return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }); } catch { return "—"; }
+}
+
 export default function PaymentsPage() {
-  const [configs, setConfigs] = useState<PaymentConfig[]>([]);
-  const [editing, setEditing] = useState<Record<string, { rate: string; bonusRate: string }>>({});
+  const [filter, setFilter] = useState<"ALL" | Status>("ALL");
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
+  const [payTarget, setPayTarget] = useState<Payment | null>(null);
 
-  useEffect(() => {
-    fetch("/api/payment-config").then((r) => r.json()).then(setConfigs);
-  }, []);
-
-  const saveRate = async (articleType: string) => {
-    const e = editing[articleType];
-    if (!e) return;
-    const def = defaultTypes.find((d) => d.articleType === articleType);
-    await fetch("/api/payment-config", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ articleType, rate: parseFloat(e.rate), bonusRate: parseFloat(e.bonusRate || "0"), ...def }),
-    });
-    const updated = await fetch("/api/payment-config").then((r) => r.json());
-    setConfigs(updated);
-    setEditing((prev) => { const n = { ...prev }; delete n[articleType]; return n; });
+  const load = (status: "ALL" | Status) => {
+    setLoading(true);
+    fetch(`/api/payments?status=${status}`)
+      .then((r) => r.json())
+      .then((data) => {
+        setPayments(Array.isArray(data.payments) ? data.payments : []);
+        setCounts(data.counts || {});
+      })
+      .catch(() => setPayments([]))
+      .finally(() => setLoading(false));
   };
+  useEffect(() => { load(filter); }, [filter]);
+
+  // Total amount shown in the toolbar — sums all currently-visible payments.
+  const total = payments.reduce((s, p) => s + p.totalAmount, 0);
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
       <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111", marginBottom: 4 }}>Payment Configuration</h1>
-        <p style={{ fontSize: 13, color: "#888", marginBottom: 20 }}>Set per-article rates for reporters. All rates in INR (₹)</p>
+        <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111", marginBottom: 4 }}>Payments</h1>
+        <p style={{ fontSize: 13, color: "#888", marginBottom: 20 }}>
+          Approve, mark paid, and review per-article reporter payments. All amounts in INR (₹).
+        </p>
 
-        <div style={{ background: "#fff", borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", overflow: "hidden" }}>
-          <div className="table-scroll">
-          <table style={{ width: "100%", minWidth: 640, borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ borderBottom: "2px solid #f3f4f6" }}>
-                <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 12, color: "#888" }}>Article Type</th>
-                <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 12, color: "#888" }}>Telugu</th>
-                <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 12, color: "#888" }}>Min Words</th>
-                <th style={{ padding: "12px 16px", textAlign: "right", fontSize: 12, color: "#888" }}>Rate (₹)</th>
-                <th style={{ padding: "12px 16px", textAlign: "right", fontSize: 12, color: "#888" }}>Bonus/1K views</th>
-                <th style={{ padding: "12px 16px", textAlign: "right", fontSize: 12, color: "#888" }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {defaultTypes.map((dt) => {
-                const config = configs.find((c) => c.articleType === dt.articleType);
-                const isEditing = !!editing[dt.articleType];
+        <div className="shadcn-scope space-y-4">
+          {/* Status filter chips with counts */}
+          <div className="flex flex-wrap items-center gap-2">
+            {FILTERS.map((f) => (
+              <Button
+                key={f.value}
+                size="sm"
+                variant={filter === f.value ? "default" : "outline"}
+                onClick={() => setFilter(f.value)}
+              >
+                {f.label}
+                <span className="ms-1 inline-flex h-5 items-center rounded border bg-background px-1 text-[0.625rem] font-medium text-muted-foreground/70">
+                  {f.value === "ALL"
+                    ? Object.values(counts).reduce((s, n) => s + n, 0)
+                    : counts[f.value] ?? 0}
+                </span>
+              </Button>
+            ))}
+            <div className="ms-auto text-sm text-muted-foreground">
+              {payments.length} row{payments.length === 1 ? "" : "s"} · total {formatINR(total)}
+            </div>
+          </div>
 
-                return (
-                  <tr key={dt.articleType} style={{ borderBottom: "1px solid #f9fafb" }}>
-                    <td style={{ padding: "12px 16px" }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "#111" }}>{dt.name}</span>
-                      {dt.requiresImage && <span style={{ marginLeft: 6, fontSize: 9, background: "#dbeafe", color: "#1d4ed8", padding: "1px 6px", borderRadius: 3, fontWeight: 600 }}>📷 Photo</span>}
-                      {dt.requiresVideo && <span style={{ marginLeft: 6, fontSize: 9, background: "#fef3c7", color: "#92400e", padding: "1px 6px", borderRadius: 3, fontWeight: 600 }}>🎥 Video</span>}
-                    </td>
-                    <td style={{ padding: "12px 16px", fontSize: 12, color: "#888" }}>{dt.nameTE}</td>
-                    <td style={{ padding: "12px 16px", fontSize: 12, color: "#888" }}>{dt.minWords}+</td>
-                    <td style={{ padding: "12px 16px", textAlign: "right" }}>
-                      {isEditing ? (
-                        <input type="number" value={editing[dt.articleType].rate} onChange={(e) => setEditing({ ...editing, [dt.articleType]: { ...editing[dt.articleType], rate: e.target.value } })}
-                          style={{ width: 80, padding: "4px 8px", border: "1px solid #ddd", borderRadius: 4, fontSize: 14, textAlign: "right" }} />
-                      ) : (
-                        <span style={{ fontSize: 16, fontWeight: 800, color: config?.rate ? "#111" : "#ccc" }}>₹{config?.rate || "—"}</span>
-                      )}
-                    </td>
-                    <td style={{ padding: "12px 16px", textAlign: "right" }}>
-                      {isEditing ? (
-                        <input type="number" value={editing[dt.articleType].bonusRate} onChange={(e) => setEditing({ ...editing, [dt.articleType]: { ...editing[dt.articleType], bonusRate: e.target.value } })}
-                          style={{ width: 60, padding: "4px 8px", border: "1px solid #ddd", borderRadius: 4, fontSize: 13, textAlign: "right" }} />
-                      ) : (
-                        <span style={{ fontSize: 13, color: "#888" }}>₹{config?.bonusRate || 0}</span>
-                      )}
-                    </td>
-                    <td style={{ padding: "12px 16px", textAlign: "right" }}>
-                      {isEditing ? (
-                        <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
-                          <button onClick={() => saveRate(dt.articleType)} style={{ padding: "4px 12px", background: "#16a34a", color: "#fff", border: "none", borderRadius: 4, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Save</button>
-                          <button onClick={() => setEditing((prev) => { const n = { ...prev }; delete n[dt.articleType]; return n; })} style={{ padding: "4px 10px", background: "#f3f4f6", color: "#888", border: "none", borderRadius: 4, fontSize: 11, cursor: "pointer" }}>Cancel</button>
-                        </div>
-                      ) : (
-                        <button onClick={() => setEditing({ ...editing, [dt.articleType]: { rate: String(config?.rate || ""), bonusRate: String(config?.bonusRate || "0") } })}
-                          style={{ padding: "4px 12px", background: "#eff6ff", color: "#2563eb", border: "none", borderRadius: 4, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-                          Set Rate
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          {/* Table */}
+          <div className="overflow-hidden rounded-md border bg-background">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Article</TableHead>
+                  <TableHead>Reporter</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead>Paid On</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {payments.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                      {loading ? "Loading payments..." : "No payments in this view."}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  payments.map((p) => {
+                    const ui = STATUS_UI[p.status];
+                    return (
+                      <TableRow key={p.id}>
+                        <TableCell>
+                          <Link href={`/content/${p.content.id}`} className="text-foreground hover:underline">
+                            <span className="font-medium">{p.content.title || "(untitled)"}</span>
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{p.journalist.name}</TableCell>
+                        <TableCell>
+                          {p.content.category ? (
+                            <Badge variant="outline" style={{ borderColor: p.content.category.color ?? undefined }}>
+                              {p.content.category.nameEn}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums font-semibold">
+                          {formatINR(p.totalAmount)}
+                        </TableCell>
+                        <TableCell>
+                          <span
+                            className="rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                            style={{ background: ui.bg, color: ui.fg }}
+                          >
+                            {ui.label}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-xs">{formatDate(p.createdAt)}</TableCell>
+                        <TableCell className="text-muted-foreground text-xs">
+                          {p.paidAt
+                            ? <>{formatDate(p.paidAt)}{p.paymentMethod ? ` · ${p.paymentMethod}` : ""}</>
+                            : "—"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {p.status === "APPROVED" && (
+                            <Button size="sm" onClick={() => setPayTarget(p)}>Mark Paid</Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
           </div>
         </div>
       </main>
+
+      {payTarget && (
+        <MarkPaidDialog
+          payment={payTarget}
+          onClose={() => setPayTarget(null)}
+          onPaid={() => { setPayTarget(null); load(filter); }}
+        />
+      )}
     </div>
+  );
+}
+
+function MarkPaidDialog({
+  payment,
+  onClose,
+  onPaid,
+}: {
+  payment: Payment;
+  onClose: () => void;
+  onPaid: () => void;
+}) {
+  const [method, setMethod] = useState<"UPI" | "BANK" | "CHEQUE">("UPI");
+  const [transactionId, setTransactionId] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/payments/${payment.id}/pay`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentMethod: method, transactionId: transactionId.trim() || undefined }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        setError(j.error || `Failed (${res.status})`);
+        setBusy(false);
+        return;
+      }
+      onPaid();
+    } catch (e: any) {
+      setError(e?.message || "Network error");
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={(v) => !v && !busy && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Mark payment as settled</DialogTitle>
+          <DialogDescription>
+            Reporter <span className="font-semibold">{payment.journalist.name}</span> ·{" "}
+            <span className="font-semibold tabular-nums">{formatINR(payment.totalAmount)}</span>{" "}
+            for &ldquo;{payment.content.title}&rdquo;.
+            <br />Once marked paid, the amount can&apos;t be edited.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="pay-method">Method</Label>
+            <Select value={method} onValueChange={(v) => setMethod(v as "UPI" | "BANK" | "CHEQUE")}>
+              <SelectTrigger id="pay-method" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="UPI">UPI</SelectItem>
+                <SelectItem value="BANK">Bank transfer</SelectItem>
+                <SelectItem value="CHEQUE">Cheque</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="pay-txn">Transaction ID <span className="text-muted-foreground font-normal">(optional)</span></Label>
+            <Input
+              id="pay-txn"
+              value={transactionId}
+              onChange={(e) => setTransactionId(e.target.value)}
+              placeholder="e.g. UPI ref or bank UTR"
+            />
+          </div>
+          {error && <p className="text-xs text-destructive">{error}</p>}
+        </div>
+
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose} disabled={busy}>Cancel</Button>
+          <Button type="button" onClick={submit} disabled={busy}>
+            {busy ? "Marking paid..." : "Mark Paid"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

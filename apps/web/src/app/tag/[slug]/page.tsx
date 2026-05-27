@@ -30,29 +30,29 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function TagPage({ params }: Props) {
   const { slug } = await params;
-  const tag = await prisma.tag.findUnique({
-    where: { slug },
-    include: {
-      articles: {
-        where: { article: { status: "PUBLISHED" } },
-        include: {
-          article: {
-            include: {
-              category: { select: { name: true, slug: true, color: true } },
-              author: { select: { name: true } },
-            },
+  // Spec #1 #189: Tag → Content is now via the `contentTags` join table.
+  // We fetch the tag for its name + the joined Content rows in parallel.
+  const [tag, contentTags] = await Promise.all([
+    prisma.tag.findUnique({ where: { slug } }),
+    prisma.contentTag.findMany({
+      where: { tag: { slug }, content: { status: "PUBLISHED" } },
+      include: {
+        content: {
+          include: {
+            category: { select: { name: true, slug: true, color: true } },
+            author: { select: { name: true } },
           },
         },
-        orderBy: { article: { publishedAt: "desc" } },
-        take: 60,
       },
-    },
-  });
+      orderBy: { content: { publishedAt: "desc" } },
+      take: 60,
+    }),
+  ]);
 
   if (!tag) notFound();
 
   const config = await getSiteConfig();
-  const articles = tag.articles.map((at) => at.article);
+  const articles = contentTags.map((ct) => ct.content);
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--page-bg, #f6f6f6)" }}>
@@ -85,10 +85,10 @@ export default async function TagPage({ params }: Props) {
                 <div style={{ padding: 16 }}>
                   <span style={{
                     display: "inline-block", fontSize: 11, fontWeight: 700, color: "#fff",
-                    background: a.category.color || "var(--brand)", padding: "2px 8px", borderRadius: 4,
+                    background: a.category?.color || "var(--brand)", padding: "2px 8px", borderRadius: 4,
                     textTransform: "uppercase", letterSpacing: "0.05em",
                   }}>
-                    {a.category.name}
+                    {a.category?.name ?? ""}
                   </span>
                   <h2 style={{ fontSize: 18, fontWeight: 800, color: "#111", lineHeight: 1.35, marginTop: 8 }}>
                     {a.title}
@@ -99,7 +99,7 @@ export default async function TagPage({ params }: Props) {
                     </p>
                   )}
                   <p style={{ fontSize: 12, color: "#888", marginTop: 8 }}>
-                    {a.author.name} · {a.publishedAt && new Date(a.publishedAt).toLocaleDateString("te-IN", { day: "numeric", month: "short", year: "numeric" })}
+                    {a.author?.name ?? ""} · {a.publishedAt && new Date(a.publishedAt).toLocaleDateString("te-IN", { day: "numeric", month: "short", year: "numeric" })}
                   </p>
                 </div>
               </Link>

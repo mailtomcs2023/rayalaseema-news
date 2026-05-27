@@ -113,7 +113,6 @@ export async function BlockRenderer({
         className={cls}
       >
         {innerBlocks.map((inner) => (
-          // @ts-expect-error — async server component
           <BlockRenderer
             key={inner.id}
             block={inner}

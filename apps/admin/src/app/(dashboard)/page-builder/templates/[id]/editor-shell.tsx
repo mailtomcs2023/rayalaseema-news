@@ -13,6 +13,7 @@
 
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import Link from "next/link";
+import { WithTooltip } from "@/components/ui/tooltip";
 
 interface Initial {
   id: string;
@@ -455,22 +456,24 @@ export function EditorShell({
         </span>
 
         <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
-          <button
-            onClick={undo}
-            disabled={undoStack.current.length === 0}
-            style={btnSecondary}
-            title="Undo (Cmd/Ctrl+Z)"
-          >
-            ↶ Undo
-          </button>
-          <button
-            onClick={redo}
-            disabled={redoStack.current.length === 0}
-            style={btnSecondary}
-            title="Redo (Cmd/Ctrl+Shift+Z)"
-          >
-            ↷ Redo
-          </button>
+          <WithTooltip text="Undo (Cmd/Ctrl+Z)">
+            <button
+              onClick={undo}
+              disabled={undoStack.current.length === 0}
+              style={btnSecondary}
+            >
+              ↶ Undo
+            </button>
+          </WithTooltip>
+          <WithTooltip text="Redo (Cmd/Ctrl+Shift+Z)">
+            <button
+              onClick={redo}
+              disabled={redoStack.current.length === 0}
+              style={btnSecondary}
+            >
+              ↷ Redo
+            </button>
+          </WithTooltip>
           <div style={deviceTabs}>
             <button
               onClick={() => setDevice("desktop")}
@@ -711,21 +714,22 @@ function PaletteItem({
   dragPayload: { type: string; compositeId?: string };
 }) {
   return (
-    <button
-      onClick={onClick}
-      draggable
-      onDragStart={(e) => {
-        e.dataTransfer.effectAllowed = "copy";
-        e.dataTransfer.setData(
-          "application/page-builder",
-          JSON.stringify({ kind: "new", ...dragPayload }),
-        );
-      }}
-      style={paletteItem}
-      title="Click to add at end, or drag onto the outline at the desired position"
-    >
-      + {label}
-    </button>
+    <WithTooltip text="Click to add at end, or drag onto the outline at the desired position">
+      <button
+        onClick={onClick}
+        draggable
+        onDragStart={(e) => {
+          e.dataTransfer.effectAllowed = "copy";
+          e.dataTransfer.setData(
+            "application/page-builder",
+            JSON.stringify({ kind: "new", ...dragPayload }),
+          );
+        }}
+        style={paletteItem}
+      >
+        + {label}
+      </button>
+    </WithTooltip>
   );
 }
 
@@ -814,46 +818,54 @@ function BlockList({
           b.type === "Composite" ? composites.find((c) => c.id === b.compositeId)?.name : null;
         return (
           <div key={b.id}>
-            <div
-              onClick={(e) => onSelect(b.id, e.metaKey || e.ctrlKey)}
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.effectAllowed = "move";
-                e.dataTransfer.setData(
-                  "application/page-builder",
-                  JSON.stringify({ kind: "move", id: b.id }),
-                );
-              }}
-              style={{
-                ...blockRow,
-                ...(selectedId === b.id ? blockRowActive : {}),
-                ...(multiSelectedIds.has(b.id) ? blockRowMulti : {}),
-              }}
-              title={multiSelectedIds.has(b.id) ? "Click to keep selecting; Cmd/Ctrl-click to toggle" : "Cmd/Ctrl-click to multi-select"}
+            <WithTooltip
+              text={multiSelectedIds.has(b.id) ? "Click to keep selecting; Cmd/Ctrl-click to toggle" : "Cmd/Ctrl-click to multi-select"}
             >
-              <span style={{ color: "#9ca3af", cursor: "grab", marginRight: 4 }} title="Drag to reorder">⋮⋮</span>
-              <span style={{ flex: 1, fontWeight: 600 }}>
-                {i + 1}. {b.type}
-                {compName && <span style={{ color: "#6b7280", fontWeight: 400 }}> · {compName}</span>}
-              </span>
-              <button
-                onClick={(e) => { e.stopPropagation(); onMove(b.id, -1); }}
-                disabled={i === 0}
-                style={iconBtn}
-                title="Move up"
-              >▲</button>
-              <button
-                onClick={(e) => { e.stopPropagation(); onMove(b.id, 1); }}
-                disabled={i === blocks.length - 1}
-                style={iconBtn}
-                title="Move down"
-              >▼</button>
-              <button
-                onClick={(e) => { e.stopPropagation(); onDelete(b.id); }}
-                style={{ ...iconBtn, color: "#B91C1C" }}
-                title="Delete"
-              >✕</button>
-            </div>
+              <div
+                onClick={(e) => onSelect(b.id, e.metaKey || e.ctrlKey)}
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.effectAllowed = "move";
+                  e.dataTransfer.setData(
+                    "application/page-builder",
+                    JSON.stringify({ kind: "move", id: b.id }),
+                  );
+                }}
+                style={{
+                  ...blockRow,
+                  ...(selectedId === b.id ? blockRowActive : {}),
+                  ...(multiSelectedIds.has(b.id) ? blockRowMulti : {}),
+                }}
+              >
+                <WithTooltip text="Drag to reorder">
+                  <span style={{ color: "#9ca3af", cursor: "grab", marginRight: 4 }}>⋮⋮</span>
+                </WithTooltip>
+                <span style={{ flex: 1, fontWeight: 600 }}>
+                  {i + 1}. {b.type}
+                  {compName && <span style={{ color: "#6b7280", fontWeight: 400 }}> · {compName}</span>}
+                </span>
+                <WithTooltip text="Move up">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onMove(b.id, -1); }}
+                    disabled={i === 0}
+                    style={iconBtn}
+                  >▲</button>
+                </WithTooltip>
+                <WithTooltip text="Move down">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onMove(b.id, 1); }}
+                    disabled={i === blocks.length - 1}
+                    style={iconBtn}
+                  >▼</button>
+                </WithTooltip>
+                <WithTooltip text="Delete">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onDelete(b.id); }}
+                    style={{ ...iconBtn, color: "#B91C1C" }}
+                  >✕</button>
+                </WithTooltip>
+              </div>
+            </WithTooltip>
             {/* Drop indicator after each block */}
             <div {...dropZoneProps(i + 1)} style={dropZone(dropIdx === i + 1)} />
           </div>

@@ -211,6 +211,71 @@ export function ArticleEditor({ kycVerified }: Props) {
         </div>
       ) : null}
 
+      {/* Featured image — moved to the top so the visual hero anchors the
+          page; the rest of the form (headline / body / category) sits below. */}
+      <Label>Featured image</Label>
+      <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          style={photoBtnStyle}
+        >
+          <ImageIcon size={16} color="#555" />
+          Choose from device
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (fileInputRef.current) {
+              fileInputRef.current.setAttribute("capture", "environment");
+              fileInputRef.current.click();
+            }
+          }}
+          style={photoBtnStyle}
+        >
+          <Camera size={16} color="#555" />
+          Camera
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={onPickFile}
+          style={{ display: "none" }}
+        />
+      </div>
+      {imagePreview ? (
+        <div style={{ position: "relative", marginBottom: 16 }}>
+          <img
+            src={imagePreview}
+            alt=""
+            style={{ width: "100%", maxHeight: 280, objectFit: "cover", borderRadius: 10, display: "block" }}
+          />
+          <button
+            type="button"
+            onClick={clearImage}
+            aria-label="Remove image"
+            style={{
+              position: "absolute",
+              top: 8,
+              right: 8,
+              background: "rgba(0,0,0,0.6)",
+              color: "#fff",
+              border: "none",
+              borderRadius: "50%",
+              width: 30,
+              height: 30,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+            }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+      ) : null}
+
       <Label>Headline</Label>
       <textarea
         value={title}
@@ -319,69 +384,6 @@ export function ArticleEditor({ kycVerified }: Props) {
         </div>
       )}
       <FieldError message={errors.categoryId} />
-
-      <Label>Featured image</Label>
-      <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          style={photoBtnStyle}
-        >
-          <ImageIcon size={16} color="#555" />
-          Choose from device
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            if (fileInputRef.current) {
-              fileInputRef.current.setAttribute("capture", "environment");
-              fileInputRef.current.click();
-            }
-          }}
-          style={photoBtnStyle}
-        >
-          <Camera size={16} color="#555" />
-          Camera
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={onPickFile}
-          style={{ display: "none" }}
-        />
-      </div>
-      {imagePreview ? (
-        <div style={{ position: "relative", marginBottom: 12 }}>
-          <img
-            src={imagePreview}
-            alt=""
-            style={{ width: "100%", maxHeight: 280, objectFit: "cover", borderRadius: 10, display: "block" }}
-          />
-          <button
-            type="button"
-            onClick={clearImage}
-            aria-label="Remove image"
-            style={{
-              position: "absolute",
-              top: 8,
-              right: 8,
-              background: "rgba(0,0,0,0.6)",
-              color: "#fff",
-              border: "none",
-              borderRadius: "50%",
-              width: 30,
-              height: 30,
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-            }}
-          >
-            <X size={16} />
-          </button>
-        </div>
-      ) : null}
 
       {/* Action row */}
       <div style={{ display: "flex", gap: 8, marginTop: 16 }}>

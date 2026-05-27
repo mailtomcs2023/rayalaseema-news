@@ -4,7 +4,11 @@
 // (Phase A0).
 
 type ArticleLink = {
-  id: string;
+  // Optional because some link sources (e.g. ePaper hotspots whose JSON
+  // payload only stores {slug,x,y,w,h}) don't carry the article id. When
+  // missing we fall back to a slug-only path; callers that need the
+  // canonical id-suffixed URL must pass `id`.
+  id?: string;
   slug: string | null;
   constituency?: {
     slug: string;
@@ -47,12 +51,13 @@ function idSuffix(id: string): string {
  */
 export function articleHref(a: ArticleLink): string {
   if (!a.slug) return "#";
-  const suffix = idSuffix(a.id);
+  const suffix = a.id ? idSuffix(a.id) : "";
+  const tail = suffix ? `${a.slug}-${suffix}` : a.slug;
   const c = a.constituency;
   if (c?.slug && c.district?.slug && !RESERVED_DISTRICT_SLUGS.has(c.district.slug)) {
-    return `/${c.district.slug}/${c.slug}/${a.slug}-${suffix}`;
+    return `/${c.district.slug}/${c.slug}/${tail}`;
   }
-  return `/news/${a.slug}-${suffix}`;
+  return `/news/${tail}`;
 }
 
 /**

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { hash } from "bcryptjs";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { normalizeEmail } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   // 5 registrations per IP per hour is plenty for a real user and tight
@@ -26,14 +27,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Name, email, phone, password required" }, { status: 400 });
     }
 
-    // Check if email exists
-    const existing = await prisma.user.findUnique({ where: { email } });
+    // Canonicalise email before the uniqueness check + write. Without this
+    // `Foo@Gmail.com` and `foo@gmail.com` would slip past the unique
+    // constraint as two separate users — same human, two accounts, two
+    // sets of articles, no way to recover.
+    const cleanEmail = normalizeEmail(email);
+    if (!cleanEmail) {
+      return NextResponse.json({ error: "Email is required" }, { status: 400 });
+    }
+
+    // Check if email exists (against the normalised form).
+    const existing = await prisma.user.findUnique({ where: { email: cleanEmail } });
     if (existing) return NextResponse.json({ error: "Email already registered" }, { status: 400 });
 
     // Create user
     const passwordHash = await hash(password, 12);
     const user = await prisma.user.create({
-      data: { email, name: fullName, passwordHash, role: "REPORTER", phone, active: true },
+      data: { email: cleanEmail, name: fullName, passwordHash, role: "REPORTER", phone, active: true },
     });
 
     // Create journalist profile with KYC

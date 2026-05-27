@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { getReporterId } from "@/lib/reporter-auth";
+import { pickLeastLoadedReviewer } from "@/lib/reviewer-assignment";
 
 // Reporter-scoped single-article operations.
 //
@@ -96,15 +97,32 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     // Status: the only transition reporters may make here is
     // DRAFT → SUBMITTED ("send my draft for review"). Anything else is a
     // hard 403 — we don't let reporters un-submit, approve, or publish.
+    let willSubmit = false;
     if (status !== undefined && status !== r.article.status) {
       if (r.article.status === "DRAFT" && status === "SUBMITTED") {
         data.status = "SUBMITTED";
+        willSubmit = true;
       } else {
         return NextResponse.json(
           { error: `Status change ${r.article.status} → ${status} is not allowed` },
           { status: 403 },
         );
       }
+    }
+
+    // When the reporter pushes a draft into review, run auto-assignment so
+    // the article goes to the least-loaded sub-editor in its category. We
+    // look up the article's current category (which may have been updated
+    // in this same PATCH via `data.categoryId`) to feed the algorithm.
+    if (willSubmit) {
+      const targetCategoryId =
+        typeof data.categoryId === "string"
+          ? data.categoryId
+          : (await prisma.content.findUnique({
+              where: { id },
+              select: { categoryId: true },
+            }))?.categoryId ?? null;
+      data.assignedReviewerId = await pickLeastLoadedReviewer(prisma, targetCategoryId);
     }
 
     const updated = await prisma.content.update({

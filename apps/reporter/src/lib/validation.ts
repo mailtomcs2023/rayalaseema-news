@@ -34,13 +34,21 @@ export function loginSchema(t: TFn) {
 // Pincode is required because the admin uses it to route the reporter to the
 // correct district desk for the editorial workflow.
 export function step1Schema(t: TFn) {
+  // Confirm-email is a typo-catcher (we don't send OTP, so we can't prove
+  // ownership — at least force the reporter to type their email twice so a
+  // silent typo doesn't create a useless account they can never log in to).
+  // Compared case-insensitively + trimmed to match how the server stores it.
   return z.object({
     fullName: z.string().trim().min(1, t("validation.required")),
     email: z.string().trim().min(1, t("validation.required")).email(t("validation.email")),
+    emailConfirm: z.string().trim().min(1, t("validation.required")),
     phone: z.string().regex(PHONE_RE, t("validation.phone")),
     password: z.string().min(8, t("validation.password")),
     pincode: z.string().regex(/^[0-9]{6}$/, t("validation.pincode")),
-  });
+  }).refine(
+    (d) => d.email.trim().toLowerCase() === d.emailConfirm.trim().toLowerCase(),
+    { path: ["emailConfirm"], message: t("validation.emailMismatch") },
+  );
 }
 
 // Register — step 2: KYC. Everything is required.

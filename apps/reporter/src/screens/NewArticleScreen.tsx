@@ -199,6 +199,9 @@ export function NewArticleScreen() {
       const data = await api("/api/ai/rewrite", {
         method: "POST",
         body: { text: `Title: ${title}\n\nBody: ${body}`, action: "translate" },
+        // AI calls to Anthropic routinely take 15–30s on a multi-paragraph
+        // body. The default 10s would alias every translation to a timeout.
+        timeoutMs: 60000,
       });
       if (data.result) {
         const h2Match = data.result.match(/<h2[^>]*>(.*?)<\/h2>/);
@@ -357,6 +360,23 @@ export function NewArticleScreen() {
         <Text style={styles.readOnlyHint}>{t("editArticle.readOnlyHint")}</Text>
       )}
 
+      {/* Photo — moved to the top so the hero anchors the screen. Pickers
+          are hidden in read-only mode; the preview still renders. */}
+      <Text style={styles.label}>{t("newArticle.featuredImage")}</Text>
+      {!readOnly && (
+        <View style={styles.photoRow}>
+          <TouchableOpacity style={styles.photoBtn} onPress={takePhoto}>
+            <Ionicons name="camera-outline" size={16} color="#555" />
+            <Text style={styles.photoBtnText}>{t("common.camera")}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.photoBtn} onPress={pickImage}>
+            <Ionicons name="images-outline" size={16} color="#555" />
+            <Text style={styles.photoBtnText}>{t("newArticle.gallery")}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      {previewImage ? <Image source={{ uri: previewImage }} style={styles.preview} /> : null}
+
       {/* Title */}
       <Text style={styles.label}>{t("newArticle.headline")}</Text>
       <TextInput
@@ -466,22 +486,6 @@ export function NewArticleScreen() {
       )}
       <FieldError message={errors.categoryId} />
 
-      {/* Photo — only show the pickers when editable */}
-      <Text style={styles.label}>{t("newArticle.featuredImage")}</Text>
-      {!readOnly && (
-        <View style={styles.photoRow}>
-          <TouchableOpacity style={styles.photoBtn} onPress={takePhoto}>
-            <Ionicons name="camera-outline" size={16} color="#555" />
-            <Text style={styles.photoBtnText}>{t("common.camera")}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.photoBtn} onPress={pickImage}>
-            <Ionicons name="images-outline" size={16} color="#555" />
-            <Text style={styles.photoBtnText}>{t("newArticle.gallery")}</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-      {previewImage ? <Image source={{ uri: previewImage }} style={styles.preview} /> : null}
-
       {/* Action row — adapts to mode:
           CREATE                        → [Save Draft] [Submit]
           EDIT DRAFT                    → [Delete] [Save Draft] [Submit]
@@ -547,6 +551,10 @@ const styles = StyleSheet.create({
 
   label: { fontSize: 12, fontWeight: "700", color: "#555", marginBottom: 4, marginTop: 8 },
   input: { backgroundColor: "#fff", borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 10, padding: 14, fontSize: 15, marginBottom: 8 },
+  // Headline (multiline=2). Telugu vowel marks (ా, ీ, ై, ో etc.) sit ABOVE the
+  // consonant baseline and need extra line-height + a top-anchored caret;
+  // without these the top of the glyph is clipped by the default content box.
+  headlineInput: { minHeight: 64, paddingTop: 12, paddingBottom: 12, lineHeight: 24, textAlignVertical: "top" },
   // Summary textarea — grows from ~4 lines tall, content top-anchored.
   textarea: { minHeight: 100, paddingTop: 12, lineHeight: 22 },
   inputError: { borderColor: "#dc2626" },

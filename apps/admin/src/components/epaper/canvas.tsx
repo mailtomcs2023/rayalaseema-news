@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Moveable from "react-moveable";
 import Selecto from "selecto";
 import { DEFAULT_GEOMETRY, snapColumn, type PageGeometry } from "@/lib/epaper/geometry";
+import { WithTooltip } from "@/components/ui/tooltip";
 
 // v2 editor Canvas (#125). Absolute-mm-positioned blocks rendered inside a
 // 330×520mm live area. Moveable wraps the active selection (drag + resize
@@ -188,47 +189,50 @@ export function Canvas({
         };
         const t = typeColor[b.type] ?? { bg: "#fee2e2", border: "#f87171" };
         return (
-          <div
+          <WithTooltip
             key={b.id}
-            data-block-id={b.id}
-            style={{
-              position: "absolute",
-              left: mm(b.x),
-              top: mm(b.y),
-              width: mm(b.w),
-              height: mm(b.h),
-              background: isMaster ? "rgba(99,102,241,0.10)" : t.bg,
-              // Always 2px solid border so overlapping tiles stay visually
-              // separable; selection bumps to indigo, master uses dashed purple.
-              border: isMaster
-                ? "2px dashed #6366f1"
-                : isSelected
-                ? "3px solid #4f46e5"
-                : `2px solid ${t.border}`,
-              boxShadow: isSelected ? "0 0 0 4px rgba(79,70,229,0.15)" : "inset 0 0 0 1px rgba(255,255,255,0.4)",
-              cursor: isMaster ? "not-allowed" : "grab",
-              overflow: "hidden",
-              padding: 4,
-              fontSize: 11,
-              color: ["masthead", "section-band"].includes(b.type) ? "#fff" : "#111",
-              opacity: isMaster ? 0.55 : 1,
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (isMaster) return;
-              onSelect([b.id], e.shiftKey);
-            }}
-            onContextMenu={(e) => {
-              if (!isMaster || !onDetachMaster) return;
-              e.preventDefault();
-              if (confirm(`Detach this ${b.type} block from the master? It becomes editable on this page only — the master is unchanged.`)) {
-                onDetachMaster(b);
-              }
-            }}
-            title={isMaster ? "Master block (inherited). Right-click → Detach to override on this page." : undefined}
+            text={isMaster ? "Master block (inherited). Right-click → Detach to override on this page." : null}
           >
-            {renderBlockContent(b)}
-          </div>
+            <div
+              data-block-id={b.id}
+              style={{
+                position: "absolute",
+                left: mm(b.x),
+                top: mm(b.y),
+                width: mm(b.w),
+                height: mm(b.h),
+                background: isMaster ? "rgba(99,102,241,0.10)" : t.bg,
+                // Always 2px solid border so overlapping tiles stay visually
+                // separable; selection bumps to indigo, master uses dashed purple.
+                border: isMaster
+                  ? "2px dashed #6366f1"
+                  : isSelected
+                  ? "3px solid #4f46e5"
+                  : `2px solid ${t.border}`,
+                boxShadow: isSelected ? "0 0 0 4px rgba(79,70,229,0.15)" : "inset 0 0 0 1px rgba(255,255,255,0.4)",
+                cursor: isMaster ? "not-allowed" : "grab",
+                overflow: "hidden",
+                padding: 4,
+                fontSize: 11,
+                color: ["masthead", "section-band"].includes(b.type) ? "#fff" : "#111",
+                opacity: isMaster ? 0.55 : 1,
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (isMaster) return;
+                onSelect([b.id], e.shiftKey);
+              }}
+              onContextMenu={(e) => {
+                if (!isMaster || !onDetachMaster) return;
+                e.preventDefault();
+                if (confirm(`Detach this ${b.type} block from the master? It becomes editable on this page only — the master is unchanged.`)) {
+                  onDetachMaster(b);
+                }
+              }}
+            >
+              {renderBlockContent(b)}
+            </div>
+          </WithTooltip>
         );
       })}
 

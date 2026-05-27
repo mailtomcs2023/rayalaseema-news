@@ -21,6 +21,7 @@ import { EditorV2 } from "@/components/epaper/editor-v2";
 import { migrateLegacyLayout } from "@/lib/epaper/migrate-layout";
 import { PreflightPanel, PreflightChip } from "@/components/epaper/preflight-panel";
 import { InlineTextEditor } from "@/components/epaper/inline-text-editor";
+import { WithTooltip } from "@/components/ui/tooltip";
 
 interface Block {
   id: string;
@@ -1216,7 +1217,9 @@ function EpaperEditorPage() {
                 <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Headline panel bg</label>
                 <div style={{ display: "flex", gap: 4 }}>
                   <input type="color" value={styleHlBgColor || "#ffffff"} onChange={(e) => setStyleHlBgColor(e.target.value)} style={{ flex: 1, height: 32, border: "1px solid #ddd", borderRadius: 4 }} />
-                  <button onClick={() => setStyleHlBgColor("")} title="Clear" style={{ padding: "0 8px", background: "#fee2e2", color: "#991b1b", border: "none", borderRadius: 4, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>✕</button>
+                  <WithTooltip text="Clear">
+                    <button onClick={() => setStyleHlBgColor("")} style={{ padding: "0 8px", background: "#fee2e2", color: "#991b1b", border: "none", borderRadius: 4, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>✕</button>
+                  </WithTooltip>
                 </div>
               </div>
               <div>
@@ -1227,7 +1230,9 @@ function EpaperEditorPage() {
                 <label style={{ display: "block", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Block background</label>
                 <div style={{ display: "flex", gap: 4 }}>
                   <input type="color" value={styleBlockBgColor || "#ffffff"} onChange={(e) => setStyleBlockBgColor(e.target.value)} style={{ flex: 1, height: 32, border: "1px solid #ddd", borderRadius: 4 }} />
-                  <button onClick={() => setStyleBlockBgColor("")} title="Clear" style={{ padding: "0 8px", background: "#fee2e2", color: "#991b1b", border: "none", borderRadius: 4, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>✕</button>
+                  <WithTooltip text="Clear">
+                    <button onClick={() => setStyleBlockBgColor("")} style={{ padding: "0 8px", background: "#fee2e2", color: "#991b1b", border: "none", borderRadius: 4, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>✕</button>
+                  </WithTooltip>
                 </div>
               </div>
             </div>
@@ -1584,22 +1589,24 @@ function EpaperEditorPage() {
           <input type="date" value={date} onChange={(e) => { setDate(e.target.value); setVariant("main"); }}
             style={{ padding: "6px 10px", border: "1px solid #ddd", borderRadius: 8, fontSize: 13 }} />
           {variants.length > 0 && (
-            <select value={variant} onChange={(e) => setVariant(e.target.value)}
-              title="Edition variant — main + per-district splits"
-              style={{ padding: "6px 10px", border: "1px solid #ddd", borderRadius: 8, fontSize: 13, fontWeight: 700, background: variant !== "main" ? "#fef3c7" : "#fff" }}>
-              {variants.map((v) => (
-                <option key={v.id} value={v.edition}>
-                  {v.edition === "main" ? "Main edition" : `📰 ${v.edition}`} ({v.pageCount}p · {v.status})
-                </option>
-              ))}
-            </select>
+            <WithTooltip text="Edition variant — main + per-district splits">
+              <select value={variant} onChange={(e) => setVariant(e.target.value)}
+                style={{ padding: "6px 10px", border: "1px solid #ddd", borderRadius: 8, fontSize: 13, fontWeight: 700, background: variant !== "main" ? "#fef3c7" : "#fff" }}>
+                {variants.map((v) => (
+                  <option key={v.id} value={v.edition}>
+                    {v.edition === "main" ? "Main edition" : `📰 ${v.edition}`} ({v.pageCount}p · {v.status})
+                  </option>
+                ))}
+              </select>
+            </WithTooltip>
           )}
           {edition && variant === "main" && (
-            <button onClick={cloneVariant} disabled={busy === "cloning"}
-              title="Clone the main edition into a district variant"
-              style={{ padding: "6px 12px", background: "#fff", color: "#0891b2", border: "1px dashed #0891b2", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-              {busy === "cloning" ? "Cloning…" : "+ Clone variant"}
-            </button>
+            <WithTooltip text="Clone the main edition into a district variant">
+              <button onClick={cloneVariant} disabled={busy === "cloning"}
+                style={{ padding: "6px 12px", background: "#fff", color: "#0891b2", border: "1px dashed #0891b2", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                {busy === "cloning" ? "Cloning…" : "+ Clone variant"}
+              </button>
+            </WithTooltip>
           )}
           <button onClick={generate} disabled={busy === "generating"}
             style={{ padding: "8px 16px", background: "#4f46e5", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
@@ -1613,17 +1620,19 @@ function EpaperEditorPage() {
           )}
           {edition && (
             edition.pdfUrl ? (
-              <a href={edition.pdfUrl} target="_blank" rel="noopener noreferrer"
-                title="Open the most recently rendered PDF in a new tab"
-                style={{ padding: "8px 16px", background: "#fff", color: "#4f46e5", border: "1px solid #4f46e5", borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
-                📄 Preview PDF ↗
-              </a>
+              <WithTooltip text="Open the most recently rendered PDF in a new tab">
+                <a href={edition.pdfUrl} target="_blank" rel="noopener noreferrer"
+                  style={{ padding: "8px 16px", background: "#fff", color: "#4f46e5", border: "1px solid #4f46e5", borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
+                  📄 Preview PDF ↗
+                </a>
+              </WithTooltip>
             ) : (
-              <button onClick={renderEdition} disabled={busy === "rendering"}
-                title="No PDF yet — click to render now"
-                style={{ padding: "8px 16px", background: "#fff", color: "#4f46e5", border: "1px dashed #4f46e5", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-                📄 Preview PDF (renders now)
-              </button>
+              <WithTooltip text="No PDF yet — click to render now">
+                <button onClick={renderEdition} disabled={busy === "rendering"}
+                  style={{ padding: "8px 16px", background: "#fff", color: "#4f46e5", border: "1px dashed #4f46e5", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                  📄 Preview PDF (renders now)
+                </button>
+              </WithTooltip>
             )
           )}
           {edition && (
@@ -1635,21 +1644,24 @@ function EpaperEditorPage() {
           {/* Preflight chip (#139) — opens side panel listing every issue. */}
           {edition && <PreflightChip editionId={edition.id} onClick={() => setPreflightOpen(true)} reloadKey={preflightReload} />}
           {/* v2 editor flag chip (#135). Click to flip between v1 (RGL) and v2 (mm canvas + moveable). */}
-          <button onClick={flipEditor}
-            title={editorVersion === "v2" ? "Switch back to legacy editor" : "Try the new mm-coord editor (BETA)"}
-            style={{ padding: "6px 12px", background: editorVersion === "v2" ? "#db2777" : "#fff", color: editorVersion === "v2" ? "#fff" : "#db2777", border: "1px solid #db2777", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-            editor: {editorVersion}{editorVersion === "v2" ? " BETA" : ""}
-          </button>
+          <WithTooltip text={editorVersion === "v2" ? "Switch back to legacy editor" : "Try the new mm-coord editor (BETA)"}>
+            <button onClick={flipEditor}
+              style={{ padding: "6px 12px", background: editorVersion === "v2" ? "#db2777" : "#fff", color: editorVersion === "v2" ? "#fff" : "#db2777", border: "1px solid #db2777", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+              editor: {editorVersion}{editorVersion === "v2" ? " BETA" : ""}
+            </button>
+          </WithTooltip>
           {edition && (
             <button onClick={() => setCommentsOpen(true)}
               style={{ padding: "8px 16px", background: "#fff", color: "#0891b2", border: "1px solid #0891b2", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
               💬 Comments {comments.filter((c) => !c.resolved).length > 0 ? `(${comments.filter((c) => !c.resolved).length})` : ""}
             </button>
           )}
-          <button onClick={toggleDark} title="Toggle dark mode"
-            style={{ padding: "6px 10px", background: "transparent", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 13, cursor: "pointer" }}>
-            {darkMode ? "☀️" : "🌙"}
-          </button>
+          <WithTooltip text="Toggle dark mode">
+            <button onClick={toggleDark}
+              style={{ padding: "6px 10px", background: "transparent", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 13, cursor: "pointer" }}>
+              {darkMode ? "☀️" : "🌙"}
+            </button>
+          </WithTooltip>
           {activePage && (
             <div style={{ display: "inline-flex", border: "1px solid #d1d5db", borderRadius: 8, overflow: "hidden" }}>
               {(["edit", "split", "preview"] as const).map((m) => (
@@ -1662,22 +1674,25 @@ function EpaperEditorPage() {
           )}
           {activePage && (
             <>
-              <button onClick={undo} disabled={!undoStacks[activePage.id]?.length}
-                title="Undo (Ctrl+Z)"
-                style={{ padding: "8px 12px", background: undoStacks[activePage.id]?.length ? "#fff" : "#f3f4f6", color: undoStacks[activePage.id]?.length ? "#111" : "#9ca3af", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: undoStacks[activePage.id]?.length ? "pointer" : "not-allowed" }}>
-                ↶ Undo {undoStacks[activePage.id]?.length ? `(${undoStacks[activePage.id].length})` : ""}
-              </button>
-              <button onClick={redo} disabled={!redoStacks[activePage.id]?.length}
-                title="Redo (Ctrl+Shift+Z)"
-                style={{ padding: "8px 12px", background: redoStacks[activePage.id]?.length ? "#fff" : "#f3f4f6", color: redoStacks[activePage.id]?.length ? "#111" : "#9ca3af", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: redoStacks[activePage.id]?.length ? "pointer" : "not-allowed" }}>
-                ↷ Redo {redoStacks[activePage.id]?.length ? `(${redoStacks[activePage.id].length})` : ""}
-              </button>
-              <div style={{ position: "relative" }}>
-                <button onClick={() => setAddBlockOpen((o) => !o)}
-                  title="Add a new block to this page"
-                  style={{ padding: "8px 12px", background: "#4f46e5", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-                  + Add Block ▾
+              <WithTooltip text="Undo (Ctrl+Z)">
+                <button onClick={undo} disabled={!undoStacks[activePage.id]?.length}
+                  style={{ padding: "8px 12px", background: undoStacks[activePage.id]?.length ? "#fff" : "#f3f4f6", color: undoStacks[activePage.id]?.length ? "#111" : "#9ca3af", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: undoStacks[activePage.id]?.length ? "pointer" : "not-allowed" }}>
+                  ↶ Undo {undoStacks[activePage.id]?.length ? `(${undoStacks[activePage.id].length})` : ""}
                 </button>
+              </WithTooltip>
+              <WithTooltip text="Redo (Ctrl+Shift+Z)">
+                <button onClick={redo} disabled={!redoStacks[activePage.id]?.length}
+                  style={{ padding: "8px 12px", background: redoStacks[activePage.id]?.length ? "#fff" : "#f3f4f6", color: redoStacks[activePage.id]?.length ? "#111" : "#9ca3af", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: redoStacks[activePage.id]?.length ? "pointer" : "not-allowed" }}>
+                  ↷ Redo {redoStacks[activePage.id]?.length ? `(${redoStacks[activePage.id].length})` : ""}
+                </button>
+              </WithTooltip>
+              <div style={{ position: "relative" }}>
+                <WithTooltip text="Add a new block to this page">
+                  <button onClick={() => setAddBlockOpen((o) => !o)}
+                    style={{ padding: "8px 12px", background: "#4f46e5", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                    + Add Block ▾
+                  </button>
+                </WithTooltip>
                 {addBlockOpen && (
                   <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, background: "#fff", border: "1px solid #d1d5db", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 100, minWidth: 220, padding: 6 }}>
                     {[
@@ -1706,16 +1721,18 @@ function EpaperEditorPage() {
             </>
           )}
           {edition && (
-            <span title={edition.workflowNote ? `Last note: ${edition.workflowNote}` : ""}
-              style={{ fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 6, background: WORKFLOW_COLOR[edition.workflowState] + "22", color: WORKFLOW_COLOR[edition.workflowState] }}>
-              {WORKFLOW_LABEL[edition.workflowState]}
-            </span>
+            <WithTooltip text={edition.workflowNote ? `Last note: ${edition.workflowNote}` : null}>
+              <span style={{ fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 6, background: WORKFLOW_COLOR[edition.workflowState] + "22", color: WORKFLOW_COLOR[edition.workflowState] }}>
+                {WORKFLOW_LABEL[edition.workflowState]}
+              </span>
+            </WithTooltip>
           )}
           {peers.length > 1 && (
-            <span title={peers.map((p) => `${p.userName}${p.pageId ? ` (page ${edition?.pages.find((x) => x.id === p.pageId)?.pageNumber ?? "?"})` : ""}`).join("\n")}
-              style={{ fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 999, background: "#dcfce7", color: "#166534" }}>
-              👥 {peers.length} editors
-            </span>
+            <WithTooltip text={peers.map((p) => `${p.userName}${p.pageId ? ` (page ${edition?.pages.find((x) => x.id === p.pageId)?.pageNumber ?? "?"})` : ""}`).join("\n")}>
+              <span style={{ fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 999, background: "#dcfce7", color: "#166534" }}>
+                👥 {peers.length} editors
+              </span>
+            </WithTooltip>
           )}
           {edition && (NEXT_STATES[edition.workflowState] || []).map((opt) => (
             <button key={opt.to} onClick={() => transitionTo(opt.to, opt.label, !!opt.needNote)}
@@ -1781,23 +1798,31 @@ function EpaperEditorPage() {
                       </div>
                       <div style={{ display: "flex", gap: 6, fontSize: 10, marginTop: 3, color: isActive ? "rgba(255,255,255,0.85)" : "#6b7280" }}>
                         {emptyCount > 0
-                          ? <span title={`${emptyCount} empty story block${emptyCount > 1 ? "s" : ""}`}>⚠ {emptyCount}</span>
-                          : <span title="All story blocks filled">✓</span>}
-                        {lockedCount > 0 && <span title={`${lockedCount} locked block${lockedCount > 1 ? "s" : ""}`}>🔒 {lockedCount}</span>}
-                        {commentsByPage[p.id] > 0 && <span title={`${commentsByPage[p.id]} open comments`}>💬 {commentsByPage[p.id]}</span>}
+                          ? <WithTooltip text={`${emptyCount} empty story block${emptyCount > 1 ? "s" : ""}`}><span>⚠ {emptyCount}</span></WithTooltip>
+                          : <WithTooltip text="All story blocks filled"><span>✓</span></WithTooltip>}
+                        {lockedCount > 0 && <WithTooltip text={`${lockedCount} locked block${lockedCount > 1 ? "s" : ""}`}><span>🔒 {lockedCount}</span></WithTooltip>}
+                        {commentsByPage[p.id] > 0 && <WithTooltip text={`${commentsByPage[p.id]} open comments`}><span>💬 {commentsByPage[p.id]}</span></WithTooltip>}
                         {peers.filter((peer) => peer.pageId === p.id && peer.userId !== "you").length > 0 && (
-                          <span title={peers.filter((peer) => peer.pageId === p.id).map((peer) => peer.userName).join(", ")}>
-                            👥 {peers.filter((peer) => peer.pageId === p.id).length}
-                          </span>
+                          <WithTooltip text={peers.filter((peer) => peer.pageId === p.id).map((peer) => peer.userName).join(", ")}>
+                            <span>
+                              👥 {peers.filter((peer) => peer.pageId === p.id).length}
+                            </span>
+                          </WithTooltip>
                         )}
                       </div>
                     </button>
-                    <button onClick={() => renamePage(p.id, p.label)} title="Rename page"
-                      style={{ padding: "4px 6px", background: "transparent", border: "none", cursor: "pointer", color: isActive ? "#fff" : "#9ca3af", fontSize: 13 }}>✎</button>
-                    <button onClick={() => duplicatePage(p.id)} title="Duplicate page"
-                      style={{ padding: "4px 6px", background: "transparent", border: "none", cursor: "pointer", color: isActive ? "#fff" : "#9ca3af", fontSize: 13 }}>⎘</button>
-                    <button onClick={() => deletePage(p.id, p.label)} title="Delete page"
-                      style={{ padding: "4px 6px", background: "transparent", border: "none", cursor: "pointer", color: isActive ? "#fff" : "#9ca3af", fontSize: 13 }}>🗑</button>
+                    <WithTooltip text="Rename page">
+                      <button onClick={() => renamePage(p.id, p.label)}
+                        style={{ padding: "4px 6px", background: "transparent", border: "none", cursor: "pointer", color: isActive ? "#fff" : "#9ca3af", fontSize: 13 }}>✎</button>
+                    </WithTooltip>
+                    <WithTooltip text="Duplicate page">
+                      <button onClick={() => duplicatePage(p.id)}
+                        style={{ padding: "4px 6px", background: "transparent", border: "none", cursor: "pointer", color: isActive ? "#fff" : "#9ca3af", fontSize: 13 }}>⎘</button>
+                    </WithTooltip>
+                    <WithTooltip text="Delete page">
+                      <button onClick={() => deletePage(p.id, p.label)}
+                        style={{ padding: "4px 6px", background: "transparent", border: "none", cursor: "pointer", color: isActive ? "#fff" : "#9ca3af", fontSize: 13 }}>🗑</button>
+                    </WithTooltip>
                   </div>
                 );
               })}
@@ -1805,11 +1830,12 @@ function EpaperEditorPage() {
                 style={{ width: "100%", marginTop: 8, padding: "8px 10px", background: "#fff", color: "#4f46e5", border: "1px dashed #4f46e5", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
                 + New Page (from template)
               </button>
-              <button onClick={insertBlankPage}
-                title="Word/InDesign-style: empty canvas. Draw blocks anywhere with the toolbar tool."
-                style={{ width: "100%", marginTop: 6, padding: "8px 10px", background: "#fff", color: "#16a34a", border: "1px dashed #16a34a", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                + Blank page
-              </button>
+              <WithTooltip text="Word/InDesign-style: empty canvas. Draw blocks anywhere with the toolbar tool.">
+                <button onClick={insertBlankPage}
+                  style={{ width: "100%", marginTop: 6, padding: "8px 10px", background: "#fff", color: "#16a34a", border: "1px dashed #16a34a", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                  + Blank page
+                </button>
+              </WithTooltip>
             </aside>
 
             {/* Page canvas + (optionally) live preview iframe */}
@@ -2145,13 +2171,13 @@ function EpaperEditorPage() {
                   {pickerArticles.map((a) => {
                     const used = usedArticleIdsInEdition.has(a.id);
                     return (
-                    <button key={a.id} onClick={() => {
+                    <WithTooltip key={a.id} text={used ? "⚠ Already placed on another page in this edition" : "Drag onto any block, or click to assign to selected block"}>
+                    <button onClick={() => {
                       if (used && !confirm(`This article is already placed on another page of this edition. Pick it again anyway?`)) return;
                       setBlockArticle(a.id);
                     }}
                       draggable
                       onDragStart={(e) => onArticleDragStart(e, a.id)}
-                      title={used ? "⚠ Already placed on another page in this edition" : "Drag onto any block, or click to assign to selected block"}
                       style={{
                         width: "100%", textAlign: "left", padding: 8,
                         border: used ? "1px solid #fbbf24" : "1px solid #eee",
@@ -2180,6 +2206,7 @@ function EpaperEditorPage() {
                         </div>
                       </div>
                     </button>
+                    </WithTooltip>
                     );
                   })}
                 </>
@@ -2349,11 +2376,12 @@ function DraggableBlockGrid({
           <div style={{ width: `${Math.min(100, (usedRows / MAX_ROWS) * 100)}%`, height: "100%", background: isOverflow ? "#dc2626" : usedRows >= MAX_ROWS - 3 ? "#d97706" : "#16a34a" }} />
         </div>
         {isOverflow && onClearOffPage && (
-          <button onClick={onClearOffPage}
-            title="Delete every block past row 30 in one click"
-            style={{ padding: "4px 10px", background: "#dc2626", color: "#fff", border: "none", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-            🗑 Clear off-page
-          </button>
+          <WithTooltip text="Delete every block past row 30 in one click">
+            <button onClick={onClearOffPage}
+              style={{ padding: "4px 10px", background: "#dc2626", color: "#fff", border: "none", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+              🗑 Clear off-page
+            </button>
+          </WithTooltip>
         )}
         <span style={{ color: "#6b7280", fontWeight: 500 }}>Indian broadsheet 300×560mm</span>
       </div>
@@ -2456,19 +2484,21 @@ function DraggableBlockGrid({
                 zIndex: isSelected ? 3 : 2,
               }}>
               {onRemoveBlock && b.type !== "masthead" && b.type !== "section-band" && (
-                <button
-                  className="lock-btn"
-                  onClick={(e) => { e.stopPropagation(); if (confirm(`Delete ${b.type} block?`)) onRemoveBlock(b.id); }}
-                  title={`Delete this ${b.type} block`}
-                  style={{ position: "absolute", bottom: 2, right: 2, background: "rgba(220,38,38,0.85)", color: "#fff", fontSize: 11, fontWeight: 800, width: 18, height: 18, border: "none", borderRadius: 3, cursor: "pointer", zIndex: 6, lineHeight: 1, padding: 0 }}>
-                  ×
-                </button>
+                <WithTooltip text={`Delete this ${b.type} block`}>
+                  <button
+                    className="lock-btn"
+                    onClick={(e) => { e.stopPropagation(); if (confirm(`Delete ${b.type} block?`)) onRemoveBlock(b.id); }}
+                    style={{ position: "absolute", bottom: 2, right: 2, background: "rgba(220,38,38,0.85)", color: "#fff", fontSize: 11, fontWeight: 800, width: 18, height: 18, border: "none", borderRadius: 3, cursor: "pointer", zIndex: 6, lineHeight: 1, padding: 0 }}>
+                    ×
+                  </button>
+                </WithTooltip>
               )}
               {blockWarnings.length > 0 && (
-                <div title={blockWarnings.map((w) => w.detail).join("\n")}
-                  style={{ position: "absolute", top: 2, right: 2, background: hasOverflow ? "#dc2626" : "#f59e0b", color: "#fff", fontSize: 9, fontWeight: 800, padding: "2px 5px", borderRadius: 3, zIndex: 4, lineHeight: 1 }}>
-                  {hasOverflow ? "⚠ OVERFLOW" : `⚠ ${blockWarnings.length}`}
-                </div>
+                <WithTooltip text={blockWarnings.map((w) => w.detail).join("\n")}>
+                  <div style={{ position: "absolute", top: 2, right: 2, background: hasOverflow ? "#dc2626" : "#f59e0b", color: "#fff", fontSize: 9, fontWeight: 800, padding: "2px 5px", borderRadius: 3, zIndex: 4, lineHeight: 1 }}>
+                    {hasOverflow ? "⚠ OVERFLOW" : `⚠ ${blockWarnings.length}`}
+                  </div>
+                </WithTooltip>
               )}
               {/* Block-type pill (top-left): small label so operator sees
                   what kind of block this is. iframe behind shows real

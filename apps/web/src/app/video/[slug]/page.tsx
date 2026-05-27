@@ -75,7 +75,7 @@ export default async function VideoPage({ params }: { params: Promise<{ slug: st
           </p>
         )}
         <div style={{ marginTop: 24 }}>
-          <ShareBar title={video.title} slug={slug} siteUrl={SITE_URL} />
+          <ShareBar title={video.title} articleUrl={`${SITE_URL}/video/${slug}`} />
         </div>
       </main>
       <Footer config={config} />

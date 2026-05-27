@@ -66,12 +66,16 @@ export default async function DashboardPage() {
         {/* Quick Actions */}
         <div className="quick-grid">
           {[
+            // "New Content" and "Breaking News" both land on the /content/new
+            // type picker right now — until the picker supports a `?type=` query
+            // to skip straight to BREAKING_NEWS, both shortcuts share the same
+            // href. Key off label (unique) instead of href so React doesn't warn.
             { label: "New Content", href: "/content/new", icon: "+" },
             { label: "Breaking News", href: "/content/new", icon: "!" },
             { label: "Upload ePaper", href: "/epaper", icon: "^" },
             { label: "Add Category", href: "/categories", icon: "#" },
           ].map((a) => (
-            <Link key={a.href} href={a.href} style={{ background: "#fff", borderRadius: 10, padding: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", textDecoration: "none", textAlign: "center" }}>
+            <Link key={a.label} href={a.href} style={{ background: "#fff", borderRadius: 10, padding: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", textDecoration: "none", textAlign: "center" }}>
               <span style={{ fontSize: 28, display: "block", marginBottom: 8 }}>{a.icon}</span>
               <span style={{ fontSize: 13, fontWeight: 600, color: "#555" }}>{a.label}</span>
             </Link>

@@ -112,7 +112,10 @@ export default async function CinemaPage({
           take: 10,
           select: { id: true, title: true, slug: true, payload: true },
         })
-      : Promise.resolve([]),
+      : // Typed empty fallback — without this annotation the union collapses
+        // to `never[]` and reviewsRaw loses the {id, title, slug} fields,
+        // breaking the projectRating spread downstream.
+        Promise.resolve([] as Array<{ id: string; title: string; slug: string | null; payload: unknown }>),
   ]);
   const articles = articlesRaw.map(projectRating);
   const reviews = reviewsRaw.map(projectRating);

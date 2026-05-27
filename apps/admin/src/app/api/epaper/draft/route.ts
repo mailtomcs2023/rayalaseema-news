@@ -76,12 +76,16 @@ export async function POST(req: NextRequest) {
         .map((a) => a.id);
     }
 
+    // category is nullable on Content (uncategorised drafts) — treat those as
+    // soft so they don't fall into the front-page pool by default.
+    const isFrontCandidate = (a: (typeof articles)[number]) =>
+      !!a.category && !SOFT.has(a.category.slug);
     const frontPool =
       editionKey === "main"
-        ? articles.filter((a) => !SOFT.has(a.category.slug)).map((a) => a.id)
+        ? articles.filter(isFrontCandidate).map((a) => a.id)
         : districtPool.length
         ? districtPool
-        : articles.filter((a) => !SOFT.has(a.category.slug)).map((a) => a.id);
+        : articles.filter(isFrontCandidate).map((a) => a.id);
 
     const pages: LayoutPage[] = PAGE_PLAN.map((p) => {
       let ids: string[];
