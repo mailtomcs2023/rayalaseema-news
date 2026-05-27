@@ -6,6 +6,7 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { ConstituencyFilter } from "./filter";
 import { getSiteConfig, getTrendingArticles } from "@/lib/db-queries";
+import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 import { articleHref } from "@/lib/article-href";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -73,8 +74,17 @@ export default async function DistrictPage({ params }: { params: Promise<{ slug:
   const grid = articles.slice(1, 5);
   const rest = articles.slice(5);
 
+  const siteUrl = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+  const breadcrumbLd = buildBreadcrumbListSchema({
+    items: [
+      { name: "Home", url: siteUrl },
+      { name: `${district.name} (${district.nameEn})` },
+    ],
+  });
+
   return (
     <div className="min-h-screen" style={{ background: "#fff" }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: stringifyJsonLd(breadcrumbLd) }} />
       <Header config={config} breakingNews={[]} />
 
       {/* Branded header */}

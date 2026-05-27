@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { prisma } from "@rayalaseema/db";
+import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 import { articleHref } from "@/lib/article-href";
 
 export default async function ConstituencyPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -28,8 +29,18 @@ export default async function ConstituencyPage({ params }: { params: Promise<{ s
     take: 20,
   });
 
+  const siteUrl = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+  const breadcrumbLd = buildBreadcrumbListSchema({
+    items: [
+      { name: "Home", url: siteUrl },
+      { name: constituency.district.name, url: `${siteUrl}/district/${constituency.district.slug}` },
+      { name: constituency.name },
+    ],
+  });
+
   return (
     <div className="min-h-screen bg-gray-50">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: stringifyJsonLd(breadcrumbLd) }} />
       <Header />
 
       {/* Header */}

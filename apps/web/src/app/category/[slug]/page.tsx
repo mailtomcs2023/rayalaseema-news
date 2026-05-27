@@ -14,6 +14,7 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { TemplateRenderer } from "@/components/blocks/template-renderer";
 import { getSiteConfig } from "@/lib/db-queries";
+import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 
 export async function generateMetadata({
   params,
@@ -48,8 +49,17 @@ export default async function CategoryPage({
 
   const config = await getSiteConfig();
 
+  const siteUrl = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+  const breadcrumbLd = buildBreadcrumbListSchema({
+    items: [
+      { name: "Home", url: siteUrl },
+      { name: category.name },
+    ],
+  });
+
   return (
     <div className="min-h-screen" style={{ background: "#fff" }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: stringifyJsonLd(breadcrumbLd) }} />
       <Header config={config} breakingNews={[]} />
       <main style={{ maxWidth: 1280, margin: "0 auto", padding: "18px 12px 48px" }}>
         <TemplateRenderer

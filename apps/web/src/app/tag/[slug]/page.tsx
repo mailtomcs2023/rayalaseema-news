@@ -6,6 +6,7 @@ import { Footer } from "@/components/footer";
 import { getSiteConfig } from "@/lib/db-queries";
 import type { Metadata } from "next";
 import { articleHref } from "@/lib/article-href";
+import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -54,8 +55,17 @@ export default async function TagPage({ params }: Props) {
   const config = await getSiteConfig();
   const articles = contentTags.map((ct) => ct.content);
 
+  const siteUrl = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+  const breadcrumbLd = buildBreadcrumbListSchema({
+    items: [
+      { name: "Home", url: siteUrl },
+      { name: `#${tag.name}` },
+    ],
+  });
+
   return (
     <div style={{ minHeight: "100vh", background: "var(--page-bg, #f6f6f6)" }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: stringifyJsonLd(breadcrumbLd) }} />
       <Header config={config} />
       <main style={{ maxWidth: 1280, margin: "0 auto", padding: "var(--sp-5, 24px) var(--sp-4, 16px)" }}>
         {/* Tag header */}
