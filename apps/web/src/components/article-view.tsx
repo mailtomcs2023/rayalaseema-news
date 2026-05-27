@@ -15,6 +15,8 @@ import { DialectGlosser } from "@/components/dialect-glosser";
 import { injectInlineByline, formatRelativeTelugu } from "@/lib/byline";
 import { sanitizeArticleHtml } from "@/lib/sanitize";
 import { articleHref } from "@/lib/article-href";
+import { buildNewsArticleSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
+import type { LocationChain, AuthorRef, PublisherConfig } from "@rayalaseema/seo-schema";
 
 // Loose type — matches the projected shape returned by
 // getArticleBySlug + getTrendingArticles + getArticlesByCategory in db-queries.
@@ -64,26 +66,62 @@ interface Props {
 
 export function ArticleView({ article, related, trending, siteUrl }: Props) {
   const canonical = `${siteUrl}${articleHref(article)}`;
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "NewsArticle",
-    headline: article.title,
-    description: article.summary || "",
-    image: article.featuredImage || undefined,
-    datePublished: article.publishedAt?.toISOString(),
-    dateModified: article.updatedAt?.toISOString(),
-    author: article.desk
-      ? { "@type": "Organization", name: article.desk.name }
-      : { "@type": "Person", name: article.author.name },
-    publisher: {
-      "@type": "Organization",
-      name: "Rayalaseema Express",
-      logo: { "@type": "ImageObject", url: `${siteUrl}/logo.png` },
+  // Cast widens to the post-A2/A3 author + constituency shape that
+  // getArticleBySlug now returns (publicProfileSlug, social fields, lat/lng
+  // on district/constituency). ArticleLike stays loose to support older
+  // callers that pass partial shapes.
+  const a = article as any;
+  const newsArticleLd = buildNewsArticleSchema({
+    article: {
+      id: article.id,
+      slug: article.slug || "",
+      title: article.title,
+      summary: article.summary,
+      body: article.body,
+      featuredImage: article.featuredImage,
+      publishedAt: article.publishedAt,
+      updatedAt: article.updatedAt,
+      articleSection: a.category?.nameEn || article.category.name,
     },
-    mainEntityOfPage: { "@type": "WebPage", "@id": canonical },
-    articleSection: article.category.name,
-    inLanguage: "te",
-  };
+    author: {
+      name: article.author.name,
+      publicProfileSlug: a.author?.publicProfileSlug || a.author?.id || "author",
+      role: a.author?.role ?? null,
+      bio: a.author?.bio ?? null,
+      avatar: a.author?.avatar ?? null,
+      twitterHandle: a.author?.twitterHandle ?? null,
+      linkedinUrl: a.author?.linkedinUrl ?? null,
+      facebookUrl: a.author?.facebookUrl ?? null,
+      expertise: a.author?.expertise ?? [],
+      affiliations: a.author?.affiliations ?? [],
+    } satisfies AuthorRef,
+    publisher: {
+      siteUrl,
+      publicationName: "Rayalaseema Express",
+      publicationNameTe: "రాయలసీమ ఎక్స్‌ప్రెస్",
+      logoUrl: `${siteUrl}/logo.png`,
+    } satisfies PublisherConfig,
+    locationChain: a.constituency
+      ? ({
+          district: {
+            name: a.constituency.district?.name ?? "",
+            nameEn: a.constituency.district?.nameEn ?? "",
+            slug: a.constituency.district?.slug ?? "",
+            lat: a.constituency.district?.lat ?? null,
+            lng: a.constituency.district?.lng ?? null,
+          },
+          constituency: {
+            name: a.constituency.name ?? "",
+            nameEn: a.constituency.nameEn ?? "",
+            slug: a.constituency.slug,
+            lat: a.constituency.lat ?? null,
+            lng: a.constituency.lng ?? null,
+          },
+        } satisfies LocationChain)
+      : null,
+    canonicalUrl: canonical,
+    images: article.featuredImage,
+  });
 
   const breadcrumbLd = {
     "@context": "https://schema.org",
@@ -102,7 +140,7 @@ export function ArticleView({ article, related, trending, siteUrl }: Props) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: stringifyJsonLd(newsArticleLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
       <ScrollShareNudge title={article.title} slug={slug} articleUrl={canonical} />
       <Header />

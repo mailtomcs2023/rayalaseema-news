@@ -245,10 +245,15 @@ export async function getArticleBySlug(slug: string) {
     where: { slug },
     include: {
       category: { select: { name: true, nameEn: true, slug: true, color: true } },
-      author: { select: { id: true, name: true, bio: true, avatar: true } },
+      // Author fields extended (Spec #4 B1 #197) so the NewsArticle JSON-LD
+      // generator can build a full Person entity with sameAs + expertise.
+      author: { select: { id: true, name: true, bio: true, avatar: true, publicProfileSlug: true, twitterHandle: true, linkedinUrl: true, facebookUrl: true, expertise: true, affiliations: true, role: true } },
       desk: { select: { name: true, nameEn: true, branch: true } },
       tags: { include: { tag: true } },
-      constituency: { select: { slug: true, district: { select: { slug: true } } } },
+      // Full constituency + district shape (name + lat/lng) so the schema
+      // generator can emit contentLocation/spatialCoverage as a Place with
+      // GeoCoordinates.
+      constituency: { select: { slug: true, name: true, nameEn: true, lat: true, lng: true, district: { select: { slug: true, name: true, nameEn: true, lat: true, lng: true } } } },
     },
   });
   if (!row || row.type !== "ARTICLE") return null;

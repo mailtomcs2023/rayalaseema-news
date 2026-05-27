@@ -11,3 +11,4 @@
 
 export * from "./types";
 export { stringifyJsonLd } from "./serialize";
+export { buildNewsArticleSchema } from "./news-article";
