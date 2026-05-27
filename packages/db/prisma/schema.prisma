@@ -175,6 +175,9 @@ model Category {
   children    Category[] @relation("CategoryTree")
 
   contents    Content[]
+  // Cross-listed contents (Content rows whose PRIMARY category isn't this
+  // one, but which the editor opted in to "Also list under" this category).
+  crossListedContents ContentCategory[]
   assignedUsers UserCategory[]
   desk        Desk?      // back-relation: TOPICAL desk auto-derived from category
 
@@ -182,6 +185,22 @@ model Category {
   updatedAt   DateTime   @updatedAt
 
   @@map("categories")
+}
+
+// Many-to-many join for cross-listing a Content row under additional
+// categories. Primary placement still lives in Content.categoryId — this
+// table is purely for secondary discovery (e.g. a movie-review article
+// also showing up under /category/entertainment).
+model ContentCategory {
+  contentId  String
+  content    Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@id([contentId, categoryId])
+  @@index([categoryId])
+  @@map("content_categories")
 }
 
 model Tag {
@@ -1126,6 +1145,11 @@ model Content {
   assignedReviewer   User?   @relation("ContentAssignedReviewer", fields: [assignedReviewerId], references: [id])
 
   tags            ContentTag[]
+  // Multi-category cross-listing. categoryId above stays as the PRIMARY
+  // category (canonical URL, default listing). additionalCategories holds
+  // secondary categories where this row should ALSO appear on /category/…
+  // pages. Editor UI: primary dropdown + "Also list under" multi-select.
+  additionalCategories ContentCategory[]
   revisions       ContentRevision[]
   payments        ContentPayment[]
   // Spec #1 A1B (#188) — back-relations from tables whose FK moved to Content.

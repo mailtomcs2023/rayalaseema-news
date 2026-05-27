@@ -82,18 +82,42 @@ async function scrapeSource(url: string): Promise<{ text: string; ogImage: strin
       pickMeta(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i) ||
       pickMeta(/<title[^>]*>([^<]+)<\/title>/i);
 
-    const text = html
+    // Readability-style extraction. Strip noise (scripts, styles, nav,
+    // header, footer, aside, forms, comment widgets, social embeds, ads),
+    // then PREFER the <article> / <main> element if one exists — those
+    // wrap the actual story body on most modern news sites. Falls back
+    // to <body> when neither is present. Cap raised from 5K to 18K chars
+    // so multi-page wire reports (specific reliability targets, sectoral
+    // tables, etc.) don't get truncated mid-fact.
+    const stripped = html
       .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+      .replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, "")
       .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, "")
       .replace(/<header[^>]*>[\s\S]*?<\/header>/gi, "")
       .replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, "")
       .replace(/<aside[^>]*>[\s\S]*?<\/aside>/gi, "")
+      .replace(/<form[^>]*>[\s\S]*?<\/form>/gi, "")
+      .replace(/<svg[^>]*>[\s\S]*?<\/svg>/gi, "")
+      .replace(/<iframe[^>]*>[\s\S]*?<\/iframe>/gi, "")
+      // Common noise blocks by class/id heuristic (recursive content
+      // strip would be cleaner with a real DOM parser, but the regex
+      // below covers the worst offenders on Indian news sites).
+      .replace(/<div[^>]*(?:class|id)=["'][^"']*(?:related|recommend|share|social|comment|newsletter|sidebar|ad-|advert|promo|popular|trending|footer|menu|nav-|cookie|gdpr|subscribe)[^"']*["'][^>]*>[\s\S]*?<\/div>/gi, "");
+
+    // Prefer the <article> element; many publishers wrap the story body
+    // there. Fall back to <main>, then <body>, then the whole document.
+    const articleMatch = stripped.match(/<article[^>]*>([\s\S]*?)<\/article>/i);
+    const mainMatch = articleMatch ? null : stripped.match(/<main[^>]*>([\s\S]*?)<\/main>/i);
+    const bodyMatch = (articleMatch || mainMatch) ? null : stripped.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    const core = articleMatch?.[1] || mainMatch?.[1] || bodyMatch?.[1] || stripped;
+
+    const text = core
       .replace(/<[^>]+>/g, " ")
-      .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&")
+      .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&#39;/g, "'").replace(/&quot;/g, '"')
       .replace(/\s+/g, " ")
       .trim()
-      .substring(0, 5000);
+      .substring(0, 18000);
 
     return { text, ogImage, ogTitle };
   } catch (e) {
@@ -119,6 +143,19 @@ export async function POST(req: NextRequest) {
     const { text, action, sourceUrl } = await req.json();
     if (!text && !sourceUrl) return NextResponse.json({ error: "Text or source URL required" }, { status: 400 });
 
+    // Refuse search-engine result pages. Pasting google.com/search?q=…
+    // scrapes only snippet text → AI hallucinates a generic article. Same
+    // for bing/yahoo/duckduckgo/yandex/baidu. Refuse loudly so the editor
+    // pastes the actual article URL instead.
+    if (sourceUrl) {
+      const SEARCH_HOST_RE = /^https?:\/\/(?:[a-z0-9-]+\.)?(?:google|bing|yahoo|duckduckgo|yandex|baidu)\.[a-z.]+\/(?:search|news\/search|images|results|webhp)/i;
+      if (SEARCH_HOST_RE.test(sourceUrl)) {
+        return NextResponse.json({
+          error: "Source URL is a search results page, not an article. Open one of the search results and paste THAT article's URL.",
+        }, { status: 400 });
+      }
+    }
+
     // Scrape source URL for full content + og:image.
     let fullText = text || "";
     let scrapedOgImage: string | null = null;
@@ -129,6 +166,20 @@ export async function POST(req: NextRequest) {
       scrapedOgTitle = scraped.ogTitle;
       if (scraped.text.length > 100) {
         fullText = `SOURCE ARTICLE:\n${scraped.text}\n\nDESCRIPTION:\n${text}`;
+      }
+    }
+
+    // Sparse-source guard. If the combined text is under ~150 words, the
+    // model has nothing real to translate and will pad with empty
+    // attribution loops ("అధికారిక వర్గాలు తెలిపాయి…"). Refuse so the
+    // editor knows the scrape failed instead of getting fluff to publish.
+    if (action === "full-import") {
+      const wordCount = fullText.trim().split(/\s+/).filter(Boolean).length;
+      if (wordCount < 150) {
+        return NextResponse.json({
+          error: `Source content too thin (${wordCount} words). The scraper couldn't extract a full article body — likely the page is paywalled, requires JavaScript, or this is a listing page. Paste the article TEXT directly into the body field, then run తెలుగులో రాయండి.`,
+          wordCount,
+        }, { status: 422 });
       }
     }
 
@@ -146,11 +197,10 @@ export async function POST(req: NextRequest) {
           title: result.article.title_te || scrapedOgTitle || "",
           slug: result.article.slug_en || "",
           summary: result.article.summary_te || "",
-          // Include the dek as the opening element so it sits above body
-          // paragraphs in the editor preview.
-          body:
-            (result.article.dek_te ? `<p class="dek">${result.article.dek_te}</p>` : "") +
-            (result.article.body_html_te || ""),
+          // body_html_te already opens with <p class="dek"> per the
+          // compose system prompt's HTML rule, so no extra prepend (the
+          // earlier double-prepend showed the dek twice in the editor).
+          body: result.article.body_html_te || "",
           keywords: Array.isArray(result.article.keywords_en) ? result.article.keywords_en : [],
           metaDescription: result.article.meta_description_en || "",
           ogImage: scrapedOgImage,

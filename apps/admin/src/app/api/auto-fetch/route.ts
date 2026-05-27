@@ -146,13 +146,12 @@ async function importOneArticle(
   let translated: { title: string; summary: string; body: string };
   try {
     const result = await runPipeline(sourceForPipeline);
-    const dekPrefix = result.article.dek_te
-      ? `<p class="dek">${result.article.dek_te}</p>\n`
-      : "";
+    // body_html_te already opens with <p class="dek"> per compose's HTML
+    // rule, so no extra prepend (was showing the dek twice in the editor).
     translated = {
       title: result.article.title_te || article.title,
       summary: result.article.summary_te || content.substring(0, 200),
-      body: `${dekPrefix}${result.article.body_html_te}`,
+      body: result.article.body_html_te,
     };
   } catch (e) {
     // Pipeline failure (rate limit, transient model error) → fall back to
@@ -435,11 +434,12 @@ export async function POST(req: NextRequest) {
         let translated;
         try {
           const r = await runPipeline(`${article.title}\n\n${content}`);
-          const dekPrefix = r.article.dek_te ? `<p class="dek">${r.article.dek_te}</p>\n` : "";
+          // body_html_te already opens with <p class="dek"> per compose
+          // HTML rule. Don't double-prepend.
           translated = {
             title: r.article.title_te || article.title,
             summary: r.article.summary_te || content.substring(0, 200),
-            body: `${dekPrefix}${r.article.body_html_te}`,
+            body: r.article.body_html_te,
           };
         } catch (e) {
           console.error("[auto-fetch] pipeline failed:", e);
