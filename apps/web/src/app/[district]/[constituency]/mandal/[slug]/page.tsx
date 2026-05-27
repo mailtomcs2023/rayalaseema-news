@@ -30,18 +30,23 @@ import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-sch
 
 const SITE_URL = process.env.SITE_URL || "https://rayalaseemaexpress.com";
 
-type Params = Promise<{ district: string; constituency: string; mandal: string }>;
+// Route shape: /[district]/[constituency]/mandal/[slug]. The /mandal/ prefix
+// was added when this hub clashed with the article slugid route at the same
+// depth — both /district/constituency/<x> patterns collided.
+type Params = Promise<{ district: string; constituency: string; slug: string }>;
 
-// Article slug pattern (from articleHref): "<text>-<8 hex>". Skip if matched
-// so the canonical article route claims this URL instead.
+// Article slug pattern (from articleHref): "<text>-<8 hex>". Now lives at a
+// different path so the looksLikeArticleSlug guard is no longer load-bearing
+// for disambiguation — kept as a defensive 404 for someone visiting a
+// hand-crafted /mandal/<articleslug> URL.
 function looksLikeArticleSlug(s: string): boolean {
   return /-[a-z0-9]{8}$/.test(s);
 }
 
-async function resolveMandal(params: { district: string; constituency: string; mandal: string }) {
-  if (looksLikeArticleSlug(params.mandal)) return null;
+async function resolveMandal(params: { district: string; constituency: string; slug: string }) {
+  if (looksLikeArticleSlug(params.slug)) return null;
   return prisma.mandal.findUnique({
-    where: { slug: params.mandal },
+    where: { slug: params.slug },
     select: {
       id: true, name: true, nameEn: true, slug: true, lat: true, lng: true,
       population: true, isMandalHq: true,
@@ -62,10 +67,10 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   return {
     title: `${mandal.name} (${mandal.nameEn}) | Rayalaseema Express News`,
     description: `${mandal.name} మండలం నుండి తాజా వార్తలు. News from ${mandal.nameEn} mandal in ${mandal.constituency.district.nameEn} district.`,
-    alternates: { canonical: `${SITE_URL}/${p.district}/${p.constituency}/${p.mandal}` },
+    alternates: { canonical: `${SITE_URL}/${p.district}/${p.constituency}/mandal/${p.slug}` },
     openGraph: {
       title: `${mandal.name} | రాయలసీమ ఎక్స్‌ప్రెస్`,
-      url: `${SITE_URL}/${p.district}/${p.constituency}/${p.mandal}`,
+      url: `${SITE_URL}/${p.district}/${p.constituency}/mandal/${p.slug}`,
       type: "website",
       locale: "te_IN",
     },
