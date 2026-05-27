@@ -8,6 +8,43 @@ import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 import { logAudit, diffSummary } from "@/lib/audit";
 import { sanitizeSlug } from "@/lib/slug";
 import { resolveDeskId } from "@/lib/desk-resolver";
+import { pingIndexNow } from "@/lib/indexnow";
+
+// Build the canonical article URL the same way articleHref() does in apps/web.
+// Kept inline here so admin doesn't take a cross-app import; logic is small
+// + stable enough that drift is unlikely.
+function buildArticleUrl(siteUrl: string, id: string, slug: string, districtSlug: string | null, constituencySlug: string | null): string {
+  const suffix = id.slice(-8).toLowerCase();
+  if (districtSlug && constituencySlug) {
+    return `${siteUrl}/${districtSlug}/${constituencySlug}/${slug}-${suffix}`;
+  }
+  return `${siteUrl}/news/${slug}-${suffix}`;
+}
+
+async function pingArticlePublish(contentId: string, slug: string) {
+  try {
+    const row = await prisma.content.findUnique({
+      where: { id: contentId },
+      select: {
+        id: true,
+        constituency: { select: { slug: true, district: { select: { slug: true } } } },
+      },
+    });
+    const siteUrl = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+    const districtSlug = row?.constituency?.district.slug ?? null;
+    const constituencySlug = row?.constituency?.slug ?? null;
+    const urls = [
+      buildArticleUrl(siteUrl, contentId, slug, districtSlug, constituencySlug),
+      siteUrl,
+      `${siteUrl}/news-sitemap.xml`,
+    ];
+    if (districtSlug) urls.push(`${siteUrl}/district/${districtSlug}`);
+    if (constituencySlug) urls.push(`${siteUrl}/constituency/${constituencySlug}`);
+    await pingIndexNow(urls);
+  } catch (err) {
+    console.warn("[content publish] IndexNow ping failed (non-fatal):", (err as Error).message);
+  }
+}
 
 // GET — single content row with relations the editor needs (category,
 // author, tags). Returns 404 if not found.
@@ -234,6 +271,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       actor: { id: session.user.id, email: session.user.email, role: (session.user as any).role },
       req,
     });
+
+    // Spec #4 D5 (#218) — fire-and-forget IndexNow ping on publish so Bing /
+    // Yandex / Naver pick up the new URL in minutes instead of waiting for
+    // a crawl. Hub URLs (district / constituency / category) also re-ping so
+    // their article-list freshens too. Failure is non-fatal.
+    if (action === "content.publish" && content.type === "ARTICLE" && content.slug) {
+      void pingArticlePublish(content.id, content.slug);
+    }
 
     return NextResponse.json(content);
   } catch (error) {
