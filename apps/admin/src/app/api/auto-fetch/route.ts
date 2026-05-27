@@ -231,11 +231,23 @@ export async function POST(req: NextRequest) {
     // forceReimport=true → for every sourceUrl already in Content (live OR
     // soft-deleted), hard-delete the existing row before re-creating.
     forceReimport,
+    // Step 2 refine controls — all map to NewsData.io query params.
+    // cursors keyed by category for per-category "Load more" pagination.
+    keywordOverride,
+    fromDate,
+    toDate,
+    domain,
+    cursors,
   } = body as {
     action?: "preview" | "import";
     categories?: string[] | null;
     articles?: Array<RawArticle & { categorySlug: string }>;
     forceReimport?: boolean;
+    keywordOverride?: string;
+    fromDate?: string;
+    toDate?: string;
+    domain?: string;
+    cursors?: Record<string, string>;
   };
 
   // Which categories to fetch
@@ -277,8 +289,10 @@ export async function POST(req: NextRequest) {
     const previews: Array<{
       category: string;
       results: Array<RawArticle & { alreadyImported: boolean }>;
+      nextPageCursor?: string;
       error?: string;
     }> = [];
+    const trimmedKeyword = (keywordOverride || "").trim();
     for (const catSlug of categoriesToFetch) {
       // Categories the admin added in /categories aren't in our curated
       // categoryQueries map — fall back to using the slug itself (cleaned
@@ -286,9 +300,19 @@ export async function POST(req: NextRequest) {
       const config = categoryQueries[catSlug] || {
         q: catSlug.replace(/^district-/, "").replace(/-/g, " "),
       };
+      // Modal "Refine" bar — if a keyword override is set, it wins over
+      // the curated per-category query. Otherwise each category keeps
+      // its tuned q-string. Date / domain / pagination params are passed
+      // through to NewsData when present.
+      const effectiveQ = trimmedKeyword || config.q;
       try {
-        let url = `https://newsdata.io/api/1/latest?apikey=${NEWSDATA_KEY}&q=${encodeURIComponent(config.q)}&language=en,te&size=10`;
-        if (config.newsCategory) url += `&category=${config.newsCategory}`;
+        let url = `https://newsdata.io/api/1/latest?apikey=${NEWSDATA_KEY}&q=${encodeURIComponent(effectiveQ)}&language=en,te&size=10`;
+        if (config.newsCategory && !trimmedKeyword) url += `&category=${config.newsCategory}`;
+        if (fromDate) url += `&from_date=${encodeURIComponent(fromDate)}`;
+        if (toDate) url += `&to_date=${encodeURIComponent(toDate)}`;
+        if (domain) url += `&domain=${encodeURIComponent(domain.trim())}`;
+        const cursor = cursors?.[catSlug];
+        if (cursor) url += `&page=${encodeURIComponent(cursor)}`;
         const res = await fetch(url);
         const data = await res.json();
         if (data.status !== "success") {
@@ -299,7 +323,11 @@ export async function POST(req: NextRequest) {
           ...a,
           alreadyImported: !!(a.link && existingSourceSet.has(a.link)),
         }));
-        previews.push({ category: catSlug, results: out });
+        previews.push({
+          category: catSlug,
+          results: out,
+          nextPageCursor: data.nextPage || undefined,
+        });
       } catch (e: any) {
         previews.push({ category: catSlug, results: [], error: e?.message || "fetch error" });
       }

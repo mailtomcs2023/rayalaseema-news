@@ -40,7 +40,21 @@ interface RawArticle {
 interface PreviewBucket {
   category: string;
   results: RawArticle[];
+  nextPageCursor?: string;
   error?: string;
+}
+
+const FRESHNESS: Array<{ value: string; label: string; daysAgo: number | null }> = [
+  { value: "all", label: "Any time", daysAgo: null },
+  { value: "24h", label: "Last 24h", daysAgo: 1 },
+  { value: "3d", label: "Last 3 days", daysAgo: 3 },
+  { value: "7d", label: "Last week", daysAgo: 7 },
+  { value: "30d", label: "Last month", daysAgo: 30 },
+];
+
+function daysAgoToISO(daysAgo: number | null): string | undefined {
+  if (daysAgo == null) return undefined;
+  return new Date(Date.now() - daysAgo * 86400_000).toISOString().slice(0, 10);
 }
 
 interface ImportResult {
@@ -57,6 +71,13 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
   const [error, setError] = useState("");
   const [progress, setProgress] = useState("");
   const [forceReimport, setForceReimport] = useState(false);
+
+  // Refine bar (step 2). Empty keyword = each category's default
+  // NewsData query. domain = restrict to a publisher (e.g. "ndtv.com").
+  const [keyword, setKeyword] = useState("");
+  const [freshness, setFreshness] = useState("all");
+  const [domain, setDomain] = useState("");
+  const [loadingMore, setLoadingMore] = useState<string | null>(null);
 
   // Categories + districts pulled from DB. district-news is excluded from the
   // topic list because the dedicated district group already covers every
@@ -176,6 +197,17 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
     });
   };
 
+  // Refinement params sent to /api/auto-fetch preview. Shared by initial
+  // run, refine-rerun, and load-more so all three behave consistently.
+  const buildRefine = () => {
+    const f = FRESHNESS.find((x) => x.value === freshness);
+    return {
+      keywordOverride: keyword.trim() || undefined,
+      fromDate: daysAgoToISO(f?.daysAgo ?? null),
+      domain: domain.trim() || undefined,
+    };
+  };
+
   // --- Step 1 -> 2: preview ---
   const runPreview = async () => {
     if (selected.size === 0) { setError("Pick at least one category."); return; }
@@ -186,6 +218,7 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
 
     const list = [...selected];
     const acc: PreviewBucket[] = [];
+    const refine = buildRefine();
     for (let i = 0; i < list.length; i++) {
       const cat = list[i];
       setProgress(`Previewing ${i + 1} / ${list.length}: ${cat}`);
@@ -193,7 +226,7 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
         const res = await fetch("/api/auto-fetch", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "preview", categories: [cat] }),
+          body: JSON.stringify({ action: "preview", categories: [cat], ...refine }),
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
@@ -218,6 +251,82 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
     }
     setPickedLinks(initial);
     setStep("pick-articles");
+  };
+
+  // Step 2 in-place refine: re-runs the same selected categories with
+  // current keyword / freshness / domain, replacing existing buckets.
+  const refinePreview = async () => {
+    if (selected.size === 0) return;
+    setRunning(true);
+    setError("");
+    const list = [...selected];
+    const acc: PreviewBucket[] = [];
+    const refine = buildRefine();
+    setProgress(`Refining ${list.length} categor${list.length === 1 ? "y" : "ies"}…`);
+    for (const cat of list) {
+      try {
+        const res = await fetch("/api/auto-fetch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "preview", categories: [cat], ...refine }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) acc.push({ category: cat, results: [], error: data?.error || `HTTP ${res.status}` });
+        else acc.push((data.preview || [])[0] || { category: cat, results: [] });
+      } catch (e: any) {
+        acc.push({ category: cat, results: [], error: e.message || "fetch error" });
+      }
+      setBuckets([...acc]);
+    }
+    const initial = new Set<string>();
+    for (const b of acc) for (const a of b.results) {
+      if (a.link && !a.alreadyImported) initial.add(a.link);
+    }
+    setPickedLinks(initial);
+    setRunning(false);
+    setProgress("");
+  };
+
+  // Step 2 per-category Load More: fetch next NewsData page for ONE
+  // category and append to its bucket. Uses the stored cursor.
+  const loadMore = async (category: string) => {
+    const bucket = buckets.find((b) => b.category === category);
+    if (!bucket?.nextPageCursor || loadingMore) return;
+    setLoadingMore(category);
+    setError("");
+    const refine = buildRefine();
+    try {
+      const res = await fetch("/api/auto-fetch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "preview",
+          categories: [category],
+          cursors: { [category]: bucket.nextPageCursor },
+          ...refine,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data?.error || `Load more failed (${res.status})`);
+        setLoadingMore(null);
+        return;
+      }
+      const more: PreviewBucket = (data.preview || [])[0] || { category, results: [] };
+      setBuckets((prev) => prev.map((b) =>
+        b.category === category
+          ? { ...b, results: [...b.results, ...more.results], nextPageCursor: more.nextPageCursor }
+          : b,
+      ));
+      setPickedLinks((prev) => {
+        const next = new Set(prev);
+        for (const a of more.results) if (a.link && !a.alreadyImported) next.add(a.link);
+        return next;
+      });
+    } catch (e: any) {
+      setError(e.message || "Load more failed");
+    }
+    setLoadingMore(null);
   };
 
   // --- Step 2 -> 3: import the curated picks ---
@@ -326,6 +435,51 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
 
           {step === "pick-articles" && (
             <>
+              {/* Refine bar — keyword overrides per-category default query;
+                  freshness sets from_date; domain restricts to one publisher
+                  (e.g. ndtv.com). All optional. */}
+              <div style={{ display: "flex", gap: 6, marginBottom: 10, padding: 8, background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 6, flexWrap: "wrap", alignItems: "center" }}>
+                <input
+                  type="text"
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && !running) refinePreview(); }}
+                  placeholder="Keyword (overrides default, e.g. KTR water)"
+                  style={{ flex: "2 1 240px", minWidth: 0, padding: "6px 10px", border: "1px solid #d1d5db", borderRadius: 4, fontSize: 12 }}
+                  disabled={running}
+                />
+                <select
+                  value={freshness}
+                  onChange={(e) => setFreshness(e.target.value)}
+                  disabled={running}
+                  style={{ padding: "6px 10px", border: "1px solid #d1d5db", borderRadius: 4, fontSize: 12 }}
+                  title="Filter by article freshness"
+                >
+                  {FRESHNESS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+                </select>
+                <input
+                  type="text"
+                  value={domain}
+                  onChange={(e) => setDomain(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && !running) refinePreview(); }}
+                  placeholder="Source domain (e.g. ndtv.com)"
+                  style={{ flex: "1 1 180px", minWidth: 0, padding: "6px 10px", border: "1px solid #d1d5db", borderRadius: 4, fontSize: 12 }}
+                  disabled={running}
+                />
+                <button
+                  onClick={refinePreview}
+                  disabled={running}
+                  style={{ padding: "6px 14px", background: "#3b82f6", color: "#fff", border: "none", borderRadius: 4, fontSize: 12, fontWeight: 700, cursor: running ? "not-allowed" : "pointer", opacity: running ? 0.5 : 1 }}>
+                  Refresh
+                </button>
+                <button
+                  onClick={() => { setKeyword(""); setFreshness("all"); setDomain(""); }}
+                  disabled={running}
+                  style={{ padding: "6px 10px", background: "#fff", color: "#374151", border: "1px solid #d1d5db", borderRadius: 4, fontSize: 11, cursor: running ? "not-allowed" : "pointer" }}>
+                  Reset
+                </button>
+              </div>
+
               <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 12 }}>
                 {buckets.reduce((s, b) => s + b.results.length, 0)} article{buckets.reduce((s, b) => s + b.results.length, 0) === 1 ? "" : "s"} found.
                 Already-imported rows are unchecked + dimmed. Tick the ones you want — only checked rows are translated + imported.
@@ -424,6 +578,16 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
                       );
                     })}
                   </div>
+                  {b.nextPageCursor && (
+                    <div style={{ marginTop: 6, textAlign: "center" }}>
+                      <button
+                        onClick={() => loadMore(b.category)}
+                        disabled={loadingMore !== null || running}
+                        style={{ padding: "6px 14px", background: "#fff", color: "#3b82f6", border: "1px dashed #93c5fd", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: loadingMore || running ? "not-allowed" : "pointer", opacity: loadingMore && loadingMore !== b.category ? 0.5 : 1 }}>
+                        {loadingMore === b.category ? "Loading next 10…" : "Load next 10 from NewsData"}
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </>
