@@ -15,7 +15,7 @@ import { DialectGlosser } from "@/components/dialect-glosser";
 import { injectInlineByline, formatRelativeTelugu } from "@/lib/byline";
 import { sanitizeArticleHtml } from "@/lib/sanitize";
 import { articleHref } from "@/lib/article-href";
-import { buildNewsArticleSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
+import { buildNewsArticleSchema, buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 import type { LocationChain, AuthorRef, PublisherConfig } from "@rayalaseema/seo-schema";
 
 // Loose type — matches the projected shape returned by
@@ -123,15 +123,13 @@ export function ArticleView({ article, related, trending, siteUrl }: Props) {
     images: article.featuredImage,
   });
 
-  const breadcrumbLd = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Home", item: siteUrl },
-      { "@type": "ListItem", position: 2, name: article.category.name, item: `${siteUrl}/category/${article.category.slug}` },
-      { "@type": "ListItem", position: 3, name: article.title },
+  const breadcrumbLd = buildBreadcrumbListSchema({
+    items: [
+      { name: "Home", url: siteUrl },
+      { name: article.category.name, url: `${siteUrl}/category/${article.category.slug}` },
+      { name: article.title },
     ],
-  };
+  });
 
   // Headline-only fallback for ScrollShareNudge / PaywallModal which need a
   // stable identifier across the migration. They take the canonical slug
@@ -141,7 +139,7 @@ export function ArticleView({ article, related, trending, siteUrl }: Props) {
   return (
     <div className="min-h-screen bg-gray-50">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: stringifyJsonLd(newsArticleLd) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: stringifyJsonLd(breadcrumbLd) }} />
       <ScrollShareNudge title={article.title} slug={slug} articleUrl={canonical} />
       <Header />
 
