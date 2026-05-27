@@ -23,6 +23,7 @@
         "@radix-ui/react-select": "^2.2.6",
         "@radix-ui/react-slot": "^1.2.4",
         "@rayalaseema/db": "*",
+        "@rayalaseema/seo-schema": "*",
         "@rayalaseema/ui": "*",
         "@tanstack/react-table": "^8.21.3",
         "@tiptap/extension-bubble-menu": "^3.22.2",
@@ -146,6 +147,7 @@
         "@radix-ui/react-toggle-group": "^1.1.11",
         "@radix-ui/react-tooltip": "^1.2.8",
         "@rayalaseema/db": "*",
+        "@rayalaseema/seo-schema": "*",
         "@rayalaseema/ui": "*",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
@@ -202,6 +204,13 @@
         "prisma": "^6.4.0",
         "tsx": "^4.7.0",
         "typescript": "^5.5.0",
+      },
+    },
+    "packages/seo-schema": {
+      "name": "@rayalaseema/seo-schema",
+      "version": "0.0.1",
+      "devDependencies": {
+        "typescript": "^5.7.0",
       },
     },
     "packages/ui": {
@@ -867,6 +876,8 @@
     "@rayalaseema/config": ["@rayalaseema/config@workspace:packages/config"],
 
     "@rayalaseema/db": ["@rayalaseema/db@workspace:packages/db"],
+
+    "@rayalaseema/seo-schema": ["@rayalaseema/seo-schema@workspace:packages/seo-schema"],
 
     "@rayalaseema/ui": ["@rayalaseema/ui@workspace:packages/ui"],
 
