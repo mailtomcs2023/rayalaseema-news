@@ -12,3 +12,5 @@
 export * from "./types";
 export { stringifyJsonLd } from "./serialize";
 export { buildNewsArticleSchema } from "./news-article";
+export { buildNewsMediaOrganizationSchema } from "./news-media-organization";
+export type { EditorialPolicies, ContactPoint, AddressInput } from "./news-media-organization";
