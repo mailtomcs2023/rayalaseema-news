@@ -14,23 +14,30 @@ import { cn } from "@/lib/utils";
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
-  title: "రాయలసీమ ఎక్స్‌ప్రెస్ | Rayalaseema Express",
+  // Spec #4 brand disambiguation — title carries " News" suffix so Google
+  // doesn't collapse our brand into the Indian Railways train of the same
+  // name. See ~/.claude/.../memory/project_brand_disambiguation.md.
+  title: "Rayalaseema Express News | రాయలసీమ ఎక్స్‌ప్రెస్ వార్తలు",
   description:
-    "రాయలసీమ ప్రాంతం నుండి తాజా వార్తలు, రాజకీయాలు, క్రీడలు, వ్యాపారం మరియు మరిన్ని. Latest news from Rayalaseema region.",
+    "Telugu news portal covering the Rayalaseema region of Andhra Pradesh. Hyper-local news from Kurnool, Nandyal, Anantapuramu, Sri Sathya Sai, YSR-Kadapa, Annamayya, Tirupati, and Chittoor.",
   manifest: "/manifest.json",
   themeColor: "#E01B1B",
   keywords: [
-    "Rayalaseema Express",
-    "రాయలసీమ ఎక్స్‌ప్రెస్",
-    "Telugu news",
+    "Rayalaseema Express News",
+    "Rayalaseema news",
+    "రాయలసీమ ఎక్స్‌ప్రెస్ వార్తలు",
+    "Telugu news portal",
+    "Telugu news Andhra Pradesh",
     "Kurnool news",
     "Anantapur news",
     "Kadapa news",
-    "Rayalaseema news",
+    "Tirupati news",
+    "Chittoor news",
+    "Nandyal news",
   ],
   openGraph: {
-    title: "రాయలసీమ ఎక్స్‌ప్రెస్ | Rayalaseema Express",
-    description: "రాయలసీమ ప్రాంతం నుండి తాజా వార్తలు",
+    title: "Rayalaseema Express News | రాయలసీమ ఎక్స్‌ప్రెస్ వార్తలు",
+    description: "Telugu news portal for the Rayalaseema region of Andhra Pradesh.",
     type: "website",
     locale: "te_IN",
   },
@@ -60,10 +67,17 @@ export default async function RootLayout({
   const orgLd = buildNewsMediaOrganizationSchema({
     publisher: {
       siteUrl,
-      publicationName: "Rayalaseema Express",
-      publicationNameTe: "రాయలసీమ ఎక్స్‌ప్రెస్",
+      // Spec #4 brand disambiguation (2026-05-27) — "Rayalaseema Express" is
+      // also Indian Railways train 12793/12794. We brand the publication as
+      // "Rayalaseema Express News" so search engines + AI engines see a
+      // distinct entity from the train. alternateName preserves the legacy
+      // brand for users typing the shorter form.
+      publicationName: "Rayalaseema Express News",
+      publicationNameTe: "రాయలసీమ ఎక్స్‌ప్రెస్ - వార్తలు",
       logoUrl: `${siteUrl}/logo.png`,
     },
+    disambiguatingDescription:
+      "Telugu digital news portal for the Rayalaseema region of Andhra Pradesh. Covers the 8 districts of Rayalaseema. Not affiliated with the Visakhapatnam–Tirupati Express train (Indian Railways train numbers 12793/12794).",
     sameAs,
     contactPoint: (config.contact_email || config.contact_phone)
       ? { email: config.contact_email, phone: config.contact_phone, contactType: "editorial" }
