@@ -124,6 +124,13 @@ jobs:
             PEXELS_API_KEY="${{ secrets.PEXELS_API_KEY }}"
             GOOGLE_CSE_KEY="${{ secrets.GOOGLE_CSE_KEY }}"
             GOOGLE_CSE_ID="${{ secrets.GOOGLE_CSE_ID }}"
+            # Azure image generation (gpt-image-2 deployment, sweden central).
+            # Separate resource from the OpenAI chat one because image models
+            # aren't available in south india.
+            AZURE_IMAGES_ENDPOINT="${{ secrets.AZURE_IMAGES_ENDPOINT }}"
+            AZURE_IMAGES_KEY="${{ secrets.AZURE_IMAGES_KEY }}"
+            AZURE_IMAGES_DEPLOYMENT="gpt-image"
+            AZURE_IMAGES_API_VERSION="2025-04-01-preview"
             AZURE_STORAGE_CONNECTION_STRING="${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}"
             ENV
 
