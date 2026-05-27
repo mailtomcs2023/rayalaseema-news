@@ -1,0 +1,48 @@
+name: Lighthouse CI
+
+# Spec #4 E3 (#222) — Core Web Vitals + Lighthouse audit gate.
+#
+# Runs on push-to-main (post-deploy) + manual workflow_dispatch. Hits prod
+# URLs directly so we measure what users actually see (CrUX-style RUM data
+# lives in GA4 — see E2 #221; this workflow is the lab-data complement).
+#
+# Asserts hard thresholds on the top 4 page types: home, district hub,
+# constituency hub, article. Fails the run if any URL drops below 80 for
+# performance, accessibility, best-practices, or SEO. The 80 floor is
+# intentionally permissive — first-run baseline + tuning lands in E4 (Cache
+# Components) and E5 (font loading); this workflow exists to surface
+# regressions, not gate every PR.
+#
+# Reports upload as workflow artifacts so you can compare runs over time.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # Daily at 02:30 UTC (08:00 IST) — captures CWV against fresh prod state
+    # before the editorial day begins.
+    - cron: "30 2 * * *"
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Wait for deploy to settle
+        if: github.event_name == 'push'
+        # Deploy.yml runs in parallel and typically lands in ~3 min. Sleep
+        # before measuring so we audit the new code, not the previous one.
+        run: sleep 240
+
+      - uses: treosh/lighthouse-ci-action@v12
+        with:
+          urls: |
+            https://rayalaseemaexpress.com/
+            https://rayalaseemaexpress.com/district/kurnool
+            https://rayalaseemaexpress.com/constituency/kurnool-137
+            https://rayalaseemaexpress.com/news/test-untagged-fallback-53bc53aa
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+          configPath: ./.github/lighthouse-ci.json

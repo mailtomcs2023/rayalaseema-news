@@ -1,3 +1,7 @@
+// E4 (#223) — sitemap-index changes rarely; long revalidate.
+
+export const revalidate = 3600;
+
 // Spec #4 D1 (#214) — /sitemap-index.xml.
 //
 // Single submission point for GSC + Bing. References:

@@ -1,3 +1,7 @@
+// E4 (#223) — 5-min ISR.
+
+export const revalidate = 300;
+
 // Spec #4 D6 (#219) — per-district RSS feed.
 //
 // /rss/district/<slug>.xml — 30 most-recent articles tagged to the district

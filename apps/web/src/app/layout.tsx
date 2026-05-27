@@ -4,14 +4,40 @@ import { getSiteConfig } from "@/lib/db-queries";
 import { buildNewsMediaOrganizationSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 import { CookieConsent } from "@/components/cookie-consent";
 import { WhatsAppFloat } from "@/components/whatsapp-float";
+import { WebVitalsReporter } from "@/components/web-vitals-reporter";
 import { PushNotifications } from "@/components/push-notifications";
 import { DistrictPicker } from "@/components/district-picker";
 import { SWRegister } from "@/components/sw-register";
 import "./globals.css";
-import { Geist } from "next/font/google";
+import { Geist, Noto_Sans_Telugu, Noto_Serif_Telugu, Mandali } from "next/font/google";
 import { cn } from "@/lib/utils";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+// Spec #4 E5 (#224) — fonts via next/font/google. Self-hosts the woff2
+// files at build time so:
+//   - No render-blocking external request to fonts.googleapis.com
+//   - Automatic subset to Telugu + Latin glyphs only (smaller payload)
+//   - display: swap by default — avoids FOIT on Telugu text
+// Replaces the <link href="fonts.googleapis.com/..."> tag previously in
+// <head>.
+const geist = Geist({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
+const notoTelugu = Noto_Sans_Telugu({
+  subsets: ["telugu", "latin"],
+  variable: "--font-telugu-body",
+  weight: ["400", "500", "600", "700", "800", "900"],
+  display: "swap",
+});
+const notoSerifTelugu = Noto_Serif_Telugu({
+  subsets: ["telugu", "latin"],
+  variable: "--font-telugu-heading",
+  weight: ["400", "500", "600", "700", "800", "900"],
+  display: "swap",
+});
+const mandali = Mandali({
+  subsets: ["telugu", "latin"],
+  variable: "--font-mandali",
+  weight: ["400"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   // Spec #4 brand disambiguation — title carries " News" suffix so Google
@@ -96,11 +122,8 @@ export default async function RootLayout({
     },
   });
   return (
-    <html lang="te" className={cn("font-sans", geist.variable)}>
+    <html lang="te" className={cn("font-sans", geist.variable, notoTelugu.variable, notoSerifTelugu.variable, mandali.variable)}>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Telugu:wght@400;500;600;700;800;900&family=Noto+Serif+Telugu:wght@400;500;600;700;800;900&family=Mandali&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
         {/* JSON-LD structured data — search-engine metadata. Uses
             next/script so React 19 doesn't warn about raw <script>
             tags inside components, but renders as an inline script in
@@ -159,6 +182,7 @@ export default async function RootLayout({
         <DistrictPicker />
         <WhatsAppFloat />
         <CookieConsent />
+        <WebVitalsReporter />
         <PushNotifications />
         <SWRegister />
       </body>

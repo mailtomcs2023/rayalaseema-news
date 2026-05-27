@@ -1,3 +1,7 @@
+// E4 (#223) — 5-min ISR matches Cache-Control header.
+
+export const revalidate = 300;
+
 // Spec #4 D6 (#219) — site-wide RSS 2.0 feed.
 //
 // 50 most-recent published articles across all districts + categories.

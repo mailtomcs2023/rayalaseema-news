@@ -1,4 +1,9 @@
 // Spec #4 D3 (#216) — main sitemap polish.
+// E4 (#223) — `revalidate` export so Next ISR keeps a fresh copy at the
+// edge for 5 min; per-request DB hit drops to 1-per-5-min per region.
+
+export const revalidate = 300;
+
 //
 // Emits every indexable URL on the site grouped by priority + changefreq:
 //   1.0  /                             — home
