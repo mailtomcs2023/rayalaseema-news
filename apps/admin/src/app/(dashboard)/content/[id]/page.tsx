@@ -61,6 +61,10 @@ export default function ContentEditorPage() {
   const [body, setBody] = useState("");
   const [featuredImage, setFeaturedImage] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  // Multi-category cross-listing — IDs of categories this row should ALSO
+  // appear under (primary stays in categoryId). Editor renders a chip list
+  // below the primary dropdown.
+  const [additionalCategoryIds, setAdditionalCategoryIds] = useState<string[]>([]);
   const [deskId, setDeskId] = useState("");
   const [constituencyId, setConstituencyId] = useState("");
   const [status, setStatus] = useState("DRAFT");
@@ -199,6 +203,7 @@ export default function ContentEditorPage() {
       setBody(row.body || "");
       setFeaturedImage(row.featuredImage || "");
       setCategoryId(row.categoryId || "");
+      setAdditionalCategoryIds(Array.isArray(row.additionalCategoryIds) ? row.additionalCategoryIds : []);
       setDeskId(row.deskId || "");
       setConstituencyId(row.constituencyId || "");
       setStatus(row.status || "DRAFT");
@@ -269,6 +274,7 @@ export default function ContentEditorPage() {
       body: type === "ARTICLE" ? body : null,
       featuredImage: featuredImage || null,
       categoryId: categoryId || null,
+      additionalCategoryIds: additionalCategoryIds.filter((id) => id && id !== categoryId),
       deskId: deskId || null,
       constituencyId: constituencyId || null,
       status: finalStatus,
@@ -505,11 +511,48 @@ export default function ContentEditorPage() {
             {type === "ARTICLE" && <div className="shadcn-scope"><ReviewerPanel contentId={contentId} /></div>}
 
             <Section title="Classification">
-              <label style={lblStyle}>Category</label>
+              <label style={lblStyle}>Primary category</label>
               <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} style={inpStyle}>
                 <option value="">— none —</option>
                 {categories.map((c) => <option key={c.id} value={c.id}>{c.nameEn}</option>)}
               </select>
+
+              {/* Multi-category cross-listing. Clicking a chip toggles. The
+                  primary is hidden from this list (it's already counted). */}
+              <label style={lblStyle}>Also list under (optional)</label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 4, padding: 6, background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 6, minHeight: 36 }}>
+                {categories.filter((c) => c.id !== categoryId).map((c) => {
+                  const on = additionalCategoryIds.includes(c.id);
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setAdditionalCategoryIds((prev) =>
+                        prev.includes(c.id) ? prev.filter((x) => x !== c.id) : [...prev, c.id]
+                      )}
+                      style={{
+                        padding: "3px 10px",
+                        fontSize: 11,
+                        fontWeight: 600,
+                        border: `1px solid ${on ? "#93c5fd" : "#e5e7eb"}`,
+                        background: on ? "#eff6ff" : "#fff",
+                        color: on ? "#1e40af" : "#374151",
+                        borderRadius: 999,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {on ? "✓ " : ""}{c.nameEn}
+                    </button>
+                  );
+                })}
+                {categories.length === 0 && <span style={{ fontSize: 11, color: "#9ca3af" }}>Loading…</span>}
+              </div>
+              {additionalCategoryIds.length > 0 && (
+                <p style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>
+                  Cross-listed in {additionalCategoryIds.length} extra categor{additionalCategoryIds.length === 1 ? "y" : "ies"}.
+                </p>
+              )}
+
               <label style={lblStyle}>Desk (auto-resolves if blank)</label>
               <select value={deskId} onChange={(e) => setDeskId(e.target.value)} style={inpStyle}>
                 <option value="">— auto —</option>

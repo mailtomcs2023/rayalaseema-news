@@ -22,6 +22,9 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
         category: true,
         author: { select: { id: true, name: true } },
         tags: { include: { tag: true } },
+        // Cross-listed categories — editor renders these as the "Also list
+        // under" multi-select selection.
+        additionalCategories: { select: { categoryId: true } },
       },
     });
     if (!content) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -30,7 +33,12 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
     if (session.user.role === "REPORTER" && content.authorId !== session.user.id) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
-    return NextResponse.json(content);
+    // Flatten additionalCategories to a simple string[] for the editor.
+    const { additionalCategories, ...rest } = content;
+    return NextResponse.json({
+      ...rest,
+      additionalCategoryIds: additionalCategories.map((x) => x.categoryId),
+    });
   } catch (error) {
     return apiError(error);
   }
@@ -181,6 +189,18 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     const content = await prisma.content.update({ where: { id }, data });
+
+    // Additional categories: replace-all when array provided. Editor sends
+    // the full desired set; we wipe + re-create. Skipping the array entirely
+    // leaves cross-listing untouched.
+    if (Array.isArray(body.additionalCategoryIds)) {
+      await prisma.contentCategory.deleteMany({ where: { contentId: id } });
+      const primaryId = (data.categoryId ?? current.categoryId) || null;
+      const extras = [...new Set(body.additionalCategoryIds.filter((cid: string) => cid && cid !== primaryId))];
+      for (const cid of extras) {
+        await prisma.contentCategory.create({ data: { contentId: id, categoryId: cid as string } }).catch(() => {});
+      }
+    }
 
     // Tags: replace-all semantics when tagNames provided.
     if (Array.isArray(body.tagNames)) {

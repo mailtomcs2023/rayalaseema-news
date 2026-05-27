@@ -334,53 +334,78 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
     if (pickedLinks.size === 0) { setError("No articles selected."); return; }
     setRunning(true);
     setError("");
-    setProgress(`Importing ${pickedLinks.size} article${pickedLinks.size === 1 ? "" : "s"} — AI translate ~1-2s each, hold tight…`);
 
-    // Group selected articles by category and POST one category at a time so
-    // each request stays under the proxy timeout.
-    const grouped = new Map<string, Array<RawArticle & { categorySlug: string }>>();
+    // One-article-per-POST loop. Pipeline runs ~8s per article (extract +
+    // compose + fact-check); batching multiple articles into one request
+    // blew past the proxy timeout when a category had 5+ articles. Single-
+    // article requests stay safely under proxy limit + give live progress.
+    const all: Array<RawArticle & { categorySlug: string }> = [];
+    const articlesByCategory: Record<string, number> = {};
     for (const b of buckets) {
       for (const a of b.results) {
         if (a.link && pickedLinks.has(a.link)) {
-          if (!grouped.has(b.category)) grouped.set(b.category, []);
-          grouped.get(b.category)!.push({ ...a, categorySlug: b.category });
+          all.push({ ...a, categorySlug: b.category });
+          articlesByCategory[b.category] = (articlesByCategory[b.category] || 0) + 1;
         }
       }
     }
 
-    const acc: ImportResult[] = [];
+    // Tally per category for the results table.
+    const catStats = new Map<string, { fetched: number; published: number; errors: string[] }>();
+    for (const cat of Object.keys(articlesByCategory)) {
+      catStats.set(cat, { fetched: articlesByCategory[cat], published: 0, errors: [] });
+    }
+
     let total = 0;
-    let idx = 0;
-    const totalGroups = grouped.size;
-    for (const [cat, articles] of grouped) {
-      idx++;
-      setProgress(`Importing ${idx} / ${totalGroups}: ${cat} (${articles.length} article${articles.length === 1 ? "" : "s"})`);
+    for (let i = 0; i < all.length; i++) {
+      const a = all[i];
+      setProgress(`Importing ${i + 1} / ${all.length}: ${a.title?.slice(0, 60)}…`);
       try {
         const res = await fetch("/api/auto-fetch", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ articles, forceReimport }),
+          body: JSON.stringify({ articles: [a], forceReimport }),
         });
         const text = await res.text();
         let data: any = null;
-        try { data = JSON.parse(text); } catch { /* nginx HTML error */ }
+        try { data = JSON.parse(text); } catch { /* nginx HTML page */ }
+        const stats = catStats.get(a.categorySlug)!;
         if (!res.ok || !data) {
-          acc.push({ cat, fetched: articles.length, published: 0, error: data?.error || `HTTP ${res.status} (proxy timeout?)` });
+          stats.errors.push(data?.error || `HTTP ${res.status} (proxy timeout?)`);
         } else {
-          const row = data.results?.[0];
-          acc.push({ cat, fetched: row?.fetched ?? articles.length, published: row?.published ?? 0, error: row?.error });
-          total += data.totalPublished || 0;
+          const published = data.totalPublished || 0;
+          stats.published += published;
+          total += published;
+          // Mark this row imported in-place so the article picker reflects
+          // it if the user clicks Back.
+          if (a.link) {
+            const link = a.link;
+            setBuckets((prev) => prev.map((b) => ({
+              ...b,
+              results: b.results.map((r) => (r.link === link ? { ...r, alreadyImported: true } : r)),
+            })));
+          }
         }
+        // Flush a partial results view so the user can watch progress.
+        setPerCategory([...catStats.entries()].map(([cat, s]) => ({
+          cat, fetched: s.fetched, published: s.published,
+          error: s.errors.length ? s.errors.slice(0, 2).join(" · ") : undefined,
+        })));
       } catch (e: any) {
-        acc.push({ cat, fetched: articles.length, published: 0, error: e.message || "network error" });
+        const stats = catStats.get(a.categorySlug)!;
+        stats.errors.push(e.message || "network error");
       }
-      setPerCategory([...acc]);
     }
+
+    const finalRows: ImportResult[] = [...catStats.entries()].map(([cat, s]) => ({
+      cat, fetched: s.fetched, published: s.published,
+      error: s.errors.length ? s.errors.slice(0, 2).join(" · ") : undefined,
+    }));
+    setPerCategory(finalRows);
     setRunning(false);
-    setProgress(`Done. Imported ${total} article${total === 1 ? "" : "s"}.`);
+    setProgress(`Done. Imported ${total} of ${all.length} article${all.length === 1 ? "" : "s"}.`);
     setStep("results");
-    if (total > 0 && !acc.some((r) => r.error)) {
-      // Don't auto-close — user wants to see the breakdown.
+    if (total > 0 && !finalRows.some((r) => r.error)) {
       onDone(total);
     }
   };
