@@ -5,6 +5,7 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { prisma } from "@rayalaseema/db";
 import { articleHref } from "@/lib/article-href";
+import { buildPersonSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 
 const SITE_URL = process.env.SITE_URL || "https://rayalaseemaexpress.com";
 
@@ -59,35 +60,37 @@ export default async function AuthorPage({ params }: { params: Promise<{ slug: s
     prisma.content.count({ where: { type: "ARTICLE", authorId: author.id, status: "PUBLISHED" } }),
   ]);
 
-  // Minimal Person JSON-LD. Phase B4 (#200) replaces with full generator from
-  // @rayalaseema/seo-schema once that package ships. For now ship at least
-  // the basics so the page isn't author-attribution-bare.
+  // Person JSON-LD via shared generator (Phase B4 #200). Sidebar pills below
+  // also need the visible sameAs list; compute it once.
   const sameAs = [
     author.twitterHandle ? `https://twitter.com/${author.twitterHandle.replace(/^@/, "")}` : null,
     author.linkedinUrl || null,
     author.facebookUrl || null,
   ].filter((u): u is string => Boolean(u));
-  const personLd = {
-    "@context": "https://schema.org",
-    "@type": "Person",
-    name: author.name,
-    url: `${SITE_URL}/author/${author.publicProfileSlug}`,
-    image: author.avatar || undefined,
-    description: author.bio || undefined,
-    jobTitle: author.role,
-    knowsAbout: author.expertise.length > 0 ? author.expertise : undefined,
-    alumniOf: author.affiliations.length > 0 ? author.affiliations : undefined,
-    sameAs: sameAs.length > 0 ? sameAs : undefined,
-    worksFor: {
-      "@type": "NewsMediaOrganization",
-      name: "Rayalaseema Express",
-      url: SITE_URL,
+  const personLd = buildPersonSchema({
+    author: {
+      name: author.name,
+      publicProfileSlug: author.publicProfileSlug || "author",
+      role: author.role,
+      bio: author.bio,
+      avatar: author.avatar,
+      twitterHandle: author.twitterHandle,
+      linkedinUrl: author.linkedinUrl,
+      facebookUrl: author.facebookUrl,
+      expertise: author.expertise,
+      affiliations: author.affiliations,
     },
-  };
+    publisher: {
+      siteUrl: SITE_URL,
+      publicationName: "Rayalaseema Express",
+      publicationNameTe: "రాయలసీమ ఎక్స్‌ప్రెస్",
+      logoUrl: `${SITE_URL}/logo.png`,
+    },
+  });
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(personLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: stringifyJsonLd(personLd) }} />
       <Header />
       <main style={{ maxWidth: 900, margin: "0 auto", padding: "30px 16px" }}>
         {/* Author Card */}
