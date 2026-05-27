@@ -1,5 +1,9 @@
-// E4 (#223) — 5-min ISR.
-
+// E4 (#223) — 5-min ISR. dynamic param can't be enumerated at build
+// (categories are user-data), so force-dynamic skips the prerender
+// attempt that was crashing with "Cannot destructure property 'slug' of
+// '(intermediate value)' as it is undefined". Per-request rendering
+// stays cheap thanks to the revalidate window below.
+export const dynamic = "force-dynamic";
 export const revalidate = 300;
 
 // Spec #4 D6 (#219) — per-category RSS feed.

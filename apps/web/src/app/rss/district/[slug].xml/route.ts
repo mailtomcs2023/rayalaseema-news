@@ -1,5 +1,6 @@
-// E4 (#223) — 5-min ISR.
-
+// E4 (#223) — 5-min ISR. force-dynamic for the same reason as the
+// category sibling (#223 commit notes).
+export const dynamic = "force-dynamic";
 export const revalidate = 300;
 
 // Spec #4 D6 (#219) — per-district RSS feed.
