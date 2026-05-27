@@ -10,6 +10,7 @@ import { sanitizeSlug } from "@/lib/slug";
 import { resolveDeskId } from "@/lib/desk-resolver";
 import { pingIndexNow } from "@/lib/indexnow";
 import { tagContentLocations } from "@/lib/location-ner-hook";
+import { injectInternalLinks } from "@/lib/internal-linker";
 
 // Build the canonical article URL the same way articleHref() does in apps/web.
 // Kept inline here so admin doesn't take a cross-app import; logic is small
@@ -287,8 +288,15 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (action === "content.publish" && content.type === "ARTICLE") {
       try {
         await tagContentLocations(content.id, content.title, content.body || "");
+        // G3 (#233) — inject up to 2 internal links to the primary district +
+        // constituency hubs. Reads the just-written ContentLocation rows.
+        // Idempotent: no-op if the body already links to the same hubs.
+        const newBody = await injectInternalLinks(content.id, content.body || "");
+        if (newBody !== content.body) {
+          await prisma.content.update({ where: { id: content.id }, data: { body: newBody } });
+        }
       } catch (err) {
-        console.warn("[content publish] location NER failed (non-fatal):", (err as Error).message);
+        console.warn("[content publish] location NER / internal-link failed (non-fatal):", (err as Error).message);
       }
     }
 
