@@ -373,17 +373,33 @@ export default function ContentEditorPage() {
                 to title/body. */}
             <label style={lblStyle}>Featured image</label>
             <ImageUpload value={featuredImage} onChange={setFeaturedImage} />
-            <button
-              type="button"
-              onClick={() => setImageSearchOpen(true)}
-              style={{
-                marginTop: 8, marginBottom: 16, padding: "6px 12px", background: "#fff", color: "#374151",
-                border: "1px solid #d1d5db", borderRadius: 6, fontSize: 12, fontWeight: 600,
-                cursor: "pointer",
-              }}
-            >
-              🔍 Search free / web images
-            </button>
+            <div style={{ display: "flex", gap: 6, marginTop: 8, marginBottom: 16 }}>
+              <button
+                type="button"
+                onClick={() => setImageSearchOpen(true)}
+                style={{
+                  flex: 1, padding: "6px 12px", background: "#fff", color: "#374151",
+                  border: "1px solid #d1d5db", borderRadius: 6, fontSize: 12, fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                🔍 Search free / web images
+              </button>
+              <button
+                type="button"
+                onClick={() => featuredImage && setCropSrc(featuredImage)}
+                disabled={!featuredImage}
+                title={featuredImage ? "Open the crop modal — adjust framing before publishing" : "No image to crop yet"}
+                style={{
+                  padding: "6px 14px", background: featuredImage ? "#fff" : "#f3f4f6",
+                  color: featuredImage ? "#374151" : "#9ca3af",
+                  border: "1px solid #d1d5db", borderRadius: 6, fontSize: 12, fontWeight: 600,
+                  cursor: featuredImage ? "pointer" : "not-allowed",
+                }}
+              >
+                ✂ Crop
+              </button>
+            </div>
 
             {/* Common */}
             <label style={lblStyle}>Title *</label>
