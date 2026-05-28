@@ -16,18 +16,36 @@ import { resolveDeskId } from "@/lib/desk-resolver";
 const VALID_TYPES = Object.values(ContentType) as string[];
 
 // GET /api/content — list with filters (type, status, category, search) + pagination
+// GET /api/content — list with filters + pagination.
+//
+// Two pagination modes:
+//
+//   1. CURSOR (preferred, constant-time) — pass `?cursor=<id>&limit=15`.
+//      Returns `nextCursor` (or null when done) and `hasMore`. Forward-only.
+//      No `total` unless `?includeTotal=1` is also passed, because the count()
+//      is what makes large pages slow in the first place.
+//
+//   2. OFFSET (legacy fallback) — pass `?page=2&limit=15` like before.
+//      Returns `total` + `page` + `limit`. Cost grows with page number.
+//      Use only for "jump to page N" UX — and even then, expensive past
+//      page 50 on a multi-thousand-row table.
+//
+// The /content table page still uses offset today; switching it to cursor is
+// a separate frontend PR (TanStack Query) so this route ships
+// backward-compatibly.
 export async function GET(req: NextRequest) {
   const session = await requireAuth();
   if (isAuthError(session)) return session;
   try {
     const { searchParams } = new URL(req.url);
+    const cursor = searchParams.get("cursor") || "";
     const page = parseInt(searchParams.get("page") || "1");
     const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "15"), 1), 200);
+    const includeTotal = searchParams.get("includeTotal") === "1" || !cursor;
     const search = searchParams.get("search") || "";
     const type = searchParams.get("type") || "";
     const status = searchParams.get("status") || "";
     const category = searchParams.get("category") || "";
-    const offset = (page - 1) * limit;
 
     // `?ids=a,b,c` short-circuits — returns just those rows (lookup helper).
     const idsParam = searchParams.get("ids");
@@ -37,7 +55,7 @@ export async function GET(req: NextRequest) {
         where: { id: { in: ids } },
         select: { id: true, type: true, title: true, slug: true, summary: true, featuredImage: true },
       });
-      return NextResponse.json({ items, total: items.length });
+      return NextResponse.json({ items, total: items.length, hasMore: false, nextCursor: null });
     }
 
     const where: any = {};
@@ -101,21 +119,58 @@ export async function GET(req: NextRequest) {
       where.deletedAt = null;
     }
 
-    const [items, total] = await Promise.all([
+    // Stable ordering for cursor pagination — createdAt alone isn't unique
+    // enough (two rows can share a timestamp), so we add `id` as the secondary
+    // key. Both columns indexed together is the right shape for the composite
+    // index we'll add in PR 14.
+    const orderBy = [{ createdAt: "desc" as const }, { id: "desc" as const }];
+
+    // Cursor mode — fetch one extra row to detect `hasMore` cheaply, then
+    // slice it off before returning. `skip: 1` tells Prisma the cursor row
+    // is the EXCLUSIVE boundary (the last item of the previous page),
+    // not part of this page.
+    if (cursor) {
+      const findArgs: any = {
+        where,
+        include: {
+          category: { select: { name: true, nameEn: true, slug: true, color: true } },
+          author: { select: { name: true } },
+        },
+        orderBy,
+        take: limit + 1,
+        cursor: { id: cursor },
+        skip: 1,
+      };
+      const [rows, total] = await Promise.all([
+        prisma.content.findMany(findArgs),
+        includeTotal ? prisma.content.count({ where }) : Promise.resolve(null),
+      ]);
+      const hasMore = rows.length > limit;
+      const items = hasMore ? rows.slice(0, limit) : rows;
+      const nextCursor = hasMore && items.length > 0 ? items[items.length - 1].id : null;
+      return NextResponse.json({ items, hasMore, nextCursor, total, limit });
+    }
+
+    // Offset mode (legacy). Kept so the existing /content UI works unchanged
+    // until it migrates to cursor in the TanStack Query PR.
+    const offset = (page - 1) * limit;
+    const [rows, total] = await Promise.all([
       prisma.content.findMany({
         where,
         include: {
           category: { select: { name: true, nameEn: true, slug: true, color: true } },
           author: { select: { name: true } },
         },
-        orderBy: { createdAt: "desc" },
-        take: limit,
+        orderBy,
+        take: limit + 1,
         skip: offset,
       }),
       prisma.content.count({ where }),
     ]);
-
-    return NextResponse.json({ items, total, page, limit });
+    const hasMore = rows.length > limit;
+    const items = hasMore ? rows.slice(0, limit) : rows;
+    const nextCursor = hasMore && items.length > 0 ? items[items.length - 1].id : null;
+    return NextResponse.json({ items, total, page, limit, hasMore, nextCursor });
   } catch (error) {
     return apiError(error);
   }
