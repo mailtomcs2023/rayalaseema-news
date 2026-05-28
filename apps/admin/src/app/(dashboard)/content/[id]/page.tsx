@@ -76,6 +76,34 @@ export default function ContentEditorPage() {
   // After picking from search OR pasting a URL, hand the (already EXIF-
   // stripped, RE-stamped) image to the crop modal so the user can frame it.
   const [cropSrc, setCropSrc] = useState<string | null>(null);
+  // Per-operation AI enhance state (loading flag + last error). Result
+  // URL replaces featuredImage in place.
+  const [enhancing, setEnhancing] = useState<string | null>(null);
+
+  const enhanceImage = async (op: string) => {
+    if (!featuredImage || enhancing) return;
+    if (!confirm(`Run AI '${op}' on the current featured image? Takes ~15s + ~$0.06.`)) return;
+    setEnhancing(op);
+    setError("");
+    try {
+      const res = await fetch("/api/images/enhance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: featuredImage, op }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.url) {
+        setError(data.error || `Enhance failed (${res.status})`);
+      } else {
+        setFeaturedImage(data.url);
+        setSuccess(`✨ '${op}' applied. Review before publishing.`);
+        setTimeout(() => setSuccess(""), 5000);
+      }
+    } catch (e: any) {
+      setError(e.message || "Enhance failed");
+    }
+    setEnhancing(null);
+  };
 
   // ARTICLE-specific (payload)
   const [rating, setRating] = useState<string>("");
@@ -400,6 +428,38 @@ export default function ContentEditorPage() {
                 ✂ Crop
               </button>
             </div>
+
+            {/* AI enhance row — only visible once an image is set. ~$0.06 per
+                operation. Result replaces featuredImage in place. */}
+            {featuredImage && (
+              <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 16 }}>
+                {[
+                  { op: "remove-watermark", label: "🚫 Remove watermark" },
+                  { op: "enhance", label: "✨ Enhance" },
+                  { op: "upscale", label: "🔍+ Upscale" },
+                  { op: "restore", label: "🛠 Restore" },
+                ].map((b) => (
+                  <button
+                    key={b.op}
+                    type="button"
+                    onClick={() => enhanceImage(b.op)}
+                    disabled={enhancing !== null}
+                    title={`AI '${b.op}' — gpt-image-2, ~15s, ~$0.06`}
+                    style={{
+                      padding: "4px 10px",
+                      background: enhancing === b.op ? "#7c3aed" : "#f5f3ff",
+                      color: enhancing === b.op ? "#fff" : "#5b21b6",
+                      border: "1px solid #c4b5fd", borderRadius: 999,
+                      fontSize: 11, fontWeight: 600,
+                      cursor: enhancing ? "not-allowed" : "pointer",
+                      opacity: enhancing && enhancing !== b.op ? 0.5 : 1,
+                    }}
+                  >
+                    {enhancing === b.op ? "Running…" : b.label}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Common */}
             <label style={lblStyle}>Title *</label>
