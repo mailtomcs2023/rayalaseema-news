@@ -31,11 +31,16 @@ function profileData(d: Record<string, unknown>) {
     city: (d.city as string) || null,
     pincode: (d.pincode as string) || null,
     primaryDistrict: (d.primaryDistrict as string) || null,
-    aadhaarNumber: (d.aadhaarNumber as string) || null,
-    panNumber: (d.panNumber as string) || null,
+    // PII fields encrypted at rest via lib/crypto/kyc. encrypt() is a
+    // no-op for already-encrypted input, so admins re-submitting an
+    // unchanged form don't double-encrypt. bankIfsc / bankName /
+    // bankBranch stay plaintext — they're not personally identifying on
+    // their own and admins need to search/sort by them.
+    aadhaarNumber: encrypt((d.aadhaarNumber as string) || null),
+    panNumber: encrypt((d.panNumber as string) || null),
     upiId: (d.upiId as string) || null,
     bankName: (d.bankName as string) || null,
-    bankAccount: (d.bankAccount as string) || null,
+    bankAccount: encrypt((d.bankAccount as string) || null),
     bankIfsc: (d.bankIfsc as string) || null,
     bankBranch: (d.bankBranch as string) || null,
     experience: (d.experience as string) || null,
@@ -74,7 +79,14 @@ export async function GET() {
       },
       orderBy: { createdAt: "desc" },
     });
-    return NextResponse.json(journalists);
+    // Decrypt PII fields (aadhaarNumber / panNumber / bankAccount) before
+    // the admin client receives them. Rows that pre-date encryption pass
+    // through unchanged (decryptProfileFields detects the version prefix).
+    const decrypted = journalists.map((j) => ({
+      ...j,
+      reporterProfile: decryptProfileFields(j.reporterProfile),
+    }));
+    return NextResponse.json(decrypted);
   } catch (error) {
     return apiError(error);
   }

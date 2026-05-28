@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { getReporterId } from "@/lib/reporter-auth";
+import { encrypt } from "@/lib/crypto/kyc";
 
 // In-app KYC submission for the reporter (Expo) app.
 //
@@ -67,10 +68,13 @@ export async function PATCH(req: NextRequest) {
     await prisma.reporterProfile.update({
       where: { id: profile.id },
       data: {
-        aadhaarNumber: aadhaarNumber!.replace(/\D/g, ""),
+        // Aadhaar + PAN encrypted at rest. Normalisation (strip dashes
+        // from Aadhaar, uppercase PAN) happens BEFORE encrypt so the
+        // ciphertext is canonical for the value the admin will see.
+        aadhaarNumber: encrypt(aadhaarNumber!.replace(/\D/g, "")),
         aadhaarFrontUrl,
         aadhaarBackUrl,
-        panNumber: panNumber!.toUpperCase(),
+        panNumber: encrypt(panNumber!.toUpperCase()),
         panCardUrl,
         photoUrl,
         kycStatus: "SUBMITTED",

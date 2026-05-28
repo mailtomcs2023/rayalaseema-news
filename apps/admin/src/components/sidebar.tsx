@@ -155,7 +155,12 @@ export function Sidebar() {
             if (!role) return false;
             return item.roles.includes(role);
           }).map((item) => {
-            const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+            // Exact-match OR child-route match. The trailing slash on the
+            // prefix check is what stops sibling paths like /epaper-analytics
+            // from lighting up /epaper as well as themselves.
+            const isActive =
+              pathname === item.href ||
+              (item.href !== "/" && pathname.startsWith(item.href + "/"));
             return (
               <Link
                 key={item.href}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { KycStatus } from "@rayalaseema/db";
 import { getReporterId } from "@/lib/reporter-auth";
+import { decryptProfileFields } from "@/lib/crypto/kyc";
 import {
   PROFILE_FIELDS,
   LOCKED_FIELDS,
@@ -61,7 +62,12 @@ export async function POST(req: NextRequest) {
     }
     const profile = user.reporterProfile;
 
-    const currentValue = getCurrentValue({ ...profile, user }, def);
+    // Decrypt PII fields before capturing the "before" value into the
+    // ProfileUpdateRequest row, so the admin sees plaintext in both the
+    // old + new columns when reviewing. The live profile keeps its
+    // encrypted storage; we only decrypt for this transient request row.
+    const decryptedProfile = decryptProfileFields(profile);
+    const currentValue = getCurrentValue({ ...decryptedProfile, user }, def);
     const newStored = serializeForStorage(def, value);
     const oldStored = valueToStorage(def, currentValue);
 

@@ -1,6 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Constituency {
   id: string;
@@ -13,20 +20,28 @@ export function ConstituencyFilter({ constituencies }: { constituencies: Constit
   const router = useRouter();
 
   return (
-    <select
-      onChange={(e) => {
-        if (e.target.value) router.push(`/constituency/${e.target.value}`);
-      }}
-      style={{
-        padding: "8px 14px", border: "2px solid var(--color-brand)", borderRadius: 8,
-        fontSize: 14, fontWeight: 700, color: "#333", background: "#fff", cursor: "pointer",
-        minWidth: 200,
+    // Radix-backed Select via shadcn. value="" is intentionally NOT set —
+    // we want the trigger to show only the placeholder until a real
+    // constituency is picked, and Radix doesn't allow "" as a SelectItem
+    // value (it's reserved for "clear"). We just navigate on selection.
+    <Select
+      onValueChange={(slug) => {
+        if (slug) router.push(`/constituency/${slug}`);
       }}
     >
-      <option value="">ఏ నియోజకవర్గం</option>
-      {constituencies.map((c) => (
-        <option key={c.id} value={c.slug}>{c.name} ({c.nameEn})</option>
-      ))}
-    </select>
+      <SelectTrigger
+        className="h-11 min-w-55 border-2 bg-white text-sm font-bold text-foreground"
+        style={{ borderColor: "var(--color-brand)" }}
+      >
+        <SelectValue placeholder="ఏ నియోజకవర్గం" />
+      </SelectTrigger>
+      <SelectContent>
+        {constituencies.map((c) => (
+          <SelectItem key={c.id} value={c.slug}>
+            {c.name} <span className="text-muted-foreground">({c.nameEn})</span>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }

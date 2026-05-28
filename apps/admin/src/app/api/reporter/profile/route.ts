@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { getReporterId } from "@/lib/reporter-auth";
+import { decryptProfileFields } from "@/lib/crypto/kyc";
 
 // Returns the reporter's full profile (User + ReporterProfile) plus the
 // list of their in-flight change requests so the app can render "Pending
@@ -56,7 +57,9 @@ export async function GET(req: NextRequest) {
         id: user.id, name: user.name, email: user.email, phone: user.phone,
         role: user.role, avatar: user.avatar,
       },
-      profile: user.reporterProfile,
+      // Decrypt PII before handing back to the mobile app — the reporter
+      // sees their own data in plaintext on their device.
+      profile: decryptProfileFields(user.reporterProfile),
       requests,
     });
   } catch (e: any) {

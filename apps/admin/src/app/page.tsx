@@ -84,8 +84,10 @@ export default async function DashboardPage() {
         </div>
 
         {/* Recent Articles — TanStack table extracted into a client
-            component. Visual chrome (wrapper, table-fixed, h-11 headers,
-            last:py-0 cells, h-24 empty state) is identical to /content. */}
+            component. Server keeps the data fetch in this RSC; the client
+            component just renders + handles sort/visibility. Visual chrome
+            (wrapper, table-fixed, h-11 headers, last:py-0 cells, h-24 empty
+            state) matches /content for consistency. */}
         <div style={{ background: "#fff", borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
           <div style={{ padding: "16px 20px", borderBottom: "1px solid #f3f4f6", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <h2 style={{ fontSize: 16, fontWeight: 700, color: "#111" }}>Recent Articles</h2>

@@ -34,7 +34,10 @@ export async function getDashboardStats() {
   const recentArticles = await prisma.content.findMany({
     where: { type: "ARTICLE" },
     include: {
-      category: { select: { name: true, nameEn: true, slug: true } },
+      // Include category.color so the dashboard table can render each
+      // category badge in its own admin-configured colour instead of
+      // every chip looking identical.
+      category: { select: { name: true, nameEn: true, slug: true, color: true } },
       author: { select: { name: true } },
     },
     orderBy: { createdAt: "desc" },

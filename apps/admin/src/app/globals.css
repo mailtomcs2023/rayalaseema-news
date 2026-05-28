@@ -285,19 +285,27 @@
   from { opacity: 1; }
   to   { opacity: 0; }
 }
+/* Selectors cover both regular Dialog (data-slot="dialog-*") and
+   AlertDialog (data-slot="alert-dialog-*") so confirm modals get the
+   same scale+fade as edit modals. .rep-dialog-* class fallback stays for
+   any one-off component that wants to opt in by class. */
 [data-slot="dialog-content"][data-state="open"],
+[data-slot="alert-dialog-content"][data-state="open"],
 .rep-dialog-content[data-state="open"] {
   animation: rep-dialog-content-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 [data-slot="dialog-content"][data-state="closed"],
+[data-slot="alert-dialog-content"][data-state="closed"],
 .rep-dialog-content[data-state="closed"] {
   animation: rep-dialog-content-out 160ms cubic-bezier(0.7, 0, 0.84, 0);
 }
 [data-slot="dialog-overlay"][data-state="open"],
+[data-slot="alert-dialog-overlay"][data-state="open"],
 .rep-dialog-overlay[data-state="open"] {
   animation: rep-dialog-overlay-in 220ms ease-out;
 }
 [data-slot="dialog-overlay"][data-state="closed"],
+[data-slot="alert-dialog-overlay"][data-state="closed"],
 .rep-dialog-overlay[data-state="closed"] {
   animation: rep-dialog-overlay-out 160ms ease-in;
 }

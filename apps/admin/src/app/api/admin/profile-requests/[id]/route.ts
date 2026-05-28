@@ -3,11 +3,16 @@ import { prisma } from "@rayalaseema/db";
 import { KycStatus } from "@rayalaseema/db";
 import { requireCan, isAuthError, apiError } from "@/lib/api-utils";
 import { logAudit } from "@/lib/audit";
+import { encrypt } from "@/lib/crypto/kyc";
 import {
   PROFILE_FIELDS,
   isValidField,
   deserializeForWrite,
 } from "@/lib/profile-fields";
+
+// Fields that must be encrypted at rest before landing in ReporterProfile.
+// Mirror of ENCRYPTED_FIELDS in lib/crypto/kyc.ts.
+const ENCRYPTED_PROFILE_FIELDS = new Set(["aadhaarNumber", "panNumber", "bankAccount"]);
 
 // POST /api/admin/profile-requests/[id]  { action: "approve" | "reject", note? }
 //
@@ -53,7 +58,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     await prisma.$transaction(async (tx) => {
       if (action === "approve") {
-        const newValue = deserializeForWrite(def, request.newValue);
+        const rawValue = deserializeForWrite(def, request.newValue);
+        // Encrypt PII fields just before persistence. Non-PII fields and
+        // User fields pass through unchanged.
+        const newValue =
+          def.model === "reporterProfile" && ENCRYPTED_PROFILE_FIELDS.has(def.column)
+            ? encrypt(rawValue as string | null)
+            : rawValue;
 
         if (def.model === "user") {
           await tx.user.update({

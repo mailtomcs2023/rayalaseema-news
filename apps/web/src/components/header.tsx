@@ -152,14 +152,18 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
   return (
     <>
       <header className="bg-white">
-      {/* Breaking News Ticker */}
-      <div style={{ background: "#000", overflow: "hidden", whiteSpace: "nowrap" as const }}>
-        <div style={{ display: "flex", alignItems: "center" }}>
-          <span style={{ background: "var(--color-brand)", color: "#fff", padding: "6px 14px", fontSize: 13, fontWeight: 900, flexShrink: 0, display: "flex", alignItems: "center", gap: 6 }}>
-            <span className="animate-pulse" style={{ width: 6, height: 6, borderRadius: "50%", background: "#fff", display: "inline-block" }} aria-hidden="true" />
+      {/* Breaking News Ticker — 40px-tall row. Inner children share the
+          parent's height via items-center + height: 100%, so the BREAKING
+          badge and the ticker line up perfectly with no extra padding gap
+          above or below the bar. Text bumped to 14px to match the taller
+          row — 13px looked stranded in a 40px container. */}
+      <div style={{ background: "#000", overflow: "hidden", whiteSpace: "nowrap" as const, height: 40 }}>
+        <div style={{ display: "flex", alignItems: "center", height: "100%" }}>
+          <span style={{ background: "var(--color-brand)", color: "#fff", padding: "0 16px", height: "100%", fontSize: 14, fontWeight: 900, lineHeight: 1, flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
+            <span className="animate-pulse" style={{ width: 7, height: 7, borderRadius: "50%", background: "#fff", display: "inline-block" }} aria-hidden="true" />
             BREAKING
           </span>
-          <div style={{ overflow: "hidden", flex: 1, padding: "6px 0" }}>
+          <div style={{ overflow: "hidden", flex: 1, height: "100%", display: "flex", alignItems: "center" }}>
             <div
               className="animate-marquee"
               style={{
@@ -171,7 +175,7 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
             >
               {breakingNews.map((item, i) => (
                 <span key={item.id || i}>
-                  <a href="#" style={{ color: "#fff", fontSize: 13, fontWeight: 700, textDecoration: "none", marginLeft: 24, marginRight: 24 }}>
+                  <a href="#" style={{ color: "#fff", fontSize: 14, fontWeight: 700, lineHeight: 1, textDecoration: "none", marginLeft: 24, marginRight: 24 }}>
                     {item.text}
                   </a>
                   {i < breakingNews.length - 1 && <span style={{ color: "var(--color-brand)" }}>●</span>}
@@ -296,16 +300,20 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
           stop the moment the (short) header ends. */}
       <nav className="nav-gradient shadow-md relative sticky top-0 z-40">
         <div className="container-news">
-          <ul className="hidden lg:flex items-center">
+          {/* h-10 on the <ul> + items-stretch on flex makes every <li>
+              (and its child link/button) fill the full nav-bar height —
+              so the active-state bg-white/20 paints the entire row top-
+              to-bottom, not just the inline content area. */}
+          <ul className="hidden lg:flex items-stretch h-10">
             {activeMain.map((item, i) => (
-              <li key={item.slug} className="relative">
+              <li key={item.slug} className="relative flex">
                 {item.isDropdown ? (
                   /* "మరిన్ని" dropdown trigger + panel anchored to this <li> */
                   <>
                     <button
                       onClick={() => setDropdownOpen(!dropdownOpen)}
                       onBlur={() => setTimeout(() => setDropdownOpen(false), 200)}
-                      className="block px-4 py-2.5 text-[13px] hover:bg-white/20 transition-colors whitespace-nowrap font-telugu fw-bold"
+                      className="flex items-center justify-center px-4 text-[13px] leading-none hover:bg-white/20 transition-colors whitespace-nowrap font-telugu fw-bold"
                       style={{ color: "#fff" }}
                     >
                       {item.name}
@@ -346,13 +354,17 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
                 ) : (
                   <Link
                     href={item.slug}
-                    className={`block px-3 py-2.5 text-[13px] hover:bg-white/20 transition-colors whitespace-nowrap font-telugu border-r border-white/15 ${
+                    className={`flex items-center justify-center px-3 text-[13px] leading-none hover:bg-white/20 transition-colors whitespace-nowrap font-telugu border-r border-white/15 ${
                       isActive(item.slug) ? "bg-white/20" : ""
                     }`}
                     style={{ color: "#fff" }}
                   >
                     {(item as any).isHome ? (
-                      <svg className="w-5 h-5" fill="#fff" viewBox="0 0 24 24">
+                      // Sized to match the Telugu text x-height in sibling
+                      // links — 22px reads as ~the same visual weight as
+                      // "కర్నూలు" / "నంద్యాల" at 13px Noto Sans Telugu, so
+                      // the icon no longer looks short next to the words.
+                      <svg className="block" width="22" height="22" fill="#fff" viewBox="0 0 24 24" aria-label="Home">
                         <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
                       </svg>
                     ) : (
