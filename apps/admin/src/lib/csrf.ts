@@ -49,10 +49,14 @@ export function validateCsrf(req: NextRequest, opts: CsrfOptions = {}): NextResp
 
   // Skip when there's no cookie auth - bearer-token requests bypass
   // automatically because they don't carry the session cookie that makes
-  // CSRF possible. (NextAuth's cookie names start with either
-  // `next-auth.session-token` or `__Secure-next-auth.session-token`.)
+  // CSRF possible. AuthJS v5 (which this app uses) ships either:
+  //   - authjs.session-token / __Secure-authjs.session-token  (current)
+  //   - next-auth.session-token / __Secure-next-auth.session-token  (legacy)
+  // We accept both so the check is forward + backward compatible.
   const cookieHeader = req.headers.get("cookie") || "";
   const hasSession =
+    cookieHeader.includes("authjs.session-token") ||
+    cookieHeader.includes("__Secure-authjs.session-token") ||
     cookieHeader.includes("next-auth.session-token") ||
     cookieHeader.includes("__Secure-next-auth.session-token");
   if (!hasSession) return null;

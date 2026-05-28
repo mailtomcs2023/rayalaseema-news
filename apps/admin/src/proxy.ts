@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { canVisit, landingFor } from "@/lib/roles";
+import { validateCsrf } from "@/lib/csrf";
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  // CSRF guard — runs FIRST so a malicious cross-site POST can't slip
+  // through any of the early returns below. The helper itself is a no-op
+  // on GET/HEAD/OPTIONS and on exempt path prefixes (/api/auth/, the
+  // mobile reporter bearer-token routes), so this is safe to call
+  // unconditionally.
+  const csrfBlock = validateCsrf(req);
+  if (csrfBlock) return csrfBlock;
 
   // Allow these paths without auth
   if (
