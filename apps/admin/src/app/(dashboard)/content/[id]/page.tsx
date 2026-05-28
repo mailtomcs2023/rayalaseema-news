@@ -168,7 +168,11 @@ export default function ContentEditorPage() {
         setBody(data.body);
         editorRef.current?.setContent(data.body);
       }
-      if (data.ogImage && !featuredImage) setFeaturedImage(data.ogImage);
+      // Always set when fetching fresh from URL — user paste-URL means they
+      // want the source's image. If they don't want it, they can clear it
+      // manually. (Was previously conditional on !featuredImage which
+      // silently dropped the source's og:image when an old image lingered.)
+      if (data.ogImage) setFeaturedImage(data.ogImage);
       if (data.slug) setSlug(data.slug);
       setSourceUrl(pasteUrl.trim());
       setPasteUrl("");

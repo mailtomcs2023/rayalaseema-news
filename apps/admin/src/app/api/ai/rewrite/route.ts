@@ -3,6 +3,7 @@ import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 import { getReporterId } from "@/lib/reporter-auth";
 import { isUrlSafeToFetch } from "@/lib/ssrf-guard";
 import { runPipeline } from "@/lib/ai/pipeline";
+import { uploadImageFromUrl } from "@/lib/blob";
 
 const ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT;
 const KEY = process.env.AZURE_OPENAI_KEY;
@@ -162,8 +163,20 @@ export async function POST(req: NextRequest) {
     let scrapedOgTitle: string | null = null;
     if (sourceUrl) {
       const scraped = await scrapeSource(sourceUrl);
-      scrapedOgImage = scraped.ogImage;
       scrapedOgTitle = scraped.ogTitle;
+      // Rehost the source's og:image on Azure Blob (EXIF-stripped +
+      // RE-stamped via uploadImageFromUrl → processImageBuffer).
+      // Returning the raw publisher CDN URL meant the public site
+      // hotlinked them — fragile (403 / takedowns / hotlink-blocked)
+      // and skipped our metadata-cleanup pipeline.
+      if (scraped.ogImage) {
+        try {
+          scrapedOgImage = await uploadImageFromUrl(scraped.ogImage);
+        } catch (e) {
+          console.warn("[ai/rewrite] og:image rehost failed:", (e as Error).message);
+          scrapedOgImage = null;
+        }
+      }
       if (scraped.text.length > 100) {
         fullText = `SOURCE ARTICLE:\n${scraped.text}\n\nDESCRIPTION:\n${text}`;
       }
@@ -205,7 +218,10 @@ export async function POST(req: NextRequest) {
           metaDescription: result.article.meta_description_en || "",
           ogImage: scrapedOgImage,
           factCheck: result.factCheck,
-          extracted: { quotes: result.facts.quotes.length, people: result.facts.who.length },
+          // facts is null in polish mode (Telugu source bypasses extraction).
+          extracted: result.facts
+            ? { quotes: result.facts.quotes.length, people: result.facts.who.length }
+            : { mode: result.mode },
         });
       } catch (e: any) {
         console.error("[ai/rewrite] pipeline failed:", e);
