@@ -6,8 +6,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma, ContentType, safeValidatePayload } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 import { logAudit, diffSummary } from "@/lib/audit";
-import { sanitizeSlug } from "@/lib/slug";
+import { buildSlugFromTitle, isPlaceholderSlug, sanitizeSlug } from "@/lib/slug";
 import { resolveDeskId } from "@/lib/desk-resolver";
+import { pickLeastLoadedReviewer } from "@/lib/reviewer-assignment";
 
 // GET — single content row with relations the editor needs (category,
 // author, tags). Returns 404 if not found.
@@ -56,15 +57,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     }
     if (data.constituencyId === "") data.constituencyId = null;
 
-    // Admin override for auto-assignment (Stage 2). EDITOR + ADMIN can move
-    // an article to a different sub-editor (or unassign with null). REPORTER
-    // + SUB_EDITOR can't touch this field even when passed in the body.
-    if (body.assignedReviewerId !== undefined) {
-      const role = (session.user as any).role;
-      if (role === "ADMIN" || role === "EDITOR") {
-        data.assignedReviewerId = body.assignedReviewerId === "" ? null : body.assignedReviewerId;
-      }
-    }
+    // Manual reviewer assignment was removed — auto-assignment on submit
+    // (lib/reviewer-assignment.ts) + category pool fallback is the only
+    // mechanism now. Ignore any `assignedReviewerId` passed by clients so a
+    // stale UI or scripted call can't override the algorithm.
 
     // Re-resolve desk if category/constituency touched or if editor passed deskId.
     const needsDeskResolve =
@@ -84,6 +80,26 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         categoryId: effectiveCategoryId,
         constituencyId: effectiveConstituencyId,
       });
+    }
+
+    // Backend safety net for the auto-slug feature: if the slug being saved
+    // is still one of our placeholders (`untitled-…` / `breaking-…` /
+    // `news-…`) AND we have a meaningful title to work with, regenerate the
+    // slug from the title via transliteration. The frontend already does
+    // this with AI as the user types, but this catches:
+    //   - mobile reporter app saves where the AI hook isn't wired
+    //   - articles created before the auto-slug feature shipped
+    //   - any code path that PUTs raw `untitled-<ts>` without typing a title
+    // The generated slug then flows into the sanitization + collision block
+    // below exactly as if the user had typed it.
+    if (data.slug !== undefined && isPlaceholderSlug(String(data.slug ?? ""))) {
+      const fromData = typeof data.title === "string" ? data.title.trim() : "";
+      const titleForSlug = fromData
+        || (await prisma.content.findUnique({ where: { id }, select: { title: true } }))?.title
+        || "";
+      if (titleForSlug && !/^untitled\b/i.test(titleForSlug)) {
+        data.slug = buildSlugFromTitle(titleForSlug);
+      }
     }
 
     // Sanitize slug if present in update payload.
@@ -180,6 +196,15 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       data.publishedAt = new Date();
     }
 
+    // Auto-assign on every DRAFT/REJECTED → SUBMITTED transition so admin-web
+    // submissions reach a sub-editor (or the category pool) without a manual
+    // step. The reporter app + /api/review already do this; this closes the
+    // gap for status changes coming through this route.
+    if (data.status === "SUBMITTED" && current.status !== "SUBMITTED" && current.status !== "IN_REVIEW") {
+      const effectiveCategoryId = data.categoryId ?? current.categoryId ?? null;
+      data.assignedReviewerId = await pickLeastLoadedReviewer(prisma, effectiveCategoryId);
+    }
+
     const content = await prisma.content.update({ where: { id }, data });
 
     // Tags: replace-all semantics when tagNames provided.
@@ -223,13 +248,15 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
 // DELETE — tiered soft-delete.
 //   REPORTER: may soft-delete own rows whose status is DRAFT or SUBMITTED.
-//   EDITOR / CHIEF_SUB_EDITOR / SUB_EDITOR: may soft-delete any row whose
-//     status is not PUBLISHED.
+//   EDITOR / SUB_EDITOR: same window — DRAFT or SUBMITTED
+//     only. Once a sub-editor claims the row (IN_REVIEW) the article is "in
+//     the editorial pipeline" and deleting it would orphan payments / audit
+//     state; only ADMIN can override after that point.
 //   ADMIN: may soft-delete anything, and with `?purge=1` hard-deletes the
 //     row (cascade kills tags/revisions/payments per schema).
 // Soft-deleted rows stay in DB so admin can restore via POST /restore.
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await requireAuth(["ADMIN", "EDITOR", "CHIEF_SUB_EDITOR", "SUB_EDITOR", "REPORTER"]);
+  const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR", "REPORTER"]);
   if (isAuthError(session)) return session;
   try {
     const { id } = await params;
@@ -248,9 +275,15 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       if (existing.status !== "DRAFT" && existing.status !== "SUBMITTED") {
         return NextResponse.json({ error: "Reporters can only delete drafts or submissions" }, { status: 403 });
       }
-    } else if (role === "EDITOR" || role === "CHIEF_SUB_EDITOR" || role === "SUB_EDITOR") {
-      if (existing.status === "PUBLISHED") {
-        return NextResponse.json({ error: "Unpublish before deleting a live article" }, { status: 403 });
+    } else if (role === "EDITOR" || role === "SUB_EDITOR") {
+      // Sub-editor + Editor can delete only DRAFT / SUBMITTED rows. Once an
+      // article is IN_REVIEW (or further along), payments + audit history
+      // are tied to it — only ADMIN can take it out of the system.
+      if (existing.status !== "DRAFT" && existing.status !== "SUBMITTED") {
+        return NextResponse.json(
+          { error: `Article is ${existing.status} — only an admin can delete it from this point` },
+          { status: 403 },
+        );
       }
     } else if (role !== "ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });

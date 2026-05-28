@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { getSiteConfig } from "@/lib/db-queries";
 import { buildNewsMediaOrganizationSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
@@ -13,12 +13,15 @@ import { cn } from "@/lib/utils";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
+export const viewport: Viewport = {
+  themeColor: "#E01B1B",
+};
+
 export const metadata: Metadata = {
   title: "రాయలసీమ ఎక్స్‌ప్రెస్ | Rayalaseema Express",
   description:
     "రాయలసీమ ప్రాంతం నుండి తాజా వార్తలు, రాజకీయాలు, క్రీడలు, వ్యాపారం మరియు మరిన్ని. Latest news from Rayalaseema region.",
   manifest: "/manifest.json",
-  themeColor: "#E01B1B",
   keywords: [
     "Rayalaseema Express",
     "రాయలసీమ ఎక్స్‌ప్రెస్",
@@ -82,7 +85,7 @@ export default async function RootLayout({
     },
   });
   return (
-    <html lang="te" className={cn("font-sans", geist.variable)}>
+    <html lang="te" className={cn("font-sans", geist.variable)} suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

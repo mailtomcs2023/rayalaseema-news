@@ -13,7 +13,7 @@ import { uploadBuffer, blobConfigured } from "@/lib/blob";
 import { isUrlSafeToFetch } from "@/lib/ssrf-guard";
 
 export async function POST(req: NextRequest) {
-  const session = await requireAuth(["ADMIN", "EDITOR", "CHIEF_SUB_EDITOR", "SUB_EDITOR", "REPORTER"]);
+  const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR", "REPORTER"]);
   if (isAuthError(session)) return session;
   if (!blobConfigured()) {
     return NextResponse.json({ error: "AZURE_STORAGE_CONNECTION_STRING not configured" }, { status: 503 });

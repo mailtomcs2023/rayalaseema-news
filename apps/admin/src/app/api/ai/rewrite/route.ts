@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
   // mobile path first and fall back to the admin-session check.
   const reporterId = await getReporterId(req);
   if (!reporterId) {
-    const session = await requireAuth(["ADMIN", "EDITOR", "CHIEF_SUB_EDITOR", "SUB_EDITOR", "REPORTER"]);
+    const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR", "REPORTER"]);
     if (isAuthError(session)) return session;
   }
   if (!ENDPOINT || !KEY) {
@@ -236,6 +236,20 @@ ${fullText}`,
       dialect: `Add slight Rayalaseema dialect flavor to this article. Only change headlines and quotes, keep body in standard Telugu:\n\n${fullText}`,
       summarize: `Summarize in exactly 60 words in Telugu. Only return the summary, no HTML:\n\n${fullText}`,
       headline: `Suggest 5 catchy Telugu headlines for this article. Return as numbered list:\n\n${fullText}`,
+      // Telugu (or any-language) headline → short SEO-friendly English URL slug.
+      // 3-5 words, hyphenated, ASCII only. Used by the article editor to fill
+      // the slug field as the user types the title.
+      slug: `Convert this news headline into a short, SEO-friendly English URL slug.
+RULES:
+- 3 to 5 words ONLY
+- All lowercase ASCII
+- Words separated by hyphens
+- No punctuation, no diacritics, no Telugu characters
+- Capture the main subject + action (e.g. "rajadhani-construction-begins", not "the-rajadhani-construction-begins-tomorrow")
+- Return ONLY the slug — no quotes, no explanation, no period at the end
+
+HEADLINE:
+${fullText}`,
       proofread: `Proofread and fix Telugu spelling/grammar errors. Return corrected HTML:\n\n${fullText}`,
       expand: `Expand this short news into a full 400-word Telugu newspaper article:\n\n${fullText}`,
     };

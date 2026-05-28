@@ -39,6 +39,36 @@ export interface ChatResult {
   model?: string;
 }
 
+// Thrown when Azure's Responsible AI policy blocks either the prompt
+// (HTTP 400 with error.code === "content_filter") or the completion
+// (HTTP 200 with finish_reason === "content_filter"). Carries the list
+// of triggered categories so callers can show "blocked: violence" etc.
+// instead of the raw Azure boilerplate.
+export class AIContentFilterError extends Error {
+  readonly categories: string[];
+  readonly stage: "prompt" | "response";
+  constructor(stage: "prompt" | "response", categories: string[]) {
+    const cats = categories.length ? categories.join(", ") : "unknown";
+    super(`Azure content filter blocked the ${stage} (${cats})`);
+    this.name = "AIContentFilterError";
+    this.categories = categories;
+    this.stage = stage;
+  }
+}
+
+// Pull the triggered category names out of Azure's content_filter_results
+// shape: { hate: { filtered: bool, severity }, violence: {...}, ... }
+function triggeredCategories(filterResults: unknown): string[] {
+  if (!filterResults || typeof filterResults !== "object") return [];
+  const out: string[] = [];
+  for (const [name, val] of Object.entries(filterResults as Record<string, unknown>)) {
+    if (val && typeof val === "object" && (val as { filtered?: boolean }).filtered) {
+      out.push(name);
+    }
+  }
+  return out;
+}
+
 export async function chat(opts: ChatOpts): Promise<ChatResult> {
   const ep = opts.endpoint || ENDPOINT;
   const k = opts.key || KEY;
@@ -60,12 +90,37 @@ export async function chat(opts: ChatOpts): Promise<ChatResult> {
 
   if (!res.ok) {
     const body = await res.text();
+    // Prompt-side content filter — Azure returns 400 with a structured
+    // error envelope. Try to parse and surface the triggered categories.
+    try {
+      const parsed = JSON.parse(body);
+      if (parsed?.error?.code === "content_filter") {
+        const cats = triggeredCategories(parsed?.error?.innererror?.content_filter_result);
+        throw new AIContentFilterError("prompt", cats);
+      }
+    } catch (e) {
+      if (e instanceof AIContentFilterError) throw e;
+      // JSON parse failed — fall through to generic error below.
+    }
     throw new Error(`Azure OpenAI ${res.status}: ${body.slice(0, 400)}`);
   }
   const data = await res.json();
-  if (data?.error) throw new Error(data.error.message || "Azure OpenAI error");
+  if (data?.error) {
+    if (data.error?.code === "content_filter") {
+      const cats = triggeredCategories(data.error?.innererror?.content_filter_result);
+      throw new AIContentFilterError("prompt", cats);
+    }
+    throw new Error(data.error.message || "Azure OpenAI error");
+  }
+  // Response-side content filter — Azure returns 200 but finish_reason is
+  // "content_filter" and the choice carries per-category results.
+  const choice = data.choices?.[0];
+  if (choice?.finish_reason === "content_filter") {
+    const cats = triggeredCategories(choice?.content_filter_results);
+    throw new AIContentFilterError("response", cats);
+  }
   return {
-    content: data.choices?.[0]?.message?.content || "",
+    content: choice?.message?.content || "",
     tokens: {
       prompt: data.usage?.prompt_tokens,
       completion: data.usage?.completion_tokens,

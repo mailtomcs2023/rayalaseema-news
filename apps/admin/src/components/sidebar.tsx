@@ -3,8 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Role } from "@/lib/roles";
+
+// Key used to persist the sidebar's nav-scroll position across navigations.
+// The sidebar component remounts on every route change (it's imported by
+// each page rather than living in a (dashboard) layout), so the <nav>
+// scrollTop resets to 0 on click — making the active item jump out of view
+// if the user had scrolled to find it. Storing the offset in sessionStorage
+// (so it clears on tab close) preserves the scroll across remounts.
+const SIDEBAR_SCROLL_KEY = "admin-sidebar-scroll";
 
 // Each nav item declares which roles can see it. The set is the same as
 // canVisit() in lib/roles.ts — if a route is blocked there, it's hidden
@@ -48,7 +56,10 @@ const navItems: { name: string; href: string; icon: string; roles: Role[] }[] = 
   // mobile) editable as a drag-drop tree.
   { name: "Menu Builder", href: "/menu-builder/header", roles: EDITORIAL, icon: "M4 6h16M4 12h16M4 18h7" },
   { name: "Ads", href: "/ads", roles: ADMIN_ONLY, icon: "M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" },
-  { name: "Reporters", href: "/journalists", roles: ADMIN_ONLY, icon: "M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" },
+  // Reporters merged into /users — admins reach reporter KYC + profile
+  // from the merged Users table by filtering Role → Reporter, which auto-
+  // shows Phone / District / KYC / Updates columns. The /reporters route
+  // still exists for direct edits but no longer has its own nav entry.
   { name: "Profile Requests", href: "/profile-requests", roles: EDITORIAL, icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" },
   { name: "Payments", href: "/payments", roles: ADMIN_ONLY, icon: "M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" },
   { name: "Users", href: "/users", roles: ADMIN_ONLY, icon: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" },
@@ -66,6 +77,7 @@ export function Sidebar() {
   const { data: session, status } = useSession();
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
+  const navRef = useRef<HTMLElement>(null);
 
   // Lock background scroll while the mobile drawer is open
   useEffect(() => {
@@ -74,6 +86,22 @@ export function Sidebar() {
       document.body.style.overflow = "";
     };
   }, [open]);
+
+  // Restore nav scroll position on mount (the sidebar remounts on every
+  // route change because it lives in each page rather than a layout —
+  // without this, clicking a link further down the nav resets the scroll
+  // to the top of the list, hiding the item the user just selected).
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const saved = sessionStorage.getItem(SIDEBAR_SCROLL_KEY);
+    if (saved) nav.scrollTop = Number(saved) || 0;
+    const handler = () => {
+      sessionStorage.setItem(SIDEBAR_SCROLL_KEY, String(nav.scrollTop));
+    };
+    nav.addEventListener("scroll", handler, { passive: true });
+    return () => nav.removeEventListener("scroll", handler);
+  }, []);
 
   return (
     <>
@@ -99,30 +127,20 @@ export function Sidebar() {
         className={`admin-sidebar${open ? " open" : ""}`}
         style={{ width: 240, height: "100vh", background: "#111827", color: "#fff", position: "fixed", left: 0, top: 0, display: "flex", flexDirection: "column", overflow: "hidden", zIndex: 50 }}
       >
-        {/* Logo */}
-        <div style={{ padding: "16px 20px", borderBottom: "1px solid #1f2937", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-          <div>
-            {/* White-on-transparent wordmark — the sidebar background is
-                dark (#111827) so the inverse logo reads cleanly. Mirror copy
-                already exists at apps/admin/public/logo-inverse.svg. */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-inverse.svg" alt="Rayalaseema Express" style={{ height: 32, width: "auto" }} />
-            <p style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>Content Management System</p>
-          </div>
-          <button
-            className="admin-drawer-close"
-            aria-label="Close menu"
-            onClick={close}
-            style={{ border: "none", background: "transparent", color: "#9ca3af", cursor: "pointer", fontSize: 20, lineHeight: 1, padding: 4 }}
-          >
-            ✕
-          </button>
+        {/* Logo — wordmark alone, vertically centered. Mobile drawer closes
+            by tapping the backdrop (admin-backdrop), so no explicit close
+            button is rendered. */}
+        <div style={{ padding: "18px 20px", borderBottom: "1px solid #1f2937", display: "flex", alignItems: "center" }}>
+          {/* White-on-transparent wordmark — sidebar bg is #111827, so the
+              inverse logo (apps/admin/public/logo-inverse.svg) reads cleanly. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-inverse.svg" alt="Rayalaseema Express" style={{ height: 44, width: "auto", display: "block" }} />
         </div>
 
         {/* Nav — filtered by the signed-in user's role. The API-side
             requireAuth([...]) check stays authoritative; this is just so a
             user doesn't see a link that would 403 when clicked. */}
-        <nav className="sidebar-nav" style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
+        <nav ref={navRef} className="sidebar-nav" style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
           {navItems.filter((item) => {
             // While the session is still loading, render NOTHING. Previously
             // we rendered every item to avoid an empty-sidebar flash, but

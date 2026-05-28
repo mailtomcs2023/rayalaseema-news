@@ -9,7 +9,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const { id } = await params;
     const b = await req.json();
     const data: any = {};
-    for (const key of ["name", "nameEn", "slug", "color", "description", "sortOrder", "active"] as const) {
+    for (const key of ["name", "nameEn", "slug", "color", "description", "sortOrder", "active", "parentId"] as const) {
       if (b[key] !== undefined) data[key] = b[key];
     }
     const cat = await prisma.category.update({ where: { id }, data });

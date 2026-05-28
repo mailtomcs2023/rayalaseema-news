@@ -300,15 +300,49 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
             {activeMain.map((item, i) => (
               <li key={item.slug} className="relative">
                 {item.isDropdown ? (
-                  /* "మరిన్ని" dropdown trigger */
-                  <button
-                    onClick={() => setDropdownOpen(!dropdownOpen)}
-                    onBlur={() => setTimeout(() => setDropdownOpen(false), 200)}
-                    className="block px-4 py-2.5 text-[13px] hover:bg-white/20 transition-colors whitespace-nowrap font-telugu fw-bold"
-                    style={{ color: "#fff" }}
-                  >
-                    {item.name}
-                  </button>
+                  /* "మరిన్ని" dropdown trigger + panel anchored to this <li> */
+                  <>
+                    <button
+                      onClick={() => setDropdownOpen(!dropdownOpen)}
+                      onBlur={() => setTimeout(() => setDropdownOpen(false), 200)}
+                      className="block px-4 py-2.5 text-[13px] hover:bg-white/20 transition-colors whitespace-nowrap font-telugu fw-bold"
+                      style={{ color: "#fff" }}
+                    >
+                      {item.name}
+                    </button>
+                    {dropdownOpen && (
+                      <div style={{
+                        position: "absolute", right: 0, top: "100%",
+                        background: "#fff", border: "1px solid #e5e7eb",
+                        borderRadius: "0 0 10px 10px",
+                        boxShadow: "0 12px 32px rgba(0,0,0,0.18)",
+                        zIndex: 50,
+                        width: "min(420px, calc(100vw - 24px))",
+                        maxWidth: 420,
+                        padding: "8px 0",
+                      }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
+                          {activeDrop.map((dItem) => (
+                            <Link
+                              key={dItem.slug}
+                              href={dItem.slug}
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => setDropdownOpen(false)}
+                              style={{
+                                display: "block", padding: "8px 16px",
+                                fontSize: 14, fontWeight: 700, color: "#333",
+                                textDecoration: "none", borderBottom: "1px solid #f5f5f5",
+                                transition: "all 0.15s",
+                              }}
+                              className="hover:bg-red-50 hover:text-[var(--color-brand)]"
+                            >
+                              {dItem.name}
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <Link
                     href={item.slug}
@@ -330,39 +364,6 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
             ))}
           </ul>
         </div>
-
-        {/* Dropdown Menu - 2 column grid (responsive width to avoid viewport overflow) */}
-        {dropdownOpen && (
-          <div style={{
-            position: "absolute", right: 8, top: "100%",
-            background: "#fff", border: "1px solid #e5e7eb",
-            borderRadius: "0 0 10px 10px",
-            boxShadow: "0 12px 32px rgba(0,0,0,0.18)",
-            zIndex: 50,
-            width: "min(420px, calc(100vw - 24px))",
-            maxWidth: 420,
-            padding: "8px 0",
-          }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
-              {activeDrop.map((item) => (
-                <Link
-                  key={item.slug}
-                  href={item.slug}
-                  onClick={() => setDropdownOpen(false)}
-                  style={{
-                    display: "block", padding: "8px 16px",
-                    fontSize: 14, fontWeight: 700, color: "#333",
-                    textDecoration: "none", borderBottom: "1px solid #f5f5f5",
-                    transition: "all 0.15s",
-                  }}
-                  className="hover:bg-red-50 hover:text-[var(--color-brand)]"
-                >
-                  {item.name}
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
       </nav>
 
       {/* Mobile Menu - Slides up from bottom like Eenadu */}

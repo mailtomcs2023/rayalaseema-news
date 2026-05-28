@@ -32,11 +32,13 @@ import {
   EllipsisIcon,
   FilterIcon,
   ListFilterIcon,
+  RefreshCwIcon,
   Sparkles,
   TrashIcon,
   UserPlusIcon,
 } from "lucide-react";
 import { z } from "zod";
+import Link from "next/link";
 import {
   useCallback,
   useEffect,
@@ -112,7 +114,7 @@ interface User {
   id: string;
   email: string;
   name: string;
-  role: "ADMIN" | "EDITOR" | "SUB_EDITOR" | "REPORTER";
+  role: "ADMIN" | "EDITOR" | "SUB_EDITOR" | "REPORTER" | "USER";
   active: boolean;
   phone: string | null;
   createdAt: string;
@@ -122,6 +124,16 @@ interface User {
   // about it.
   assignedCategories?: { category: { id: string; name: string; nameEn: string } }[];
   mustChangePassword?: boolean;
+  // Reporter-only — null for every other role. Nested pending-update count
+  // drives the "Review N" deep link in the merged Users table.
+  reporterProfile?: {
+    id: string;
+    primaryDistrict: string | null;
+    kycStatus: "PENDING" | "SUBMITTED" | "VERIFIED" | "REJECTED";
+    kycRejectionNote: string | null;
+    verifiedAt: string | null;
+    _count: { profileUpdateRequests: number };
+  } | null;
 }
 
 interface UserRow {
@@ -132,6 +144,12 @@ interface UserRow {
   active: boolean;
   articles: number;
   joinedAt: string;
+  // Reporter-specific projections (empty / null for non-reporter rows).
+  phone: string;
+  district: string;
+  kycStatus: string;
+  pendingUpdates: number;
+  reporterProfileId: string | null;
   raw: User;
 }
 
@@ -144,6 +162,11 @@ function toRow(u: User): UserRow {
     active: u.active,
     articles: u._count?.contents ?? 0,
     joinedAt: u.createdAt,
+    phone: u.phone ?? "",
+    district: u.reporterProfile?.primaryDistrict ?? "",
+    kycStatus: u.reporterProfile?.kycStatus ?? "",
+    pendingUpdates: u.reporterProfile?._count?.profileUpdateRequests ?? 0,
+    reporterProfileId: u.reporterProfile?.id ?? null,
     raw: u,
   };
 }
@@ -153,6 +176,7 @@ const ROLE_LABEL: Record<string, string> = {
   EDITOR: "Editor",
   SUB_EDITOR: "Sub Editor",
   REPORTER: "Reporter",
+  USER: "User",
 };
 
 const ROLE_BADGE: Record<string, string> = {
@@ -160,6 +184,14 @@ const ROLE_BADGE: Record<string, string> = {
   EDITOR: "border-blue-300 bg-blue-50 text-blue-700",
   SUB_EDITOR: "border-amber-300 bg-amber-50 text-amber-700",
   REPORTER: "border-emerald-300 bg-emerald-50 text-emerald-700",
+  USER: "border-slate-300 bg-slate-50 text-slate-600",
+};
+
+const KYC_BADGE: Record<string, string> = {
+  PENDING: "border-slate-300 bg-slate-50 text-slate-600",
+  SUBMITTED: "border-blue-300 bg-blue-50 text-blue-700",
+  VERIFIED: "border-emerald-300 bg-emerald-50 text-emerald-700",
+  REJECTED: "border-red-300 bg-red-50 text-red-700",
 };
 
 // Multi-column text search — matches against name + email + phone.
@@ -193,6 +225,10 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
 
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  // All reporter-specific columns visible by default. Non-reporter rows
+  // render an em-dash in those cells, so admins always see at-a-glance
+  // who's a reporter and their KYC / district / phone / pending updates
+  // without having to pre-filter by role.
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [sorting, setSorting] = useState<SortingState>([{ id: "name", desc: false }]);
@@ -215,8 +251,44 @@ export default function UsersPage() {
     load();
   }, [load]);
 
+  // Auto-hide the Role column when the user has filtered to REPORTER only
+  // — everyone in view shares the same role so the column is redundant.
+  // Reporter-specific columns stay visible regardless (em-dash for non-
+  // reporters) so the table layout is consistent across filter states.
+  useEffect(() => {
+    const roleFilterVal = columnFilters.find((f) => f.id === "role")?.value as string[] | undefined;
+    const onlyReporter = roleFilterVal?.length === 1 && roleFilterVal[0] === "REPORTER";
+    setColumnVisibility((prev) => ({
+      ...prev,
+      role: !onlyReporter,
+    }));
+  }, [columnFilters]);
+
   const openEdit = useCallback((u: User) => setFormFor({ mode: "edit", user: u }), []);
   const openDelete = useCallback((row: UserRow) => setConfirmDelete([row]), []);
+
+  // Quick-action: verify a reporter's KYC straight from the row menu.
+  // Reject + full profile edit live on /reporters where the existing
+  // modals already handle the rejection-note input + KYC document review.
+  // We just need fast-path "yes, this looks good" without leaving /users.
+  const verifyReporterKyc = useCallback(async (row: UserRow) => {
+    if (!row.reporterProfileId) return;
+    try {
+      const res = await fetch("/api/reporters", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "verify", profileId: row.reporterProfileId }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "Verify failed");
+        return;
+      }
+      load();
+    } catch (e: any) {
+      alert(e.message || "Verify failed");
+    }
+  }, []);
 
   const columns = useMemo<ColumnDef<UserRow>[]>(
     () => [
@@ -246,7 +318,7 @@ export default function UsersPage() {
       {
         accessorKey: "name",
         header: "Name",
-        size: 200,
+        size: 160,
         enableHiding: false,
         filterFn: userSearchFilter,
         cell: ({ row }) => (
@@ -263,11 +335,20 @@ export default function UsersPage() {
           </div>
         ),
       },
-      { accessorKey: "email", header: "Email", size: 260 },
+      {
+        accessorKey: "email",
+        header: "Email",
+        size: 220,
+        cell: ({ row }) => (
+          <span className="block truncate" title={row.getValue("email") as string}>
+            {row.getValue("email")}
+          </span>
+        ),
+      },
       {
         accessorKey: "role",
         header: "Role",
-        size: 130,
+        size: 110,
         filterFn: roleFilter,
         cell: ({ row }) => {
           const r = row.getValue("role") as string;
@@ -278,16 +359,75 @@ export default function UsersPage() {
           );
         },
       },
+      // ---- Reporter-only columns. Hidden by default; the role-filter
+      // effect below auto-shows them when the user filters to REPORTER.
+      // Visibility can also be toggled via the View menu. Non-reporter
+      // rows render an em-dash placeholder so the column stays well-
+      // formed even when the user filters to "all roles".
+      {
+        accessorKey: "phone",
+        header: "Phone",
+        size: 115,
+        cell: ({ row }) => {
+          const p = row.original.phone;
+          return p ? <span className="tabular-nums">{p}</span> : <span className="text-muted-foreground">—</span>;
+        },
+      },
+      {
+        accessorKey: "district",
+        header: "District",
+        size: 100,
+        cell: ({ row }) => {
+          const d = row.original.district;
+          return d ? <span className="capitalize">{d}</span> : <span className="text-muted-foreground">—</span>;
+        },
+      },
+      {
+        accessorKey: "kycStatus",
+        header: "KYC",
+        size: 95,
+        cell: ({ row }) => {
+          const s = row.original.kycStatus;
+          if (!s) return <span className="text-muted-foreground">—</span>;
+          return (
+            <Badge variant="outline" className={cn("border text-[10px] font-semibold uppercase tracking-wide", KYC_BADGE[s] ?? "border-slate-300 bg-slate-50 text-slate-700")}>
+              {s}
+            </Badge>
+          );
+        },
+      },
+      {
+        accessorKey: "pendingUpdates",
+        header: "Updates",
+        size: 95,
+        cell: ({ row }) => {
+          const count = row.original.pendingUpdates;
+          const reporterId = row.original.reporterProfileId;
+          if (!reporterId) return <span className="text-muted-foreground">—</span>;
+          return count > 0 ? (
+            <Link href={`/profile-requests?reporterId=${reporterId}`}>
+              <Button size="sm" variant="default" className="h-7 gap-1.5 px-2.5">
+                <Badge variant="secondary" className="h-4 min-w-4 px-1 text-[10px] tabular-nums">{count}</Badge>
+                Review
+              </Button>
+            </Link>
+          ) : (
+            <Link href={`/profile-requests?reporterId=${reporterId}&status=ALL`}>
+              <Button size="sm" variant="outline" className="h-7 px-2.5 text-xs">View</Button>
+            </Link>
+          );
+        },
+      },
       {
         accessorKey: "articles",
         header: "Articles",
-        size: 90,
+        size: 75,
         cell: ({ row }) => <span className="tabular-nums">{row.getValue("articles")}</span>,
       },
       {
         accessorKey: "joinedAt",
         header: "Joined",
-        size: 130,
+        size: 105,
         cell: ({ row }) => (
           <span className="text-muted-foreground">{fmtDate(row.getValue("joinedAt"))}</span>
         ),
@@ -303,11 +443,12 @@ export default function UsersPage() {
             row={row.original}
             onEdit={openEdit}
             onDelete={openDelete}
+            onVerifyKyc={verifyReporterKyc}
           />
         ),
       },
     ],
-    [openEdit, openDelete],
+    [openEdit, openDelete, verifyReporterKyc],
   );
 
   const table = useReactTable({
@@ -375,7 +516,7 @@ export default function UsersPage() {
               <Input
                 aria-label="Filter by name, email or phone"
                 className={cn(
-                  "peer min-w-60 ps-9",
+                  "peer min-w-60 bg-white ps-9",
                   Boolean(table.getColumn("name")?.getFilterValue()) && "pe-9",
                 )}
                 id={`${id}-input`}
@@ -469,9 +610,21 @@ export default function UsersPage() {
             </DropdownMenu>
 
             <div className="ms-auto flex items-center gap-3">
-              <span className="text-sm text-muted-foreground">
-                {table.getRowCount()} user{table.getRowCount() === 1 ? "" : "s"}
-              </span>
+              {/* Refetch — re-runs /api/users via load(). spin while loading
+                  so it's clear the click did something. */}
+              <Button
+                aria-label="Refresh users"
+                title="Refresh"
+                variant="outline"
+                size="icon"
+                disabled={loading}
+                onClick={() => load()}
+              >
+                <RefreshCwIcon
+                  size={16}
+                  className={cn("opacity-70", loading && "animate-spin")}
+                />
+              </Button>
               {table.getSelectedRowModel().rows.length > 0 && (
                 <Button
                   variant="outline"
@@ -490,9 +643,12 @@ export default function UsersPage() {
             </div>
           </div>
 
-          {/* Table */}
-          <div className="overflow-hidden rounded-md border bg-background">
-            <Table className="table-fixed">
+          {/* Table — wrapper scrolls horizontally on narrow viewports so
+              the rest of the page chrome stays put (sidebar / pagination
+              don't shift). table-fixed + per-column widths keep alignment
+              stable while scrolling. */}
+          <div className="overflow-x-auto rounded-md border bg-background">
+            <Table className="table-fixed min-w-[1100px]">
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow className="hover:bg-transparent" key={headerGroup.id}>
@@ -687,11 +843,18 @@ function RowActions({
   row,
   onEdit,
   onDelete,
+  onVerifyKyc,
 }: {
   row: UserRow;
   onEdit: (u: User) => void;
   onDelete: (row: UserRow) => void;
+  onVerifyKyc: (row: UserRow) => void;
 }) {
+  const isReporter = row.role === "REPORTER";
+  const kycSubmitted = isReporter && row.kycStatus === "SUBMITTED";
+  const hasUpdates = isReporter && row.pendingUpdates > 0;
+  const reporterPid = row.reporterProfileId;
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -702,11 +865,43 @@ function RowActions({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onSelect={() => onEdit(row.raw)}>Edit</DropdownMenuItem>
+
+        {/* Reporter-specific quick actions. Shown only on REPORTER rows so
+            the menu stays lean for everyone else. The full KYC review
+            workflow (reject with mandatory note, document viewer, banking
+            inspection) lives on /reporters — the link below routes there. */}
+        {isReporter && (
+          <>
+            <DropdownMenuSeparator />
+            {kycSubmitted && (
+              <DropdownMenuItem
+                onSelect={() => onVerifyKyc(row)}
+                className="text-emerald-700 focus:text-emerald-700"
+              >
+                Verify KYC
+              </DropdownMenuItem>
+            )}
+            {hasUpdates && reporterPid && (
+              <DropdownMenuItem asChild>
+                <Link href={`/profile-requests?reporterId=${reporterPid}`}>
+                  Review {row.pendingUpdates} profile update{row.pendingUpdates === 1 ? "" : "s"}
+                </Link>
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem asChild>
+              <Link href="/reporters">Open reporter portal →</Link>
+            </DropdownMenuItem>
+          </>
+        )}
+
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onSelect={() => onDelete(row)}
           className="text-destructive focus:text-destructive"
         >
+          {/* For reporters /api/reporters DELETE is a soft-delete (active:false)
+              with content history preserved; for everyone else /api/users
+              DELETE may hard-delete. Same menu label keeps the UX simple. */}
           Delete
         </DropdownMenuItem>
       </DropdownMenuContent>

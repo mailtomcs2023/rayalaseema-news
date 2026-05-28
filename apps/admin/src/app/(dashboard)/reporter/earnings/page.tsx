@@ -18,7 +18,7 @@ export default async function ReporterEarningsPage() {
   if (role && role !== "REPORTER") redirect("/");
   if (!userId) redirect("/login");
 
-  const profile = await prisma.journalistProfile.findUnique({
+  const profile = await prisma.reporterProfile.findUnique({
     where: { userId },
     select: { kycStatus: true },
   });

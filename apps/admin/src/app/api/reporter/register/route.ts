@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     // Create journalist profile with KYC
     const hasDocuments = aadhaarFrontUrl || panCardUrl || photoUrl;
 
-    await prisma.journalistProfile.create({
+    await prisma.reporterProfile.create({
       data: {
         userId: user.id,
         fullName,

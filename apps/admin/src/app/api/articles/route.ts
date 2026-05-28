@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
 // with type=ARTICLE. Mirrors prior contract (returns the created row) so
 // legacy callers don't break. New code should POST /api/content directly.
 export async function POST(req: NextRequest) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR", "SUB_EDITOR", "REPORTER"]);
+  const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR", "REPORTER"]);
   if (isAuthError(session)) return session;
   try {
     const authorId = session.user.id;

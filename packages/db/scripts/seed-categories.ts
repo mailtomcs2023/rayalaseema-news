@@ -1,7 +1,6 @@
 /**
  * Idempotent seed for the site's content categories + a small starter tag set.
- * Mirrors the lists that used to live in prisma/seed.ts (which is now stale —
- * references the renamed CHIEF_SUB_EDITOR role).
+ * Mirrors the lists that used to live in prisma/seed.ts.
  *
  * Run:  cd packages/db && bun run scripts/seed-categories.ts
  */

@@ -86,8 +86,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-// ---- API shapes (from GET /api/journalists) ----
-interface JournalistProfile {
+// ---- API shapes (from GET /api/reporters) ----
+interface ReporterProfile {
   id: string;
   fullName: string;
   fatherName: string | null;
@@ -126,12 +126,12 @@ interface Journalist {
   phone: string;
   active: boolean;
   createdAt: string;
-  journalistProfile: JournalistProfile | null;
+  reporterProfile: ReporterProfile | null;
   _count: { contents: number; contentPayments: number };
 }
 
 // Common KYC rejection reasons. The label shown in the dropdown IS the text
-// stored on JournalistProfile.kycRejectionNote and shown to the reporter in
+// stored on ReporterProfile.kycRejectionNote and shown to the reporter in
 // the app's red KYC banner — keep them short, plain-English, actionable.
 // "other" is a sentinel that reveals a free-text input for one-off cases.
 const REJECTION_REASONS = [
@@ -192,10 +192,10 @@ function toRow(j: Journalist): JournalistRow {
     name: j.name,
     email: j.email,
     phone: j.phone || "",
-    district: j.journalistProfile?.primaryDistrict || "",
-    kyc: j.journalistProfile?.kycStatus || "NO PROFILE",
+    district: j.reporterProfile?.primaryDistrict || "",
+    kyc: j.reporterProfile?.kycStatus || "NO PROFILE",
     articles: j._count.contents,
-    pendingUpdates: j.journalistProfile?._count?.profileUpdateRequests || 0,
+    pendingUpdates: j.reporterProfile?._count?.profileUpdateRequests || 0,
     joinedAt: j.createdAt,
     raw: j,
   };
@@ -217,7 +217,7 @@ export default function JournalistsPage() {
 
   const load = useCallback(() => {
     setLoading(true);
-    fetch("/api/journalists")
+    fetch("/api/reporters")
       .then((r) => r.json())
       .then((rows: Journalist[]) => {
         setData(Array.isArray(rows) ? rows.map(toRow) : []);
@@ -253,7 +253,7 @@ export default function JournalistsPage() {
   const activate = useCallback(
     async (j: Journalist) => {
       try {
-        await fetch("/api/journalists", {
+        await fetch("/api/reporters", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action: "activate", userIds: [j.id] }),
@@ -356,17 +356,17 @@ export default function JournalistsPage() {
         // something awaiting action; otherwise a quiet "—".
         cell: ({ row }) => {
           const count = row.getValue("pendingUpdates") as number;
-          const journalistId = row.original.raw.journalistProfile?.id;
-          if (!journalistId) return <span className="text-muted-foreground">—</span>;
+          const reporterId = row.original.raw.reporterProfile?.id;
+          if (!reporterId) return <span className="text-muted-foreground">—</span>;
           return count > 0 ? (
-            <Link href={`/profile-requests?journalistId=${journalistId}`}>
+            <Link href={`/profile-requests?reporterId=${reporterId}`}>
               <Button size="sm" variant="default" className="h-7 gap-1.5 px-2.5">
                 <Badge variant="secondary" className="h-4 min-w-4 px-1 text-[10px] tabular-nums">{count}</Badge>
                 Review
               </Button>
             </Link>
           ) : (
-            <Link href={`/profile-requests?journalistId=${journalistId}&status=ALL`}>
+            <Link href={`/profile-requests?reporterId=${reporterId}&status=ALL`}>
               <Button size="sm" variant="outline" className="h-7 px-2.5 text-xs">View</Button>
             </Link>
           );
@@ -435,7 +435,7 @@ export default function JournalistsPage() {
   const handleDelete = async () => {
     if (!confirmDelete) return;
     try {
-      const res = await fetch("/api/journalists", {
+      const res = await fetch("/api/reporters", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "delete", userIds: confirmDelete.map((r) => r.id) }),
@@ -890,13 +890,13 @@ function ReviewDialog({
     setTempPassword("");
   }, [journalist?.id]);
 
-  const p = journalist?.journalistProfile ?? null;
+  const p = journalist?.reporterProfile ?? null;
 
   const act = async (action: string, note?: string) => {
     if (!p) return;
     setBusy(true);
     try {
-      await fetch("/api/journalists", {
+      await fetch("/api/reporters", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ profileId: p.id, action, note }),
@@ -913,7 +913,7 @@ function ReviewDialog({
     if (!confirm("Reset this reporter's password? Their current password stops working immediately.")) return;
     setBusy(true);
     try {
-      const res = await fetch("/api/journalists", {
+      const res = await fetch("/api/reporters", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ profileId: p.id, action: "reset-password" }),
@@ -1156,7 +1156,7 @@ function PasswordResetDialog({
   };
 
   const submit = async () => {
-    if (!journalist?.journalistProfile) {
+    if (!journalist?.reporterProfile) {
       setError("This reporter has no profile yet.");
       return;
     }
@@ -1167,11 +1167,11 @@ function PasswordResetDialog({
     setBusy(true);
     setError("");
     try {
-      const res = await fetch("/api/journalists", {
+      const res = await fetch("/api/reporters", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          profileId: journalist.journalistProfile.id,
+          profileId: journalist.reporterProfile.id,
           action: "reset-password",
           customPassword: password || undefined,
           oneTime,
@@ -1381,7 +1381,7 @@ const EMPTY_FORM: FormState = {
 };
 
 function formFromJournalist(j: Journalist): FormState {
-  const p = j.journalistProfile;
+  const p = j.reporterProfile;
   return {
     name: j.name,
     email: j.email,
@@ -1470,7 +1470,7 @@ function JournalistFormDialog({
               data: { ...form, kycStatus: undefined },
             }
           : { action: "create", data: form };
-      const res = await fetch("/api/journalists", {
+      const res = await fetch("/api/reporters", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

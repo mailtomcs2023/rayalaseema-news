@@ -50,7 +50,7 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    const profile = await prisma.journalistProfile.findUnique({
+    const profile = await prisma.reporterProfile.findUnique({
       where: { userId: reporterId },
       select: { id: true, kycStatus: true },
     });
@@ -64,7 +64,7 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    await prisma.journalistProfile.update({
+    await prisma.reporterProfile.update({
       where: { id: profile.id },
       data: {
         aadhaarNumber: aadhaarNumber!.replace(/\D/g, ""),

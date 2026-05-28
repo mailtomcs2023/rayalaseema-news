@@ -288,6 +288,16 @@
   body, button, input, textarea, select {
     font-family: var(--font-telugu-body) !important;
   }
+  /* Header nav (both <a> links and the "మరిన్ని" <button> dropdown trigger)
+     uses Noto Sans Telugu at real weight 600 — chosen for legibility at
+     13px. Mandali only ships weight 400, so its bold was synthetic and the
+     button looked visually distinct from its siblings. */
+  .nav-gradient a,
+  .nav-gradient button {
+    font-family: var(--font-telugu-body) !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.02em !important;
+  }
   /* Headings — serif (Noto Serif Telugu) for editorial gravity, sitewide */
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-telugu-heading) !important;

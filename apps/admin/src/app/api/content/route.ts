@@ -57,11 +57,34 @@ export async function GET(req: NextRequest) {
     if (status) where.status = status;
     if (category) where.categoryId = category;
 
-    // Visibility: REPORTER sees only their own rows. SUB_EDITOR / EDITOR /
-    // CHIEF_SUB_EDITOR / ADMIN see everything. Prevents reporters from
-    // browsing admin drafts and unpublished editorial copy.
+    // Visibility:
+    //   REPORTER   — only their own rows.
+    //   SUB_EDITOR — rows in their assigned categories OR rows they authored.
+    //                Mirrors /api/review's strict-assignment scope so a SE
+    //                doesn't see sports articles when they only cover crime.
+    //   EDITOR / ADMIN — everything (editor is the cross-
+    //                category super-reviewer in this newsroom).
     if (session.user.role === "REPORTER") {
       where.authorId = session.user.id;
+    } else if (session.user.role === "SUB_EDITOR") {
+      const assignments = await prisma.userCategory.findMany({
+        where: { userId: session.user.id },
+        select: { categoryId: true },
+      });
+      const categoryIds = assignments.map((a) => a.categoryId);
+      // OR clause merges with any existing search OR — wrap in AND so search
+      // (title-contains) and scope (own-or-in-my-categories) both apply.
+      const scopeOr = [
+        { authorId: session.user.id },
+        ...(categoryIds.length > 0 ? [{ categoryId: { in: categoryIds } }] : []),
+      ];
+      if (where.OR) {
+        const existingOr = where.OR;
+        delete where.OR;
+        where.AND = [{ OR: existingOr }, { OR: scopeOr }];
+      } else {
+        where.OR = scopeOr;
+      }
     }
 
     // Soft-delete: hide trashed rows by default. `?trash=1` (admin/editor)
@@ -70,7 +93,7 @@ export async function GET(req: NextRequest) {
     const trash = searchParams.get("trash") === "1";
     if (trash) {
       const role = session.user.role;
-      if (role !== "ADMIN" && role !== "EDITOR" && role !== "CHIEF_SUB_EDITOR") {
+      if (role !== "ADMIN" && role !== "EDITOR") {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
       where.deletedAt = { not: null };

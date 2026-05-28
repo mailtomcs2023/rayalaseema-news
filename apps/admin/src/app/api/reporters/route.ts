@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
-import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
+import { requireCan, isAuthError, apiError } from "@/lib/api-utils";
+import { logAudit } from "@/lib/audit";
+import { encrypt, decryptProfileFields } from "@/lib/crypto/kyc";
 import { hash } from "bcryptjs";
 import { randomInt } from "crypto";
 
@@ -16,7 +18,7 @@ function generateTempPassword(): string {
   return pw;
 }
 
-// Build the JournalistProfile field set from an admin create/edit form payload.
+// Build the ReporterProfile field set from an admin create/edit form payload.
 // kycStatus is only included when explicitly provided (edit leaves it untouched).
 function profileData(d: Record<string, unknown>) {
   const langs = d.languages;
@@ -52,7 +54,7 @@ function profileData(d: Record<string, unknown>) {
 
 // GET all journalists with profiles
 export async function GET() {
-  const session = await requireAuth(["ADMIN"]);
+  const session = await requireCan("user.manage");
   if (isAuthError(session)) return session;
   try {
     const journalists = await prisma.user.findMany({
@@ -61,7 +63,7 @@ export async function GET() {
         // Include the pending change-request count alongside the profile so
         // the journalists table can surface "this reporter has N updates
         // awaiting your review" without a second round-trip per row.
-        journalistProfile: {
+        reporterProfile: {
           include: {
             _count: {
               select: { profileUpdateRequests: { where: { status: "PENDING" } } },
@@ -80,14 +82,14 @@ export async function GET() {
 
 // POST - create / update a journalist, approve/reject KYC, or reset a password
 export async function POST(req: NextRequest) {
-  const session = await requireAuth(["ADMIN"]);
+  const session = await requireCan("user.manage");
   if (isAuthError(session)) return session;
   try {
     const body = await req.json();
     const action = body.action as string;
     if (!action) return NextResponse.json({ error: "action required" }, { status: 400 });
 
-    // ---- create a new journalist (User + JournalistProfile) ----
+    // ---- create a new reporter (User + ReporterProfile) ----
     if (action === "create") {
       const d = (body.data || {}) as Record<string, unknown>;
       if (!d.name || !d.email || !d.password) {
@@ -96,17 +98,24 @@ export async function POST(req: NextRequest) {
       const exists = await prisma.user.findUnique({ where: { email: d.email as string } });
       if (exists) return NextResponse.json({ error: "Email already registered" }, { status: 400 });
 
-      const user = await prisma.user.create({
-        data: {
-          email: d.email as string,
-          name: d.name as string,
-          phone: (d.phone as string) || null,
-          passwordHash: await hash(d.password as string, 12),
-          role: "REPORTER",
-          active: d.active === undefined ? true : Boolean(d.active),
-        },
+      // Single transaction: if the ReporterProfile insert fails (FK
+      // violation, validation, etc.) the User insert rolls back too. Stops
+      // orphan User-with-no-profile rows that the KYC workflow can't handle.
+      const passwordHash = await hash(d.password as string, 12);
+      const user = await prisma.$transaction(async (tx) => {
+        const created = await tx.user.create({
+          data: {
+            email: d.email as string,
+            name: d.name as string,
+            phone: (d.phone as string) || null,
+            passwordHash,
+            role: "REPORTER",
+            active: d.active === undefined ? true : Boolean(d.active),
+          },
+        });
+        await tx.reporterProfile.create({ data: { userId: created.id, ...profileData(d) } });
+        return created;
       });
-      await prisma.journalistProfile.create({ data: { userId: user.id, ...profileData(d) } });
       return NextResponse.json({ success: true, userId: user.id }, { status: 201 });
     }
 
@@ -132,7 +141,7 @@ export async function POST(req: NextRequest) {
           active: d.active === undefined ? true : Boolean(d.active),
         },
       });
-      await prisma.journalistProfile.upsert({
+      await prisma.reporterProfile.upsert({
         where: { userId },
         update: profileData(d),
         create: { userId, ...profileData(d) },
@@ -169,6 +178,20 @@ export async function POST(req: NextRequest) {
           where: { id: { in: deactivatable } },
           data: { active: false },
         });
+        // One audit row per deactivated user — easier to query than a
+        // bulk row, and matches the granularity of activate / verify.
+        await Promise.all(
+          deactivatable.map((uid) =>
+            logAudit({
+              action: "user.deactivate",
+              resource: "user",
+              resourceId: uid,
+              meta: { role: "REPORTER", reason: "admin soft-delete" },
+              actor: session.user,
+              req,
+            }),
+          ),
+        );
       }
       // `deleted` retained in the response shape for any older client; the
       // value is the same idea (how many rows we acted on).
@@ -192,17 +215,42 @@ export async function POST(req: NextRequest) {
         where: { id: { in: userIds }, role: "REPORTER" },
         data: { active: true },
       });
+      await Promise.all(
+        userIds.map((uid) =>
+          logAudit({
+            action: "user.activate",
+            resource: "user",
+            resourceId: uid,
+            meta: { role: "REPORTER" },
+            actor: session.user,
+            req,
+          }),
+        ),
+      );
       return NextResponse.json({ success: true, activated: result.count });
     }
 
-    // ---- KYC + password actions (operate on a JournalistProfile) ----
+    // ---- KYC + password actions (operate on a ReporterProfile) ----
     const { profileId, note } = body as { profileId?: string; note?: string };
     if (!profileId) return NextResponse.json({ error: "profileId required" }, { status: 400 });
 
     if (action === "verify") {
-      await prisma.journalistProfile.update({
+      // Capture prior state so the audit log shows the transition.
+      const prior = await prisma.reporterProfile.findUnique({
+        where: { id: profileId },
+        select: { userId: true, kycStatus: true },
+      });
+      await prisma.reporterProfile.update({
         where: { id: profileId },
         data: { kycStatus: "VERIFIED", verifiedAt: new Date() },
+      });
+      await logAudit({
+        action: "kyc.verify",
+        resource: "reporterProfile",
+        resourceId: profileId,
+        meta: { userId: prior?.userId, from: prior?.kycStatus, to: "VERIFIED" },
+        actor: session.user,
+        req,
       });
     } else if (action === "reject") {
       // Rejection reason is mandatory — the reporter sees this text in the
@@ -213,9 +261,21 @@ export async function POST(req: NextRequest) {
       if (!trimmedNote) {
         return NextResponse.json({ error: "Rejection reason is required" }, { status: 400 });
       }
-      await prisma.journalistProfile.update({
+      const prior = await prisma.reporterProfile.findUnique({
+        where: { id: profileId },
+        select: { userId: true, kycStatus: true },
+      });
+      await prisma.reporterProfile.update({
         where: { id: profileId },
         data: { kycStatus: "REJECTED", kycRejectionNote: trimmedNote },
+      });
+      await logAudit({
+        action: "kyc.reject",
+        resource: "reporterProfile",
+        resourceId: profileId,
+        meta: { userId: prior?.userId, from: prior?.kycStatus, to: "REJECTED", note: trimmedNote },
+        actor: session.user,
+        req,
       });
     } else if (action === "reset-password") {
       // Two knobs the admin modal can send in addition to `profileId`:
@@ -237,7 +297,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const profile = await prisma.journalistProfile.findUnique({
+      const profile = await prisma.reporterProfile.findUnique({
         where: { id: profileId },
         select: { userId: true },
       });
@@ -255,6 +315,17 @@ export async function POST(req: NextRequest) {
           // sets active:false, it doesn't actually delete the row).
           active: true,
         },
+      });
+      // Audit the password reset. Never log the actual password (even
+      // hashed) — record only that a reset happened, who did it, and
+      // whether it was a one-time temp password.
+      await logAudit({
+        action: "user.password.reset",
+        resource: "user",
+        resourceId: profile.userId,
+        meta: { oneTime, customPassword: !!customPassword, reactivated: true },
+        actor: session.user,
+        req,
       });
       // `tempPassword` kept for backward-compat with any older caller; the
       // new modal reads `password` (plus the oneTime echo so it can show the

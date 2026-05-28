@@ -11,17 +11,40 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  BookOpenIcon,
+  CameraIcon,
+  FileTextIcon,
+  FilmIcon,
+  Loader2Icon,
+  PaletteIcon,
+  VideoIcon,
+  ZapIcon,
+  type LucideIcon,
+} from "lucide-react";
 import { Sidebar } from "@/components/sidebar";
 
-const TYPES = [
-  { type: "ARTICLE",       icon: "📝", title: "Article",       desc: "Long-form text with rich editor. Default newsroom output.",      bg: "#fee2e2", fg: "#991b1b" },
-  { type: "VIDEO",         icon: "📹", title: "Video",         desc: "YouTube / hosted video URL with thumbnail.",                     bg: "#dbeafe", fg: "#1e40af" },
-  { type: "REEL",          icon: "🎬", title: "Reel",          desc: "Short vertical clip (9:16).",                                    bg: "#dcfce7", fg: "#166534" },
-  { type: "WEB_STORY",     icon: "📖", title: "Web Story",     desc: "Swipeable image-and-caption cards.",                             bg: "#fef3c7", fg: "#92400e" },
-  { type: "PHOTO_GALLERY", icon: "📷", title: "Photo Gallery", desc: "Multi-photo collection with per-photo captions.",                bg: "#f3e8ff", fg: "#6b21a8" },
-  { type: "CARTOON",       icon: "🎨", title: "Cartoon",       desc: "Single image with caption + publish date (ఎట్టెట).",            bg: "#fce7f3", fg: "#9d174d" },
-  { type: "BREAKING_NEWS", icon: "⚡", title: "Breaking News", desc: "Ticker headline. No body, no public URL. Routes straight to review.", bg: "#fef2f2", fg: "#7f1d1d" },
-] as const;
+interface TypeMeta {
+  type: string;
+  Icon: LucideIcon;
+  title: string;
+  desc: string;
+  bg: string;
+  fg: string;
+  ring: string;
+}
+
+const TYPES: readonly TypeMeta[] = [
+  { type: "ARTICLE",       Icon: FileTextIcon, title: "Article",       desc: "Long-form text with rich editor. Default newsroom output.",            bg: "#fef2f2", fg: "#991b1b", ring: "#fca5a5" },
+  { type: "VIDEO",         Icon: VideoIcon,    title: "Video",         desc: "YouTube or hosted video URL with thumbnail.",                          bg: "#eff6ff", fg: "#1e40af", ring: "#93c5fd" },
+  { type: "REEL",          Icon: FilmIcon,     title: "Reel",          desc: "Short vertical clip (9:16).",                                          bg: "#f0fdf4", fg: "#166534", ring: "#86efac" },
+  { type: "WEB_STORY",     Icon: BookOpenIcon, title: "Web Story",     desc: "Swipeable image-and-caption cards.",                                   bg: "#fffbeb", fg: "#92400e", ring: "#fcd34d" },
+  { type: "PHOTO_GALLERY", Icon: CameraIcon,   title: "Photo Gallery", desc: "Multi-photo collection with per-photo captions.",                      bg: "#faf5ff", fg: "#6b21a8", ring: "#d8b4fe" },
+  { type: "CARTOON",       Icon: PaletteIcon,  title: "Cartoon",       desc: "Single image with caption and publish date (ఎట్టెట).",               bg: "#fdf2f8", fg: "#9d174d", ring: "#f9a8d4" },
+  { type: "BREAKING_NEWS", Icon: ZapIcon,      title: "Breaking News", desc: "Ticker headline. No body, no public URL. Routes straight to review.", bg: "#fff1f2", fg: "#9f1239", ring: "#fda4af" },
+];
 
 export default function NewContentPage() {
   const router = useRouter();
@@ -61,64 +84,211 @@ export default function NewContentPage() {
   };
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
+    <div style={{ display: "flex", minHeight: "100vh", background: "#f8fafc" }}>
       <Sidebar />
-      <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-          <Link href="/content" style={{ fontSize: 13, color: "#6b7280", textDecoration: "none" }}>← Back to Content</Link>
-        </div>
-        <h1 style={{ fontSize: 28, fontWeight: 800, color: "#111", marginBottom: 4 }}>What are you creating?</h1>
-        <p style={{ fontSize: 14, color: "#666", marginBottom: 24 }}>
-          Pick a content type. Title + everything else go in the editor.
-        </p>
+      <main style={{ marginLeft: 240, flex: 1 }}>
+        <div style={{ maxWidth: 1120, margin: "0 auto", padding: "32px 32px 64px" }}>
+          {/* Back link */}
+          <Link
+            href="/content"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 13,
+              color: "#64748b",
+              textDecoration: "none",
+              marginBottom: 28,
+              transition: "color 150ms",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "#0f172a")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "#64748b")}
+          >
+            <ArrowLeftIcon aria-hidden="true" size={14} />
+            Back to Content
+          </Link>
 
-        {error && (
-          <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: 13, color: "#dc2626" }}>
-            {error}
+          {/* Heading */}
+          <div style={{ marginBottom: 36 }}>
+            <h1
+              style={{
+                fontSize: 30,
+                fontWeight: 700,
+                color: "#0f172a",
+                margin: 0,
+                marginBottom: 8,
+                letterSpacing: "-0.02em",
+                lineHeight: 1.15,
+              }}
+            >
+              What are you creating?
+            </h1>
+            <p
+              style={{
+                fontSize: 15,
+                color: "#64748b",
+                margin: 0,
+                maxWidth: 600,
+                lineHeight: 1.55,
+              }}
+            >
+              Pick a content type. Title and everything else go in the editor.
+            </p>
           </div>
-        )}
 
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
-          gap: 12,
-        }}>
-          {TYPES.map((t) => {
-            const busy = creating === t.type;
-            const disabled = creating !== null;
-            return (
-              <button
-                key={t.type}
-                onClick={() => create(t.type)}
-                disabled={disabled}
-                style={{
-                  textAlign: "left",
-                  padding: 20,
-                  background: "#fff",
-                  border: `2px solid ${busy ? t.fg : "#e5e7eb"}`,
-                  borderRadius: 12,
-                  cursor: disabled ? "not-allowed" : "pointer",
-                  opacity: disabled && !busy ? 0.5 : 1,
-                  transition: "border-color 0.15s",
-                }}
-                onMouseEnter={(e) => { if (!disabled) (e.currentTarget.style.borderColor = t.fg); }}
-                onMouseLeave={(e) => { if (!busy) (e.currentTarget.style.borderColor = "#e5e7eb"); }}
-              >
-                <div style={{
-                  width: 48, height: 48, borderRadius: 10,
-                  background: t.bg, color: t.fg,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 24, marginBottom: 12,
-                }}>{t.icon}</div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: "#111", marginBottom: 4 }}>
-                  {t.title}
-                </div>
-                <p style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.5, margin: 0 }}>
-                  {busy ? "Creating draft…" : t.desc}
-                </p>
-              </button>
-            );
-          })}
+          {error && (
+            <div
+              role="alert"
+              style={{
+                background: "#fef2f2",
+                border: "1px solid #fecaca",
+                borderRadius: 10,
+                padding: "10px 14px",
+                marginBottom: 24,
+                fontSize: 13,
+                color: "#b91c1c",
+              }}
+            >
+              {error}
+            </div>
+          )}
+
+          {/* Type grid */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+              gap: 18,
+            }}
+          >
+            {TYPES.map((t) => {
+              const busy = creating === t.type;
+              const disabled = creating !== null;
+              const Icon = t.Icon;
+              return (
+                <button
+                  key={t.type}
+                  onClick={() => create(t.type)}
+                  disabled={disabled}
+                  aria-busy={busy}
+                  style={{
+                    position: "relative",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                    textAlign: "left",
+                    padding: "22px 20px",
+                    background: "#fff",
+                    border: `1px solid ${busy ? t.ring : "#e5e7eb"}`,
+                    borderRadius: 12,
+                    cursor: disabled ? (busy ? "wait" : "not-allowed") : "pointer",
+                    opacity: disabled && !busy ? 0.5 : 1,
+                    transition:
+                      "border-color 150ms, box-shadow 150ms, transform 150ms",
+                    boxShadow: busy
+                      ? `0 0 0 3px ${t.bg}`
+                      : "0 1px 2px rgba(15, 23, 42, 0.04)",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (disabled) return;
+                    e.currentTarget.style.borderColor = t.ring;
+                    e.currentTarget.style.boxShadow =
+                      "0 6px 16px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)";
+                    e.currentTarget.style.transform = "translateY(-1px)";
+                    const arrow = e.currentTarget.querySelector<HTMLSpanElement>(
+                      "[data-arrow]"
+                    );
+                    if (arrow) {
+                      arrow.style.opacity = "1";
+                      arrow.style.transform = "translateX(0)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (busy) return;
+                    e.currentTarget.style.borderColor = "#e5e7eb";
+                    e.currentTarget.style.boxShadow =
+                      "0 1px 2px rgba(15, 23, 42, 0.04)";
+                    e.currentTarget.style.transform = "translateY(0)";
+                    const arrow = e.currentTarget.querySelector<HTMLSpanElement>(
+                      "[data-arrow]"
+                    );
+                    if (arrow) {
+                      arrow.style.opacity = "0";
+                      arrow.style.transform = "translateX(-4px)";
+                    }
+                  }}
+                >
+                  {/* Arrow indicator — fades in on hover */}
+                  <span
+                    data-arrow
+                    aria-hidden="true"
+                    style={{
+                      position: "absolute",
+                      top: 20,
+                      right: 18,
+                      color: "#94a3b8",
+                      opacity: 0,
+                      transform: "translateX(-4px)",
+                      transition: "opacity 150ms, transform 150ms",
+                      display: "inline-flex",
+                    }}
+                  >
+                    <ArrowRightIcon size={16} />
+                  </span>
+
+                  {/* Icon */}
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 10,
+                      background: t.bg,
+                      color: t.fg,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginBottom: 14,
+                    }}
+                  >
+                    {busy ? (
+                      <Loader2Icon
+                        aria-hidden="true"
+                        size={20}
+                        className="animate-spin"
+                      />
+                    ) : (
+                      <Icon aria-hidden="true" size={20} strokeWidth={1.8} />
+                    )}
+                  </div>
+
+                  {/* Title */}
+                  <div
+                    style={{
+                      fontSize: 15,
+                      fontWeight: 600,
+                      color: "#0f172a",
+                      marginBottom: 4,
+                      letterSpacing: "-0.01em",
+                    }}
+                  >
+                    {t.title}
+                  </div>
+
+                  {/* Description */}
+                  <p
+                    style={{
+                      fontSize: 13,
+                      color: "#64748b",
+                      lineHeight: 1.5,
+                      margin: 0,
+                    }}
+                  >
+                    {busy ? "Creating draft…" : t.desc}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </main>
     </div>

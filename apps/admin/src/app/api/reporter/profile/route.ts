@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { getReporterId } from "@/lib/reporter-auth";
 
-// Returns the reporter's full profile (User + JournalistProfile) plus the
+// Returns the reporter's full profile (User + ReporterProfile) plus the
 // list of their in-flight change requests so the app can render "Pending
 // review" badges and any admin rejection notes inline.
 //
@@ -23,10 +23,10 @@ export async function GET(req: NextRequest) {
       where: { id: reporterId },
       select: {
         id: true, name: true, email: true, phone: true, role: true, avatar: true,
-        journalistProfile: true,
+        reporterProfile: true,
       },
     });
-    if (!user || !user.journalistProfile) {
+    if (!user || !user.reporterProfile) {
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
 
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
     // supersedence (an APPROVED request shadows older REJECTEDs for the
     // same field). 200 rows is plenty for any single reporter's profile.
     const recent = await prisma.profileUpdateRequest.findMany({
-      where: { journalistProfileId: user.journalistProfile.id },
+      where: { reporterProfileId: user.reporterProfile.id },
       orderBy: { createdAt: "desc" },
       take: 200,
     });
@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
         id: user.id, name: user.name, email: user.email, phone: user.phone,
         role: user.role, avatar: user.avatar,
       },
-      profile: user.journalistProfile,
+      profile: user.reporterProfile,
       requests,
     });
   } catch (e: any) {

@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {
-    const jp = await prisma.journalistProfile.findUnique({
+    const jp = await prisma.reporterProfile.findUnique({
       where: { userId: reporterId },
       select: { kycStatus: true },
     });

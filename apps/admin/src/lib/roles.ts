@@ -43,7 +43,7 @@ export function canVisit(role: Role | string | undefined, pathname: string): boo
   // SUB_EDITOR + EDITOR: blocked from the HR/finance/settings cluster.
   const adminOnly = [
     "/users",
-    "/journalists",
+    "/reporters",
     "/payments",
     "/settings",
     "/categories",

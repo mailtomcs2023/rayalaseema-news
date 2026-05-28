@@ -68,7 +68,7 @@ async function searchGoogle(query: string): Promise<Hit[]> {
 }
 
 export async function GET(req: NextRequest) {
-  const session = await requireAuth(["ADMIN", "EDITOR", "CHIEF_SUB_EDITOR", "SUB_EDITOR", "REPORTER"]);
+  const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR", "REPORTER"]);
   if (isAuthError(session)) return session;
   try {
     const { searchParams } = new URL(req.url);

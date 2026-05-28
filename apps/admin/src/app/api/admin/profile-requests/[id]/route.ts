@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { KycStatus } from "@rayalaseema/db";
-import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
+import { requireCan, isAuthError, apiError } from "@/lib/api-utils";
 import { logAudit } from "@/lib/audit";
 import {
   PROFILE_FIELDS,
@@ -11,7 +11,7 @@ import {
 
 // POST /api/admin/profile-requests/[id]  { action: "approve" | "reject", note? }
 //
-// Approve: write the new value to its target table (User or JournalistProfile).
+// Approve: write the new value to its target table (User or ReporterProfile).
 //   For KYC-critical fields the journalist's kycStatus is set to VERIFIED
 //   and verifiedAt is stamped (admin is implicitly re-verifying by approving).
 //
@@ -20,7 +20,7 @@ import {
 //
 // Both paths mark the request reviewed and emit an AuditLog entry.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireAuth(["ADMIN", "EDITOR"]);
+  const auth = await requireCan("profile-request.decide");
   if (isAuthError(auth)) return auth;
 
   try {
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const request = await prisma.profileUpdateRequest.findUnique({
       where: { id },
-      include: { journalistProfile: { include: { user: true } } },
+      include: { reporterProfile: { include: { user: true } } },
     });
     if (!request) return NextResponse.json({ error: "Request not found" }, { status: 404 });
     if (request.status !== "PENDING") {
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: "Field is no longer supported" }, { status: 400 });
     }
     const def = PROFILE_FIELDS[request.field];
-    const profile = request.journalistProfile;
+    const profile = request.reporterProfile;
     if (!profile) return NextResponse.json({ error: "Journalist profile missing" }, { status: 500 });
 
     const now = new Date();
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             updateData.verifiedAt = now;
             updateData.kycRejectionNote = null;
           }
-          await tx.journalistProfile.update({
+          await tx.reporterProfile.update({
             where: { id: profile.id },
             data: updateData,
           });
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       } else {
         // Reject: restore the kycStatus we paused on submission, if any.
         if (request.previousKycStatus) {
-          await tx.journalistProfile.update({
+          await tx.reporterProfile.update({
             where: { id: profile.id },
             data: { kycStatus: request.previousKycStatus },
           });

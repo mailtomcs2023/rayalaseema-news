@@ -4,7 +4,7 @@
  *
  * - Upserts users by email
  * - Resets the password to the documented value every run
- * - For the reporter, creates a VERIFIED JournalistProfile so all gated
+ * - For the reporter, creates a VERIFIED ReporterProfile so all gated
  *   features (submit article, view earnings) are unlocked
  *
  * Run with:  bun run packages/db/scripts/seed-test-users.ts
@@ -46,10 +46,10 @@ async function main() {
       select: { id: true, email: true, role: true, name: true },
     });
 
-    // The reporter needs a VERIFIED JournalistProfile to bypass the KYC gate
+    // The reporter needs a VERIFIED ReporterProfile to bypass the KYC gate
     // on /reporter/articles/new and the locked-earnings state.
     if (user.role === "REPORTER") {
-      await prisma.journalistProfile.upsert({
+      await prisma.reporterProfile.upsert({
         where: { userId: user.id },
         update: { kycStatus: "VERIFIED", kycRejectionNote: null },
         create: {

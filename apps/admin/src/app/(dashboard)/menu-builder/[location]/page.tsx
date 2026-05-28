@@ -30,8 +30,8 @@ export default async function MenuBuilderPage({ params }: { params: Promise<{ lo
   const session = await auth();
   if (!session?.user) redirect("/login");
   const role = (session.user as any).role;
-  // ADMIN + (CHIEF_SUB_)EDITOR — same gate as Page Builder.
-  if (!["ADMIN", "EDITOR", "CHIEF_SUB_EDITOR"].includes(role)) redirect("/");
+  // ADMIN + EDITOR — same gate as Page Builder.
+  if (!["ADMIN", "EDITOR"].includes(role)) redirect("/");
 
   const { location: slug } = await params;
   const location = parseLocation(slug);

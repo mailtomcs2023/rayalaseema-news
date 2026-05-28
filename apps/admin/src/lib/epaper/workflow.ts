@@ -4,13 +4,13 @@
 //     │ submit (operator role: any editorial)
 //     ▼
 //   SUB_REVIEW
-//     │ approve (SUB_EDITOR / CHIEF_SUB_EDITOR / ADMIN)        │ reject (note required)
+//     │ approve (SUB_EDITOR / EDITOR / ADMIN)                  │ reject (note required)
 //     ▼                                                         ▼
 //   CHIEF_REVIEW                                              REJECTED → operator reopens to DRAFT
-//     │ approve (CHIEF_SUB_EDITOR / ADMIN)                     │ reject (note required)
+//     │ approve (EDITOR / ADMIN)                               │ reject (note required)
 //     ▼                                                         ▼
 //   APPROVED                                                  REJECTED → operator reopens to DRAFT
-//     │ publish (CHIEF_SUB_EDITOR / ADMIN)
+//     │ publish (EDITOR / ADMIN)
 //     ▼
 //   PUBLISHED  (terminal — unpublish goes back to DRAFT)
 //

@@ -4,6 +4,19 @@ import { requireAuth, isAuthError } from "@/lib/api-utils";
 import { buildSlugFromTitle, uniqueSlug } from "@/lib/slug";
 import { uploadImageFromUrl } from "@/lib/blob";
 import { runPipeline } from "@/lib/ai/pipeline";
+import { AIContentFilterError } from "@/lib/ai/client";
+
+// Sentinel thrown by importOneArticle when Azure's content filter blocked
+// the article. The POST handler catches it to bump the per-category
+// `blocked` counter without polluting the success/failure paths.
+class ArticleBlockedByFilter extends Error {
+  readonly categories: string[];
+  constructor(categories: string[]) {
+    super(`blocked by AI content filter (${categories.join(", ") || "unknown"})`);
+    this.name = "ArticleBlockedByFilter";
+    this.categories = categories;
+  }
+}
 
 const NEWSDATA_KEY = process.env.NEWSDATA_API_KEY;
 const AZURE_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT || "https://rayalaseema-ai.openai.azure.com/";
@@ -154,9 +167,17 @@ async function importOneArticle(
       body: result.article.body_html_te,
     };
   } catch (e) {
-    // Pipeline failure (rate limit, transient model error) → fall back to
-    // a minimal English-as-Telugu placeholder so the row at least lands
-    // in DRAFT and the editor can fix it manually.
+    // Azure Responsible AI blocked this article. Bail out hard — the
+    // fallback (raw English in <p>) is worse than nothing because it
+    // silently pollutes the review queue with un-translated rows and
+    // the editor has no signal the AI rejected the source.
+    if (e instanceof AIContentFilterError) {
+      console.warn("[auto-fetch] content filter blocked:", e.categories.join(", "));
+      throw new ArticleBlockedByFilter(e.categories);
+    }
+    // Other pipeline failures (rate limit, transient model error) →
+    // fall back to a minimal English-as-Telugu placeholder so the row at
+    // least lands in DRAFT and the editor can fix it manually.
     console.error("[auto-fetch] pipeline failed:", e);
     translated = { title: article.title, summary: content.substring(0, 200), body: `<p>${content}</p>` };
   }
@@ -334,7 +355,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ preview: previews });
   }
 
-  const results: { category: string; fetched: number; published: number; error?: string }[] = [];
+  const results: { category: string; fetched: number; published: number; blocked?: number; error?: string }[] = [];
   let totalPublished = 0;
 
   // Phase 2 — import a curated list. Skip the NewsData fetch entirely; the
@@ -357,12 +378,26 @@ export async function POST(req: NextRequest) {
         constituencyId = district?.constituencies[0]?.id;
       }
       let published = 0;
+      let blocked = 0;
+      const blockedCategories = new Set<string>();
       for (const article of list) {
-        const ok = await importOneArticle(article, categoryId, constituencyId, existingSourceSet, existingSlugs, admin.id, !!forceReimport);
-        if (ok) { published++; totalPublished++; }
+        try {
+          const ok = await importOneArticle(article, categoryId, constituencyId, existingSourceSet, existingSlugs, admin.id, !!forceReimport);
+          if (ok) { published++; totalPublished++; }
+        } catch (e) {
+          if (e instanceof ArticleBlockedByFilter) {
+            blocked++;
+            for (const c of e.categories) blockedCategories.add(c);
+          } else {
+            throw e;
+          }
+        }
         await new Promise((r) => setTimeout(r, 1000));
       }
-      results.push({ category: catSlug, fetched: list.length, published });
+      const blockedNote = blocked > 0
+        ? `${blocked} blocked by AI content filter${blockedCategories.size ? ` (${[...blockedCategories].join(", ")})` : ""}`
+        : undefined;
+      results.push({ category: catSlug, fetched: list.length, published, blocked: blocked || undefined, error: blockedNote });
     }
     return NextResponse.json({
       success: true,
@@ -404,6 +439,8 @@ export async function POST(req: NextRequest) {
       }
 
       let published = 0;
+      let blocked = 0;
+      const blockedCategories = new Set<string>();
 
       for (const article of data.results) {
         const content = article.content || article.description || article.title || "";
@@ -442,6 +479,15 @@ export async function POST(req: NextRequest) {
             body: r.article.body_html_te,
           };
         } catch (e) {
+          // Azure content filter — skip the article entirely so the
+          // review queue stays clean. Other failures fall through to the
+          // English placeholder so the editor can manually translate.
+          if (e instanceof AIContentFilterError) {
+            console.warn("[auto-fetch] content filter blocked:", e.categories.join(", "));
+            blocked++;
+            for (const c of e.categories) blockedCategories.add(c);
+            continue;
+          }
           console.error("[auto-fetch] pipeline failed:", e);
           translated = { title: article.title, summary: content.substring(0, 200), body: `<p>${content}</p>` };
         }
@@ -511,7 +557,10 @@ export async function POST(req: NextRequest) {
         await new Promise((r) => setTimeout(r, 1000));
       }
 
-      results.push({ category: catSlug, fetched: data.results.length, published });
+      const blockedNote = blocked > 0
+        ? `${blocked} blocked by AI content filter${blockedCategories.size ? ` (${[...blockedCategories].join(", ")})` : ""}`
+        : undefined;
+      results.push({ category: catSlug, fetched: data.results.length, published, blocked: blocked || undefined, error: blockedNote });
     } catch (err: any) {
       results.push({ category: catSlug, fetched: 0, published: 0, error: err.message });
     }

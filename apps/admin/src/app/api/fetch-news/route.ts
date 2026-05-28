@@ -17,7 +17,7 @@ const NEWSDATA_API_KEY = process.env.NEWSDATA_API_KEY;
 // imageUrl, sourceUrl, source, language, publishedAt, keywords }] }. POST
 // /api/fetch-news (further down this file) imports a result row as a draft.
 export async function GET(req: NextRequest) {
-  const session = await requireAuth(["ADMIN", "EDITOR", "CHIEF_SUB_EDITOR", "SUB_EDITOR", "REPORTER"]);
+  const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR", "REPORTER"]);
   if (isAuthError(session)) return session;
   const { searchParams } = new URL(req.url);
   const provider = (searchParams.get("provider") || "newsdata").toLowerCase();
@@ -102,7 +102,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/fetch-news - import a news article as draft
 export async function POST(req: NextRequest) {
-  const session2 = await requireAuth(["ADMIN", "EDITOR", "CHIEF_SUB_EDITOR", "SUB_EDITOR", "REPORTER"]);
+  const session2 = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR", "REPORTER"]);
   if (isAuthError(session2)) return session2;
   try {
     const body = await req.json();

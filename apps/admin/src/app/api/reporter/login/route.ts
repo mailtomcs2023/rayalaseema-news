@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Case-insensitive lookup so capitalisation typed at login doesn't matter.
-    // journalistProfile is pulled so we can return the reporter's KYC state
+    // reporterProfile is pulled so we can return the reporter's KYC state
     // along with the token — the Expo app reads it from AsyncStorage and
     // shows a "KYC under verification" banner / gates Submit + Earnings
     // until kycStatus === "VERIFIED".
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       select: {
         id: true, name: true, email: true, role: true, active: true,
         phone: true, avatar: true, passwordHash: true,
-        journalistProfile: {
+        reporterProfile: {
           select: { kycStatus: true, kycRejectionNote: true },
         },
       },
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Record the login time on the journalist profile (best-effort).
-    await prisma.journalistProfile
+    await prisma.reporterProfile
       .updateMany({ where: { userId: user.id }, data: { lastActiveAt: new Date() } })
       .catch(() => {});
 
@@ -59,8 +59,8 @@ export async function POST(req: NextRequest) {
         role: user.role,
         phone: user.phone,
         avatar: user.avatar,
-        kycStatus: user.journalistProfile?.kycStatus || "PENDING",
-        kycRejectionNote: user.journalistProfile?.kycRejectionNote || null,
+        kycStatus: user.reporterProfile?.kycStatus || "PENDING",
+        kycRejectionNote: user.reporterProfile?.kycRejectionNote || null,
       },
     });
   } catch (e: any) {

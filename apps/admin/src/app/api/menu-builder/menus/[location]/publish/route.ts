@@ -13,7 +13,7 @@ function parseLocation(slug: string): MenuLocation | null {
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ location: string }> }) {
-  const session = await requireAuth(["ADMIN", "EDITOR", "CHIEF_SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(session)) return session;
   try {
     const { location: slug } = await params;

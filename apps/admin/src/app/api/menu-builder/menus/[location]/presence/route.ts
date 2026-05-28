@@ -31,7 +31,7 @@ function evictStale(bucket: Map<string, Entry>) {
 }
 
 export async function POST(_: NextRequest, { params }: { params: Promise<{ location: string }> }) {
-  const session = await requireAuth(["ADMIN", "EDITOR", "CHIEF_SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(session)) return session;
   try {
     const { location } = await params;
@@ -46,7 +46,7 @@ export async function POST(_: NextRequest, { params }: { params: Promise<{ locat
 }
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ location: string }> }) {
-  const session = await requireAuth(["ADMIN", "EDITOR", "CHIEF_SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(session)) return session;
   try {
     const { location } = await params;

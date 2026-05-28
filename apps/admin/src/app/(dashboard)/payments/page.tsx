@@ -2,13 +2,39 @@
 
 // /payments — admin payouts dashboard. Lists every ContentPayment row with a
 // status filter, totals per status, and a "Mark Paid" action for APPROVED
-// rows. Per-article rate cards (PaymentConfig) are intentionally not part of
-// this v1 — the CEO-approved flow has sub-editors set per-article amounts
-// during review, not derive from a category-level rate card.
+// rows. Table chrome mirrors /journalists (TanStack Table + shadcn primitives)
+// so the two admin tables look and behave the same.
 
-import { useEffect, useState } from "react";
+import {
+  type ColumnDef,
+  type ColumnFiltersState,
+  type FilterFn,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  type PaginationState,
+  type SortingState,
+  useReactTable,
+  type VisibilityState,
+} from "@tanstack/react-table";
+import {
+  ChevronDownIcon,
+  ChevronFirstIcon,
+  ChevronLastIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ChevronUpIcon,
+  CircleXIcon,
+  Columns3Icon,
+  ListFilterIcon,
+} from "lucide-react";
 import Link from "next/link";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+
 import { Sidebar } from "@/components/sidebar";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +47,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Pagination, PaginationContent, PaginationItem } from "@/components/ui/pagination";
 import {
   Select,
   SelectContent,
@@ -70,13 +104,15 @@ const FILTERS: { value: "ALL" | Status; label: string }[] = [
   { value: "CANCELLED",  label: "Cancelled" },
 ];
 
-const STATUS_UI: Record<Status, { label: string; bg: string; fg: string }> = {
-  CALCULATED: { label: "Pending",        bg: "#fef3c7", fg: "#92400e" },
-  APPROVED:   { label: "Awaiting payout", bg: "#dbeafe", fg: "#1e3a8a" },
-  PROCESSING: { label: "Processing",     bg: "#ede9fe", fg: "#5b21b6" },
-  PAID:       { label: "Settled",        bg: "#dcfce7", fg: "#166534" },
-  CANCELLED:  { label: "Cancelled",      bg: "#f3f4f6", fg: "#6b7280" },
-  DISPUTED:   { label: "Disputed",       bg: "#fee2e2", fg: "#991b1b" },
+// Status pill colour map — same shadcn-style palette as /journalists' KYC
+// badge so the two pages feel like the same product.
+const STATUS_BADGE: Record<Status, { label: string; cls: string }> = {
+  CALCULATED: { label: "Pending",         cls: "bg-amber-100 text-amber-700 border-amber-200" },
+  APPROVED:   { label: "Awaiting payout", cls: "bg-blue-100 text-blue-700 border-blue-200" },
+  PROCESSING: { label: "Processing",      cls: "bg-violet-100 text-violet-700 border-violet-200" },
+  PAID:       { label: "Settled",         cls: "bg-green-100 text-green-700 border-green-200" },
+  CANCELLED:  { label: "Cancelled",       cls: "bg-muted text-muted-foreground border-transparent" },
+  DISPUTED:   { label: "Disputed",        cls: "bg-red-100 text-red-700 border-red-200" },
 };
 
 function formatINR(n: number) {
@@ -87,12 +123,27 @@ function formatDate(iso: string | null) {
   try { return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }); } catch { return "—"; }
 }
 
+// Search across article title + reporter name. Mirrors /journalists' search.
+const multiColumnFilterFn: FilterFn<Payment> = (row, _columnId, filterValue) => {
+  const haystack = `${row.original.content.title} ${row.original.journalist.name}`.toLowerCase();
+  return haystack.includes((filterValue ?? "").toLowerCase());
+};
+
 export default function PaymentsPage() {
+  const id = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
+
   const [filter, setFilter] = useState<"ALL" | Status>("ALL");
   const [payments, setPayments] = useState<Payment[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [payTarget, setPayTarget] = useState<Payment | null>(null);
+
+  // TanStack state — mirrors /journalists shape.
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+  const [sorting, setSorting] = useState<SortingState>([{ id: "createdAt", desc: true }]);
 
   const load = (status: "ALL" | Status) => {
     setLoading(true);
@@ -107,8 +158,136 @@ export default function PaymentsPage() {
   };
   useEffect(() => { load(filter); }, [filter]);
 
-  // Total amount shown in the toolbar — sums all currently-visible payments.
-  const total = payments.reduce((s, p) => s + p.totalAmount, 0);
+  const columns = useMemo<ColumnDef<Payment>[]>(
+    () => [
+      {
+        id: "article",
+        accessorFn: (p) => p.content.title || "(untitled)",
+        header: "Article",
+        size: 280,
+        enableHiding: false,
+        filterFn: multiColumnFilterFn,
+        cell: ({ row }) => (
+          <Link
+            href={`/content/${row.original.content.id}`}
+            className="font-medium text-foreground hover:underline"
+          >
+            {row.original.content.title || "(untitled)"}
+          </Link>
+        ),
+      },
+      {
+        id: "reporter",
+        accessorFn: (p) => p.journalist.name,
+        header: "Reporter",
+        size: 160,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground">{row.original.journalist.name}</span>
+        ),
+      },
+      {
+        id: "category",
+        accessorFn: (p) => p.content.category?.nameEn ?? "",
+        header: "Category",
+        size: 140,
+        cell: ({ row }) => {
+          const c = row.original.content.category;
+          return c ? (
+            <Badge variant="outline" style={{ borderColor: c.color ?? undefined }}>
+              {c.nameEn}
+            </Badge>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          );
+        },
+      },
+      {
+        accessorKey: "totalAmount",
+        header: "Amount",
+        size: 110,
+        cell: ({ row }) => (
+          <span className="tabular-nums font-semibold">
+            {formatINR(row.original.totalAmount)}
+          </span>
+        ),
+        sortingFn: "basic",
+      },
+      {
+        accessorKey: "status",
+        header: "Status",
+        size: 140,
+        cell: ({ row }) => {
+          const ui = STATUS_BADGE[row.original.status];
+          return (
+            <Badge variant="outline" className={cn("border", ui.cls)}>
+              {ui.label}
+            </Badge>
+          );
+        },
+      },
+      {
+        accessorKey: "createdAt",
+        header: "Created",
+        size: 120,
+        cell: ({ row }) => (
+          <span className="text-xs text-muted-foreground">{formatDate(row.original.createdAt)}</span>
+        ),
+        sortingFn: "datetime",
+      },
+      {
+        accessorKey: "paidAt",
+        header: "Paid On",
+        size: 160,
+        cell: ({ row }) => {
+          const p = row.original;
+          if (!p.paidAt) return <span className="text-xs text-muted-foreground">—</span>;
+          return (
+            <span className="text-xs text-muted-foreground">
+              {formatDate(p.paidAt)}
+              {p.paymentMethod ? ` · ${p.paymentMethod}` : ""}
+            </span>
+          );
+        },
+        sortingFn: "datetime",
+      },
+      {
+        id: "actions",
+        size: 110,
+        enableSorting: false,
+        enableHiding: false,
+        header: () => <div className="text-right">Action</div>,
+        cell: ({ row }) =>
+          row.original.status === "APPROVED" ? (
+            <div className="flex justify-end">
+              <Button size="sm" onClick={() => setPayTarget(row.original)}>Mark Paid</Button>
+            </div>
+          ) : (
+            <div className="text-right text-muted-foreground">—</div>
+          ),
+      },
+    ],
+    [],
+  );
+
+  const table = useReactTable({
+    columns,
+    data: payments,
+    enableSortingRemoval: false,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    onColumnFiltersChange: setColumnFilters,
+    onColumnVisibilityChange: setColumnVisibility,
+    onPaginationChange: setPagination,
+    onSortingChange: setSorting,
+    state: { columnFilters, columnVisibility, pagination, sorting },
+  });
+
+  // Total amount = sum of currently-visible (post-filter) rows.
+  const visibleTotal = table
+    .getFilteredRowModel()
+    .rows.reduce((s, r) => s + r.original.totalAmount, 0);
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
@@ -120,7 +299,7 @@ export default function PaymentsPage() {
         </p>
 
         <div className="shadcn-scope space-y-4">
-          {/* Status filter chips with counts */}
+          {/* Status filter chips with counts — server-side refetch */}
           <div className="flex flex-wrap items-center gap-2">
             {FILTERS.map((f) => (
               <Button
@@ -137,81 +316,220 @@ export default function PaymentsPage() {
                 </span>
               </Button>
             ))}
+          </div>
+
+          {/* Table toolbar — search + view columns + count/total summary */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative">
+              <Input
+                aria-label="Filter by article or reporter"
+                className={cn(
+                  "peer min-w-64 ps-9",
+                  Boolean(table.getColumn("article")?.getFilterValue()) && "pe-9",
+                )}
+                id={`${id}-input`}
+                onChange={(e) => table.getColumn("article")?.setFilterValue(e.target.value)}
+                placeholder="Filter by article or reporter..."
+                ref={inputRef}
+                type="text"
+                value={(table.getColumn("article")?.getFilterValue() ?? "") as string}
+              />
+              <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 text-muted-foreground/80">
+                <ListFilterIcon aria-hidden="true" size={16} />
+              </div>
+              {Boolean(table.getColumn("article")?.getFilterValue()) && (
+                <button
+                  aria-label="Clear filter"
+                  className="absolute inset-y-0 end-0 flex h-full w-9 items-center justify-center rounded-e-md text-muted-foreground/80 outline-none transition-colors hover:text-foreground"
+                  onClick={() => {
+                    table.getColumn("article")?.setFilterValue("");
+                    inputRef.current?.focus();
+                  }}
+                  type="button"
+                >
+                  <CircleXIcon aria-hidden="true" size={16} />
+                </button>
+              )}
+            </div>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Columns3Icon aria-hidden="true" className="-ms-1 opacity-60" size={16} />
+                  View
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
+                {table
+                  .getAllColumns()
+                  .filter((column) => column.getCanHide())
+                  .map((column) => (
+                    <DropdownMenuCheckboxItem
+                      checked={column.getIsVisible()}
+                      className="capitalize"
+                      key={column.id}
+                      onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                      onSelect={(event) => event.preventDefault()}
+                    >
+                      {column.id}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <div className="ms-auto text-sm text-muted-foreground">
-              {payments.length} row{payments.length === 1 ? "" : "s"} · total {formatINR(total)}
+              {table.getFilteredRowModel().rows.length} row
+              {table.getFilteredRowModel().rows.length === 1 ? "" : "s"} · total{" "}
+              <span className="font-semibold text-foreground tabular-nums">{formatINR(visibleTotal)}</span>
             </div>
           </div>
 
-          {/* Table */}
+          {/* Table — same shell as /journalists */}
           <div className="overflow-hidden rounded-md border bg-background">
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
-                <TableRow>
-                  <TableHead>Article</TableHead>
-                  <TableHead>Reporter</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead>Paid On</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
-                </TableRow>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow className="hover:bg-transparent" key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => (
+                      <TableHead
+                        className="h-11"
+                        key={header.id}
+                        style={{ width: `${header.getSize()}px` }}
+                      >
+                        {header.isPlaceholder ? null : header.column.getCanSort() ? (
+                          <div
+                            className="flex h-full cursor-pointer select-none items-center justify-between gap-2"
+                            onClick={header.column.getToggleSortingHandler()}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                header.column.getToggleSortingHandler()?.(e);
+                              }
+                            }}
+                            tabIndex={0}
+                          >
+                            {flexRender(header.column.columnDef.header, header.getContext())}
+                            {{
+                              asc: <ChevronUpIcon className="shrink-0 opacity-60" size={16} />,
+                              desc: <ChevronDownIcon className="shrink-0 opacity-60" size={16} />,
+                            }[header.column.getIsSorted() as string] ?? null}
+                          </div>
+                        ) : (
+                          flexRender(header.column.columnDef.header, header.getContext())
+                        )}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                ))}
               </TableHeader>
               <TableBody>
-                {payments.length === 0 ? (
+                {table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow data-state={row.getIsSelected() && "selected"} key={row.id}>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell className="last:py-0" key={cell.id}>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                    <TableCell className="h-24 text-center" colSpan={columns.length}>
                       {loading ? "Loading payments..." : "No payments in this view."}
                     </TableCell>
                   </TableRow>
-                ) : (
-                  payments.map((p) => {
-                    const ui = STATUS_UI[p.status];
-                    return (
-                      <TableRow key={p.id}>
-                        <TableCell>
-                          <Link href={`/content/${p.content.id}`} className="text-foreground hover:underline">
-                            <span className="font-medium">{p.content.title || "(untitled)"}</span>
-                          </Link>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">{p.journalist.name}</TableCell>
-                        <TableCell>
-                          {p.content.category ? (
-                            <Badge variant="outline" style={{ borderColor: p.content.category.color ?? undefined }}>
-                              {p.content.category.nameEn}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums font-semibold">
-                          {formatINR(p.totalAmount)}
-                        </TableCell>
-                        <TableCell>
-                          <span
-                            className="rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
-                            style={{ background: ui.bg, color: ui.fg }}
-                          >
-                            {ui.label}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-xs">{formatDate(p.createdAt)}</TableCell>
-                        <TableCell className="text-muted-foreground text-xs">
-                          {p.paidAt
-                            ? <>{formatDate(p.paidAt)}{p.paymentMethod ? ` · ${p.paymentMethod}` : ""}</>
-                            : "—"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {p.status === "APPROVED" && (
-                            <Button size="sm" onClick={() => setPayTarget(p)}>Mark Paid</Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
                 )}
               </TableBody>
             </Table>
+          </div>
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between gap-8">
+            <div className="flex items-center gap-3">
+              <Label className="max-sm:sr-only" htmlFor={id}>
+                Rows per page
+              </Label>
+              <Select
+                onValueChange={(value) => table.setPageSize(Number(value))}
+                value={table.getState().pagination.pageSize.toString()}
+              >
+                <SelectTrigger className="w-fit whitespace-nowrap" id={id}>
+                  <SelectValue placeholder="Rows" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[5, 10, 25, 50].map((pageSize) => (
+                    <SelectItem key={pageSize} value={pageSize.toString()}>
+                      {pageSize}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex grow justify-end whitespace-nowrap text-sm text-muted-foreground">
+              <p aria-live="polite">
+                <span className="text-foreground">
+                  {table.getRowCount() === 0
+                    ? 0
+                    : table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}
+                  -
+                  {Math.min(
+                    (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
+                    table.getRowCount(),
+                  )}
+                </span>{" "}
+                of <span className="text-foreground">{table.getRowCount()}</span>
+              </p>
+            </div>
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <Button
+                    aria-label="Go to first page"
+                    disabled={!table.getCanPreviousPage()}
+                    onClick={() => table.firstPage()}
+                    size="icon"
+                    variant="outline"
+                  >
+                    <ChevronFirstIcon aria-hidden="true" size={16} />
+                  </Button>
+                </PaginationItem>
+                <PaginationItem>
+                  <Button
+                    aria-label="Go to previous page"
+                    disabled={!table.getCanPreviousPage()}
+                    onClick={() => table.previousPage()}
+                    size="icon"
+                    variant="outline"
+                  >
+                    <ChevronLeftIcon aria-hidden="true" size={16} />
+                  </Button>
+                </PaginationItem>
+                <PaginationItem>
+                  <Button
+                    aria-label="Go to next page"
+                    disabled={!table.getCanNextPage()}
+                    onClick={() => table.nextPage()}
+                    size="icon"
+                    variant="outline"
+                  >
+                    <ChevronRightIcon aria-hidden="true" size={16} />
+                  </Button>
+                </PaginationItem>
+                <PaginationItem>
+                  <Button
+                    aria-label="Go to last page"
+                    disabled={!table.getCanNextPage()}
+                    onClick={() => table.lastPage()}
+                    size="icon"
+                    variant="outline"
+                  >
+                    <ChevronLastIcon aria-hidden="true" size={16} />
+                  </Button>
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           </div>
         </div>
       </main>

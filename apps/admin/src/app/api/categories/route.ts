@@ -21,8 +21,14 @@ export async function POST(req: NextRequest) {
     const count = await prisma.category.count();
     const slug = body.slug || body.nameEn?.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") || `cat-${Date.now()}`;
     const cat = await prisma.category.create({
-      data: { name: body.name, nameEn: body.nameEn, slug, color: body.color || "#FF2C2C", description: body.description, sortOrder: body.sortOrder || count + 1, active: body.active ?? true },
+      data: { name: body.name, nameEn: body.nameEn, slug, color: body.color || "#FF2C2C", description: body.description, sortOrder: body.sortOrder || count + 1, active: body.active ?? true, parentId: body.parentId || null },
     });
+
+    // New categories start with an empty tag-suggestion pool. As editors
+    // tag articles under this category, those tags get surfaced via the
+    // usage-learning path in /api/categories/[id]/suggested-tags. To seed
+    // a brand-new category up-front, add it to scripts/seed-category-tags.ts.
+
     return NextResponse.json(cat, { status: 201 });
   } catch (error) {
     return apiError(error);

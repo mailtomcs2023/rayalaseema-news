@@ -2,6 +2,7 @@
 
 import { SessionProvider } from "next-auth/react";
 import type { Session } from "next-auth";
+import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 export function Providers({
@@ -16,7 +17,13 @@ export function Providers({
 }) {
   return (
     <SessionProvider session={session}>
-      <TooltipProvider>{children}</TooltipProvider>
+      <TooltipProvider>
+        {children}
+        {/* Single app-wide sonner mount — any client component can call
+            `toast.success(...)` etc. and have it show up here. Top-right
+            with rich colors matches the admin's other notification chrome. */}
+        <Toaster position="bottom-right" richColors closeButton />
+      </TooltipProvider>
     </SessionProvider>
   );
 }

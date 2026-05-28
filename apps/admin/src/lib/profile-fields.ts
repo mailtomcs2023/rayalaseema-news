@@ -1,7 +1,7 @@
 // Single source of truth for the reporter-initiated profile-change flow.
 //
 // Defines every editable field, where it lives on the data model
-// (User vs JournalistProfile), how it's validated, and whether changing it
+// (User vs ReporterProfile), how it's validated, and whether changing it
 // re-opens KYC ("kyc"-critical, pauses earnings until admin re-verifies) or
 // affects payment routing ("bank"-critical, payments delayed until verified).
 //

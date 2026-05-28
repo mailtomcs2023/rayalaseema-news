@@ -54,12 +54,12 @@ export async function POST(req: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { id: reporterId },
-      include: { journalistProfile: true },
+      include: { reporterProfile: true },
     });
-    if (!user || !user.journalistProfile) {
+    if (!user || !user.reporterProfile) {
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
-    const profile = user.journalistProfile;
+    const profile = user.reporterProfile;
 
     const currentValue = getCurrentValue({ ...profile, user }, def);
     const newStored = serializeForStorage(def, value);
@@ -75,12 +75,12 @@ export async function POST(req: NextRequest) {
 
     const result = await prisma.$transaction(async (tx) => {
       await tx.profileUpdateRequest.deleteMany({
-        where: { journalistProfileId: profile.id, field, status: "PENDING" },
+        where: { reporterProfileId: profile.id, field, status: "PENDING" },
       });
 
       const created = await tx.profileUpdateRequest.create({
         data: {
-          journalistProfileId: profile.id,
+          reporterProfileId: profile.id,
           field,
           oldValue: oldStored,
           newValue: newStored,
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
       });
 
       if (newKyc) {
-        await tx.journalistProfile.update({
+        await tx.reporterProfile.update({
           where: { id: profile.id },
           data: { kycStatus: newKyc },
         });
@@ -124,15 +124,15 @@ export async function DELETE(req: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { id: reporterId },
-      include: { journalistProfile: true },
+      include: { reporterProfile: true },
     });
-    if (!user?.journalistProfile) {
+    if (!user?.reporterProfile) {
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
-    const profile = user.journalistProfile;
+    const profile = user.reporterProfile;
 
     const pending = await prisma.profileUpdateRequest.findFirst({
-      where: { journalistProfileId: profile.id, field, status: "PENDING" },
+      where: { reporterProfileId: profile.id, field, status: "PENDING" },
     });
     if (!pending) {
       return NextResponse.json({ error: "No pending request for that field" }, { status: 404 });
@@ -141,7 +141,7 @@ export async function DELETE(req: NextRequest) {
     await prisma.$transaction(async (tx) => {
       await tx.profileUpdateRequest.delete({ where: { id: pending.id } });
       if (pending.previousKycStatus) {
-        await tx.journalistProfile.update({
+        await tx.reporterProfile.update({
           where: { id: profile.id },
           data: { kycStatus: pending.previousKycStatus },
         });

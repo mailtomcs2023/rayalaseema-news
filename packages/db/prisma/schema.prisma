@@ -10,13 +10,11 @@ datasource db {
 // ============ USER & AUTH ============
 
 enum Role {
-  ADMIN           // Full access - everything
+  ADMIN           // Full access — everything
   EDITOR          // Edit all categories, publish, breaking news
-  CHIEF_SUB_EDITOR // Legacy alias for EDITOR. Prod has rows with this value;
-                   // removing it from the enum breaks prisma db push on
-                   // deploy. Keep until prod rows migrate to EDITOR.
   SUB_EDITOR      // Edit assigned categories, review articles, can't publish
   REPORTER        // Write articles, upload photos, submit for review only
+  USER            // Non-staff account — public read access only, no admin app
 }
 
 model User {
@@ -37,7 +35,7 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   // Spec #4 A2 (#193) — Author profile / E-E-A-T fields. Populated for active
-  // editorial users; REPORTER role typically lives in JournalistProfile and
+  // editorial users; REPORTER role typically lives in ReporterProfile and
   // these can stay null until they're publishing under a real byline.
   //
   // publicProfileSlug is the URL segment for /author/<slug>; backfilled from
@@ -65,8 +63,10 @@ model User {
   // Audit log entries (actions performed by this user)
   auditLogs        AuditLog[]
 
-  // Journalist profile (for REPORTER role)
-  journalistProfile JournalistProfile?
+  // Reporter profile (for REPORTER role). DB table name retained as
+  // `journalist_profiles` via @@map on the model so this is a TS-only
+  // rename — no migration required.
+  reporterProfile ReporterProfile?
 
   // Unified Content (Spec #1) — Article-side back-relations dropped in A1C.
   contents          Content[]         @relation("ContentAuthor")
@@ -86,6 +86,16 @@ model User {
   // Profile-change requests this user has reviewed (admin role)
   reviewedProfileUpdateRequests ProfileUpdateRequest[] @relation("ProfileUpdateRequestReviewer")
 
+  // Indexes on hot WHERE columns. Without these, /users paging + the
+  // role chip filter do sequential scans on every request.
+  //   - [role, active] composite — most common filter combo (e.g. "active
+  //     reporters", "active editors"). Postgres can also use it for
+  //     role-only lookups thanks to leading-column rule.
+  //   - [active] alone — for global "everyone signed in" counts.
+  //   - [createdAt] — for the default sort order in lists.
+  @@index([role, active])
+  @@index([active])
+  @@index([createdAt])
   @@map("users")
 }
 
@@ -180,11 +190,37 @@ model Category {
   crossListedContents ContentCategory[]
   assignedUsers UserCategory[]
   desk        Desk?      // back-relation: TOPICAL desk auto-derived from category
+  tagSuggestions CategoryTagSuggestion[]
 
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
   @@map("categories")
+}
+
+// Tag-suggestion seed for the editor. Populated by a static seed script
+// (packages/db/scripts/seed-category-tags.ts) and shown as clickable chips
+// under the Tags input when an editor picks a category. Top-N most-used
+// tags from past ContentTag history get merged in at query time, so this
+// table only stores the cold-start seed, not usage stats.
+enum TagSuggestionSource {
+  CURATED      // Editorial seed — written by the seed script or admin UI
+  MANUAL       // Editor pinned this tag manually via admin UI
+}
+
+model CategoryTagSuggestion {
+  id         String              @id @default(cuid())
+  categoryId String
+  category   Category            @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  tagId      String
+  tag        Tag                 @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  source     TagSuggestionSource @default(CURATED)
+  createdAt  DateTime            @default(now())
+
+  @@unique([categoryId, tagId])
+  @@index([categoryId])
+  @@index([tagId])
+  @@map("category_tag_suggestions")
 }
 
 // Many-to-many join for cross-listing a Content row under additional
@@ -204,10 +240,11 @@ model ContentCategory {
 }
 
 model Tag {
-  id          String       @id @default(cuid())
-  name        String       @unique
-  slug        String       @unique
-  contentTags ContentTag[]
+  id              String                  @id @default(cuid())
+  name            String                  @unique
+  slug            String                  @unique
+  contentTags     ContentTag[]
+  categorySeeds   CategoryTagSuggestion[]
 
   @@map("tags")
 }
@@ -902,7 +939,7 @@ enum KycStatus {
   REJECTED
 }
 
-model JournalistProfile {
+model ReporterProfile {
   id              String    @id @default(cuid())
   userId          String    @unique
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -954,6 +991,14 @@ model JournalistProfile {
   // Reporter-initiated edits awaiting (or completed by) admin review
   profileUpdateRequests ProfileUpdateRequest[]
 
+  // Indexes on the KYC review hot path. Admin opens the merged Users
+  // page filtered to Reporter + KYC=SUBMITTED — without this index the
+  // DB scans every reporter row.
+  //   - [kycStatus] — KYC queue filter ("show all SUBMITTED").
+  //   - [primaryDistrict] — district-scoped reporter assignment lookups
+  //     used by content auto-assignment + payment computation.
+  @@index([kycStatus])
+  @@index([primaryDistrict])
   @@map("journalist_profiles")
 }
 
@@ -966,7 +1011,7 @@ enum ProfileUpdateRequestStatus {
 }
 
 // A single field-level change the reporter wants applied to their profile.
-// One PENDING request per (journalistProfileId, field) at a time; re-requesting
+// One PENDING request per (reporterProfileId, field) at a time; re-requesting
 // the same field replaces the prior PENDING request.
 //
 // `oldValue` / `newValue` are stored as text (arrays/dates are JSON-stringified).
@@ -974,9 +1019,11 @@ enum ProfileUpdateRequestStatus {
 // so we can restore it if admin rejects (we flip the journalist's kycStatus to
 // SUBMITTED on submission to pause earnings until re-verification).
 model ProfileUpdateRequest {
-  id                  String                     @id @default(cuid())
-  journalistProfileId String
-  journalistProfile   JournalistProfile          @relation(fields: [journalistProfileId], references: [id], onDelete: Cascade)
+  id                String                     @id @default(cuid())
+  // DB column name stays `journalistProfileId` via @map — TS API is now
+  // `reporterProfileId` to match the renamed ReporterProfile model.
+  reporterProfileId String                     @map("journalistProfileId")
+  reporterProfile   ReporterProfile            @relation(fields: [reporterProfileId], references: [id], onDelete: Cascade)
 
   field               String                     // e.g. "name", "phone", "aadhaarNumber", "bankIfsc"
   oldValue            String?                    @db.Text
@@ -993,7 +1040,7 @@ model ProfileUpdateRequest {
   createdAt           DateTime                   @default(now())
   updatedAt           DateTime                   @updatedAt
 
-  @@index([journalistProfileId, status])
+  @@index([reporterProfileId, status])
   @@index([status, createdAt])
   @@map("profile_update_requests")
 }

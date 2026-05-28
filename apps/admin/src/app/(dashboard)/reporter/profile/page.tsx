@@ -38,7 +38,7 @@ export default async function ReporterProfilePage() {
       email: true,
       phone: true,
       avatar: true,
-      journalistProfile: {
+      reporterProfile: {
         select: {
           kycStatus: true,
           kycRejectionNote: true,
@@ -59,11 +59,11 @@ export default async function ReporterProfilePage() {
   });
   if (!data) redirect("/login");
 
-  const p = data.journalistProfile;
+  const p = data.reporterProfile;
 
   // Pending profile-update requests — drives the badge on the row.
-  // ProfileUpdateRequest is keyed by JournalistProfile.id, not User.id.
-  const pendingCount = (await prisma.journalistProfile
+  // ProfileUpdateRequest is keyed by ReporterProfile.id, not User.id.
+  const pendingCount = (await prisma.reporterProfile
     .findUnique({
       where: { userId },
       select: { _count: { select: { profileUpdateRequests: { where: { status: "PENDING" } } } } },

@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
     // only blocks fresh creation. The reporter app's FAB and empty-state CTAs
     // surface a friendly Alert before getting here, so this 403 is the
     // server-side safety net.
-    const jp = await prisma.journalistProfile.findUnique({
+    const jp = await prisma.reporterProfile.findUnique({
       where: { userId: reporterId },
       select: { kycStatus: true },
     });

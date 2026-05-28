@@ -43,6 +43,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { CircleXIcon, ListFilterIcon, PlusIcon, RefreshCwIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Article {
   id: string;
@@ -688,21 +690,40 @@ export default function ReviewPage() {
           ))}
         </div>
 
-        {/* Toolbar: search + category/reporter filters + result counter */}
-        <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
-          <Input
-            placeholder="Search title, reporter, category..."
-            value={globalFilter}
-            onChange={(e) => setGlobalFilter(e.target.value)}
-            className="max-w-xs"
-          />
+        {/* Toolbar: search + category/reporter filters + refresh + new */}
+        <div className="mb-3 flex flex-wrap items-center gap-3">
+          {/* Search — leading filter icon + clear button, matches /content, /journalists, /users. */}
+          <div className="relative">
+            <Input
+              aria-label="Search title, reporter or category"
+              className={cn("peer min-w-60 bg-white ps-9", globalFilter && "pe-9")}
+              onChange={(e) => setGlobalFilter(e.target.value)}
+              placeholder="Search title, reporter, category..."
+              type="text"
+              value={globalFilter}
+            />
+            <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 text-muted-foreground/80">
+              <ListFilterIcon aria-hidden="true" size={16} />
+            </div>
+            {globalFilter && (
+              <button
+                aria-label="Clear filter"
+                className="absolute inset-y-0 end-0 flex h-full w-9 items-center justify-center rounded-e-md text-muted-foreground/80 outline-none transition-colors hover:text-foreground"
+                onClick={() => setGlobalFilter("")}
+                type="button"
+              >
+                <CircleXIcon aria-hidden="true" size={16} />
+              </button>
+            )}
+          </div>
+
           <Select
             value={categoryFilterValue}
             onValueChange={(v) =>
               table.getColumn("category")?.setFilterValue(v === "all" ? undefined : v)
             }
           >
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[180px] bg-white">
               <SelectValue placeholder="All categories" />
             </SelectTrigger>
             <SelectContent>
@@ -720,7 +741,7 @@ export default function ReviewPage() {
               table.getColumn("author")?.setFilterValue(v === "all" ? undefined : v)
             }
           >
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[180px] bg-white">
               <SelectValue placeholder="All reporters" />
             </SelectTrigger>
             <SelectContent>
@@ -732,9 +753,29 @@ export default function ReviewPage() {
               ))}
             </SelectContent>
           </Select>
-          <span style={{ fontSize: 12, color: "#888", marginLeft: "auto" }}>
-            {table.getFilteredRowModel().rows.length} of {articles.length} articles
-          </span>
+
+          {/* Right-aligned actions: refresh + new article. */}
+          <div className="ms-auto flex items-center gap-2">
+            <Button
+              aria-label="Refresh queue"
+              title="Refresh"
+              variant="outline"
+              size="icon"
+              disabled={loading}
+              onClick={() => load(activeTab)}
+            >
+              <RefreshCwIcon
+                size={16}
+                className={cn("opacity-70", loading && "animate-spin")}
+              />
+            </Button>
+            <Link href="/content/new">
+              <Button>
+                <PlusIcon aria-hidden="true" className="-ms-1 opacity-90" size={16} />
+                New Article
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Bulk actions toolbar — only visible when ≥1 row selected */}
