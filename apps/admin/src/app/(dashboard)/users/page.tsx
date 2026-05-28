@@ -443,6 +443,7 @@ export default function UsersPage() {
             row={row.original}
             onEdit={openEdit}
             onDelete={openDelete}
+            onToggleActive={handleToggleActive}
             onVerifyKyc={verifyReporterKyc}
           />
         ),
@@ -487,15 +488,53 @@ export default function UsersPage() {
   const handleDelete = async () => {
     if (!confirmDelete) return;
     try {
-      await Promise.all(
-        confirmDelete.map((r) => fetch(`/api/users/${r.id}`, { method: "DELETE" })),
+      const results = await Promise.all(
+        confirmDelete.map(async (r) => {
+          const res = await fetch(`/api/users/${r.id}`, { method: "DELETE" });
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            return { row: r, error: data.error || `HTTP ${res.status}` };
+          }
+          return { row: r, error: null };
+        }),
       );
+      const failures = results.filter((x) => x.error);
       table.resetRowSelection();
       setConfirmDelete(null);
       load();
+      // Surface per-user 409s ("user has authored content") so the admin
+      // knows which rows still need Deactivate instead.
+      if (failures.length > 0) {
+        const msg = failures
+          .map((f) => `${f.row.name}: ${f.error}`)
+          .join("\n");
+        alert(`Some users couldn't be deleted:\n\n${msg}`);
+      }
     } catch {
       setConfirmDelete(null);
       alert("Delete failed. Please try again.");
+    }
+  };
+
+  // Toggle a single user's `active` flag via the PUT endpoint. Distinct from
+  // Delete (which is a permanent DB remove) — Deactivate keeps the row but
+  // blocks sign-in and pulls the user out of review pools.
+  const handleToggleActive = async (row: UserRow) => {
+    const nextActive = !row.active;
+    try {
+      const res = await fetch(`/api/users/${row.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active: nextActive }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || `Failed (HTTP ${res.status})`);
+        return;
+      }
+      load();
+    } catch {
+      alert("Toggle failed. Please try again.");
     }
   };
 
@@ -818,11 +857,15 @@ export default function UsersPage() {
       <AlertDialog open={!!confirmDelete} onOpenChange={(v) => !v && setConfirmDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete user{confirmDelete && confirmDelete.length > 1 ? "s" : ""}?</AlertDialogTitle>
+            <AlertDialogTitle>
+              Permanently delete {confirmDelete?.length ?? 0} user
+              {confirmDelete && confirmDelete.length > 1 ? "s" : ""}?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              This permanently deletes {confirmDelete?.length ?? 0} user
-              {confirmDelete && confirmDelete.length > 1 ? "s" : ""}. Users with content can&apos;t
-              be deleted from the server — use deactivate instead.
+              This removes the account from the database — there is no undo.
+              Users who have authored articles can&apos;t be deleted; for those,
+              use <strong>Deactivate</strong> in the row menu instead (the user
+              can no longer sign in but their content stays attributed).
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -843,11 +886,13 @@ function RowActions({
   row,
   onEdit,
   onDelete,
+  onToggleActive,
   onVerifyKyc,
 }: {
   row: UserRow;
   onEdit: (u: User) => void;
   onDelete: (row: UserRow) => void;
+  onToggleActive: (row: UserRow) => void;
   onVerifyKyc: (row: UserRow) => void;
 }) {
   const isReporter = row.role === "REPORTER";
@@ -895,13 +940,18 @@ function RowActions({
         )}
 
         <DropdownMenuSeparator />
+        {/* Deactivate / Activate — soft action. Flips User.active so the
+            user can no longer sign in (and is pulled out of review pools)
+            but their authored content + audit trail stay intact. */}
+        <DropdownMenuItem onSelect={() => onToggleActive(row)}>
+          {row.active ? "Deactivate" : "Activate"}
+        </DropdownMenuItem>
         <DropdownMenuItem
           onSelect={() => onDelete(row)}
           className="text-destructive focus:text-destructive"
         >
-          {/* For reporters /api/reporters DELETE is a soft-delete (active:false)
-              with content history preserved; for everyone else /api/users
-              DELETE may hard-delete. Same menu label keeps the UX simple. */}
+          {/* Hard delete — permanently removes the row. Blocked server-side
+              if the user has authored content; admins use Deactivate then. */}
           Delete
         </DropdownMenuItem>
       </DropdownMenuContent>

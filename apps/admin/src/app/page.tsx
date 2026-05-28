@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/sidebar";
+import { RecentArticlesTable } from "@/components/dashboard/recent-articles-table";
 import { getDashboardStats } from "@/lib/admin-queries";
 import { auth } from "@/lib/auth";
 import { landingFor } from "@/lib/roles";
@@ -82,52 +83,15 @@ export default async function DashboardPage() {
           ))}
         </div>
 
-        {/* Recent Articles */}
+        {/* Recent Articles — TanStack table extracted into a client
+            component. Visual chrome (wrapper, table-fixed, h-11 headers,
+            last:py-0 cells, h-24 empty state) is identical to /content. */}
         <div style={{ background: "#fff", borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
           <div style={{ padding: "16px 20px", borderBottom: "1px solid #f3f4f6", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <h2 style={{ fontSize: 16, fontWeight: 700, color: "#111" }}>Recent Articles</h2>
-            <Link href="/articles" style={{ fontSize: 13, color: "#FF2C2C", fontWeight: 600, textDecoration: "none" }}>View All</Link>
+            <Link href="/content" style={{ fontSize: 13, color: "#FF2C2C", fontWeight: 600, textDecoration: "none" }}>View All</Link>
           </div>
-          <div className="table-scroll">
-          <table style={{ width: "100%", minWidth: 680, borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ borderBottom: "1px solid #f3f4f6" }}>
-                <th style={{ padding: "10px 20px", textAlign: "left", fontSize: 12, color: "#888", fontWeight: 600 }}>Title</th>
-                <th style={{ padding: "10px 20px", textAlign: "left", fontSize: 12, color: "#888", fontWeight: 600 }}>Category</th>
-                <th style={{ padding: "10px 20px", textAlign: "left", fontSize: 12, color: "#888", fontWeight: 600 }}>Author</th>
-                <th style={{ padding: "10px 20px", textAlign: "left", fontSize: 12, color: "#888", fontWeight: 600 }}>Status</th>
-                <th style={{ padding: "10px 20px", textAlign: "left", fontSize: 12, color: "#888", fontWeight: 600 }}>Views</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stats.recentArticles.map((article: any) => (
-                <tr key={article.id} style={{ borderBottom: "1px solid #f9fafb" }}>
-                  <td style={{ padding: "12px 20px", fontSize: 13, fontWeight: 600, color: "#111", maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    <Link href={`/content/${article.id}`} style={{ color: "#111", textDecoration: "none" }}>
-                      {article.title.substring(0, 50)}...
-                    </Link>
-                  </td>
-                  <td style={{ padding: "12px 20px" }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: "#fff", background: "#FF2C2C", padding: "2px 8px", borderRadius: 4 }}>
-                      {article.category?.nameEn || "—"}
-                    </span>
-                  </td>
-                  <td style={{ padding: "12px 20px", fontSize: 12, color: "#888" }}>{article.author?.name || ""}</td>
-                  <td style={{ padding: "12px 20px" }}>
-                    <span style={{
-                      fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 4,
-                      background: article.status === "PUBLISHED" ? "#dcfce7" : article.status === "DRAFT" ? "#fef3c7" : "#dbeafe",
-                      color: article.status === "PUBLISHED" ? "#166534" : article.status === "DRAFT" ? "#92400e" : "#1e40af",
-                    }}>
-                      {article.status}
-                    </span>
-                  </td>
-                  <td style={{ padding: "12px 20px", fontSize: 12, color: "#888" }}>{article.viewCount.toLocaleString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          </div>
+          <RecentArticlesTable articles={stats.recentArticles as any} />
         </div>
       </main>
     </div>

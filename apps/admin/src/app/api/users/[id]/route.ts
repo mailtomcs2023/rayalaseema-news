@@ -70,6 +70,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 }
 
+// Hard delete — permanently removes the User row from the DB. To soft-delete
+// (set `active: false` so the user can no longer sign in but their authored
+// content is preserved) call PUT with `{ active: false }` instead — that's
+// what the "Deactivate" action in the UI does.
+//
+// Refuses if the user has authored Content rows (FK constraint would fail
+// anyway since Content.authorId is NOT NULL). Sub-editors with open reviews
+// get their backlog redistributed before delete so articles aren't orphaned.
 export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAuth(["ADMIN"]);
   if (isAuthError(session)) return session;
@@ -77,14 +85,50 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
     const { id } = await params;
     const prior = await prisma.user.findUnique({
       where: { id },
-      select: { active: true, role: true },
+      select: {
+        active: true,
+        role: true,
+        _count: { select: { contents: true } },
+      },
     });
-    await prisma.user.update({ where: { id }, data: { active: false } });
-    // Same redistribution path as PUT when a SUB_EDITOR is deactivated via DELETE.
+    if (!prior) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+    // Block hard-delete when the user owns content — Content.authorId is
+    // NOT NULL so the DELETE would FK-fail. Admin should Deactivate instead,
+    // which keeps the authorship trail intact.
+    if (prior._count.contents > 0) {
+      return NextResponse.json(
+        {
+          error: `User has ${prior._count.contents} authored article${prior._count.contents === 1 ? "" : "s"} and cannot be deleted. Deactivate them instead.`,
+        },
+        { status: 409 },
+      );
+    }
+
+    // Redistribute any open reviews this sub-editor was holding before they
+    // disappear from the pool — same logic the PUT/deactivate path uses.
     let redistribution: { reassigned: number; unassigned: number } | undefined;
-    if (prior?.role === "SUB_EDITOR" && prior.active) {
+    if (prior.role === "SUB_EDITOR" && prior.active) {
       redistribution = await redistributeReviewerArticles(prisma, id);
     }
+
+    try {
+      await prisma.user.delete({ where: { id } });
+    } catch (e: any) {
+      // Catch any other FK constraint we didn't pre-check (audit log relations,
+      // payments, template authorship, etc.) so the admin sees a clear message
+      // instead of a 500.
+      if (e?.code === "P2003") {
+        return NextResponse.json(
+          {
+            error: "User has related records (payments, audit log, or templates) and cannot be deleted. Deactivate them instead.",
+          },
+          { status: 409 },
+        );
+      }
+      throw e;
+    }
+
     return NextResponse.json({ success: true, redistribution });
   } catch (error) {
     return apiError(error);
