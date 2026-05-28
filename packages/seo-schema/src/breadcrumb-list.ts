@@ -1,6 +1,6 @@
 // BreadcrumbList JSON-LD generator. Spec #4 B3 (#199).
 //
-// Article + hub + author + tag pages all emit BreadcrumbList — extracting it
+// Article + hub + author + tag pages all emit BreadcrumbList - extracting it
 // into a single generator keeps the schema consistent and lets us upgrade
 // position-handling / encoding rules in one place if Google changes them.
 //
@@ -24,7 +24,7 @@ interface BuildArgs {
 /**
  * Returns the BreadcrumbList JSON-LD payload. `position` is auto-numbered
  * starting at 1. Items without a `url` (typically the last "you are here"
- * crumb) emit just a name on the ListItem — schema.org allows this for the
+ * crumb) emit just a name on the ListItem - schema.org allows this for the
  * current page.
  */
 export function buildBreadcrumbListSchema(args: BuildArgs): JsonLd {

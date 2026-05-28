@@ -88,7 +88,7 @@ export function ProfileSectionView({ fields }: { fields: string[] }) {
   );
 }
 
-// ─── Field row — WhatsApp profile layout: label on top, value below ─────────
+// ─── Field row - WhatsApp profile layout: label on top, value below ─────────
 
 function FieldRow({ field, meta, value, pending, last, onEdit }: {
   field: string;
@@ -112,7 +112,7 @@ function FieldRow({ field, meta, value, pending, last, onEdit }: {
           <Image source={{ uri: String(value) }} style={styles.thumb} />
         ) : (
           <Text style={styles.rowValue} numberOfLines={2}>
-            {isImage ? "—" : formatDisplay(field, value)}
+            {isImage ? "-" : formatDisplay(field, value)}
           </Text>
         )}
 

@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
       if (slug) (byCat[slug] ||= []).push(a.id);
     }
 
-    // District edition — front + district-news pages drawn from this district's articles
+    // District edition - front + district-news pages drawn from this district's articles
     let districtName = "";
     let districtPool: string[] = [];
     if (editionKey !== "main") {
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
         .map((a) => a.id);
     }
 
-    // category is nullable on Content (uncategorised drafts) — treat those as
+    // category is nullable on Content (uncategorised drafts) - treat those as
     // soft so they don't fall into the front-page pool by default.
     const isFrontCandidate = (a: (typeof articles)[number]) =>
       !!a.category && !SOFT.has(a.category.slug);
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
     }
 
     const dateLabel = editionDate.toLocaleDateString("te-IN", { day: "numeric", month: "long", year: "numeric" });
-    const title = `రాయలసీమ ఎక్స్‌ప్రెస్${districtName ? ` — ${districtName} ఎడిషన్` : ""} · ${dateLabel}`;
+    const title = `రాయలసీమ ఎక్స్‌ప్రెస్${districtName ? ` - ${districtName} ఎడిషన్` : ""} · ${dateLabel}`;
 
     const existing = await prisma.epaperEdition.findUnique({
       where: { date_edition: { date: editionDate, edition: editionKey } },

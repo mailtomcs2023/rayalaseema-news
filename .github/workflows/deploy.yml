@@ -38,7 +38,7 @@ jobs:
             echo "=== Install dependencies ==="
             bun install --frozen-lockfile || bun install
 
-            # Spec #1 I1 #134 — pg_dump backup BEFORE any prisma db push.
+            # Spec #1 I1 #134 - pg_dump backup BEFORE any prisma db push.
             # Spec #1 Phase A1B (#188) renames FK columns and A1C (#189) drops
             # ~10 legacy tables. Either step is irrecoverable without a backup.
             # Backup runs on every deploy to keep the muscle memory consistent;
@@ -87,7 +87,7 @@ jobs:
             # for newly-added rows. Rate-limited at 1.5s/req per OSM fair-use
             # policy. First-time full run is ~6 min; subsequent deploys ~5 sec
             # (no rows to query). Safe to leave in the deploy hot path.
-            bunx tsx scripts/backfill-osm-coords.ts || echo "OSM backfill failed — non-fatal, manual re-run later"
+            bunx tsx scripts/backfill-osm-coords.ts || echo "OSM backfill failed - non-fatal, manual re-run later"
 
             echo "=== Seed e-paper v2 templates (front + 8 district + 4 section) ==="
             bunx tsx scripts/seed-epaper-templates.ts
@@ -99,7 +99,7 @@ jobs:
             bunx tsx scripts/seed-menus.ts
             echo "=== Seed category tag suggestions (chip row under Tags input) ==="
             # Idempotent: re-running upserts Tag rows + skips existing
-            # CategoryTagSuggestion links. Editor work — to add tags for a
+            # CategoryTagSuggestion links. Editor work - to add tags for a
             # newly-created category, edit scripts/seed-category-tags.ts
             # and re-deploy.
             bunx tsx scripts/seed-category-tags.ts

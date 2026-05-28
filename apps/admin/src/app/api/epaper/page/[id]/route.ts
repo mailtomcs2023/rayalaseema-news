@@ -24,7 +24,7 @@ interface Block {
 //
 // All shapes accept an optional `expectedVersion: number` field. When present,
 // the server compares it to the page's current `version` and returns 409 with
-// the current version if they disagree — that's the conflict signal the
+// the current version if they disagree - that's the conflict signal the
 // editor uses to prompt a reload.
 //
 // On a successful write the response always includes the NEW `version` so the
@@ -40,7 +40,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (!page) return NextResponse.json({ error: "Page not found" }, { status: 404 });
 
     // Optimistic concurrency check. If the client passes `expectedVersion` and
-    // it doesn't match the current row, refuse the write — somebody else has
+    // it doesn't match the current row, refuse the write - somebody else has
     // edited the page since this client last read it.
     if (typeof body?.expectedVersion === "number" && body.expectedVersion !== page.version) {
       return NextResponse.json(
@@ -82,7 +82,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     // Bump version atomically with the layout write. Using `increment` keeps it
-    // race-safe even if two writes get here at the same moment — one will see
+    // race-safe even if two writes get here at the same moment - one will see
     // the bumped version and (if it passed expectedVersion) succeed, the
     // other's expectedVersion will now be stale on the NEXT request.
     const updated = await prisma.epaperPage.update({
@@ -98,7 +98,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 }
 
-// GET /api/epaper/page/[id] — full page with resolved article titles for the editor
+// GET /api/epaper/page/[id] - full page with resolved article titles for the editor
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAuth();
   if (isAuthError(session)) return session;

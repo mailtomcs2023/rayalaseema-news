@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@rayalaseema/db";
+import { prisma, categoryUpdateSchema } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -7,7 +7,18 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (isAuthError(session)) return session;
   try {
     const { id } = await params;
-    const b = await req.json();
+    const rawBody = await req.json();
+    const parsed = categoryUpdateSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          error: "Invalid request body",
+          fieldErrors: parsed.error.flatten().fieldErrors,
+        },
+        { status: 400 },
+      );
+    }
+    const b = parsed.data as Record<string, any>;
     const data: any = {};
     for (const key of ["name", "nameEn", "slug", "color", "description", "sortOrder", "active", "parentId"] as const) {
       if (b[key] !== undefined) data[key] = b[key];

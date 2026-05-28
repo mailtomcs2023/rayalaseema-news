@@ -12,13 +12,13 @@ import { useRouter, useNavigation, useLocalSearchParams } from "expo-router";
 // Reporter's "view / edit / delete one of my articles" screen.
 //
 // Editing and deletion are permitted while the article's status is "SUBMITTED"
-// or "DRAFT" — both states still belong to the reporter. Once an editor pulls
+// or "DRAFT" - both states still belong to the reporter. Once an editor pulls
 // it into review (IN_REVIEW) or it's been decided (APPROVED / PUBLISHED /
 // REJECTED), the screen renders in read-only mode: every input is disabled,
 // Save / Delete / Translate / Submit are hidden, and a status banner explains
 // why. A DRAFT article also gets a "Submit for Review" button so the reporter
 // can promote it without going back to the new-article flow. The server
-// enforces the same rules on PATCH/DELETE, so the UI is a hint — not the
+// enforces the same rules on PATCH/DELETE, so the UI is a hint - not the
 // security boundary.
 const EDITABLE_STATUSES = ["SUBMITTED", "DRAFT"] as const;
 
@@ -64,7 +64,7 @@ export function EditArticleScreen() {
   const [catLoading, setCatLoading] = useState(true);
   const [catError, setCatError] = useState("");
 
-  // Action state — three independent operations; while any is in flight the
+  // Action state - three independent operations; while any is in flight the
   // others are disabled so we don't fire overlapping PATCH/DELETE requests.
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -290,7 +290,7 @@ export function EditArticleScreen() {
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
     >
-      {/* Status banner — explains why fields are locked when not editable */}
+      {/* Status banner - explains why fields are locked when not editable */}
       <View style={[styles.statusBanner, { backgroundColor: sc.bg }]}>
         <Text style={[styles.statusBannerLabel, { color: sc.text }]}>
           {t("editArticle.statusPrefix")}: {status}
@@ -300,7 +300,7 @@ export function EditArticleScreen() {
         )}
       </View>
 
-      {/* Photo — moved to the top so the hero anchors the screen. Only the
+      {/* Photo - moved to the top so the hero anchors the screen. Only the
           pickers are gated on `editable`; the preview always renders so the
           reporter can see what's attached even on read-only statuses. */}
       <Text style={styles.label}>{t("newArticle.featuredImage")}</Text>
@@ -330,7 +330,7 @@ export function EditArticleScreen() {
       />
       <FieldError message={errors.title} />
 
-      {/* Summary — multi-line textarea. `textAlignVertical: top` is required
+      {/* Summary - multi-line textarea. `textAlignVertical: top` is required
           on Android so the caret starts at the top instead of being centered
           vertically (iOS already does this with multiline). */}
       <Text style={styles.label}>{t("newArticle.summary")}</Text>
@@ -357,7 +357,7 @@ export function EditArticleScreen() {
       />
       <FieldError message={errors.body} />
 
-      {/* AI Translate — only when editable. Solid brand-red pill with a
+      {/* AI Translate - only when editable. Solid brand-red pill with a
           sparkles icon to signal an assistive AI action. */}
       {editable && (
         <TouchableOpacity
@@ -416,7 +416,7 @@ export function EditArticleScreen() {
       )}
       <FieldError message={errors.categoryId} />
 
-      {/* Action buttons — only when editable.
+      {/* Action buttons - only when editable.
           SUBMITTED: [Delete] + [Save Changes].
           DRAFT:     [Delete] + [Save Draft] + [Submit for Review]. */}
       {editable && (
@@ -482,7 +482,7 @@ const styles = StyleSheet.create({
 
   label: { fontSize: 12, fontWeight: "700", color: "#555", marginBottom: 4, marginTop: 8 },
   input: { backgroundColor: "#fff", borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 10, padding: 14, fontSize: 15, marginBottom: 8 },
-  // Summary textarea — grows from ~4 lines tall, content top-anchored.
+  // Summary textarea - grows from ~4 lines tall, content top-anchored.
   textarea: { minHeight: 100, paddingTop: 12, lineHeight: 22 },
   inputError: { borderColor: "#dc2626" },
   inputDisabled: { backgroundColor: "#f3f4f6", color: "#555" },
@@ -498,7 +498,7 @@ const styles = StyleSheet.create({
   translateBtnBusy: { opacity: 0.7 },
   translateText: { color: "#fff", fontSize: 14, fontWeight: "700", letterSpacing: 0.2 },
 
-  // Wraps to multiple rows so every category is visible at once — no
+  // Wraps to multiple rows so every category is visible at once - no
   // horizontal scroll. Vertical gap on row-wrap is handled by the same `gap`.
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, paddingVertical: 4, marginBottom: 12 },
   chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: "#fff", borderWidth: 1, borderColor: "#e5e7eb" },
@@ -521,7 +521,7 @@ const styles = StyleSheet.create({
   submitRow: { flexDirection: "row", gap: 8, marginTop: 16 },
   deleteBtn: { flex: 1, flexDirection: "row", gap: 6, padding: 16, backgroundColor: "#fff", borderRadius: 10, borderWidth: 1, borderColor: "#fecaca", alignItems: "center", justifyContent: "center" },
   deleteText: { fontSize: 14, fontWeight: "700", color: "#dc2626" },
-  // Save Draft button — neutral, sits between Delete and the prominent
+  // Save Draft button - neutral, sits between Delete and the prominent
   // Submit-for-Review button on a draft.
   saveDraftBtn: { flex: 1, padding: 16, backgroundColor: "#fff", borderRadius: 10, borderWidth: 1, borderColor: "#e5e7eb", alignItems: "center", justifyContent: "center" },
   saveDraftText: { fontSize: 14, fontWeight: "700", color: "#475569" },

@@ -72,7 +72,7 @@ export function VersionsClient({
             {versions.length === 0 && (
               <tr>
                 <td colSpan={5} style={{ padding: 24, textAlign: "center", color: "#6b7280" }}>
-                  No version history yet — publish the draft to capture the first snapshot.
+                  No version history yet - publish the draft to capture the first snapshot.
                 </td>
               </tr>
             )}
@@ -82,7 +82,7 @@ export function VersionsClient({
                 <td style={td}>{v.editorName}</td>
                 <td style={td}>{v.blockCount}</td>
                 <td style={{ ...td, color: v.editNote ? "#111827" : "#9ca3af" }}>
-                  {v.editNote || "—"}
+                  {v.editNote || "-"}
                 </td>
                 <td style={{ ...td, textAlign: "right" }}>
                   <button

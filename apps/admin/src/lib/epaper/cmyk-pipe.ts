@@ -33,7 +33,7 @@ function runGhostscript(args: string[]): Promise<{ stdout: string; stderr: strin
 }
 
 export async function convertPdfToCmyk(srcBytes: Uint8Array): Promise<Uint8Array> {
-  if (!isCmykEnabled()) throw new Error("Ghostscript not configured — set GHOSTSCRIPT_BIN");
+  if (!isCmykEnabled()) throw new Error("Ghostscript not configured - set GHOSTSCRIPT_BIN");
   const dir = await mkdtemp(join(tmpdir(), "re-cmyk-"));
   const inPath = join(dir, "in.pdf");
   const outPath = join(dir, "out.pdf");

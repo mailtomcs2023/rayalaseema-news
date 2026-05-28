@@ -1,15 +1,15 @@
-// Spec #4 E2 (#221) — web-vitals → GA4 custom event reporter.
+// Spec #4 E2 (#221) - web-vitals → GA4 custom event reporter.
 //
 // Uses Next 16's built-in useReportWebVitals hook (wraps web-vitals lib) to
 // send LCP, INP, CLS, FCP, TTFB to GA4 as `web_vital` custom events. GA4
-// already loaded via the layout.tsx GTM/gtag block — we just dispatch
+// already loaded via the layout.tsx GTM/gtag block - we just dispatch
 // events to its dataLayer.
 //
 // Each event carries:
 //   event_category: "Web Vitals"
 //   event_label:    LCP / INP / CLS / FCP / TTFB
 //   value:          metric value (ms for time metrics, *1000 for CLS so
-//                   GA4 stores integers — convert back in dashboard)
+//                   GA4 stores integers - convert back in dashboard)
 //   non_interaction: true (don't inflate engagement metric)
 //
 // Reads on every page navigation. Cheap; web-vitals lib only fires when the

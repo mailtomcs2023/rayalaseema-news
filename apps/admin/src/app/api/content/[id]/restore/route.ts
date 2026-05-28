@@ -1,4 +1,4 @@
-// POST /api/content/[id]/restore — undo a soft-delete. Clears deletedAt +
+// POST /api/content/[id]/restore - undo a soft-delete. Clears deletedAt +
 // deletedById. Only ADMIN / EDITOR may restore.
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";

@@ -29,7 +29,7 @@ export const maxDuration = 300;
 interface Block { id: string; type: string; targetPage?: number }
 
 // Maximum render attempts before surfacing the failure to the operator.
-// Each attempt re-launches Chromium from scratch — most transient errors
+// Each attempt re-launches Chromium from scratch - most transient errors
 // (font load races, image fetch timeouts) clear on retry.
 const MAX_RENDER_ATTEMPTS = 3;
 
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     });
     if (!edition) return NextResponse.json({ error: "Edition not found" }, { status: 404 });
     if (edition.pages.length === 0) {
-      return NextResponse.json({ error: "Edition has no pages — call generate-edition first" }, { status: 400 });
+      return NextResponse.json({ error: "Edition has no pages - call generate-edition first" }, { status: 400 });
     }
 
     // Snapshot before render so the operator can rollback to the exact
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
 
     await prisma.epaperEdition.update({ where: { id: edition.id }, data: { status: "generating" } });
 
-    // Render-job row tracks attempts, duration, outcome — powers the SLA
+    // Render-job row tracks attempts, duration, outcome - powers the SLA
     // dashboard (#90). One row per POST, retries increment in-place.
     const job = await prisma.epaperRenderJob.create({
       data: {
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // All attempts exhausted — mark failed.
+    // All attempts exhausted - mark failed.
     await prisma.epaperRenderJob.update({
       where: { id: job.id },
       data: {
@@ -229,7 +229,7 @@ async function renderEditionAttempt(
       job: { id: jobId, attempt, durationMs: Date.now() - tStart },
     });
   } catch (e) {
-    // Re-throw — outer retry loop in POST handles retry + final failure logging.
+    // Re-throw - outer retry loop in POST handles retry + final failure logging.
     throw e;
   }
 }

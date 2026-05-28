@@ -1,4 +1,4 @@
-// GET /api/menu-builder/menus/[location]/versions — version history list
+// GET /api/menu-builder/menus/[location]/versions - version history list
 // (Spec #3 D2 #182). Each row = state of the menu BEFORE that publish.
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, MenuLocation } from "@rayalaseema/db";

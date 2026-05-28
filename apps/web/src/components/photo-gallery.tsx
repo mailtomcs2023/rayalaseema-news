@@ -8,7 +8,7 @@ interface Photo {
   count: number;
 }
 
-/** Photo gallery section — IE-style shell, landscape thumbnails with photo-count badge. */
+/** Photo gallery section - IE-style shell, landscape thumbnails with photo-count badge. */
 export function PhotoGallery({ photos }: { photos: Photo[] }) {
   if (!photos || photos.length === 0) return null;
 

@@ -1,21 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@rayalaseema/db";
+import { prisma, userUpdateSchema } from "@rayalaseema/db";
 import { hash } from "bcryptjs";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 import { redistributeReviewerArticles } from "@/lib/reviewer-assignment";
 import { normalizeEmail } from "@/lib/email";
+import { isProtectedUser } from "@/lib/protected-users";
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAuth(["ADMIN"]);
   if (isAuthError(session)) return session;
   try {
     const { id } = await params;
-    const b = await req.json();
+    const rawBody = await req.json();
+    const parsed = userUpdateSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          error: "Invalid request body",
+          fieldErrors: parsed.error.flatten().fieldErrors,
+        },
+        { status: 400 },
+      );
+    }
+    const b = parsed.data;
     const data: any = {};
     for (const key of ["name", "role", "active", "bio", "phone"] as const) {
       if (b[key] !== undefined) data[key] = b[key];
     }
-    // Canonicalise email on edit too — admins occasionally fix typos in
+    // Canonicalise email on edit too - admins occasionally fix typos in
     // existing rows, and we don't want a stray uppercase letter to slip a
     // duplicate past the unique constraint.
     if (b.email !== undefined) {
@@ -24,12 +36,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       data.email = cleanEmail;
     }
     if (b.password) data.passwordHash = await hash(b.password, 12);
-    // Force-change-on-first-login flag — admin can toggle this independently
+    // Force-change-on-first-login flag - admin can toggle this independently
     // of password change (e.g. to force a future rotation on a user who hasn't
     // been touched in months).
     if (b.mustChangePassword !== undefined) data.mustChangePassword = !!b.mustChangePassword;
 
-    // Detect "this user is being deactivated" — we need to redistribute any
+    // Detect "this user is being deactivated" - we need to redistribute any
     // articles they had assigned before they vanish from the review pool.
     // We read the prior state first so we know whether `active` actually
     // changed (vs being a no-op write).
@@ -42,22 +54,26 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       prior.active === true &&
       data.active === false;
 
-    const user = await prisma.user.update({ where: { id }, data });
-
-    // Update category assignments
-    if (b.categoryIds !== undefined) {
-      // Remove old assignments
-      await prisma.userCategory.deleteMany({ where: { userId: id } });
-      // Add new
-      if (b.categoryIds?.length) {
-        for (const catId of b.categoryIds) {
-          await prisma.userCategory.create({ data: { userId: id, categoryId: catId } }).catch(() => {});
+    // Atomic write: user.update + category-assignment replace all happen in
+    // one transaction so a mid-loop FK failure can't leave the user with
+    // half-replaced assignments. Inserts use createMany + skipDuplicates
+    // (instead of the old per-row create loop) - one round trip instead of N.
+    const user = await prisma.$transaction(async (tx) => {
+      const updated = await tx.user.update({ where: { id }, data });
+      if (b.categoryIds !== undefined) {
+        await tx.userCategory.deleteMany({ where: { userId: id } });
+        if (b.categoryIds?.length) {
+          await tx.userCategory.createMany({
+            data: (b.categoryIds as string[]).map((catId) => ({ userId: id, categoryId: catId })),
+            skipDuplicates: true,
+          });
         }
       }
-    }
+      return updated;
+    });
 
     // Redistribute any SUBMITTED/IN_REVIEW articles this sub-editor had
-    // assigned so they don't get stranded. Best-effort — admin sees a count
+    // assigned so they don't get stranded. Best-effort - admin sees a count
     // in the response so they know it ran.
     let redistribution: { reassigned: number; unassigned: number } | undefined;
     if (willDeactivate) {
@@ -70,9 +86,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 }
 
-// Hard delete — permanently removes the User row from the DB. To soft-delete
+// Hard delete - permanently removes the User row from the DB. To soft-delete
 // (set `active: false` so the user can no longer sign in but their authored
-// content is preserved) call PUT with `{ active: false }` instead — that's
+// content is preserved) call PUT with `{ active: false }` instead - that's
 // what the "Deactivate" action in the UI does.
 //
 // Refuses if the user has authored Content rows (FK constraint would fail
@@ -88,12 +104,27 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
       select: {
         active: true,
         role: true,
+        email: true,
         _count: { select: { contents: true } },
       },
     });
     if (!prior) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-    // Block hard-delete when the user owns content — Content.authorId is
+    // Protected seed accounts (admin / editor / sub-editor / reporter from
+    // prisma/seed.ts) can never be deleted - the deploy script re-upserts
+    // them, so a delete would just put the row in a confusing temporary
+    // state. Deactivate instead if the canonical account needs to be
+    // disabled.
+    if (isProtectedUser(prior.email)) {
+      return NextResponse.json(
+        {
+          error: "This is a built-in seed account and cannot be deleted. Deactivate it instead if you need to disable sign-in.",
+        },
+        { status: 403 },
+      );
+    }
+
+    // Block hard-delete when the user owns content - Content.authorId is
     // NOT NULL so the DELETE would FK-fail. Admin should Deactivate instead,
     // which keeps the authorship trail intact.
     if (prior._count.contents > 0) {
@@ -106,7 +137,7 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
     }
 
     // Redistribute any open reviews this sub-editor was holding before they
-    // disappear from the pool — same logic the PUT/deactivate path uses.
+    // disappear from the pool - same logic the PUT/deactivate path uses.
     let redistribution: { reassigned: number; unassigned: number } | undefined;
     if (prior.role === "SUB_EDITOR" && prior.active) {
       redistribution = await redistributeReviewerArticles(prisma, id);

@@ -37,7 +37,7 @@ export function DashboardScreen() {
       setArticles(list);
       setStats({
         total: data.total || 0,
-        // "Approved" mirrors the chip in the Articles tab — articles that
+        // "Approved" mirrors the chip in the Articles tab - articles that
         // passed editor review (also counts PUBLISHED since published is the
         // downstream state of approved).
         approved: list.filter((a: any) => a.status === "APPROVED" || a.status === "PUBLISHED").length,
@@ -71,7 +71,7 @@ export function DashboardScreen() {
           <View>
             <KycBanner />
             <Text style={styles.welcome}>{t("dashboard.greeting", { name })}</Text>
-            {/* KPI grid — each card deep-links to the matching tab/filter */}
+            {/* KPI grid - each card deep-links to the matching tab/filter */}
             <View style={styles.kpiGrid}>
               <KpiCard
                 icon="document-text-outline" tint="#3b82f6"
@@ -127,7 +127,7 @@ export function DashboardScreen() {
         }
       />
 
-      {/* New-article action — floating button */}
+      {/* New-article action - floating button */}
       <TouchableOpacity
         style={styles.fab}
         onPress={async () => {
@@ -141,7 +141,7 @@ export function DashboardScreen() {
   );
 }
 
-// A single KPI tile — tinted icon chip, big number, label. Tapping it
+// A single KPI tile - tinted icon chip, big number, label. Tapping it
 // navigates to the related tab (see onPress wiring in the grid above).
 function KpiCard({ icon, tint, value, label, onPress }: {
   icon: keyof typeof Ionicons.glyphMap;
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
   welcome: { fontSize: 17, lineHeight: 24, fontWeight: "800", color: "#111", paddingHorizontal: 16, paddingTop: 16 },
 
   // KPI grid (2x2)
-  // Three cards in a single row — flex:1 splits the available width evenly.
+  // Three cards in a single row - flex:1 splits the available width evenly.
   kpiGrid: {
     flexDirection: "row", gap: 8,
     paddingHorizontal: 14, paddingTop: 10,

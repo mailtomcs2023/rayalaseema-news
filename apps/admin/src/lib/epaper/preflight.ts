@@ -72,7 +72,7 @@ export async function collectIssues(editionId: string): Promise<PreflightIssue[]
     });
   }
 
-  // 2. Bounds check — any block past the trim/live area on the editor's
+  // 2. Bounds check - any block past the trim/live area on the editor's
   //    coord system. mm-v2 layouts get a precise mm check; grid-v1 layouts
   //    rely on the existing block-overflow heuristic in quality.ts.
   for (const p of pages as PageLite[]) {
@@ -100,7 +100,7 @@ export async function collectIssues(editionId: string): Promise<PreflightIssue[]
   return issues;
 }
 
-/** Count of blocking issues — used by publish gate. */
+/** Count of blocking issues - used by publish gate. */
 export function blockingCount(issues: PreflightIssue[]): number {
   return issues.filter((i) => i.severity === "blocking").length;
 }

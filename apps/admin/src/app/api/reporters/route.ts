@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@rayalaseema/db";
+import { prisma, reporterActionSchema } from "@rayalaseema/db";
 import { requireCan, isAuthError, apiError } from "@/lib/api-utils";
 import { logAudit } from "@/lib/audit";
 import { encrypt, decryptProfileFields } from "@/lib/crypto/kyc";
 import { hash } from "bcryptjs";
 import { randomInt } from "crypto";
 
-// Test/QA reporter account(s) — editable, but never deletable via the portal.
+// Test/QA reporter account(s) - editable, but never deletable via the portal.
 const PROTECTED_EMAILS = ["reporter@rayalaseemaexpress.com"];
 
-// A readable temp password for admin-assisted resets — no ambiguous
+// A readable temp password for admin-assisted resets - no ambiguous
 // chars (0/O/1/l/I) so it can be relayed over a phone call without confusion.
 function generateTempPassword(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
@@ -34,7 +34,7 @@ function profileData(d: Record<string, unknown>) {
     // PII fields encrypted at rest via lib/crypto/kyc. encrypt() is a
     // no-op for already-encrypted input, so admins re-submitting an
     // unchanged form don't double-encrypt. bankIfsc / bankName /
-    // bankBranch stay plaintext — they're not personally identifying on
+    // bankBranch stay plaintext - they're not personally identifying on
     // their own and admins need to search/sort by them.
     aadhaarNumber: encrypt((d.aadhaarNumber as string) || null),
     panNumber: encrypt((d.panNumber as string) || null),
@@ -57,36 +57,73 @@ function profileData(d: Record<string, unknown>) {
   };
 }
 
-// GET all journalists with profiles
-export async function GET() {
+// GET all journalists with profiles.
+//
+// Pagination - same dual-mode shape as /api/content (PR 1) and /api/users
+// (PR 2):
+//   - CURSOR: ?cursor=<id>&limit=50 → { items, hasMore, nextCursor }
+//   - OFFSET (legacy): ?page=2&limit=50 → adds { total, page }
+//   - Default (no params): limit=500 + paginated object so the existing
+//     /reporters UI can continue to "fetch all and paginate client-side"
+//     until PR 12 (TanStack Query) flips it to true cursor mode.
+export async function GET(req: NextRequest) {
   const session = await requireCan("user.manage");
   if (isAuthError(session)) return session;
   try {
-    const journalists = await prisma.user.findMany({
-      where: { role: "REPORTER" },
-      include: {
-        // Include the pending change-request count alongside the profile so
-        // the journalists table can surface "this reporter has N updates
-        // awaiting your review" without a second round-trip per row.
-        reporterProfile: {
-          include: {
-            _count: {
-              select: { profileUpdateRequests: { where: { status: "PENDING" } } },
-            },
+    const url = new URL(req.url);
+    const cursor = url.searchParams.get("cursor") || "";
+    const page = parseInt(url.searchParams.get("page") || "1");
+    const limit = Math.min(Math.max(parseInt(url.searchParams.get("limit") || "500"), 1), 500);
+    const includeTotal = url.searchParams.get("includeTotal") === "1" || !cursor;
+
+    const where = { role: "REPORTER" as const };
+    // Stable ordering for cursor pagination - createdAt + id tiebreaker.
+    const orderBy = [{ createdAt: "desc" as const }, { id: "desc" as const }];
+    const include = {
+      reporterProfile: {
+        include: {
+          _count: {
+            select: { profileUpdateRequests: { where: { status: "PENDING" as const } } },
           },
         },
-        _count: { select: { contents: true, contentPayments: true } },
       },
-      orderBy: { createdAt: "desc" },
-    });
-    // Decrypt PII fields (aadhaarNumber / panNumber / bankAccount) before
-    // the admin client receives them. Rows that pre-date encryption pass
-    // through unchanged (decryptProfileFields detects the version prefix).
-    const decrypted = journalists.map((j) => ({
-      ...j,
-      reporterProfile: decryptProfileFields(j.reporterProfile),
-    }));
-    return NextResponse.json(decrypted);
+      _count: { select: { contents: true, contentPayments: true } },
+    } as const;
+
+    const decryptAll = (rows: any[]) =>
+      rows.map((j) => ({ ...j, reporterProfile: decryptProfileFields(j.reporterProfile) }));
+
+    // Cursor mode.
+    if (cursor) {
+      const [rows, total] = await Promise.all([
+        prisma.user.findMany({
+          where, include, orderBy,
+          take: limit + 1,
+          cursor: { id: cursor },
+          skip: 1,
+        }),
+        includeTotal ? prisma.user.count({ where }) : Promise.resolve(null),
+      ]);
+      const hasMore = rows.length > limit;
+      const items = decryptAll(hasMore ? rows.slice(0, limit) : rows);
+      const nextCursor = hasMore && items.length > 0 ? items[items.length - 1].id : null;
+      return NextResponse.json({ items, hasMore, nextCursor, total, limit });
+    }
+
+    // Offset / default mode.
+    const offset = (page - 1) * limit;
+    const [rows, total] = await Promise.all([
+      prisma.user.findMany({
+        where, include, orderBy,
+        take: limit + 1,
+        skip: offset,
+      }),
+      prisma.user.count({ where }),
+    ]);
+    const hasMore = rows.length > limit;
+    const items = decryptAll(hasMore ? rows.slice(0, limit) : rows);
+    const nextCursor = hasMore && items.length > 0 ? items[items.length - 1].id : null;
+    return NextResponse.json({ items, hasMore, nextCursor, total, page, limit });
   } catch (error) {
     return apiError(error);
   }
@@ -97,9 +134,23 @@ export async function POST(req: NextRequest) {
   const session = await requireCan("user.manage");
   if (isAuthError(session)) return session;
   try {
-    const body = await req.json();
+    const rawBody = await req.json();
+    // Discriminated-union validation: the `action` value picks which branch
+    // of the schema runs. Bad action / missing required field → structured
+    // 400 with fieldErrors. The downstream handlers (still under `body`)
+    // keep their existing logic for backward compat.
+    const parsed = reporterActionSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          error: "Invalid request body",
+          fieldErrors: parsed.error.flatten().fieldErrors,
+        },
+        { status: 400 },
+      );
+    }
+    const body = parsed.data as any;
     const action = body.action as string;
-    if (!action) return NextResponse.json({ error: "action required" }, { status: 400 });
 
     // ---- create a new reporter (User + ReporterProfile) ----
     if (action === "create") {
@@ -165,7 +216,7 @@ export async function POST(req: NextRequest) {
     // We flip `active: false` instead of hard-deleting. That keeps every
     // article / payment / KYC document intact, leaves an obvious "Inactive"
     // marker in the journalists list, and is one click away from
-    // reactivation (Edit details → tick Active, or Reset password —
+    // reactivation (Edit details → tick Active, or Reset password -
     // resetting their password automatically flips active back to true).
     if (action === "delete") {
       const userIds = body.userIds as string[];
@@ -190,7 +241,7 @@ export async function POST(req: NextRequest) {
           where: { id: { in: deactivatable } },
           data: { active: false },
         });
-        // One audit row per deactivated user — easier to query than a
+        // One audit row per deactivated user - easier to query than a
         // bulk row, and matches the granularity of activate / verify.
         await Promise.all(
           deactivatable.map((uid) =>
@@ -216,7 +267,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ---- reactivate one or more journalists (undo a soft-delete) ----
-    // Inverse of action:"delete". No content checks needed — flipping
+    // Inverse of action:"delete". No content checks needed - flipping
     // `active: true` lets them sign in again; nothing was destroyed.
     if (action === "activate") {
       const userIds = body.userIds as string[];
@@ -265,7 +316,7 @@ export async function POST(req: NextRequest) {
         req,
       });
     } else if (action === "reject") {
-      // Rejection reason is mandatory — the reporter sees this text in the
+      // Rejection reason is mandatory - the reporter sees this text in the
       // app's KYC banner and uses it to fix their re-submission. Without it
       // the rejection is unactionable, so the admin UI also blocks empty
       // submissions; this is defense in depth for any non-UI caller.
@@ -291,10 +342,10 @@ export async function POST(req: NextRequest) {
       });
     } else if (action === "reset-password") {
       // Two knobs the admin modal can send in addition to `profileId`:
-      //   customPassword — admin typed a specific value; we use it as-is.
+      //   customPassword - admin typed a specific value; we use it as-is.
       //                    Falls back to a random temp password when absent
       //                    or shorter than 8 chars.
-      //   oneTime        — true means "force them to change it at next
+      //   oneTime        - true means "force them to change it at next
       //                    sign-in" (User.mustChangePassword flag).
       const customPassword =
         typeof (body as { customPassword?: unknown }).customPassword === "string"
@@ -322,14 +373,14 @@ export async function POST(req: NextRequest) {
           passwordHash: await hash(password, 12),
           mustChangePassword: oneTime,
           // If the admin is bothering to set a new password they want this
-          // account usable — flip it back to active in case it was soft-
+          // account usable - flip it back to active in case it was soft-
           // deleted earlier (the "Deactivate journalist" menu item only
           // sets active:false, it doesn't actually delete the row).
           active: true,
         },
       });
       // Audit the password reset. Never log the actual password (even
-      // hashed) — record only that a reset happened, who did it, and
+      // hashed) - record only that a reset happened, who did it, and
       // whether it was a one-time temp password.
       await logAudit({
         action: "user.password.reset",

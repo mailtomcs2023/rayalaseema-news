@@ -73,14 +73,14 @@ interface ProfileRequest {
 }
 
 function formatStoredValue(field: string, stored: string | null): string {
-  if (stored == null || stored === "") return "—";
+  if (stored == null || stored === "") return "-";
   if (ARRAY_FIELDS.has(field)) {
     try { return (JSON.parse(stored) as string[]).join(", "); } catch { return stored; }
   }
   if (field === "dateOfBirth") {
-    // Accept either a full ISO timestamp ("2000-01-01T00:00:00.000Z" — how
+    // Accept either a full ISO timestamp ("2000-01-01T00:00:00.000Z" - how
     // Prisma serialises the stored DateTime) or a "YYYY-MM-DD" string from
-    // the reporter app's date picker. Render as "Jan 31, 2000" — unambiguous
+    // the reporter app's date picker. Render as "Jan 31, 2000" - unambiguous
     // across locales (toLocaleDateString() defaults to "1/31/2000" in en-US,
     // "31/01/2000" in en-GB, etc., which is confusing on the admin UI).
     try {
@@ -202,7 +202,7 @@ function ProfileRequestsPageBody() {
           </p>
         </header>
 
-        {/* Reporter-filter banner — shown when arriving from the users
+        {/* Reporter-filter banner - shown when arriving from the users
             page via /profile-requests?reporterId=... */}
         {reporterId ? (
           <div style={{
@@ -348,7 +348,7 @@ function RequestCard({ request, onApprove, onReject }: {
       background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: 18,
       display: "flex", flexDirection: "column", gap: 14,
     }}>
-      {/* Header — journalist + field + status */}
+      {/* Header - journalist + field + status */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <div>
           <div style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>
@@ -439,7 +439,7 @@ function RequestCard({ request, onApprove, onReject }: {
         <div style={{ padding: 10, background: "#f9fafb", borderRadius: 8, fontSize: 12, color: "#374151" }}>
           <span style={{ fontWeight: 700 }}>Reviewer note:</span> {request.reviewerNote}
           {request.reviewedBy ? (
-            <span style={{ color: "#6b7280", marginLeft: 6 }}>— {request.reviewedBy.name}</span>
+            <span style={{ color: "#6b7280", marginLeft: 6 }}>- {request.reviewedBy.name}</span>
           ) : null}
         </div>
       ) : null}

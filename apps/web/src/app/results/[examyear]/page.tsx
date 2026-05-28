@@ -1,4 +1,4 @@
-// Spec #4 K6 (#251) — /results/<exam>-<year> exam-result live-blog template.
+// Spec #4 K6 (#251) - /results/<exam>-<year> exam-result live-blog template.
 //
 // One URL per exam-year. Editor pre-creates the article in admin as a
 // Content row with category=exam-results, slug=<exam>-<year>-results,

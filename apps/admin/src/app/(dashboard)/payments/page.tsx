@@ -1,6 +1,6 @@
 "use client";
 
-// /payments — admin payouts dashboard. Lists every ContentPayment row with a
+// /payments - admin payouts dashboard. Lists every ContentPayment row with a
 // status filter, totals per status, and a "Mark Paid" action for APPROVED
 // rows. Table chrome mirrors /journalists (TanStack Table + shadcn primitives)
 // so the two admin tables look and behave the same.
@@ -104,7 +104,7 @@ const FILTERS: { value: "ALL" | Status; label: string }[] = [
   { value: "CANCELLED",  label: "Cancelled" },
 ];
 
-// Status pill colour map — same shadcn-style palette as /journalists' KYC
+// Status pill colour map - same shadcn-style palette as /journalists' KYC
 // badge so the two pages feel like the same product.
 const STATUS_BADGE: Record<Status, { label: string; cls: string }> = {
   CALCULATED: { label: "Pending",         cls: "bg-amber-100 text-amber-700 border-amber-200" },
@@ -119,8 +119,8 @@ function formatINR(n: number) {
   return `₹${new Intl.NumberFormat("en-IN").format(Math.round(n))}`;
 }
 function formatDate(iso: string | null) {
-  if (!iso) return "—";
-  try { return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }); } catch { return "—"; }
+  if (!iso) return "-";
+  try { return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }); } catch { return "-"; }
 }
 
 // Search across article title + reporter name. Mirrors /journalists' search.
@@ -139,7 +139,7 @@ export default function PaymentsPage() {
   const [loading, setLoading] = useState(true);
   const [payTarget, setPayTarget] = useState<Payment | null>(null);
 
-  // TanStack state — mirrors /journalists shape.
+  // TanStack state - mirrors /journalists shape.
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
@@ -197,7 +197,7 @@ export default function PaymentsPage() {
               {c.nameEn}
             </Badge>
           ) : (
-            <span className="text-muted-foreground">—</span>
+            <span className="text-muted-foreground">-</span>
           );
         },
       },
@@ -240,7 +240,7 @@ export default function PaymentsPage() {
         size: 160,
         cell: ({ row }) => {
           const p = row.original;
-          if (!p.paidAt) return <span className="text-xs text-muted-foreground">—</span>;
+          if (!p.paidAt) return <span className="text-xs text-muted-foreground">-</span>;
           return (
             <span className="text-xs text-muted-foreground">
               {formatDate(p.paidAt)}
@@ -262,7 +262,7 @@ export default function PaymentsPage() {
               <Button size="sm" onClick={() => setPayTarget(row.original)}>Mark Paid</Button>
             </div>
           ) : (
-            <div className="text-right text-muted-foreground">—</div>
+            <div className="text-right text-muted-foreground">-</div>
           ),
       },
     ],
@@ -299,7 +299,7 @@ export default function PaymentsPage() {
         </p>
 
         <div className="shadcn-scope space-y-4">
-          {/* Status filter chips with counts — server-side refetch */}
+          {/* Status filter chips with counts - server-side refetch */}
           <div className="flex flex-wrap items-center gap-2">
             {FILTERS.map((f) => (
               <Button
@@ -318,7 +318,7 @@ export default function PaymentsPage() {
             ))}
           </div>
 
-          {/* Table toolbar — search + view columns + count/total summary */}
+          {/* Table toolbar - search + view columns + count/total summary */}
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative">
               <Input
@@ -385,7 +385,7 @@ export default function PaymentsPage() {
             </div>
           </div>
 
-          {/* Table — same shell as /journalists */}
+          {/* Table - same shell as /journalists */}
           <div className="overflow-hidden rounded-md border bg-background">
             <Table className="table-fixed">
               <TableHeader>
@@ -445,8 +445,9 @@ export default function PaymentsPage() {
             </Table>
           </div>
 
-          {/* Pagination */}
-          <div className="flex items-center justify-between gap-8">
+          {/* Pagination row - page-size on the left, range counter + nav
+              buttons grouped together on the right. No empty gap in middle. */}
+          <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <Label className="max-sm:sr-only" htmlFor={id}>
                 Rows per page
@@ -467,8 +468,8 @@ export default function PaymentsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex grow justify-end whitespace-nowrap text-sm text-muted-foreground">
-              <p aria-live="polite">
+            <div className="flex items-center gap-3">
+              <p aria-live="polite" className="whitespace-nowrap text-sm text-muted-foreground">
                 <span className="text-foreground">
                   {table.getRowCount() === 0
                     ? 0
@@ -481,9 +482,8 @@ export default function PaymentsPage() {
                 </span>{" "}
                 of <span className="text-foreground">{table.getRowCount()}</span>
               </p>
-            </div>
-            <Pagination>
-              <PaginationContent>
+              <Pagination className="mx-0 w-auto">
+                <PaginationContent>
                 <PaginationItem>
                   <Button
                     aria-label="Go to first page"
@@ -528,8 +528,9 @@ export default function PaymentsPage() {
                     <ChevronLastIcon aria-hidden="true" size={16} />
                   </Button>
                 </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+                </PaginationContent>
+              </Pagination>
+            </div>
           </div>
         </div>
       </main>

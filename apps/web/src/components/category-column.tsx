@@ -10,7 +10,7 @@ interface ColArticle {
 }
 
 /**
- * IE-style compact category column — lead (headline + image) + 2x2 text-headline grid.
+ * IE-style compact category column - lead (headline + image) + 2x2 text-headline grid.
  * No rail. Designed to sit two-up: <CategoryPair> renders two side by side.
  */
 export function CategoryColumn({
@@ -30,7 +30,7 @@ export function CategoryColumn({
         {title} <span aria-hidden="true">›</span>
       </Link>
 
-      {/* LEAD — headline left, image right */}
+      {/* LEAD - headline left, image right */}
       <div className="cc-lead">
         <Link href={articleHref(lead)} className="cc-lead-link">
           <h3 className="cc-lead-title">{lead.title}</h3>
@@ -140,7 +140,7 @@ export function CategoryColumn({
   );
 }
 
-/** Two CategoryColumns side by side with a vertical divider — the IE 2-up unit. */
+/** Two CategoryColumns side by side with a vertical divider - the IE 2-up unit. */
 export function CategoryPair({ children }: { children: React.ReactNode }) {
   return (
     <div className="cp">

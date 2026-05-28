@@ -5,7 +5,7 @@
 //   1. operator picks a date + clicks Generate → /api/epaper/generate-edition
 //      auto-fills templates with articles
 //   2. left pane shows page tabs
-//   3. middle pane shows the chosen page's block grid — drag any block to
+//   3. middle pane shows the chosen page's block grid - drag any block to
 //      reorder, drag a corner to resize, click a story block to swap article
 //   4. right pane shows article picker filtered by the slot's rules
 //   5. lock toggle per block (autofill skips locked blocks on regenerate)
@@ -131,23 +131,23 @@ function EpaperEditorPage() {
   const [pickerArticles, setPickerArticles] = useState<ArticleSummary[]>([]);
   const [pickerQuery, setPickerQuery] = useState("");
   const [pickerFilters, setPickerFilters] = useState<PickerFilters>(DEFAULT_FILTERS);
-  const [pickerTotal, setPickerTotal] = useState(0);  // total in window before chip filters — for empty-state hints
+  const [pickerTotal, setPickerTotal] = useState(0);  // total in window before chip filters - for empty-state hints
 
   const { toasts, push: toast, dismiss: dismissToast } = useToasts();
 
   type ArticleMeta = { title: string; summary?: string | null; featuredImage?: string | null };
   const [titles, setTitles] = useState<Record<string, ArticleMeta>>({});
 
-  // Quality warnings from the most recent render — keyed by `${pageId}:${blockId}`
+  // Quality warnings from the most recent render - keyed by `${pageId}:${blockId}`
   // so the block tile can show a per-block badge.
   type QWarning = { pageNumber: number; blockId: string; blockType: string; kind: string; detail: string };
   const [warnings, setWarnings] = useState<QWarning[]>([]);
 
-  // Baseline-grid overlay toggle for the preview iframe — helps editors verify
+  // Baseline-grid overlay toggle for the preview iframe - helps editors verify
   // text aligns horizontally across columns on a real print baseline.
   const [showBaseline, setShowBaseline] = useState(false);
 
-  // Preflight panel (#139) — open/close + reload key bumped on render/save
+  // Preflight panel (#139) - open/close + reload key bumped on render/save
   // so the chip + panel reflect fresh state.
   const [preflightOpen, setPreflightOpen] = useState(false);
   const [preflightReload, setPreflightReload] = useState(0);
@@ -155,7 +155,7 @@ function EpaperEditorPage() {
   const loadEdition = useCallback(async (d: string, v: string = "main") => {
     setError(""); setBusy("loading");
     try {
-      // Load the variant list for this date in parallel — used by the picker.
+      // Load the variant list for this date in parallel - used by the picker.
       fetch(`/api/epaper/edition?date=${d}&listVariants=1`).then((r) => r.json())
         .then((data) => setVariants(data.variants || []))
         .catch(() => setVariants([]));
@@ -199,7 +199,7 @@ function EpaperEditorPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Clone failed");
-      toast("success", `Variant '${slug}' created — ${data.pageCount} pages`);
+      toast("success", `Variant '${slug}' created - ${data.pageCount} pages`);
       setVariant(slug);
     } catch (e: any) { setError(e.message); }
     finally { setBusy(null); }
@@ -239,7 +239,7 @@ function EpaperEditorPage() {
       }
       const data = await res.json();
       await loadEdition(date);
-      toast("success", `PDF rendered — ${data.pageCount} pages`);
+      toast("success", `PDF rendered - ${data.pageCount} pages`);
       // Continuity gate: warn if any article appears on more than one page.
       if (Array.isArray(data.duplicates) && data.duplicates.length > 0) {
         for (const d of data.duplicates.slice(0, 3)) {
@@ -255,7 +255,7 @@ function EpaperEditorPage() {
         const overflows = data.qualityWarnings.filter((w: any) => w.kind === "block-overflow");
         const others = data.qualityWarnings.filter((w: any) => w.kind !== "empty-story" && w.kind !== "block-overflow");
         if (empties.length > 0) toast("warn", `${empties.length} empty story block${empties.length > 1 ? "s" : ""} on rendered pages`);
-        if (overflows.length > 0) toast("warn", `${overflows.length} block${overflows.length > 1 ? "s" : ""} overflow — copy will be clipped on print. Open the block to resize or split to continuation.`);
+        if (overflows.length > 0) toast("warn", `${overflows.length} block${overflows.length > 1 ? "s" : ""} overflow - copy will be clipped on print. Open the block to resize or split to continuation.`);
         for (const w of others.slice(0, 3)) {
           toast("warn", `Page ${w.pageNumber} · ${w.kind}: ${w.detail.slice(0, 60)}`);
         }
@@ -281,7 +281,7 @@ function EpaperEditorPage() {
     router.replace(`?${next.toString()}`);
   };
 
-  // v2 reads blocks in mm-v2 shape — auto-migrate legacy grid-v1 layouts
+  // v2 reads blocks in mm-v2 shape - auto-migrate legacy grid-v1 layouts
   // on the fly so an operator can flip ?editor=v2 on any existing edition
   // without manual schema conversion. The migration is purely read-side
   // here; first save persists the new shape via the existing PATCH path.
@@ -348,7 +348,7 @@ function EpaperEditorPage() {
     const wantTotal = pickerTotalKeyRef.current !== totalKey;
     if (!wantTotal) params.set("skipTotal", "1");
 
-    // Debounce 100 ms — fast enough to feel instant, slow enough to collapse
+    // Debounce 100 ms - fast enough to feel instant, slow enough to collapse
     // chip-toggle bursts into a single fetch.
     const timer = setTimeout(() => {
       pickerAbortRef.current?.abort();
@@ -371,7 +371,7 @@ function EpaperEditorPage() {
     return () => clearTimeout(timer);
   }, [selectedBlockId, pickerQuery, pickerFilters, activePage]);
 
-  // Workflow transitions — what's available depends on the current state.
+  // Workflow transitions - what's available depends on the current state.
   // The full transitions table lives server-side; here we just hit the API
   // and let it 403 if the role doesn't match. We pre-compute label/style.
   const WORKFLOW_LABEL: Record<string, string> = {
@@ -383,7 +383,7 @@ function EpaperEditorPage() {
     DRAFT: "#6b7280", SUB_REVIEW: "#f59e0b", CHIEF_REVIEW: "#0ea5e9",
     APPROVED: "#16a34a", PUBLISHED: "#7c3aed", REJECTED: "#dc2626",
   };
-  // Next-state buttons per source state. Mirrors workflow.ts TRANSITIONS for UX —
+  // Next-state buttons per source state. Mirrors workflow.ts TRANSITIONS for UX -
   // the server is the source of truth and will 403 unauthorized clicks.
   const NEXT_STATES: Record<string, Array<{ to: string; label: string; needNote?: boolean; danger?: boolean }>> = {
     DRAFT: [{ to: "SUB_REVIEW", label: "Submit for review" }],
@@ -401,7 +401,7 @@ function EpaperEditorPage() {
   };
   const transitionTo = async (to: string, label: string, needNote: boolean) => {
     if (!edition) return;
-    const note = needNote ? prompt(`${label} — reason note (required):`) : null;
+    const note = needNote ? prompt(`${label} - reason note (required):`) : null;
     if (needNote && !note) return;
     const r = await fetch(`/api/epaper/edition/${edition.id}/transition`, {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -495,10 +495,10 @@ function EpaperEditorPage() {
           ? { coordSystem: "mm-v2", blocks: nextBlocks }
           : { blocks: nextBlocks },
       } : p) } : prev);
-    // Persist via PATCH — include coordSystem so server round-trips it.
+    // Persist via PATCH - include coordSystem so server round-trips it.
     await patchPage(isV2 ? { blocks: nextBlocks, coordSystem: "mm-v2" } : { blocks: nextBlocks });
     setAddBlockOpen(false);
-    toast("success", `Added ${type} block — drag to reposition`);
+    toast("success", `Added ${type} block - drag to reposition`);
   };
 
   // Page CRUD state: modal for inserting a new page from a template.
@@ -537,7 +537,7 @@ function EpaperEditorPage() {
     });
     if (!r.ok) { setError("Blank-page insert failed"); return; }
     await loadEdition(date);
-    toast("success", "Blank page added — drag in the canvas to draw blocks.");
+    toast("success", "Blank page added - drag in the canvas to draw blocks.");
   };
 
   // Draw-block mode on the canvas: hold B + drag = create a new block at
@@ -651,11 +651,11 @@ function EpaperEditorPage() {
     return () => { clearInterval(interval); es.close(); };
   }, [edition, activePage]);
 
-  // First-time walkthrough tour — fires once per browser, persists dismissal.
+  // First-time walkthrough tour - fires once per browser, persists dismissal.
   const TOUR_STEPS = [
     { title: "Welcome to ePaper v3", body: "Quick 6-step tour to get you publishing. Press Esc anytime to dismiss." },
     { title: "1. Generate today's edition", body: "Pick a date and hit Generate. The auto-fill engine assigns recent articles to all 30+ page templates." },
-    { title: "2. Switch between pages", body: "Use the left page list — each tab shows ⚠ empty / 🔒 locked / 💬 comment counts at a glance." },
+    { title: "2. Switch between pages", body: "Use the left page list - each tab shows ⚠ empty / 🔒 locked / 💬 comment counts at a glance." },
     { title: "3. Swap stories", body: "Click any story block on the canvas. The right panel lets you pick a different article (with chip filters)." },
     { title: "4. Lock + comment", body: "Lock blocks the auto-fill shouldn't touch. Leave 💬 Comments for the chief editor on specific blocks." },
     { title: "5. Render PDF", body: "When happy, Render PDF → vector output with real text + working hyperlinks + cross-page jumps." },
@@ -689,7 +689,7 @@ function EpaperEditorPage() {
 
   // View mode: edit canvas / split (canvas + preview iframe) / preview-only.
   // Live preview hits /api/epaper/page/[id]/preview which reuses
-  // renderLayoutToHtml — no Playwright in the hot path so it's near-instant.
+  // renderLayoutToHtml - no Playwright in the hot path so it's near-instant.
   // Default Edit because the canvas itself is now WYSIWYG (renders the
   // real Eenadu-style preview behind the editable blocks). Split + Preview
   // pills still available for full-bleed preview mode.
@@ -705,7 +705,7 @@ function EpaperEditorPage() {
     const t = setInterval(() => setSaveTick((n) => n + 1), 30_000);
     return () => clearInterval(t);
   }, []);
-  // Block tab/close while a save is in flight — prevents data loss on
+  // Block tab/close while a save is in flight - prevents data loss on
   // navigation mid-write.
   useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -738,7 +738,7 @@ function EpaperEditorPage() {
   // their next save will fail too.
   const [conflict, setConflict] = useState<{ pageId: string; pageLabel: string; currentVersion: number } | null>(null);
 
-  // Snapshot/History panel — operator opens to see point-in-time captures
+  // Snapshot/History panel - operator opens to see point-in-time captures
   // (auto-saved before each Render / Regenerate + any manual snapshots) and
   // restore any of them. Restoring writes a pre-restore snapshot first so it's
   // itself undoable.
@@ -807,7 +807,7 @@ function EpaperEditorPage() {
     setLastSavedAt(Date.now());
     // Stamp the bumped version onto the local page so the next PATCH passes.
     // Defensive: only overwrite when the server actually returned a numeric
-    // version — a missing field would silently disable concurrency checks.
+    // version - a missing field would silently disable concurrency checks.
     if (typeof updated?.version === "number") {
       setEdition((prev) => {
         if (!prev) return prev;
@@ -951,7 +951,7 @@ function EpaperEditorPage() {
     await patchPage({ blocks: next });
   }, [activePage, redoStacks]);
 
-  // Per-block style panel — image position/size, text columns, headline scale,
+  // Per-block style panel - image position/size, text columns, headline scale,
   // colors (text/headline/headline-bg/block-bg), padding, margin.
   const [styleBlockId, setStyleBlockId] = useState<string | null>(null);
   const [styleImgPos, setStyleImgPos] = useState<"top" | "left" | "right" | "none">("top");
@@ -1000,7 +1000,7 @@ function EpaperEditorPage() {
     toast("success", "Block style saved");
   };
 
-  // Image crop modal — per-block fractional crop on the article's featured image.
+  // Image crop modal - per-block fractional crop on the article's featured image.
   const [cropBlockId, setCropBlockId] = useState<string | null>(null);
   const [cropImgUrl, setCropImgUrl] = useState<string | null>(null);
   const [cropRect, setCropRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
@@ -1008,7 +1008,7 @@ function EpaperEditorPage() {
   const cropDragStart = useRef<{ x: number; y: number } | null>(null);
   const openCrop = async (blockId: string) => {
     const b = activePage?.layout.blocks.find((x) => x.id === blockId);
-    if (!b?.articleId) { toast("warn", "Block has no article — pick one first"); return; }
+    if (!b?.articleId) { toast("warn", "Block has no article - pick one first"); return; }
     // Look up the article's featured image; fall back to a re-fetch if not cached.
     let img: string | null = null;
     const r = await fetch(`/api/articles/${b.articleId}`);
@@ -1084,7 +1084,7 @@ function EpaperEditorPage() {
   // Help overlay (? key) listing every keyboard shortcut.
   const [helpOpen, setHelpOpen] = useState(false);
 
-  // Comments drawer — chief editor leaves notes per page or per block.
+  // Comments drawer - chief editor leaves notes per page or per block.
   interface Comment { id: string; blockId: string | null; text: string; resolved: boolean; createdAt: string; author: { id: string; name: string }; pageId: string }
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -1166,7 +1166,7 @@ function EpaperEditorPage() {
           if (blockId) { setSelectedBlockId(blockId); setSelectedBlockIds(new Set([blockId])); }
         }}
       />
-      {/* Block style panel — image + columns + headline + colors + spacing */}
+      {/* Block style panel - image + columns + headline + colors + spacing */}
       {styleBlockId && (
         <div onClick={() => setStyleBlockId(null)}
           style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 1200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
@@ -1292,7 +1292,7 @@ function EpaperEditorPage() {
                     method: "POST", headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ imageUrl: cropImgUrl }),
                   });
-                  if (r.status === 503) { toast("warn", "Smart-crop disabled — Azure Vision key not set"); return; }
+                  if (r.status === 503) { toast("warn", "Smart-crop disabled - Azure Vision key not set"); return; }
                   if (!r.ok) { toast("error", "Smart-crop failed"); return; }
                   const data = await r.json();
                   setCropRect(data.crop);
@@ -1412,7 +1412,7 @@ function EpaperEditorPage() {
           </div>
         </div>
       )}
-      {/* Night-shift dark mode — chrome only, page canvas stays light. */}
+      {/* Night-shift dark mode - chrome only, page canvas stays light. */}
       <style>{`
         html[data-re-epaper-dark="1"] main { background: #0f172a !important; }
         html[data-re-epaper-dark="1"] aside,
@@ -1421,7 +1421,7 @@ function EpaperEditorPage() {
         html[data-re-epaper-dark="1"] h2,
         html[data-re-epaper-dark="1"] h3 { color: #f1f5f9 !important; }
       `}</style>
-      {/* Conflict modal — shown when the server returns 409 (another editor
+      {/* Conflict modal - shown when the server returns 409 (another editor
           touched this page). Reload reloads the whole edition (loses local
           unsaved changes); Cancel just dismisses (next save will 409 again). */}
       {/* Insert new page modal */}
@@ -1438,7 +1438,7 @@ function EpaperEditorPage() {
               style={{ width: "100%", padding: "8px 10px", border: "1px solid #ddd", borderRadius: 6, fontSize: 13, marginBottom: 12, boxSizing: "border-box" }}>
               <option value="">Pick a template…</option>
               {templateOptions.map((t) => (
-                <option key={t.slug} value={t.slug}>{t.type} — {t.name}</option>
+                <option key={t.slug} value={t.slug}>{t.type} - {t.name}</option>
               ))}
             </select>
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
@@ -1513,7 +1513,7 @@ function EpaperEditorPage() {
           </div>
         </div>
       )}
-      {/* History drawer — sliding panel on the right with snapshot list. */}
+      {/* History drawer - sliding panel on the right with snapshot list. */}
       {historyOpen && edition && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 999 }}
           onClick={() => setHistoryOpen(false)}>
@@ -1589,7 +1589,7 @@ function EpaperEditorPage() {
           <input type="date" value={date} onChange={(e) => { setDate(e.target.value); setVariant("main"); }}
             style={{ padding: "6px 10px", border: "1px solid #ddd", borderRadius: 8, fontSize: 13 }} />
           {variants.length > 0 && (
-            <WithTooltip text="Edition variant — main + per-district splits">
+            <WithTooltip text="Edition variant - main + per-district splits">
               <select value={variant} onChange={(e) => setVariant(e.target.value)}
                 style={{ padding: "6px 10px", border: "1px solid #ddd", borderRadius: 8, fontSize: 13, fontWeight: 700, background: variant !== "main" ? "#fef3c7" : "#fff" }}>
                 {variants.map((v) => (
@@ -1627,7 +1627,7 @@ function EpaperEditorPage() {
                 </a>
               </WithTooltip>
             ) : (
-              <WithTooltip text="No PDF yet — click to render now">
+              <WithTooltip text="No PDF yet - click to render now">
                 <button onClick={renderEdition} disabled={busy === "rendering"}
                   style={{ padding: "8px 16px", background: "#fff", color: "#4f46e5", border: "1px dashed #4f46e5", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
                   📄 Preview PDF (renders now)
@@ -1641,7 +1641,7 @@ function EpaperEditorPage() {
               ↩ History
             </button>
           )}
-          {/* Preflight chip (#139) — opens side panel listing every issue. */}
+          {/* Preflight chip (#139) - opens side panel listing every issue. */}
           {edition && <PreflightChip editionId={edition.id} onClick={() => setPreflightOpen(true)} reloadKey={preflightReload} />}
           {/* v2 editor flag chip (#135). Click to flip between v1 (RGL) and v2 (mm canvas + moveable). */}
           <WithTooltip text={editorVersion === "v2" ? "Switch back to legacy editor" : "Try the new mm-coord editor (BETA)"}>
@@ -1696,10 +1696,10 @@ function EpaperEditorPage() {
                 {addBlockOpen && (
                   <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, background: "#fff", border: "1px solid #d1d5db", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 100, minWidth: 220, padding: 6 }}>
                     {[
-                      { t: "lead", lbl: "Lead story", hint: "8×12 — big headline + image" },
-                      { t: "major", lbl: "Major", hint: "4×6 — secondary story" },
-                      { t: "secondary", lbl: "Secondary", hint: "3×5 — sidebar story" },
-                      { t: "brief", lbl: "Brief", hint: "6×2 — short item" },
+                      { t: "lead", lbl: "Lead story", hint: "8×12 - big headline + image" },
+                      { t: "major", lbl: "Major", hint: "4×6 - secondary story" },
+                      { t: "secondary", lbl: "Secondary", hint: "3×5 - sidebar story" },
+                      { t: "brief", lbl: "Brief", hint: "6×2 - short item" },
                       { t: "image", lbl: "Image only", hint: "4×4" },
                       { t: "text", lbl: "Text only", hint: "6×2" },
                       { t: "ad", lbl: "Ad slot", hint: "12×3 full-width" },
@@ -1740,7 +1740,7 @@ function EpaperEditorPage() {
               {opt.label}
             </button>
           ))}
-          <span style={{ fontSize: 12, color: "#888" }}>Render: <b>{edition?.status || "—"}</b></span>
+          <span style={{ fontSize: 12, color: "#888" }}>Render: <b>{edition?.status || "-"}</b></span>
           <SaveBadge state={saveState} lastSavedAt={lastSavedAt} tick={saveTick} />
           {error && <span style={{ color: "#dc2626", fontSize: 12 }}>{error}</span>}
         </div>
@@ -1754,7 +1754,7 @@ function EpaperEditorPage() {
 
         {edition && (
           <div style={{ display: "flex", gap: 16, flex: 1, minHeight: 0 }}>
-            {/* Page tabs — flex-shrink:0 so the picker on the right keeps its width;
+            {/* Page tabs - flex-shrink:0 so the picker on the right keeps its width;
                 overflowY:auto + minHeight:0 so this list scrolls independently
                 of the canvas (no full-page scroll bleed). */}
             <aside style={{ width: 240, flexShrink: 0, background: "#fff", borderRadius: 8, padding: 12, overflowY: "auto", minHeight: 0 }}>
@@ -1923,7 +1923,7 @@ function EpaperEditorPage() {
                             };
                             const next = [...v2BlocksForActive, copy];
                             saveLayout(next as any);
-                            toast("success", `Detached ${masterBlock.type} block — editable on this page only.`);
+                            toast("success", `Detached ${masterBlock.type} block - editable on this page only.`);
                           }}
                           renderBlockContent={(b) => {
                             const meta = b.articleId ? titles[b.articleId] : null;
@@ -1937,7 +1937,7 @@ function EpaperEditorPage() {
                         />
                       ) : (
                         <div style={{ position: "relative" }}>
-                          {/* Draw toolbar — Word/InDesign-style. Click a tool then
+                          {/* Draw toolbar - Word/InDesign-style. Click a tool then
                               drag on the canvas to create a block at any size. */}
                           <div style={{ display: "flex", gap: 6, marginBottom: 6, flexWrap: "wrap", alignItems: "center", padding: "6px 8px", background: "#f9fafb", borderRadius: 6, border: "1px solid #e5e7eb" }}>
                             <span style={{ fontSize: 11, fontWeight: 700, color: "#374151" }}>✏ Draw tool:</span>
@@ -1956,7 +1956,7 @@ function EpaperEditorPage() {
                               </span>
                             )}
                           </div>
-                          {/* Draw overlay — appears only when a tool is selected. */}
+                          {/* Draw overlay - appears only when a tool is selected. */}
                           {drawType && (
                             <div onMouseDown={handleCanvasMouseDown}
                               onMouseMove={handleCanvasMouseMove}
@@ -2044,7 +2044,7 @@ function EpaperEditorPage() {
               )}
             </section>
 
-            {/* Article picker — chip-based filters so the operator can SEE every
+            {/* Article picker - chip-based filters so the operator can SEE every
                 rule the slot has + untick to widen the search. */}
             <aside style={{ width: 320, background: "#fff", borderRadius: 8, padding: 12, overflowY: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
               <h3 style={{ fontSize: 13, fontWeight: 800, color: "#555" }}>ARTICLE PICKER</h3>
@@ -2309,7 +2309,7 @@ function DraggableBlockGrid({
   onClearOffPage?: () => void;
   pageId?: string;
   pageVersion?: number;
-  /** Inline TipTap edits: { id, overrideTitle?, overrideDek? } — parent
+  /** Inline TipTap edits: { id, overrideTitle?, overrideDek? } - parent
    *  patches the matching block in the layout. */
   onInlineEdit?: (blockId: string, patch: { overrideTitle?: string; overrideDek?: string }) => void;
 }) {
@@ -2337,13 +2337,13 @@ function DraggableBlockGrid({
   }));
 
   const onChange = (newRGL: RGLLayout[]) => {
-    // Refuse RGL changes that would push any block past MAX_ROWS — print
+    // Refuse RGL changes that would push any block past MAX_ROWS - print
     // would clip it. Snap the offending block back to its prior position
     // instead and alert the operator with a clear next-step (split to
     // continuation on the next page).
     const overflowing = newRGL.find((it) => it.y + it.h > MAX_ROWS);
     if (overflowing) {
-      alert(`Block "${overflowing.i}" would land past row ${MAX_ROWS} (the print page boundary). Page is full — pick one:\n\n• Make the block smaller\n• Move another block off this page\n• Add a new page and split the story to a continuation block`);
+      alert(`Block "${overflowing.i}" would land past row ${MAX_ROWS} (the print page boundary). Page is full - pick one:\n\n• Make the block smaller\n• Move another block off this page\n• Add a new page and split the story to a continuation block`);
       return;
     }
     // Merge RGL coords back into our block model. Skip purely visual updates
@@ -2359,7 +2359,7 @@ function DraggableBlockGrid({
     if (dirty) onLayoutChange(next);
   };
 
-  // Visual snap guides — vertical lines at each column boundary, horizontal
+  // Visual snap guides - vertical lines at each column boundary, horizontal
   // lines at each row. Pure CSS background so it doesn't interact with RGL's
   // own drag/resize.
   const colPx = (GRID_WIDTH - 16) / COLS;
@@ -2370,7 +2370,7 @@ function DraggableBlockGrid({
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, fontSize: 11, fontWeight: 700 }}>
         <span style={{ color: isOverflow ? "#dc2626" : usedRows >= MAX_ROWS - 3 ? "#d97706" : "#16a34a" }}>
-          Page fill: {usedRows} / {MAX_ROWS} rows{isOverflow ? " — OVERFLOW will be clipped on print!" : ""}
+          Page fill: {usedRows} / {MAX_ROWS} rows{isOverflow ? " - OVERFLOW will be clipped on print!" : ""}
         </span>
         <div style={{ flex: 1, height: 6, background: "#e5e7eb", borderRadius: 3, overflow: "hidden" }}>
           <div style={{ width: `${Math.min(100, (usedRows / MAX_ROWS) * 100)}%`, height: "100%", background: isOverflow ? "#dc2626" : usedRows >= MAX_ROWS - 3 ? "#d97706" : "#16a34a" }} />
@@ -2386,7 +2386,7 @@ function DraggableBlockGrid({
         <span style={{ color: "#6b7280", fontWeight: 500 }}>Indian broadsheet 300×560mm</span>
       </div>
       <div style={{ position: "relative", background: "#FCFAF3", borderRadius: 6, padding: 8 }}>
-        {/* WYSIWYG underlay — the actual rendered HTML the PDF will produce.
+        {/* WYSIWYG underlay - the actual rendered HTML the PDF will produce.
             Scale = GRID_WIDTH / 1480 ≈ 0.662 so 1480×2760 page becomes
             980×1827 ≈ matches the grid's 30×60=1800 footprint. Tiles above
             stay transparent so the operator sees + edits the real Eenadu-
@@ -2416,10 +2416,10 @@ function DraggableBlockGrid({
             />
           </div>
         )}
-        {/* Red overflow zone — anything below row MAX_ROWS gets clipped on PDF render */}
+        {/* Red overflow zone - anything below row MAX_ROWS gets clipped on PDF render */}
         {isOverflow && (
           <div style={{ position: "absolute", left: 8, right: 8, top: 8 + MAX_ROWS * ROW_H, height: (usedRows - MAX_ROWS) * ROW_H, background: "repeating-linear-gradient(45deg, rgba(220,38,38,0.12), rgba(220,38,38,0.12) 8px, rgba(220,38,38,0.04) 8px, rgba(220,38,38,0.04) 16px)", borderTop: "2px dashed #dc2626", pointerEvents: "none", zIndex: 1 }}>
-            <div style={{ position: "sticky", top: 4, textAlign: "center", color: "#991b1b", fontWeight: 800, fontSize: 11, padding: 4 }}>⚠ OFF-PAGE — clipped on print</div>
+            <div style={{ position: "sticky", top: 4, textAlign: "center", color: "#991b1b", fontWeight: 800, fontSize: 11, padding: 4 }}>⚠ OFF-PAGE - clipped on print</div>
           </div>
         )}
       <GridLayout
@@ -2511,10 +2511,10 @@ function DraggableBlockGrid({
               {/* Empty-state CTA only when no article and the block is a story */}
               {!title && isStory && (
                 <div style={{ alignSelf: "center", marginTop: "auto", marginBottom: "auto", color: "#92400e", fontSize: 11, fontStyle: "italic", fontWeight: 700, padding: 4 }}>
-                  empty — click to pick
+                  empty - click to pick
                 </div>
               )}
-              {/* Inline TipTap editor — appears when this story block is
+              {/* Inline TipTap editor - appears when this story block is
                   selected. Operator types headline + body directly into
                   the canvas; save persists to overrideTitle / overrideDek.
                   Render path already prefers overrides over the linked

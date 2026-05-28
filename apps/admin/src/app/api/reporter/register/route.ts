@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
 
     // Canonicalise email before the uniqueness check + write. Without this
     // `Foo@Gmail.com` and `foo@gmail.com` would slip past the unique
-    // constraint as two separate users — same human, two accounts, two
+    // constraint as two separate users - same human, two accounts, two
     // sets of articles, no way to recover.
     const cleanEmail = normalizeEmail(email);
     if (!cleanEmail) {

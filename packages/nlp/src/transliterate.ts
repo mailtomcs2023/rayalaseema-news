@@ -1,8 +1,8 @@
-// Spec #4 K7 (#252) — Telugu → IAST/Romanised transliteration.
+// Spec #4 K7 (#252) - Telugu → IAST/Romanised transliteration.
 //
 // Used at draft-save time to auto-fill the URL slug + English-only meta
 // keywords. Editors can override. Capturing both the native and
-// romanised forms doubles the reachable query bucket — see research §1.
+// romanised forms doubles the reachable query bucket - see research §1.
 //
 // Implementation: dictionary table mapping each Telugu character to its
 // ITRANS-style ASCII equivalent. Order matters: longer multi-char tokens
@@ -35,13 +35,13 @@ const CONSONANTS: Record<string, string> = {
   "ళ": "la", "క్ష": "ksha", "ఱ": "rra",
 };
 
-const VIRAMA = "్"; // halant — removes inherent 'a'
+const VIRAMA = "్"; // halant - removes inherent 'a'
 
 /**
  * Transliterate a Telugu string into ITRANS-ish ASCII. Output is lowercase,
  * hyphen-safe for use in URL slugs. Non-Telugu characters pass through.
  *
- * Not perfect — this is a pragmatic dictionary mapping, not a full
+ * Not perfect - this is a pragmatic dictionary mapping, not a full
  * linguistic transliteration. Editors can override the generated slug.
  */
 export function teluguToAscii(input: string): string {

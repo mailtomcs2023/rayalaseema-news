@@ -1,4 +1,4 @@
-// /api/articles/[id]/pib-approve — Spec #1 A1C (#189) compat shim.
+// /api/articles/[id]/pib-approve - Spec #1 A1C (#189) compat shim.
 // Calls the canonical /api/content/[id]/pib-approve handler logic against
 // the Content table where type=ARTICLE.
 import { NextRequest, NextResponse } from "next/server";

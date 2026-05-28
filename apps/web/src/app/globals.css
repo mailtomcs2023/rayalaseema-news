@@ -1,4 +1,4 @@
-/* BBC look — sans-serif only. Noto Sans Telugu (body) + Noto Serif Telugu (article h1 only) */
+/* BBC look - sans-serif only. Noto Sans Telugu (body) + Noto Serif Telugu (article h1 only) */
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Telugu:wght@400;500;600;700;800;900&family=Noto+Serif+Telugu:wght@400;500;600;700;800;900&display=swap');
 
 /* ===== Nova preset (pristine shadcn v4 block) ================================ */
@@ -56,7 +56,7 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.547 0.229 27.36);            /* brand red — #E01B1B */
+  --primary: oklch(0.547 0.229 27.36);            /* brand red - #E01B1B */
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -67,7 +67,7 @@
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.547 0.229 27.36);               /* brand red — focus ring on-brand */
+  --ring: oklch(0.547 0.229 27.36);               /* brand red - focus ring on-brand */
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -90,7 +90,7 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.62 0.22 27.36);              /* brand red — slightly lifted for dark bg */
+  --primary: oklch(0.62 0.22 27.36);              /* brand red - slightly lifted for dark bg */
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
@@ -127,7 +127,7 @@
   }
 }
 
-/* ===== Project additions — brand-red palette + Telugu fonts ==================
+/* ===== Project additions - brand-red palette + Telugu fonts ==================
    shadcn's `primary/secondary/accent` above are DEFAULT-only; this block adds
    the numbered scales (`bg-primary-500`, `text-secondary-100` etc.) the rest
    of the codebase (~200 usages across 31 files) still depends on. */
@@ -158,17 +158,17 @@
   --font-body:    "Mandali", "Noto Sans Telugu", "NTR", sans-serif;
 }
 
-/* ====== DESIGN TOKENS — single source of truth ====== */
+/* ====== DESIGN TOKENS - single source of truth ====== */
 :root {
-  /* ---------- COLOR — brand + neutrals + semantic ---------- */
-  --brand: #E01B1B;            /* dialed down from #FF2C2C — fluorescent fatigue */
+  /* ---------- COLOR - brand + neutrals + semantic ---------- */
+  --brand: #E01B1B;            /* dialed down from #FF2C2C - fluorescent fatigue */
   --brand-dark: #B91414;
   --brand-soft: #FFF1F1;
   --brand-on: #FFFFFF;
 
-  --paper: #FFFFFF;            /* BBC look — pure white cards */
+  --paper: #FFFFFF;            /* BBC look - pure white cards */
   --paper-edge: rgba(0,0,0,0.06);
-  --page-bg: #F6F6F6;          /* BBC body bg — light gray so white cards pop */
+  --page-bg: #F6F6F6;          /* BBC body bg - light gray so white cards pop */
 
   --n-0:  #FFFFFF;
   --n-50: #F9FAFB;
@@ -184,19 +184,19 @@
   --warn:    #D97706;
   --danger:  #DC2626;
 
-  /* ---------- RADIUS — 3 tiers only ---------- */
+  /* ---------- RADIUS - 3 tiers only ---------- */
   --r-sm: 4px;
   --r-md: 8px;
   --r-lg: 16px;
   --r-pill: 9999px;
 
-  /* ---------- SHADOW — 3 tiers (layered for paper depth) ---------- */
+  /* ---------- SHADOW - 3 tiers (layered for paper depth) ---------- */
   --shadow-sm:  0 1px 2px rgba(0,0,0,0.05);
   --shadow-md:  0 1px 2px rgba(0,0,0,0.04), 0 6px 22px rgba(0,0,0,0.05);
   --shadow-lg:  0 2px 4px rgba(0,0,0,0.08), 0 14px 40px rgba(0,0,0,0.10);
   --shadow-inset-tab: 0 1px 0 rgba(0,0,0,0.10), inset 0 -2px 0 rgba(0,0,0,0.14);
 
-  /* ---------- SPACING — 8-grid (with 4 for compact) ---------- */
+  /* ---------- SPACING - 8-grid (with 4 for compact) ---------- */
   --sp-1: 4px;
   --sp-2: 8px;
   --sp-3: 12px;
@@ -205,7 +205,7 @@
   --sp-6: 32px;
   --sp-7: 48px;
 
-  /* ---------- TYPE SCALE — 6 sizes ---------- */
+  /* ---------- TYPE SCALE - 6 sizes ---------- */
   --t-xs:  12px;
   --t-sm:  14px;
   --t-md:  16px;
@@ -214,7 +214,7 @@
   --t-2xl: 28px;
   --t-3xl: 36px;   /* article hero only */
 
-  /* ---------- WEIGHT — 3 only ---------- */
+  /* ---------- WEIGHT - 3 only ---------- */
   --w-body: 400;
   --w-emp:  600;
   --w-head: 800;
@@ -236,7 +236,7 @@
   --font-telugu-heading: "Noto Serif Telugu", "Noto Sans Telugu", serif;
   --font-latin: "Noto Sans Telugu", "Helvetica Neue", Arial, sans-serif;
 
-  /* ====== LEGACY ALIASES (kept for backward compat — gradually drop) ====== */
+  /* ====== LEGACY ALIASES (kept for backward compat - gradually drop) ====== */
   --color-brand: var(--brand);
   --color-brand-dark: var(--brand-dark);
   --color-brand-darker: var(--brand-dark);
@@ -284,12 +284,12 @@
     text-rendering: optimizeLegibility;
   }
 
-  /* Body + form controls — sans (Noto Sans Telugu) */
+  /* Body + form controls - sans (Noto Sans Telugu) */
   body, button, input, textarea, select {
     font-family: var(--font-telugu-body) !important;
   }
   /* Header nav (both <a> links and the "మరిన్ని" <button> dropdown trigger)
-     uses Noto Sans Telugu at real weight 600 — chosen for legibility at
+     uses Noto Sans Telugu at real weight 600 - chosen for legibility at
      13px. Mandali only ships weight 400, so its bold was synthetic and the
      button looked visually distinct from its siblings. */
   .nav-gradient a,
@@ -298,7 +298,7 @@
     font-weight: 600 !important;
     letter-spacing: 0.02em !important;
   }
-  /* Headings — serif (Noto Serif Telugu) for editorial gravity, sitewide */
+  /* Headings - serif (Noto Serif Telugu) for editorial gravity, sitewide */
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-telugu-heading) !important;
   }
@@ -311,7 +311,7 @@
     line-height: var(--lh-loose);
   }
 
-  /* ===== TYPE HIERARCHY — distinct ranks via size + weight ===== */
+  /* ===== TYPE HIERARCHY - distinct ranks via size + weight ===== */
   h1 { font-weight: var(--w-head) !important; font-size: var(--t-2xl);  line-height: var(--lh-tight); }
   h2 { font-weight: var(--w-head) !important; font-size: var(--t-xl);   line-height: var(--lh-snug);  }
   h3 { font-weight: var(--w-head) !important; font-size: var(--t-lg);   line-height: var(--lh-snug);  }
@@ -353,7 +353,7 @@
   .card__image img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform var(--dur-slow) var(--ease); }
   .card:hover .card__image img { transform: scale(1.04); }
 
-  /* ===== CHIP — category label, breaking pill, meta tags ===== */
+  /* ===== CHIP - category label, breaking pill, meta tags ===== */
   .chip {
     display: inline-flex;
     align-items: center;
@@ -372,7 +372,7 @@
   .chip--soft  { background: var(--brand-soft); color: var(--brand-dark); }
   .chip--ghost { background: transparent; color: var(--n-600); border: 1px solid var(--n-200); }
 
-  /* ===== TYPE — RANKED ===== */
+  /* ===== TYPE - RANKED ===== */
   .h-hero     { font-family: var(--font-telugu-heading); font-size: var(--t-2xl); font-weight: var(--w-head); line-height: var(--lh-tight); color: var(--n-900); }
   .h-feature  { font-family: var(--font-telugu-heading); font-size: var(--t-xl);  font-weight: var(--w-head); line-height: 1.3; color: var(--n-900); }
   .h-card     { font-family: var(--font-telugu-heading); font-size: var(--t-lg);  font-weight: var(--w-head); line-height: 1.35; color: var(--n-900); }
@@ -380,7 +380,7 @@
   .meta       { font-family: var(--font-telugu-body); font-size: var(--t-xs); font-weight: var(--w-body); color: var(--n-500); }
   .meta-italic{ font-family: var(--font-latin);       font-size: var(--t-xs); font-weight: var(--w-body); color: var(--n-500); letter-spacing: 0.04em; text-transform: uppercase; }
 
-  /* ===== INTERACTIVE — single hover language ===== */
+  /* ===== INTERACTIVE - single hover language ===== */
   .link-hover { transition: color var(--dur-fast) var(--ease); }
   .link-hover:hover { color: var(--brand-dark); }
 
@@ -399,7 +399,7 @@
   .article-body .re-byline {
     font-family: var(--font-telugu-heading);
     font-weight: 800;
-    color: var(--brand);   /* Red — Sakshi-style standout dateline */
+    color: var(--brand);   /* Red - Sakshi-style standout dateline */
     margin-right: 4px;
   }
 
@@ -414,7 +414,7 @@
   }
   body.article-paywall-blocked { overflow: hidden; }
 
-  /* Editorial headline serif — article title only */
+  /* Editorial headline serif - article title only */
   article > h1, .article-title, .article-body h1 {
     font-family: var(--font-telugu-heading) !important;
     font-weight: var(--w-head);
@@ -422,7 +422,7 @@
     font-size: var(--t-3xl);
   }
 
-  /* Section accent — hairline rule above card content */
+  /* Section accent - hairline rule above card content */
   .category-card-header {
     border-bottom: 2px solid var(--brand);
     padding-bottom: var(--sp-1) !important;
@@ -462,7 +462,7 @@
     letter-spacing: 0.08em;
   }
 
-  /* Legacy headlines — point at new tokens */
+  /* Legacy headlines - point at new tokens */
   .news-headline-featured {
     font-size: var(--t-xl);
     line-height: 1.3;
@@ -488,7 +488,7 @@
 
   .hover-brand:hover { color: var(--brand-dark) !important; }
 
-  /* ===== SECTION HEAD — BBC kicker: 2px red rule on left, bold uppercase label ===== */
+  /* ===== SECTION HEAD - BBC kicker: 2px red rule on left, bold uppercase label ===== */
   .section-head {
     display: flex;
     align-items: center;
@@ -554,10 +554,10 @@
 /* POLISH #2: pause breaking-news marquee so readers can actually read it */
 .animate-marquee:hover { animation-play-state: paused; cursor: pointer; }
 
-/* News card hover — POLISH #3: smoother, less jumpy */
+/* News card hover - POLISH #3: smoother, less jumpy */
 .news-card:hover .news-card-img { transform: scale(1.03); }
 
-/* Missing image placeholder — branded SVG-like gradient */
+/* Missing image placeholder - branded SVG-like gradient */
 .img-placeholder {
   width: 100%;
   aspect-ratio: 16/10;
@@ -602,7 +602,7 @@
 }
 .news-card:hover { box-shadow: var(--shadow-md); }
 
-/* Category card boxes — tokens; VIBE pack later overrides bg w/ paper + shadows */
+/* Category card boxes - tokens; VIBE pack later overrides bg w/ paper + shadows */
 .category-card {
   background: var(--paper);
   border: 1px solid var(--paper-edge);
@@ -644,7 +644,7 @@ footer {
   box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
 }
 footer * {
-  color: #D1D1D1 !important; /* was #B8B8B8 — failed WCAG AA on dark bg */
+  color: #D1D1D1 !important; /* was #B8B8B8 - failed WCAG AA on dark bg */
 }
 footer h4 {
   color: #fff !important;
@@ -722,7 +722,7 @@ footer a:hover {
   display: inline-block;
 }
 
-/* ====== RESPONSIVE HOMEPAGE LAYOUT — 8-grid spacing ====== */
+/* ====== RESPONSIVE HOMEPAGE LAYOUT - 8-grid spacing ====== */
 .home-section-1 {
   display: flex;
   gap: var(--sp-3);
@@ -850,10 +850,10 @@ footer a:hover {
   }
 }
 
-/* ====== POLISH BLOCK (color/text/motion only — no layout changes) ====== */
+/* ====== POLISH BLOCK (color/text/motion only - no layout changes) ====== */
 
 /* POLISH #5: Visible focus ring for keyboard navigation (only shows on Tab).
-   Scoped to skip shadcn/Nova components — they emit their own focus ring via
+   Scoped to skip shadcn/Nova components - they emit their own focus ring via
    `--ring` (see `has-[...focus-visible]` selectors in input-group, button etc.),
    and stacking a red outline on top of that ring looks broken. */
 *:focus-visible {
@@ -901,7 +901,7 @@ button:not([data-slot]):focus-visible {
 }
 
 /* ====================================================================== */
-/* ====== BBC PACK — clean modern news (white cards on light gray) ====== */
+/* ====== BBC PACK - clean modern news (white cards on light gray) ====== */
 /* ====================================================================== */
 
 /* Body is light gray so white cards visually float */
@@ -918,14 +918,14 @@ body { background: var(--page-bg) !important; }
 .category-card:hover { box-shadow: var(--shadow-md) !important; }
 .bg-white { background-color: var(--paper) !important; }
 
-/* Generous breathing between major sections — BBC has lots of air */
+/* Generous breathing between major sections - BBC has lots of air */
 .home-section-1     { margin-top: var(--sp-5) !important; gap: var(--sp-4) !important; }
 .home-section-media { margin-top: var(--sp-6) !important; gap: var(--sp-4) !important; }
 .home-section-content { margin-top: var(--sp-6) !important; gap: var(--sp-4) !important; }
 .home-content-left .space-y-2 > * + * { margin-top: var(--sp-5) !important; }
 .home-content-left .grid           { gap: var(--sp-4) !important; }
 
-/* Trending sidebar: plain bold red numerals — no italic, no Cormorant */
+/* Trending sidebar: plain bold red numerals - no italic, no Cormorant */
 .home-sidebar > .bg-white ul {
   counter-reset: trending;
   padding: 0;
@@ -960,7 +960,7 @@ body { background: var(--page-bg) !important; }
 .container-news { padding-left: var(--sp-4); padding-right: var(--sp-4); }
 
 /* ====================================================================== */
-/* BBC AGGRESSIVE OVERRIDE — neutralize remaining red filled strip headers */
+/* BBC AGGRESSIVE OVERRIDE - neutralize remaining red filled strip headers */
 /* ====================================================================== */
 
 /* District-News grid: red filled headers + red border + red title → BBC kicker */
@@ -971,7 +971,7 @@ body { background: var(--page-bg) !important; }
   margin-bottom: var(--sp-5) !important;  /* clear separation before district grid */
 }
 
-/* Section block wrapping district news — title + grid spacing */
+/* Section block wrapping district news - title + grid spacing */
 .district-news-grid {
   gap: var(--sp-4) !important;
   margin-top: var(--sp-2) !important;
@@ -1041,7 +1041,7 @@ body { background: var(--page-bg) !important; }
   letter-spacing: 0.06em;
 }
 
-/* Web Stories — kill inline red strip header (background: "#E01B1B") */
+/* Web Stories - kill inline red strip header (background: "#E01B1B") */
 [style*="#E01B1B"]:not(.nav-gradient) {
   background: transparent !important;
   border-radius: 0 !important;
@@ -1069,7 +1069,7 @@ h2[style*="color:var(--color-brand)"] {
   letter-spacing: 0.04em;
 }
 
-/* ===== STRUCTURAL ALIGNMENT — remove panel-wrapper padding so sections share left edge ===== */
+/* ===== STRUCTURAL ALIGNMENT - remove panel-wrapper padding so sections share left edge ===== */
 .home-section-1 > .home-main,
 .home-section-1 > .home-sidebar {
   background: transparent !important;
@@ -1120,7 +1120,7 @@ h2[style*="color:var(--color-brand)"] {
   top: var(--sp-4);
 }
 
-/* ===== Nested panel flattening — widgets inside tabs lose their own chrome ===== */
+/* ===== Nested panel flattening - widgets inside tabs lose their own chrome ===== */
 .panel .panel {
   background: transparent !important;
   border: none !important;
@@ -1162,7 +1162,7 @@ h2[style*="color:var(--color-brand)"] {
   .cartoon-sticky { position: static; }
 }
 
-/* ===== FINAL STANDARDIZATION — every panel/card-like element same chrome ===== */
+/* ===== FINAL STANDARDIZATION - every panel/card-like element same chrome ===== */
 
 /* Video / Movies / Reels / WebStories / PhotoGallery / Cartoon wrappers */
 .category-card,
@@ -1187,7 +1187,7 @@ h2[style*="color:var(--color-brand)"] {
   padding: var(--sp-3) !important;
 }
 
-/* Yetteta cartoon — image must not balloon */
+/* Yetteta cartoon - image must not balloon */
 .home-content-left img[style*="aspect-ratio: 1/1"],
 .home-content-left img[style*="aspect-ratio:1/1"] {
   max-height: 360px;
@@ -1195,7 +1195,7 @@ h2[style*="color:var(--color-brand)"] {
   object-fit: cover;
 }
 
-/* Yetteta archive link — red bar at bottom becomes neutral footer link */
+/* Yetteta archive link - red bar at bottom becomes neutral footer link */
 a[href="/cartoons"] {
   background: var(--paper) !important;
   color: var(--brand) !important;
@@ -1211,7 +1211,7 @@ a[href="/cartoons"] {
   margin-top: var(--sp-6) !important;
 }
 
-/* "View all" / "మరిన్ని" footer links — normalize */
+/* "View all" / "మరిన్ని" footer links - normalize */
 .home-content-left a[href$="#"][style*="textAlign: \"center\""],
 .home-content-left a[style*="border-top"][style*="textAlign"] {
   padding: var(--sp-2) var(--sp-3) !important;

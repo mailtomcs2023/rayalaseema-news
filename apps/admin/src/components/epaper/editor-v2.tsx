@@ -6,7 +6,7 @@ import { Ruler, useCanvasCursor } from "./ruler";
 import { useZoom, ZoomBar } from "./zoom-controls";
 import { DEFAULT_GEOMETRY, type PageGeometry } from "@/lib/epaper/geometry";
 
-// EditorV2 (#135) — composes Canvas + Rulers + ZoomBar into a single
+// EditorV2 (#135) - composes Canvas + Rulers + ZoomBar into a single
 // drop-in alternative to DraggableBlockGrid. Page (apps/admin/src/app/
 // (dashboard)/epaper/page.tsx) renders this when ?editor=v2.
 

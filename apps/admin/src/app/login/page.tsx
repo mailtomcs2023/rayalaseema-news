@@ -20,7 +20,7 @@ import { Eye, EyeOff, AlertCircle, ShieldCheck, Pencil, ClipboardCheck, Newspape
 // Demo-only quick-login cards. Each tap auto-fills + submits the credentials
 // for a seeded test account so reviewers can flip between roles without
 // retyping. Source of truth for these passwords is
-// packages/db/scripts/seed-test-users.ts — keep in sync.
+// packages/db/scripts/seed-test-users.ts - keep in sync.
 const DEMO_ROLES = [
   { key: "admin",     label: "Admin",      email: "admin@rayalaseemaexpress.com",     password: "admin123",     accent: "#dc2626", Icon: ShieldCheck    },
   { key: "editor",    label: "Editor",     email: "editor@rayalaseemaexpress.com",    password: "editor123",    accent: "#2563eb", Icon: Pencil         },
@@ -73,7 +73,7 @@ export default function LoginPage() {
         setLoading(false);
       } else if (result?.ok) {
         // Middleware redirects to role-appropriate landing on the next page
-        // load — REPORTER → /reporter-home, SUB_EDITOR → /review, etc.
+        // load - REPORTER → /reporter-home, SUB_EDITOR → /review, etc.
         window.location.href = "/";
       } else {
         setError("Login failed. Try again.");
@@ -133,7 +133,7 @@ export default function LoginPage() {
           ) : null}
 
           {/* noValidate so the browser's native HTML5 popups don't fire
-              before our Zod validation runs — keeps error UX consistent. */}
+              before our Zod validation runs - keeps error UX consistent. */}
           <form onSubmit={handleSubmit} noValidate className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="email">Email</Label>
@@ -191,7 +191,7 @@ export default function LoginPage() {
               {loading ? "Signing in..." : "Sign In"}
             </Button>
 
-            {/* Quick demo login — one tap per role, auto-submits with the
+            {/* Quick demo login - one tap per role, auto-submits with the
                 seeded test credentials. Only rendered in development so
                 production never exposes the canned passwords. NODE_ENV is
                 statically replaced by Next at build time, so the block is

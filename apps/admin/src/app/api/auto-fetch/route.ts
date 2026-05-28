@@ -115,7 +115,7 @@ RULES:
   }
 }
 
-// Generate URL slug from title — delegates to shared sanitizer + uniqueness helper.
+// Generate URL slug from title - delegates to shared sanitizer + uniqueness helper.
 function generateSlug(title: string, existingSlugs: Set<string>): string {
   const base = buildSlugFromTitle(title);
   const final = uniqueSlug(base, existingSlugs);
@@ -167,7 +167,7 @@ async function importOneArticle(
       body: result.article.body_html_te,
     };
   } catch (e) {
-    // Azure Responsible AI blocked this article. Bail out hard — the
+    // Azure Responsible AI blocked this article. Bail out hard - the
     // fallback (raw English in <p>) is worse than nothing because it
     // silently pollutes the review queue with un-translated rows and
     // the editor has no signal the AI rejected the source.
@@ -223,7 +223,7 @@ async function importOneArticle(
   return created;
 }
 
-// Shape coming back from NewsData.io — the subset we use.
+// Shape coming back from NewsData.io - the subset we use.
 interface RawArticle {
   article_id?: string;
   title?: string;
@@ -239,7 +239,7 @@ interface RawArticle {
 // articles with dedup flags without importing anything. Phase 2 (action=
 // "import" or articles[] provided) imports a caller-curated list.
 // Backward-compat: old shape { categories, forceReimport? } still works and
-// behaves like "fetch + auto-import everything" — the modal's bulk mode.
+// behaves like "fetch + auto-import everything" - the modal's bulk mode.
 export async function POST(req: NextRequest) {
   const session = await requireAuth(["ADMIN"]); if (isAuthError(session)) return session;
   if (!NEWSDATA_KEY) return NextResponse.json({ error: "NEWSDATA_API_KEY not configured" }, { status: 503 });
@@ -251,7 +251,7 @@ export async function POST(req: NextRequest) {
     // forceReimport=true → for every sourceUrl already in Content (live OR
     // soft-deleted), hard-delete the existing row before re-creating.
     forceReimport,
-    // Step 2 refine controls — all map to NewsData.io query params.
+    // Step 2 refine controls - all map to NewsData.io query params.
     // cursors keyed by category for per-category "Load more" pagination.
     keywordOverride,
     fromDate,
@@ -283,7 +283,7 @@ export async function POST(req: NextRequest) {
   // The DB unique indexes on (slug) and (sourceUrl) span every row regardless
   // of soft-delete state, so dedup must too. The prisma client extension
   // (packages/db/src/index.ts) auto-injects `deletedAt: null` on findMany,
-  // hiding trashed rows from the default query — we work around it by
+  // hiding trashed rows from the default query - we work around it by
   // running a second findMany with an EXPLICIT deletedAt filter (any
   // explicit deletedAt key in where bypasses the auto-inject) and merging.
   const [activeItems, trashedItems] = await Promise.all([
@@ -302,7 +302,7 @@ export async function POST(req: NextRequest) {
   const categoryMap: Record<string, string> = {};
   dbCategories.forEach((c) => (categoryMap[c.slug] = c.id));
 
-  // Phase 1 — preview. Pull NewsData hits for each selected category and
+  // Phase 1 - preview. Pull NewsData hits for each selected category and
   // return them WITHOUT importing. Each result is flagged `alreadyImported`
   // so the picker UI can dim / pre-uncheck them.
   if (action === "preview") {
@@ -315,12 +315,12 @@ export async function POST(req: NextRequest) {
     const trimmedKeyword = (keywordOverride || "").trim();
     for (const catSlug of categoriesToFetch) {
       // Categories the admin added in /categories aren't in our curated
-      // categoryQueries map — fall back to using the slug itself (cleaned
+      // categoryQueries map - fall back to using the slug itself (cleaned
       // of district- prefix and dashes) as the NewsData search query.
       const config = categoryQueries[catSlug] || {
         q: catSlug.replace(/^district-/, "").replace(/-/g, " "),
       };
-      // Modal "Refine" bar — if a keyword override is set, it wins over
+      // Modal "Refine" bar - if a keyword override is set, it wins over
       // the curated per-category query. Otherwise each category keeps
       // its tuned q-string. Date / domain / pagination params are passed
       // through to NewsData when present.
@@ -358,7 +358,7 @@ export async function POST(req: NextRequest) {
   const results: { category: string; fetched: number; published: number; blocked?: number; error?: string }[] = [];
   let totalPublished = 0;
 
-  // Phase 2 — import a curated list. Skip the NewsData fetch entirely; the
+  // Phase 2 - import a curated list. Skip the NewsData fetch entirely; the
   // caller already picked the articles in the preview step.
   if (Array.isArray(pickedArticles) && pickedArticles.length > 0) {
     // Group by category so we share the same constituency lookup per group.
@@ -408,7 +408,7 @@ export async function POST(req: NextRequest) {
   }
 
   for (const catSlug of categoriesToFetch) {
-    // Same fallback as the preview branch — admin-created categories.
+    // Same fallback as the preview branch - admin-created categories.
     const config = categoryQueries[catSlug] || {
       q: catSlug.replace(/^district-/, "").replace(/-/g, " "),
     };
@@ -466,7 +466,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Translate to Telugu via the Eenadu-grade pipeline. Same path as
-        // importOneArticle — kept inlined here so the bulk-all branch
+        // importOneArticle - kept inlined here so the bulk-all branch
         // produces identical quality copy to the curated-picker branch.
         let translated;
         try {
@@ -479,7 +479,7 @@ export async function POST(req: NextRequest) {
             body: r.article.body_html_te,
           };
         } catch (e) {
-          // Azure content filter — skip the article entirely so the
+          // Azure content filter - skip the article entirely so the
           // review queue stays clean. Other failures fall through to the
           // English placeholder so the editor can manually translate.
           if (e instanceof AIContentFilterError) {
@@ -494,7 +494,7 @@ export async function POST(req: NextRequest) {
         const slug = generateSlug(article.title, existingSlugs);
 
         // Re-host source image on Azure Blob (publishers block hotlinking).
-        // Image is OPTIONAL — articles without one still import; admin can
+        // Image is OPTIONAL - articles without one still import; admin can
         // attach a stock image later via the editor's image-search modal.
         const hostedImage = article.image_url ? await uploadImageFromUrl(article.image_url) : null;
 
@@ -534,7 +534,7 @@ export async function POST(req: NextRequest) {
               finalSlug = `${slug}-${Date.now()}-${attempt + 1}`;
               continue;
             }
-            // sourceUrl collision — article already in DB (possibly soft-
+            // sourceUrl collision - article already in DB (possibly soft-
             // deleted, hence missed by our dedup set). Skip silently;
             // editor can restore the trashed row if they want it back.
             if (msg.includes("Unique constraint") && msg.includes("sourceUrl")) {
@@ -544,7 +544,7 @@ export async function POST(req: NextRequest) {
           }
         }
         if (!created) {
-          // Three retries exhausted — skip this article rather than throwing
+          // Three retries exhausted - skip this article rather than throwing
           // (don't want one bad slug to abort the whole category batch).
           continue;
         }

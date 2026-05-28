@@ -1,4 +1,4 @@
-// Spec #4 K4 (#249) — Movie + Review + AggregateRating JSON-LD.
+// Spec #4 K4 (#249) - Movie + Review + AggregateRating JSON-LD.
 //
 // Telugu cinema review pages need Review schema with itemReviewed=Movie
 // to earn star ratings in SERP. +10% CTR documented vs no-rating
@@ -8,7 +8,7 @@
 import type { JsonLd, AuthorRef, PublisherConfig } from "./types";
 
 interface MovieFacts {
-  /** Movie name as released — Telugu form. */
+  /** Movie name as released - Telugu form. */
   name: string;
   /** English transliteration, used as `alternateName`. */
   nameEn?: string;
@@ -23,7 +23,7 @@ interface MovieFacts {
 }
 
 interface ReviewFacts {
-  /** 1.0 — 5.0 numeric rating. */
+  /** 1.0 - 5.0 numeric rating. */
   ratingValue: number;
   /** Defaults to 5; some publications use 10-point. */
   bestRating?: number;
@@ -31,7 +31,7 @@ interface ReviewFacts {
   worstRating?: number;
   /** Headline / summary of the review. */
   headline: string;
-  /** Full review body — plain text or HTML. */
+  /** Full review body - plain text or HTML. */
   body?: string;
   /** Review publication date. */
   datePublished: string;

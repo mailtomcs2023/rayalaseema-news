@@ -36,11 +36,11 @@ export async function POST(req: NextRequest) {
       orderBy: { sortOrder: "asc" },
     });
     if (templates.length === 0) {
-      return NextResponse.json({ error: "No active templates — run seed-epaper-templates.ts" }, { status: 400 });
+      return NextResponse.json({ error: "No active templates - run seed-epaper-templates.ts" }, { status: 400 });
     }
 
     // One main edition row per day. Per-district editions are now pages within
-    // the same edition (v2 simplification — no more 9 separate EpaperEdition rows).
+    // the same edition (v2 simplification - no more 9 separate EpaperEdition rows).
     const edition = await prisma.epaperEdition.upsert({
       where: { date_edition: { date, edition: "main" } },
       update: { status: "draft", pageCount: templates.length },

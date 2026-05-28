@@ -58,7 +58,7 @@ interface Article {
   editorNote?: string | null;
   category: { name: string; nameEn: string; color: string };
   author: { name: string };
-  // Stage 2 — auto-assigned sub-editor (null = pool / unassigned).
+  // Stage 2 - auto-assigned sub-editor (null = pool / unassigned).
   assignedReviewer?: { id: string; name: string } | null;
 }
 
@@ -89,7 +89,7 @@ function bulkActionsFor(tab: string, role: string): ActionDef[] {
     if (["EDITOR", "ADMIN"].includes(role)) {
       out.push({ label: "Approve", action: "approve", color: "#16a34a", bg: "#dcfce7" });
       out.push({ label: "Publish", action: "publish", color: "#fff", bg: "#FF2C2C" });
-      // Editor-only escape hatch when a SE made a mistake — send it back to
+      // Editor-only escape hatch when a SE made a mistake - send it back to
       // them with a note. Not exposed to SE (they can't return to themselves).
       out.push({ label: "Return to SE", action: "return-to-se", color: "#92400e", bg: "#fef3c7" });
     }
@@ -117,7 +117,7 @@ export default function ReviewPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [rejectNote, setRejectNote] = useState("");
   const [rejectArticleId, setRejectArticleId] = useState<string | null>(null);
-  // Rejection-reason modal — opened from the new "Reason" column for any
+  // Rejection-reason modal - opened from the new "Reason" column for any
   // REJECTED row. Keeps the table compact instead of expanding a per-row
   // panel that pushes other rows down.
   const [reasonModalArticle, setReasonModalArticle] = useState<Article | null>(null);
@@ -135,7 +135,7 @@ export default function ReviewPage() {
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
 
-  // "Return to SE" modal — Editor/Admin only. Mirrors the review modal's
+  // "Return to SE" modal - Editor/Admin only. Mirrors the review modal's
   // single|bulk shape so we can fire one or many bounces with the same note.
   type ReturnTarget =
     | { mode: "single"; articleId: string; articleTitle: string }
@@ -145,7 +145,7 @@ export default function ReviewPage() {
   const [returnError, setReturnError] = useState<string | null>(null);
   const [returnSubmitting, setReturnSubmitting] = useState(false);
 
-  // Editor-note viewer modal — opens from the orange "View note" badge on
+  // Editor-note viewer modal - opens from the orange "View note" badge on
   // SUBMITTED rows so the SE can read why the editor sent it back.
   const [editorNoteModalArticle, setEditorNoteModalArticle] = useState<Article | null>(null);
 
@@ -160,7 +160,7 @@ export default function ReviewPage() {
   const [globalFilter, setGlobalFilter] = useState("");
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
-  // Tracks whether the component is still mounted — fetch callbacks bail out
+  // Tracks whether the component is still mounted - fetch callbacks bail out
   // when it's false so we don't setState on an unmounted component.
   const mountedRef = useRef(true);
   useEffect(() => {
@@ -192,7 +192,7 @@ export default function ReviewPage() {
 
   useEffect(() => {
     load("SUBMITTED");
-    // load is stable enough — only fired once on mount.
+    // load is stable enough - only fired once on mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -246,7 +246,7 @@ export default function ReviewPage() {
     load(activeTab);
   };
 
-  // Open the payment modal — entry point for both per-row and bulk Review.
+  // Open the payment modal - entry point for both per-row and bulk Review.
   const openReviewModal = (target: ReviewTarget) => {
     setReviewTarget(target);
     setReviewAmount("");
@@ -288,7 +288,7 @@ export default function ReviewPage() {
     }
   };
 
-  // Submit handler for the Return-to-SE modal. Note is mandatory — the SE
+  // Submit handler for the Return-to-SE modal. Note is mandatory - the SE
   // needs to know WHY it came back. Single fires doAction; bulk fans out via
   // doBulkAction, mirroring the review-modal shape.
   const submitReturnModal = async () => {
@@ -330,7 +330,7 @@ export default function ReviewPage() {
       if (["EDITOR", "ADMIN"].includes(role)) {
         actions.push({ label: "Approve", action: "approve", color: "#16a34a", bg: "#dcfce7" });
         actions.push({ label: "Publish", action: "publish", color: "#fff", bg: "#FF2C2C" });
-        // Editor-only escape hatch when a SE made a mistake — send it back to
+        // Editor-only escape hatch when a SE made a mistake - send it back to
         // them with a note. Not exposed to SE (they can't return to themselves).
         actions.push({ label: "Return to SE", action: "return-to-se", color: "#92400e", bg: "#fef3c7" });
       }
@@ -418,7 +418,7 @@ export default function ReviewPage() {
                   <path d="M3 12a9 9 0 1 0 9-9" />
                   <polyline points="3 4 3 10 9 10" />
                 </svg>
-                Returned by editor — view note
+                Returned by editor - view note
               </button>
             ) : null}
           </div>
@@ -497,7 +497,7 @@ export default function ReviewPage() {
         },
       },
       {
-        // Reason column — only meaningful for REJECTED rows. For everything
+        // Reason column - only meaningful for REJECTED rows. For everything
         // else we render a muted dash so the column has the same width across
         // tabs and doesn't shift layout on tab switch.
         id: "reason",
@@ -507,7 +507,7 @@ export default function ReviewPage() {
         cell: ({ row }) => {
           const a = row.original;
           if (a.status !== "REJECTED" || !a.rejectionNote) {
-            return <span style={{ fontSize: 12, color: "#cbd5e1" }}>—</span>;
+            return <span style={{ fontSize: 12, color: "#cbd5e1" }}>-</span>;
           }
           return (
             <button
@@ -626,7 +626,7 @@ export default function ReviewPage() {
     enableRowSelection: true,
     // React 19 flags setState during render as "update on a not-yet-mounted
     // component". TanStack's defaults reset page/expansion DURING the
-    // pagination row-model build — disable those auto-resets and instead
+    // pagination row-model build - disable those auto-resets and instead
     // reset pageIndex manually from useEffect (below) whenever filters/data
     // could push the user past the last page.
     autoResetPageIndex: false,
@@ -635,7 +635,7 @@ export default function ReviewPage() {
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 20 } },
+    initialState: { pagination: { pageSize: 10 } },
   });
 
   // Manually reset to page 1 when the data shape or filters change so the
@@ -660,7 +660,7 @@ export default function ReviewPage() {
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
         <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111", marginBottom: 4 }}>Review Queue</h1>
         <p style={{ fontSize: 13, color: "#888", marginBottom: 16 }}>
-          Editorial workflow — review, approve, publish articles
+          Editorial workflow - review, approve, publish articles
         </p>
 
         {/* Status Tabs */}
@@ -692,7 +692,7 @@ export default function ReviewPage() {
 
         {/* Toolbar: search + category/reporter filters + refresh + new */}
         <div className="mb-3 flex flex-wrap items-center gap-3">
-          {/* Search — leading filter icon + clear button, matches /content, /journalists, /users. */}
+          {/* Search - leading filter icon + clear button, matches /content, /journalists, /users. */}
           <div className="relative">
             <Input
               aria-label="Search title, reporter or category"
@@ -778,7 +778,7 @@ export default function ReviewPage() {
           </div>
         </div>
 
-        {/* Bulk actions toolbar — only visible when ≥1 row selected */}
+        {/* Bulk actions toolbar - only visible when ≥1 row selected */}
         {selectedCount > 0 && (
           <div
             style={{
@@ -793,9 +793,8 @@ export default function ReviewPage() {
               borderRadius: 8,
             }}
           >
-            <span style={{ fontSize: 13, fontWeight: 700, color: "#1d4ed8" }}>
-              {selectedCount} selected
-            </span>
+            {/* Bulk action labels carry the count, so no standalone "N selected"
+                pill is needed. Un-tick the header checkbox (or any row) to clear. */}
             {tabBulkActions.map((act) => {
               if (act.action === "reject") {
                 return (
@@ -826,7 +825,7 @@ export default function ReviewPage() {
                 );
               }
               if (act.action === "return-to-se") {
-                // Same shape as review — bounce-with-note modal first, then
+                // Same shape as review - bounce-with-note modal first, then
                 // fire the bulk action with the editor's note attached.
                 return (
                   <Button
@@ -856,10 +855,6 @@ export default function ReviewPage() {
                 </Button>
               );
             })}
-            <Button size="sm" variant="ghost" onClick={() => setRowSelection({})} disabled={bulkRunning}>
-              Clear
-            </Button>
-
             {/* Inline bulk reject note input */}
             {bulkRejectMode && (
               <div style={{ display: "flex", gap: 6, flexBasis: "100%", marginTop: 8 }}>
@@ -923,7 +918,7 @@ export default function ReviewPage() {
                         key={header.id}
                         style={{ width: header.column.id === "select" ? 32 : undefined }}
                       >
-                        {/* Non-sortable headers render the raw content — e.g. the
+                        {/* Non-sortable headers render the raw content - e.g. the
                             select-column header is itself a <Checkbox> (which is a
                             <button>), so wrapping it in another <button> would
                             nest interactive elements and crash hydration. */}
@@ -980,7 +975,7 @@ export default function ReviewPage() {
                       ))}
                     </TableRow>
 
-                    {/* Rejection note moved out of the table — now opened from
+                    {/* Rejection note moved out of the table - now opened from
                         the "Reason" column's View-reason button into a modal. */}
 
                     {rejectArticleId === row.original.id && (
@@ -1059,7 +1054,7 @@ export default function ReviewPage() {
         </div>
       </main>
 
-      {/* Rejection-reason modal — opens from the "Reason" column's
+      {/* Rejection-reason modal - opens from the "Reason" column's
           View-reason button on REJECTED rows. Read-only; the reporter sees
           the same note in their app via /api/reporter/articles. */}
       <Dialog
@@ -1091,7 +1086,7 @@ export default function ReviewPage() {
                 <p className="text-[11px] uppercase tracking-wide font-semibold text-muted-foreground mb-0.5">Article</p>
                 <p className="text-sm font-semibold text-foreground break-words">{reasonModalArticle.title}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {reasonModalArticle.category?.nameEn || "—"} · by {reasonModalArticle.author?.name || "—"}
+                  {reasonModalArticle.category?.nameEn || "-"} · by {reasonModalArticle.author?.name || "-"}
                 </p>
               </div>
               <div className="rounded-md border border-red-200 bg-red-50/70 px-3.5 py-3">
@@ -1110,7 +1105,7 @@ export default function ReviewPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Payment modal — opens when the sub-editor clicks "Review" on a row
+      {/* Payment modal - opens when the sub-editor clicks "Review" on a row
           or "Review N" in the bulk bar. Their input becomes the article's
           ContentPayment.baseAmount, reporter sees it as "Pending" instantly. */}
       <Dialog
@@ -1132,7 +1127,7 @@ export default function ReviewPage() {
           </DialogHeader>
 
           <div className="space-y-3">
-            {/* Surface the editor's return note inline — the SE shouldn't
+            {/* Surface the editor's return note inline - the SE shouldn't
                 need to close this modal and click the badge to read it. Only
                 visible in single mode (bulk could mix bounced + fresh rows). */}
             {reviewTarget?.mode === "single" && (() => {
@@ -1140,7 +1135,7 @@ export default function ReviewPage() {
               if (!row?.editorNote) return null;
               return (
                 <div className="rounded-md border border-amber-200 bg-amber-50/70 px-3 py-2">
-                  <p className="text-[11px] uppercase tracking-wide font-bold text-amber-700 mb-1">Editor returned this — please address</p>
+                  <p className="text-[11px] uppercase tracking-wide font-bold text-amber-700 mb-1">Editor returned this - please address</p>
                   <p className="text-sm leading-relaxed text-amber-900/90 italic break-words">
                     “{row.editorNote}”
                   </p>
@@ -1194,7 +1189,7 @@ export default function ReviewPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Return-to-SE modal — Editor/Admin only. Note is mandatory; the SE
+      {/* Return-to-SE modal - Editor/Admin only. Note is mandatory; the SE
           sees it as a badge in their SUBMITTED queue and can read the full
           message before re-claiming. */}
       <Dialog
@@ -1253,7 +1248,7 @@ export default function ReviewPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Editor-note viewer — opens from the orange "View note" badge on
+      {/* Editor-note viewer - opens from the orange "View note" badge on
           SUBMITTED rows that the Editor bounced back. Read-only. */}
       <Dialog
         open={!!editorNoteModalArticle}
@@ -1284,7 +1279,7 @@ export default function ReviewPage() {
                 <p className="text-[11px] uppercase tracking-wide font-semibold text-muted-foreground mb-0.5">Article</p>
                 <p className="text-sm font-semibold text-foreground break-words">{editorNoteModalArticle.title}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {editorNoteModalArticle.category?.nameEn || "—"} · by {editorNoteModalArticle.author?.name || "—"}
+                  {editorNoteModalArticle.category?.nameEn || "-"} · by {editorNoteModalArticle.author?.name || "-"}
                 </p>
               </div>
               <div className="rounded-md border border-amber-200 bg-amber-50/70 px-3.5 py-3">

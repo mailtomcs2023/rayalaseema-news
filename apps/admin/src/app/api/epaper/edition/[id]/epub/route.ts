@@ -6,10 +6,10 @@ import { uploadBuffer } from "@/lib/blob";
 // POST /api/epaper/edition/[id]/epub
 //
 // Build a Kindle/Kobo-friendly ePub3 for the edition. Uploads to blob and
-// returns the URL — caller (admin button or post-publish step) can persist
+// returns the URL - caller (admin button or post-publish step) can persist
 // on the edition row, link from /epaper, etc.
 //
-// Idempotent — re-running rebuilds + uploads a fresh blob.
+// Idempotent - re-running rebuilds + uploads a fresh blob.
 export async function POST(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR"]);
   if (isAuthError(session)) return session;

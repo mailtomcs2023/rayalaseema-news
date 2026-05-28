@@ -24,7 +24,7 @@ import {
 import { WithTooltip } from "@/components/ui/tooltip";
 
 // Topics + Districts are loaded from the DB (Category + District tables) when
-// the modal opens — no hardcoded list. Admin edits to /categories or
+// the modal opens - no hardcoded list. Admin edits to /categories or
 // /locations propagate here on the next open. The auto-fetch backend has a
 // curated `categoryQueries` map with richer NewsData query strings for the
 // classic slugs; any slug NOT in that map falls back to using the slug
@@ -133,7 +133,7 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
 
   // step 2 state
   const [buckets, setBuckets] = useState<PreviewBucket[]>([]);
-  // Articles are keyed by their `link` (sourceUrl) — the only globally-unique
+  // Articles are keyed by their `link` (sourceUrl) - the only globally-unique
   // value NewsData consistently returns.
   const [pickedLinks, setPickedLinks] = useState<Set<string>>(new Set());
 
@@ -455,7 +455,7 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
 
   return (
     <div
-      // Backdrop is intentionally *not* clickable to close — the modal can
+      // Backdrop is intentionally *not* clickable to close - the modal can
       // contain in-flight network operations (preview + AI translate +
       // import) and an accidental outside-click would lose that work. Use
       // the × button in the header to dismiss.
@@ -531,13 +531,13 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
 
           {step === "pick-articles" && (
             <>
-              {/* Refine bar — keyword overrides per-category default query;
+              {/* Refine bar - keyword overrides per-category default query;
                   freshness sets from_date; domain restricts to one publisher
                   (e.g. ndtv.com). All optional. */}
               {/* Sticky: pinned to the top of the scroll body so the refine
                   controls stay accessible as the article list scrolls.
                   -top-4 (top:-16px) pins it at the parent's border edge
-                  rather than its padding edge — without that offset, the
+                  rather than its padding edge - without that offset, the
                   pinned bar sits 16px below the modal header and scrolled
                   cards peek through the gap. -mx-4/-mt-4 + px-4 py-3 lets
                   it bleed into the body's 16px padding so the bar visually
@@ -556,7 +556,7 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
                   <SelectTrigger className="h-9 w-[140px] text-xs" title="Filter by article freshness">
                     <SelectValue />
                   </SelectTrigger>
-                  {/* z-[1100] beats the modal backdrop (zIndex:1000) — without
+                  {/* z-[1100] beats the modal backdrop (zIndex:1000) - without
                       it the portaled dropdown renders behind the backdrop and
                       clicks pass through to the eat-click div. */}
                   <SelectContent className="z-[1100]">
@@ -590,7 +590,7 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
 
               <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 12 }}>
                 {buckets.reduce((s, b) => s + b.results.length, 0)} article{buckets.reduce((s, b) => s + b.results.length, 0) === 1 ? "" : "s"} found.
-                Already-imported rows are unchecked + dimmed. Tick the ones you want — only checked rows are translated + imported.
+                Already-imported rows are unchecked + dimmed. Tick the ones you want - only checked rows are translated + imported.
               </p>
               {buckets.map((b) => (
                 <div key={b.category} style={{ marginBottom: 18 }}>
@@ -684,7 +684,7 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
                             transition: "background 120ms ease, border-color 120ms ease",
                             outline: "none",
                           }}>
-                          {/* Picked badge — anchored inside the card's
+                          {/* Picked badge - anchored inside the card's
                               top-left corner. Sits on top of the image with
                               a small inset so it doesn't touch the border. */}
                           {picked && !locked && (
@@ -712,7 +712,7 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
                               </svg>
                             </div>
                           )}
-                          {/* Image cell — relative positioned so the picked
+                          {/* Image cell - relative positioned so the picked
                               state can stack a soft blue tint overlay. */}
                           <div style={{ position: "relative", width: 84, height: 56 }}>
                             {a.image_url ? (
@@ -749,7 +749,7 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
                                 href={link}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                title="Open original source in a new tab — read before importing"
+                                title="Open original source in a new tab - read before importing"
                                 style={{
                                   display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
                                   fontSize: 11, fontWeight: 600,
@@ -865,7 +865,7 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
                     <span style={{ fontFamily: "monospace" }}>{r.cat}</span>
                     <span style={{ textAlign: "right" }}>{r.fetched}</span>
                     <span style={{ textAlign: "right", fontWeight: 700, color: r.published > 0 ? "#16a34a" : "#6b7280" }}>{r.published}</span>
-                    <span style={{ textAlign: "right", fontWeight: blocked > 0 ? 700 : 400, color: blocked > 0 ? "#ea580c" : "#9ca3af" }}>{blocked || "—"}</span>
+                    <span style={{ textAlign: "right", fontWeight: blocked > 0 ? 700 : 400, color: blocked > 0 ? "#ea580c" : "#9ca3af" }}>{blocked || "-"}</span>
                     <span style={{ fontSize: 11, color: "#6b7280" }}>
                       {r.error ? r.error : skipped ? "all skipped (dedup, content too short, or source error)" : ""}
                     </span>
@@ -892,7 +892,7 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
             {step === "pick-articles" && (
               <WithTooltip
                 side="top"
-                text={"When OFF (default): rows whose source URL already\nexists in the DB are skipped during import.\n\nWhen ON: those rows are purged and re-created — use\nthis to refresh a previously-imported article with\nupdated content or a re-translated body.\n\nDestructive: the existing row's ID and edit history\nare lost."}
+                text={"When OFF (default): rows whose source URL already\nexists in the DB are skipped during import.\n\nWhen ON: those rows are purged and re-created - use\nthis to refresh a previously-imported article with\nupdated content or a re-translated body.\n\nDestructive: the existing row's ID and edit history\nare lost."}
               >
                 <label
                   style={{
@@ -946,7 +946,7 @@ export function AutoFetchModal({ open, onClose, onDone }: Props) {
           </div>
         </div>
 
-        {/* Full-panel loading overlay — appears during step transitions
+        {/* Full-panel loading overlay - appears during step transitions
             (preview / refine / import). Blocks the underlying UI to prevent
             duplicate submissions and surfaces a determinate progress bar
             built from the {done, total, label} state. */}
@@ -1040,11 +1040,11 @@ function Stepper({
         const dotBg = isCurrent ? "#16a34a" : isCompleted ? "#16a34a" : reachable(s) ? "#e5e7eb" : "#f3f4f6";
         const dotColor = isCurrent || isCompleted ? "#fff" : "#9ca3af";
         const labelColor = isCurrent ? "#0f172a" : isCompleted ? "#166534" : reachable(s) ? "#374151" : "#9ca3af";
-        // Visual states (all three pills share the same footprint — same
+        // Visual states (all three pills share the same footprint - same
         // minWidth + same border/bg model, just different colors):
-        //   current   — soft mint pill (you are here, not navigable)
-        //   completed — light-green pill with a *bright* #16a34a border (revisit affordance)
-        //   locked    — soft gray pill, muted, not clickable
+        //   current   - soft mint pill (you are here, not navigable)
+        //   completed - light-green pill with a *bright* #16a34a border (revisit affordance)
+        //   locked    - soft gray pill, muted, not clickable
         const bg = isCurrent ? "#f0fdf4" : isCompleted ? "#f0fdf4" : "#f9fafb";
         const border = isCurrent
           ? "1px solid #bbf7d0"
@@ -1055,10 +1055,10 @@ function Stepper({
         const tooltip = isCurrent
           ? `Current step: ${labels[s]}`
           : isCompleted
-            ? `✓ Completed — click to revisit ${labels[s]}`
+            ? `✓ Completed - click to revisit ${labels[s]}`
             : reachable(s)
               ? `Go to ${labels[s]}`
-              : `${labels[s]} — complete the previous step first`;
+              : `${labels[s]} - complete the previous step first`;
         return (
           <div key={s} style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <button

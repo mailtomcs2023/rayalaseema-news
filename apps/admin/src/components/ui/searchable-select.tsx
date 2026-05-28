@@ -1,6 +1,6 @@
 "use client";
 
-// Searchable Select — a shadcn-styled combobox built on Popover + a plain
+// Searchable Select - a shadcn-styled combobox built on Popover + a plain
 // filterable list. Use this anywhere we'd reach for a long-list <Select>:
 // the search input lets users jump to an option by typing any part of its
 // label, ↑/↓ moves the highlight, Enter selects, Esc closes.
@@ -56,7 +56,7 @@ export function SearchableSelect({
   const listRef = React.useRef<HTMLDivElement>(null);
 
   // Filtered list. The "none" entry (when emptyLabel is set) only shows when
-  // the search is blank — once the user starts typing they're looking for a
+  // the search is blank - once the user starts typing they're looking for a
   // real option, not the clear-all sentinel.
   const filtered = React.useMemo<SearchableOption[]>(() => {
     const q = query.trim().toLowerCase();

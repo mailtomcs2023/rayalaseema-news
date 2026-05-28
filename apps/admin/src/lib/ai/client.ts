@@ -17,7 +17,7 @@ export interface ChatMessage {
 export interface ChatOpts {
   // Azure deployment name OR an env-var override. The pipeline picks
   // different models per step (e.g. gpt41-mini for extract, gpt51 for
-  // compose) — pass the deployment name string directly.
+  // compose) - pass the deployment name string directly.
   deployment: string;
   messages: ChatMessage[];
   temperature?: number;
@@ -27,7 +27,7 @@ export interface ChatOpts {
   // (always, since style-guide.ts asks for a JSON envelope).
   responseFormatJson?: boolean;
   // Optional per-call endpoint override. Used when compose moves to
-  // Claude (different Azure resource) — extract + fact-check stay on the
+  // Claude (different Azure resource) - extract + fact-check stay on the
   // OpenAI resource via the default ENDPOINT.
   endpoint?: string;
   key?: string;
@@ -90,7 +90,7 @@ export async function chat(opts: ChatOpts): Promise<ChatResult> {
 
   if (!res.ok) {
     const body = await res.text();
-    // Prompt-side content filter — Azure returns 400 with a structured
+    // Prompt-side content filter - Azure returns 400 with a structured
     // error envelope. Try to parse and surface the triggered categories.
     try {
       const parsed = JSON.parse(body);
@@ -100,7 +100,7 @@ export async function chat(opts: ChatOpts): Promise<ChatResult> {
       }
     } catch (e) {
       if (e instanceof AIContentFilterError) throw e;
-      // JSON parse failed — fall through to generic error below.
+      // JSON parse failed - fall through to generic error below.
     }
     throw new Error(`Azure OpenAI ${res.status}: ${body.slice(0, 400)}`);
   }
@@ -112,7 +112,7 @@ export async function chat(opts: ChatOpts): Promise<ChatResult> {
     }
     throw new Error(data.error.message || "Azure OpenAI error");
   }
-  // Response-side content filter — Azure returns 200 but finish_reason is
+  // Response-side content filter - Azure returns 200 but finish_reason is
   // "content_filter" and the choice carries per-category results.
   const choice = data.choices?.[0];
   if (choice?.finish_reason === "content_filter") {
@@ -132,7 +132,7 @@ export async function chat(opts: ChatOpts): Promise<ChatResult> {
 
 // Parse a JSON envelope tolerantly. response_format=json_object usually
 // returns a clean object, but some model versions wrap output in markdown
-// fences anyway — strip them before parsing.
+// fences anyway - strip them before parsing.
 export function parseJsonEnvelope<T = unknown>(raw: string): T {
   let s = raw.trim();
   // Strip ```json ... ``` fences if present.

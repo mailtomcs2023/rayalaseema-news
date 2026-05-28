@@ -2,7 +2,7 @@
 // package on npm is a deprecated empty stub. Module-level shim so the
 // /epaper editor page (which uses GridLayout + Layout) compiles.
 //
-// Just the surface the editor actually touches — Layout (rectangle in the
+// Just the surface the editor actually touches - Layout (rectangle in the
 // grid) and the default GridLayout component. Everything else lands as
 // `any`; library behaviour is JS-runtime untyped.
 declare module "react-grid-layout" {

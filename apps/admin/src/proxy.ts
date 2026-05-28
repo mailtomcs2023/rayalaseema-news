@@ -49,7 +49,7 @@ export async function proxy(req: NextRequest) {
       return NextResponse.redirect(new URL(landingFor(role), req.url));
     }
   } catch {
-    // Decode failure — let the page handle it.
+    // Decode failure - let the page handle it.
   }
 
   return NextResponse.next();

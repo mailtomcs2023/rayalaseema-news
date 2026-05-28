@@ -17,7 +17,7 @@ const IconClock = () => (
 export function LatestNewsSidebar({ items }: { items: NewsItem[] }) {
   return (
     <div className="bg-white">
-      {/* Left-aligned section head — was: centered title with em-dashes */}
+      {/* Left-aligned section head - was: centered title with em-dashes */}
       <div className="section-head">
         <span className="section-head__icon"><IconClock /></span>
         <span className="section-head__label">తాజా వార్తలు</span>

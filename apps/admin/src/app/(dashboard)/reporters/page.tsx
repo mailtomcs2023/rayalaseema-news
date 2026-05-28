@@ -132,7 +132,7 @@ interface Journalist {
 
 // Common KYC rejection reasons. The label shown in the dropdown IS the text
 // stored on ReporterProfile.kycRejectionNote and shown to the reporter in
-// the app's red KYC banner — keep them short, plain-English, actionable.
+// the app's red KYC banner - keep them short, plain-English, actionable.
 // "other" is a sentinel that reveals a free-text input for one-off cases.
 const REJECTION_REASONS = [
   "Aadhaar photo unclear or blurry",
@@ -168,11 +168,11 @@ const KYC_BADGE: Record<string, string> = {
   "NO PROFILE": "bg-muted text-muted-foreground border-transparent",
 };
 
-// Test/QA reporter account(s) — editable, but never deletable.
+// Test/QA reporter account(s) - editable, but never deletable.
 const PROTECTED_EMAILS = new Set(["reporter@rayalaseemaexpress.com"]);
 const isProtected = (email: string) => PROTECTED_EMAILS.has((email || "").trim().toLowerCase());
 
-const fmtDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString() : "—");
+const fmtDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString() : "-");
 const fmtAadhaar = (n?: string | null) => (n ? n.replace(/(\d{4})(?=\d)/g, "$1 ") : "");
 
 // Search across name / email / phone
@@ -213,14 +213,20 @@ export default function JournalistsPage() {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
-  const [sorting, setSorting] = useState<SortingState>([{ id: "name", desc: false }]);
+  // Newest-first default - admins almost always want to see "who did I
+  // just onboard?" at the top. Click any column header to re-sort.
+  const [sorting, setSorting] = useState<SortingState>([{ id: "joinedAt", desc: true }]);
 
   const load = useCallback(() => {
     setLoading(true);
+    // /api/reporters now returns { items, hasMore, nextCursor, total, limit }
+    // (PR 3 - cursor pagination). UI still loads everything client-side and
+    // paginates via TanStack until PR 12 switches to true cursor mode.
     fetch("/api/reporters")
       .then((r) => r.json())
-      .then((rows: Journalist[]) => {
-        setData(Array.isArray(rows) ? rows.map(toRow) : []);
+      .then((data: { items?: Journalist[] }) => {
+        const rows = Array.isArray(data?.items) ? data.items : [];
+        setData(rows.map(toRow));
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -249,7 +255,7 @@ export default function JournalistsPage() {
   const openDelete = useCallback((row: JournalistRow) => setConfirmDelete([row]), []);
 
   // One-click reactivate from the row dropdown for soft-deleted journalists.
-  // No confirmation dialog — activation is non-destructive.
+  // No confirmation dialog - activation is non-destructive.
   const activate = useCallback(
     async (j: Journalist) => {
       try {
@@ -317,14 +323,14 @@ export default function JournalistsPage() {
         header: "Phone",
         size: 130,
         cell: ({ row }) =>
-          row.getValue("phone") || <span className="text-muted-foreground">—</span>,
+          row.getValue("phone") || <span className="text-muted-foreground">-</span>,
       },
       {
         accessorKey: "district",
         header: "District",
         size: 130,
         cell: ({ row }) =>
-          row.getValue("district") || <span className="text-muted-foreground">—</span>,
+          row.getValue("district") || <span className="text-muted-foreground">-</span>,
       },
       {
         accessorKey: "kyc",
@@ -353,11 +359,11 @@ export default function JournalistsPage() {
         enableSorting: false,
         // "View" links straight to the per-journalist filter on the
         // profile-requests review page. Shows a pending count when there's
-        // something awaiting action; otherwise a quiet "—".
+        // something awaiting action; otherwise a quiet "-".
         cell: ({ row }) => {
           const count = row.getValue("pendingUpdates") as number;
           const reporterId = row.original.raw.reporterProfile?.id;
-          if (!reporterId) return <span className="text-muted-foreground">—</span>;
+          if (!reporterId) return <span className="text-muted-foreground">-</span>;
           return count > 0 ? (
             <Link href={`/profile-requests?reporterId=${reporterId}`}>
               <Button size="sm" variant="default" className="h-7 gap-1.5 px-2.5">
@@ -446,7 +452,7 @@ export default function JournalistsPage() {
       load();
       if (result.skipped?.length) {
         alert(
-          `Deleted ${result.deleted}. Skipped ${result.skipped.length} — they have content and can't be deleted:\n` +
+          `Deleted ${result.deleted}. Skipped ${result.skipped.length} - they have content and can't be deleted:\n` +
             result.skipped
               .map((s: { name: string; reason: string }) => `• ${s.name} (${s.reason})`)
               .join("\n") +
@@ -651,8 +657,9 @@ export default function JournalistsPage() {
             </Table>
           </div>
 
-          {/* Pagination */}
-          <div className="flex items-center justify-between gap-8">
+          {/* Pagination row - page-size on the left, range counter + nav
+              buttons grouped together on the right. No empty gap in middle. */}
+          <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <Label className="max-sm:sr-only" htmlFor={id}>
                 Rows per page
@@ -673,8 +680,8 @@ export default function JournalistsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex grow justify-end whitespace-nowrap text-sm text-muted-foreground">
-              <p aria-live="polite">
+            <div className="flex items-center gap-3">
+              <p aria-live="polite" className="whitespace-nowrap text-sm text-muted-foreground">
                 <span className="text-foreground">
                   {table.getRowCount() === 0
                     ? 0
@@ -687,9 +694,8 @@ export default function JournalistsPage() {
                 </span>{" "}
                 of <span className="text-foreground">{table.getRowCount()}</span>
               </p>
-            </div>
-            <Pagination>
-              <PaginationContent>
+              <Pagination className="mx-0 w-auto">
+                <PaginationContent>
                 <PaginationItem>
                   <Button
                     aria-label="Go to first page"
@@ -734,8 +740,9 @@ export default function JournalistsPage() {
                     <ChevronLastIcon aria-hidden="true" size={16} />
                   </Button>
                 </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+                </PaginationContent>
+              </Pagination>
+            </div>
           </div>
 
           {/* KYC review dialog */}
@@ -758,7 +765,7 @@ export default function JournalistsPage() {
                 <AlertDialogDescription>
                   They&apos;ll be unable to log in to the reporter app. Their articles, payments,
                   and KYC documents are preserved. To reactivate later, edit the reporter and
-                  tick &ldquo;Active&rdquo; — or resetting their password also reactivates the
+                  tick &ldquo;Active&rdquo; - or resetting their password also reactivates the
                   account automatically.
                 </AlertDialogDescription>
               </AlertDialogHeader>
@@ -1009,7 +1016,7 @@ function ReviewDialog({
                   </div>
                 )}
 
-                {/* KYC decision — available for any not-yet-final state, so a
+                {/* KYC decision - available for any not-yet-final state, so a
                     PENDING profile (registered without docs) can still be approved. */}
                 <SectionTitle>KYC Decision</SectionTitle>
                 <div className="space-y-2">
@@ -1049,7 +1056,7 @@ function ReviewDialog({
                             setRejectNote(e.target.value);
                             if (rejectError) setRejectError(null);
                           }}
-                          placeholder="Describe the reason — the reporter will see this"
+                          placeholder="Describe the reason - the reporter will see this"
                           value={rejectNote}
                           aria-invalid={!!rejectError}
                         />
@@ -1068,7 +1075,7 @@ function ReviewDialog({
                           const finalNote =
                             rejectReason === REJECTION_OTHER ? rejectNote.trim() : rejectReason;
                           if (!finalNote) {
-                            setRejectError("Please describe the reason — the reporter sees this in the app.");
+                            setRejectError("Please describe the reason - the reporter sees this in the app.");
                             return;
                           }
                           act("reject", finalNote);
@@ -1094,7 +1101,7 @@ function ReviewDialog({
                 {tempPassword && (
                   <div className="mt-2 rounded-md border border-amber-300 bg-amber-50 p-3">
                     <p className="text-[11px] font-bold text-amber-800">
-                      Temporary password — share it with the reporter:
+                      Temporary password - share it with the reporter:
                     </p>
                     <div className="my-1.5 flex items-center gap-2">
                       <code className="text-lg font-extrabold tracking-wide text-foreground">{tempPassword}</code>
@@ -1261,12 +1268,12 @@ function PasswordResetDialog({
                 <div className="rounded-md border border-amber-300 bg-amber-50 p-3">
                   <p className="mb-2 text-[11px] font-bold text-amber-800">
                     {oneTime
-                      ? "One-time password — they must change it at next sign-in."
+                      ? "One-time password - they must change it at next sign-in."
                       : "New password set."}
                   </p>
                   <div className="flex gap-2">
                     {/* Read-only shadcn Input so the result mirrors the form
-                        above visually — same border, same padding, same
+                        above visually - same border, same padding, same
                         focus ring. The user can also tap-select-all. */}
                     <Input
                       readOnly
@@ -1300,7 +1307,7 @@ function PasswordResetDialog({
 
 // Strong 14-char password mixing upper / lower / digit / symbol, with
 // lookalike chars (0/O, 1/l/I) excluded so it survives reading aloud and
-// chat copy-paste. We deliberately don't use crypto.randomBytes here —
+// chat copy-paste. We deliberately don't use crypto.randomBytes here -
 // this runs in the browser, and the modal surfaces the result once
 // rather than persisting it as a secret.
 function makeStrongPassword(length = 14): string {
@@ -1466,7 +1473,7 @@ function JournalistFormDialog({
           ? {
               action: "update",
               userId: target.journalist.id,
-              // KYC status is omitted on edit — it moves only via verify/reject.
+              // KYC status is omitted on edit - it moves only via verify/reject.
               data: { ...form, kycStatus: undefined },
             }
           : { action: "create", data: form };
@@ -1498,7 +1505,7 @@ function JournalistFormDialog({
           <DialogDescription>
             {isEdit
               ? "Update this reporter's account and profile."
-              : "Create a reporter account and profile — they can log in immediately."}
+              : "Create a reporter account and profile - they can log in immediately."}
           </DialogDescription>
         </DialogHeader>
 

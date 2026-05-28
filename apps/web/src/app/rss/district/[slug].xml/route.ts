@@ -1,11 +1,11 @@
-// E4 (#223) — 5-min ISR. force-dynamic for the same reason as the
+// E4 (#223) - 5-min ISR. force-dynamic for the same reason as the
 // category sibling (#223 commit notes).
 export const dynamic = "force-dynamic";
 export const revalidate = 300;
 
-// Spec #4 D6 (#219) — per-district RSS feed.
+// Spec #4 D6 (#219) - per-district RSS feed.
 //
-// /rss/district/<slug>.xml — 30 most-recent articles tagged to the district
+// /rss/district/<slug>.xml - 30 most-recent articles tagged to the district
 // (via primary constituency). District-loyal subscribers + aggregator
 // district-specific feeds (Telugu newsletters etc).
 
@@ -22,7 +22,7 @@ function cdata(s: string): string {
 
 export async function GET(_req: Request, ctx: { params: Promise<{ slug: string }> }) {
   const { slug: rawSlug } = await ctx.params;
-  // Accept "<slug>" or "<slug>.xml" — Next routes the file-name form as the
+  // Accept "<slug>" or "<slug>.xml" - Next routes the file-name form as the
   // dynamic segment value including the extension.
   const slug = rawSlug.endsWith(".xml") ? rawSlug.slice(0, -4) : rawSlug;
 
@@ -62,7 +62,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ slug: string }
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Rayalaseema Express — ${escXml(district.nameEn)} (${escXml(district.name)})</title>
+    <title>Rayalaseema Express - ${escXml(district.nameEn)} (${escXml(district.name)})</title>
     <link>${siteUrl}/district/${district.slug}</link>
     <atom:link href="${siteUrl}/rss/district/${district.slug}.xml" rel="self" type="application/rss+xml" />
     <description>News from ${escXml(district.nameEn)} district.</description>

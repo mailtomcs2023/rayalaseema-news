@@ -24,7 +24,7 @@ export interface FieldMeta {
 
 // Predefined option lists used by constrained fields (gender, specialization,
 // languages). Kept here so the reporter app and any future settings UI stay
-// in sync — admins can still write arbitrary values via the journalists page.
+// in sync - admins can still write arbitrary values via the journalists page.
 export const GENDER_OPTIONS = ["Male", "Female", "Other", "Prefer not to say"];
 export const SPECIALIZATION_OPTIONS = [
   "Politics", "Crime", "Sports", "Business", "Entertainment",
@@ -138,7 +138,7 @@ export function getCurrentValue(data: ProfileResponse, field: string): unknown {
   return data.profile?.[field];
 }
 
-export function formatDisplay(field: string, value: unknown, fallback = "—"): string {
+export function formatDisplay(field: string, value: unknown, fallback = "-"): string {
   if (value == null || value === "") return fallback;
   const meta = FIELDS[field];
   if (!meta) return String(value);
@@ -156,7 +156,7 @@ export function formatDisplay(field: string, value: unknown, fallback = "—"): 
 
 // Compact preview text used by pending chips / pending-list rows.
 export function previewNewValue(field: string, stored: string | null): string {
-  if (!stored) return "—";
+  if (!stored) return "-";
   const meta = FIELDS[field];
   if (!meta) return stored;
   if (meta.kind === "string-array") {

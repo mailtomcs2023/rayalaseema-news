@@ -6,7 +6,8 @@
     "dev": "next dev --port 3001 --turbopack",
     "build": "next build",
     "start": "next start --port 3001",
-    "lint": "next lint"
+    "lint": "next lint",
+    "analyze": "ANALYZE=true next build"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
@@ -24,6 +25,7 @@
     "@rayalaseema/nlp": "*",
     "@rayalaseema/seo-schema": "*",
     "@rayalaseema/ui": "*",
+    "@tanstack/react-query": "^5.100.14",
     "@tanstack/react-table": "^8.21.3",
     "@tiptap/extension-bubble-menu": "^3.22.2",
     "@tiptap/extension-color": "^3.22.2",
@@ -70,6 +72,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^16.2.6",
     "@rayalaseema/config": "*",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",

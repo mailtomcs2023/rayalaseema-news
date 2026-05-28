@@ -1,8 +1,8 @@
-// /api/payments/[id]/pay — admin flips an APPROVED payment to PAID after the
+// /api/payments/[id]/pay - admin flips an APPROVED payment to PAID after the
 // real bank transfer has gone out. Captures the transactionId + paymentMethod
-// for the reporter to see ("Settled — paid on 2026-05-26 via UPI · txn123").
+// for the reporter to see ("Settled - paid on 2026-05-26 via UPI · txn123").
 //
-// Admin-only. Atomic conditional update — only flips APPROVED → PAID, so
+// Admin-only. Atomic conditional update - only flips APPROVED → PAID, so
 // trying to pay a CANCELLED or already-PAID row returns 409 cleanly.
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
@@ -33,7 +33,7 @@ export async function POST(
     const userId = session.user.id;
 
     const result = await prisma.$transaction(async (tx) => {
-      // Atomic flip — only succeeds if currently APPROVED. Loser gets 409.
+      // Atomic flip - only succeeds if currently APPROVED. Loser gets 409.
       const claim = await tx.contentPayment.updateMany({
         where: { id: paymentId, status: "APPROVED" },
         data: {

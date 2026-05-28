@@ -23,7 +23,7 @@ export function ContentPayloadEditor({ type, payload, setPayload }: ContentPaylo
   const upd = (patch: Payload) => setPayload({ ...payload, ...patch });
 
   if (type === "VIDEO") {
-    // F2 — VIDEO subform. videoUrl + duration (sec) + optional thumbnail.
+    // F2 - VIDEO subform. videoUrl + duration (sec) + optional thumbnail.
     return (
       <SectionBox title="Video details">
         <Field label="Video URL">
@@ -46,7 +46,7 @@ export function ContentPayloadEditor({ type, payload, setPayload }: ContentPaylo
   }
 
   if (type === "REEL") {
-    // F2 — REEL subform. Vertical short clip URL + duration.
+    // F2 - REEL subform. Vertical short clip URL + duration.
     return (
       <SectionBox title="Reel details">
         <Field label="Clip URL (vertical 9:16)">
@@ -65,7 +65,7 @@ export function ContentPayloadEditor({ type, payload, setPayload }: ContentPaylo
   }
 
   if (type === "WEB_STORY") {
-    // F3 — slide builder. Add/remove rows; per-slide image + caption. Reorder
+    // F3 - slide builder. Add/remove rows; per-slide image + caption. Reorder
     // via up/down buttons (drag-drop in a polish PR).
     const slides = (Array.isArray(payload.slides) ? payload.slides : []) as Array<{ image: string; caption?: string }>;
     const setSlides = (next: typeof slides) => upd({ slides: next });
@@ -106,7 +106,7 @@ export function ContentPayloadEditor({ type, payload, setPayload }: ContentPaylo
   }
 
   if (type === "PHOTO_GALLERY") {
-    // F4 — multi-photo. Same shape as slides but no ordering UI required by
+    // F4 - multi-photo. Same shape as slides but no ordering UI required by
     // most galleries; still expose move buttons for cover-image ordering.
     const photos = (Array.isArray(payload.photos) ? payload.photos : []) as Array<{ url: string; caption?: string }>;
     const setPhotos = (next: typeof photos) => upd({ photos: next });
@@ -145,7 +145,7 @@ export function ContentPayloadEditor({ type, payload, setPayload }: ContentPaylo
   }
 
   if (type === "CARTOON") {
-    // F5 — single image (use featuredImage on the parent) + caption + date.
+    // F5 - single image (use featuredImage on the parent) + caption + date.
     // Date defaults to today on first edit; stored as ISO datetime string.
     return (
       <SectionBox title="Cartoon details">
@@ -167,7 +167,7 @@ export function ContentPayloadEditor({ type, payload, setPayload }: ContentPaylo
   }
 
   if (type === "BREAKING_NEWS") {
-    // F6 — ticker headline. No body, no image, slug auto-generated. Priority
+    // F6 - ticker headline. No body, no image, slug auto-generated. Priority
     // 1 = top of ticker; expiresAt auto-hides on the public side.
     return (
       <SectionBox title="Breaking ticker">

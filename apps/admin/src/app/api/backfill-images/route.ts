@@ -5,7 +5,7 @@ import { uploadImageFromUrl, blobConfigured } from "@/lib/blob";
 
 /**
  * Re-host existing articles' external (hotlink-blocked) images on Azure Blob.
- * Batched — call repeatedly with ?limit=N until done:0.
+ * Batched - call repeatedly with ?limit=N until done:0.
  * POST /api/backfill-images?limit=20
  */
 export async function POST(req: NextRequest) {
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
       await prisma.content.update({ where: { id: a.id }, data: { featuredImage: hosted } });
       rehosted++;
     } else {
-      // Source unreachable (403/expired) — null it so the UI shows a clean placeholder
+      // Source unreachable (403/expired) - null it so the UI shows a clean placeholder
       await prisma.content.update({ where: { id: a.id }, data: { featuredImage: null } });
       failed++;
     }

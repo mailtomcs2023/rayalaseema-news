@@ -40,7 +40,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# DB snapshot — share via file transfer, not git
+# DB snapshot - share via file transfer, not git
 db-snapshot.sql
 
 # Generated recruitment tracker (regenerate via packages/db/scripts/export-recruitment-xlsx.ts)

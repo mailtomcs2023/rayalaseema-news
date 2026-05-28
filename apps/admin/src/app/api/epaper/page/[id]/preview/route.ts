@@ -5,7 +5,7 @@ import { renderEpaperPageById } from "@/lib/epaper/render-layout";
 
 // GET /api/epaper/page/[id]/preview
 // Returns the page's rendered HTML for the live-preview iframe in the editor.
-// No Playwright in this path — the browser does the heavy rendering itself,
+// No Playwright in this path - the browser does the heavy rendering itself,
 // so updates are near-instant. The editor cache-busts by appending
 // `?v={page.version}` so every PATCH that bumps version invalidates the iframe.
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -19,7 +19,7 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
     let html = await renderEpaperPageById(id);
 
     // Optional baseline-grid overlay for the editor preview. Activated via
-    // ?grid=1 — never enabled in the print PDF render.
+    // ?grid=1 - never enabled in the print PDF render.
     const url = new URL(_.url);
     if (url.searchParams.get("grid") === "1") {
       const overlay = `<style>
@@ -38,7 +38,7 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
       status: 200,
       headers: {
         "Content-Type": "text/html; charset=utf-8",
-        // Don't cache — the editor needs fresh HTML on every PATCH-driven reload.
+        // Don't cache - the editor needs fresh HTML on every PATCH-driven reload.
         "Cache-Control": "no-store",
       },
     });

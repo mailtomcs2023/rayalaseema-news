@@ -1,4 +1,4 @@
-// Page Builder (Spec #2) — landing shell that fans out to the three
+// Page Builder (Spec #2) - landing shell that fans out to the three
 // sub-sections: Templates, Assignments, Composite Blocks. Each card links
 // to its own list page (D2/D3/D4). Restricted to ADMIN + EDITOR by the
 // (dashboard) auth wrapper + canVisit() guard.
@@ -7,7 +7,7 @@ import Link from "next/link";
 import { Sidebar } from "@/components/sidebar";
 import { prisma } from "@rayalaseema/db";
 
-// Don't prerender — counts must reflect live DB state, and prod DB connection
+// Don't prerender - counts must reflect live DB state, and prod DB connection
 // is unavailable at build time in CI. Without this Next 16 attempts static
 // generation and crashes the build.
 export const dynamic = "force-dynamic";

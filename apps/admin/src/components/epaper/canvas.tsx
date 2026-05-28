@@ -61,7 +61,7 @@ export function Canvas({
   // mm → px scale for on-screen rendering
   const mm = (v: number) => v * scale;
 
-  // Track Alt key globally — held = snap bypass.
+  // Track Alt key globally - held = snap bypass.
   useEffect(() => {
     const down = (e: KeyboardEvent) => { if (e.key === "Alt") setAltHeld(true); };
     const up = (e: KeyboardEvent) => { if (e.key === "Alt") setAltHeld(false); };
@@ -157,7 +157,7 @@ export function Canvas({
         {/* Alt-bypass HUD: tells operator snap is off while held. */}
         {altHeld && (
           <div style={{ position: "absolute", top: 4, right: 4, padding: "2px 8px", background: "#f59e0b", color: "#fff", fontSize: 10, fontWeight: 800, borderRadius: 3, letterSpacing: 0.5 }}>
-            ⌥ ALT — SNAP OFF
+            ⌥ ALT - SNAP OFF
           </div>
         )}
         {/* Live position/size label during active drag/resize. */}
@@ -225,7 +225,7 @@ export function Canvas({
               onContextMenu={(e) => {
                 if (!isMaster || !onDetachMaster) return;
                 e.preventDefault();
-                if (confirm(`Detach this ${b.type} block from the master? It becomes editable on this page only — the master is unchanged.`)) {
+                if (confirm(`Detach this ${b.type} block from the master? It becomes editable on this page only - the master is unchanged.`)) {
                   onDetachMaster(b);
                 }
               }}

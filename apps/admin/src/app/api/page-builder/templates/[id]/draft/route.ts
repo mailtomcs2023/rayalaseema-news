@@ -1,4 +1,4 @@
-// Page Builder (Spec #2) — save draft layout. Zod-validates the incoming
+// Page Builder (Spec #2) - save draft layout. Zod-validates the incoming
 // layout JSON; rejects with 400 + zod issues on shape errors so the editor
 // can surface them inline.
 //

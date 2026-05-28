@@ -9,7 +9,7 @@ import { Platform } from "react-native";
 // disk and readable by anyone with file access (e.g. a backup, a rooted
 // device, ADB on a debug build).
 //
-// SecureStore is unavailable on web/Expo Go-on-web — we fall back to
+// SecureStore is unavailable on web/Expo Go-on-web - we fall back to
 // AsyncStorage there so dev still works.
 //
 // First read on each device transparently migrates a pre-existing
@@ -31,7 +31,7 @@ async function migrateOnce() {
       await AsyncStorage.removeItem(TOKEN_KEY);
     }
   } catch {
-    // Best-effort migration — if SecureStore throws (e.g. user has no
+    // Best-effort migration - if SecureStore throws (e.g. user has no
     // device passcode on iOS pre-13), fall back to AsyncStorage so the app
     // still works.
   }

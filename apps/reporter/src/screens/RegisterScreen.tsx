@@ -14,9 +14,9 @@ import { useRouter, useNavigation } from "expo-router";
 import { constituenciesByDistrict } from "../data/locations";
 import { pincodeToDistrict, pincodeToConstituency } from "../data/pincodes";
 
-// API_URL is the single source of truth in api/client.ts — imported above.
+// API_URL is the single source of truth in api/client.ts - imported above.
 
-// fetch() that rejects after `ms` instead of hanging forever — keeps the
+// fetch() that rejects after `ms` instead of hanging forever - keeps the
 // Submit button from getting stuck on "Submitting..." if the API is unreachable.
 const fetchWithTimeout = (url: string, options: RequestInit = {}, ms = 25000) => {
   const controller = new AbortController();
@@ -25,7 +25,7 @@ const fetchWithTimeout = (url: string, options: RequestInit = {}, ms = 25000) =>
 };
 
 // Aadhaar is stored as raw 12 digits; shown grouped "1234 5678 9012" per the
-// UIDAI convention. The spaces are presentation-only — stripped on every edit.
+// UIDAI convention. The spaces are presentation-only - stripped on every edit.
 const formatAadhaar = (digits: string) => digits.replace(/(\d{4})(?=\d)/g, "$1 ");
 
 // DOB stored as ISO "YYYY-MM-DD"; shown as "Jun-15-2000" in the UI so the
@@ -104,7 +104,7 @@ export function RegisterScreen() {
   const scrollY = useRef(0);
   const addressY = useRef(0);
 
-  // Live keyboard height — used as dynamic bottom padding on the ScrollView
+  // Live keyboard height - used as dynamic bottom padding on the ScrollView
   // so fields near the end of the form can scroll up *into* the visible area
   // when the keyboard is open, without leaving dead space when it's closed.
   const [keyboardSpace, setKeyboardSpace] = useState(0);
@@ -122,7 +122,7 @@ export function RegisterScreen() {
   }, []);
 
   // Smoothly scroll any focused TextInput so its top sits ~100 px from the top
-  // of the ScrollView — well clear of the keyboard. Uses measureLayout, which
+  // of the ScrollView - well clear of the keyboard. Uses measureLayout, which
   // is reliable on the New Architecture (Fabric) where the legacy
   // scrollResponderScrollNativeHandleToKeyboard helper is a no-op for many
   // input types. The 80 ms delay lets the keyboard begin animating in first
@@ -134,7 +134,7 @@ export function RegisterScreen() {
     // Combined with the live scroll offset we track via onScroll, we can
     // compute exactly how far to scroll so the field sits at a comfortable
     // height above the keyboard. Works the same on Fabric/Paper and
-    // iOS/Android — no node-handle gymnastics.
+    // iOS/Android - no node-handle gymnastics.
     setTimeout(() => {
       target.measure(
         (_x: number, _y: number, _w: number, _h: number, _pageX: number, pageY: number) => {
@@ -185,7 +185,7 @@ export function RegisterScreen() {
   };
 
   // Pincode → district auto-detect. Looked up against an offline map of all
-  // Rayalaseema pincodes (apps/reporter/src/data/pincodes.ts) — no network.
+  // Rayalaseema pincodes (apps/reporter/src/data/pincodes.ts) - no network.
   const onPincodeChange = (v: string) => {
     const digits = v.replace(/[^0-9]/g, "").slice(0, 6);
     if (digits.length < 6) {
@@ -196,7 +196,7 @@ export function RegisterScreen() {
     const slug = pincodeToDistrict[digits];
     if (slug) {
       // Auto-fill district always; auto-fill the constituency (city) when the
-      // pincode maps to one — otherwise clear it so the reporter picks.
+      // pincode maps to one - otherwise clear it so the reporter picks.
       const constituency = pincodeToConstituency[digits] || "";
       setForm((f) => ({ ...f, pincode: digits, primaryDistrict: slug, city: constituency }));
       setPincodeInfo({ status: "ok", district: slug });
@@ -207,7 +207,7 @@ export function RegisterScreen() {
     }
   };
 
-  // PAN is a fixed 10-char format — 5 letters, 4 digits, 1 letter (ABCPD1234E).
+  // PAN is a fixed 10-char format - 5 letters, 4 digits, 1 letter (ABCPD1234E).
   // Each keystroke is routed into its slot's character class, so a malformed
   // PAN can't be entered. Slot 4 (0-indexed 3) must be a valid holder-type code.
   const onPanChange = (v: string) => {
@@ -262,7 +262,7 @@ export function RegisterScreen() {
     const formData = new FormData();
     const filename = uri.split("/").pop() || "doc.jpg";
     formData.append("file", { uri, name: filename, type: "image/jpeg" } as any);
-    // Public upload endpoint — the reporter doesn't have a token yet during
+    // Public upload endpoint - the reporter doesn't have a token yet during
     // registration, so the admin-auth `/api/upload` and the token-auth
     // `/api/reporter/upload` would both 401 silently here.
     const res = await fetchWithTimeout(`${API_URL}/api/upload/register`, { method: "POST", body: formData });
@@ -323,7 +323,7 @@ export function RegisterScreen() {
   const cityLabel =
     (constituenciesByDistrict[form.primaryDistrict] || []).find((c) => c.value === form.city)?.label || "";
 
-  // Step 2 (KYC) — "Require everything" before continuing to step 3.
+  // Step 2 (KYC) - "Require everything" before continuing to step 3.
   const passportDone = !!form.photoUri;
   const aadhaarDone = form.aadhaarNumber.length === 12 && !!form.aadhaarFrontUri && !!form.aadhaarBackUri;
   const panDone = PAN_RE.test(form.panNumber) && !!form.panCardUri;
@@ -384,7 +384,7 @@ export function RegisterScreen() {
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       // iOS uses `padding` so the bottom inputs get pushed above the keyboard.
-      // Android relies on the activity's adjustResize (Expo default) — setting
+      // Android relies on the activity's adjustResize (Expo default) - setting
       // a behavior here on Android often fights the native resize and ends up
       // with double-padding.
       behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -395,7 +395,7 @@ export function RegisterScreen() {
       style={styles.container}
       // Bottom padding grows by the keyboard height while it's open so the
       // last fields can scroll up into the visible area. When the keyboard
-      // closes, padding collapses back to its base value — no dead space.
+      // closes, padding collapses back to its base value - no dead space.
       contentContainerStyle={{ paddingHorizontal: 14, paddingVertical: 20, paddingBottom: 60 + keyboardSpace }}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
@@ -414,7 +414,7 @@ export function RegisterScreen() {
         ))}
       </View>
 
-      {/* Step heading — counter + the current step's name */}
+      {/* Step heading - counter + the current step's name */}
       <Text style={styles.stepCounter}>{t("register.step", { step })}</Text>
       <Text style={styles.stepName}>{t(stepHeadingKey)}</Text>
       <View style={styles.stepDivider} />
@@ -437,7 +437,7 @@ export function RegisterScreen() {
             autoCapitalize="none"
             onFocus={handleInputFocus}
             // Disable copy/paste so a reporter can't paste the same typo'd
-            // email into both fields — the confirmation step has to mean
+            // email into both fields - the confirmation step has to mean
             // something. Long-press menu is still available on iOS but the
             // friction is enough to make a deliberate match the norm.
             contextMenuHidden
@@ -511,7 +511,7 @@ export function RegisterScreen() {
               </TouchableOpacity>
             </Modal>
           )}
-          {/* Pincode — typing 6 digits auto-detects the district */}
+          {/* Pincode - typing 6 digits auto-detects the district */}
           <FieldLabel style={styles.label}>{t("register.pincode")}</FieldLabel>
           <TextInput
             style={[styles.input, errors.pincode ? styles.inputError : null]}
@@ -544,7 +544,7 @@ export function RegisterScreen() {
             ))}
           </View>
 
-          {/* City = assembly constituency within the selected district — tap to choose */}
+          {/* City = assembly constituency within the selected district - tap to choose */}
           <FieldLabel style={styles.label}>{t("register.city")}</FieldLabel>
           <TouchableOpacity style={[styles.input, styles.dateField]} onPress={() => setShowCityPicker(true)} activeOpacity={0.7}>
             <Text numberOfLines={1} style={form.city ? styles.dateValue : styles.datePlaceholder}>
@@ -592,7 +592,7 @@ export function RegisterScreen() {
             onFocus={handleInputFocus}
           />
 
-          {/* Previous media experience — select from a fixed set of ranges
+          {/* Previous media experience - select from a fixed set of ranges
               instead of free text. The stored value is the localized label,
               so the admin Journalist page sees the same string. */}
           <FieldLabel style={styles.label}>{t("register.experienceLabel")}</FieldLabel>

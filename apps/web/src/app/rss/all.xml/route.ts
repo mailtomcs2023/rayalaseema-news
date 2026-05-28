@@ -1,8 +1,8 @@
-// E4 (#223) — 5-min ISR matches Cache-Control header.
+// E4 (#223) - 5-min ISR matches Cache-Control header.
 
 export const revalidate = 300;
 
-// Spec #4 D6 (#219) — site-wide RSS 2.0 feed.
+// Spec #4 D6 (#219) - site-wide RSS 2.0 feed.
 //
 // 50 most-recent published articles across all districts + categories.
 // Aggregator pickup (Feedly, InoReader, NewsBlur) routes traffic from
@@ -48,7 +48,7 @@ export async function GET() {
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Rayalaseema Express — All news</title>
+    <title>Rayalaseema Express - All news</title>
     <link>${siteUrl}</link>
     <atom:link href="${siteUrl}/rss/all.xml" rel="self" type="application/rss+xml" />
     <description>Latest news from across the 8 districts of the Rayalaseema region.</description>

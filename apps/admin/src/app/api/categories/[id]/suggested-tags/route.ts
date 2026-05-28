@@ -1,4 +1,4 @@
-// /api/categories/[id]/suggested-tags — tag-suggestion chips for the editor.
+// /api/categories/[id]/suggested-tags - tag-suggestion chips for the editor.
 //
 // Source = curated seed (CategoryTagSuggestion rows with source = CURATED, written
 // by the seeder lib on category creation + the deploy backfill) PLUS the
@@ -7,7 +7,7 @@
 // surfaces both the curated AI baseline AND what the newsroom is actually
 // using right now.
 //
-// No write side here — that's the seeder. This endpoint is read-only and
+// No write side here - that's the seeder. This endpoint is read-only and
 // any authenticated user can hit it (no role gate beyond the session check).
 
 import { NextRequest, NextResponse } from "next/server";
@@ -44,14 +44,14 @@ export async function GET(
       return NextResponse.json({ error: "Category not found" }, { status: 404 });
     }
 
-    // (1) AI seeds — curated baseline written by the seeder.
+    // (1) AI seeds - curated baseline written by the seeder.
     const aiSeeds = await prisma.categoryTagSuggestion.findMany({
       where: { categoryId, source: "CURATED" },
       include: { tag: { select: { id: true, name: true, slug: true } } },
       orderBy: { createdAt: "asc" },
     });
 
-    // (2) Usage stats — the top-5 most common tags actually attached to
+    // (2) Usage stats - the top-5 most common tags actually attached to
     // Content in this category. Includes both PRIMARY (Content.categoryId)
     // and cross-listed (ContentCategory) placements, because cross-listing
     // signals editorial intent for the secondary category too.
@@ -80,7 +80,7 @@ export async function GET(
     const usageById = new Map(usageTags.map((t) => [t.id, t]));
     const usageCountById = new Map(usageRows.map((r) => [r.tagId, r._count.tagId]));
 
-    // Merge — start with AI seeds (preserving creation order), then layer in
+    // Merge - start with AI seeds (preserving creation order), then layer in
     // usage rows. If a tag is in both lists upgrade its `source` to BOTH and
     // carry the usage count.
     const merged = new Map<string, SuggestedTag>();

@@ -4,9 +4,12 @@ import { CategoriesTable, type CategoryRow } from "./categories-table";
 
 export default async function CategoriesPage() {
   // Pull every category plus its (optional) parent + per-category article
-  // count. Order by sortOrder so the visual order matches the front-end nav.
+  // count. Order by createdAt desc so newly-added categories surface at the
+  // top of the admin list - admins almost always want to see "what did I
+  // just add?" first. The public nav still pulls its own ordered list from
+  // /api/categories (sortOrder asc), so this only affects this page.
   const raw = await prisma.category.findMany({
-    orderBy: { sortOrder: "asc" },
+    orderBy: { createdAt: "desc" },
     include: {
       _count: { select: { contents: true } },
       parent: { select: { id: true, nameEn: true, slug: true } },

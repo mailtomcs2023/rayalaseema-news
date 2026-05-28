@@ -1,4 +1,4 @@
-// Page Builder (Spec #2) — restore a TemplateVersion into the template's
+// Page Builder (Spec #2) - restore a TemplateVersion into the template's
 // draftLayout (NOT the published layout). The operator reviews the
 // restored draft in the editor and then publishes when ready.
 //

@@ -1,4 +1,4 @@
-// Page Builder (Spec #2) — templates list. Server-renders the table from
+// Page Builder (Spec #2) - templates list. Server-renders the table from
 // /api/page-builder/templates data and embeds a client component that
 // owns the create + clone + delete dialogs.
 
@@ -30,7 +30,7 @@ export default async function TemplatesPage() {
     patterns: t.assignments
       .sort((a, b) => b.priority - a.priority)
       .map((a) => a.pattern),
-    createdBy: t.createdBy?.name || "—",
+    createdBy: t.createdBy?.name || "-",
     updatedAt: t.updatedAt.toISOString(),
   }));
 

@@ -1,4 +1,4 @@
-// Page Builder (Spec #2) — visual editor shell (E1 #163).
+// Page Builder (Spec #2) - visual editor shell (E1 #163).
 // Loads the template + the published web URL into a client component
 // that owns the 3-pane layout (palette | canvas iframe | config panel).
 // Subsequent E phases (#164-#167) wire the interactivity:

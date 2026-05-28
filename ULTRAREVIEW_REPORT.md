@@ -17,9 +17,9 @@
 ### Top 5 Issues
 
 1. [CRITICAL] Hardcoded API keys in source code (`apps/admin/src/app/api/auto-publish/route.ts:4`, `apps/web/src/app/api/tts/route.ts:3`, `apps/admin/src/app/api/auto-fetch/route.ts:4`)
-2. [HIGH] Missing authentication on 35 of 39 admin API routes — anyone can DELETE articles, users, categories
-3. [HIGH] N+1 query in district articles — 2×N queries per request (`apps/web/src/lib/db-queries.ts:214`)
-4. [HIGH] No input validation — raw `req.json()` passed directly to Prisma update on all PUT routes
+2. [HIGH] Missing authentication on 35 of 39 admin API routes - anyone can DELETE articles, users, categories
+3. [HIGH] N+1 query in district articles - 2×N queries per request (`apps/web/src/lib/db-queries.ts:214`)
+4. [HIGH] No input validation - raw `req.json()` passed directly to Prisma update on all PUT routes
 5. [HIGH] Weak NextAuth secret in `.env.local` (`"dev-secret-change-in-production"`)
 
 ---
@@ -61,12 +61,12 @@
   ```typescript
   const NEWSDATA_KEY = process.env.NEWSDATA_API_KEY || "pub_599d50a2b3024142bf3f31aef9b6b89b";
   ```
-- **Fix:** Same as S1 — use env var only, fail if missing.
+- **Fix:** Same as S1 - use env var only, fail if missing.
 
 ### HIGH
 
 #### S4: Missing Authentication on All Admin API Routes
-- **Files:** 35+ routes in `apps/admin/src/app/api/` — articles, categories, users, polls, ads, breaking-news, comments, galleries, etc.
+- **Files:** 35+ routes in `apps/admin/src/app/api/` - articles, categories, users, polls, ads, breaking-news, comments, galleries, etc.
 - **Description:** Admin PUT/DELETE operations have NO auth checks. Middleware only protects page routes, not API routes. Anyone can modify or delete all data.
 - **Vulnerable code:**
   ```typescript
@@ -84,12 +84,12 @@
 
 #### S5: No Input Validation on Update Routes
 - **Files:** `apps/admin/src/app/api/ads/[id]/route.ts:6`, `categories/[id]/route.ts:7`, `galleries/[id]/route.ts:6`, and 20+ others
-- **Description:** Raw `req.json()` passed directly to `prisma.update({ data })`. Allows mass assignment — attacker can set any field.
+- **Description:** Raw `req.json()` passed directly to `prisma.update({ data })`. Allows mass assignment - attacker can set any field.
 - **Fix:** Whitelist allowed fields or use Zod schema validation.
 
 #### S6: Weak NextAuth Secret
 - **File:** `.env.local:2`
-- **Description:** `NEXTAUTH_SECRET="dev-secret-change-in-production"` — trivially guessable, allows JWT forgery.
+- **Description:** `NEXTAUTH_SECRET="dev-secret-change-in-production"` - trivially guessable, allows JWT forgery.
 - **Fix:** Generate with `openssl rand -base64 32` and set in production env.
 
 #### S7: Database Password Exposure
@@ -99,7 +99,7 @@
 
 #### S8: Insecure Cookie Configuration
 - **File:** `apps/admin/src/lib/auth.ts:63`
-- **Description:** `secure: false` on session cookie — tokens transmitted over HTTP, interceptable.
+- **Description:** `secure: false` on session cookie - tokens transmitted over HTTP, interceptable.
 - **Fix:** `secure: process.env.NODE_ENV === "production"`
 
 #### S9: No Rate Limiting on Public Endpoints
@@ -153,7 +153,7 @@
 
 #### P4: Missing Full-Text Search Indexes
 - **File:** `packages/db/prisma/schema.prisma` (Article model)
-- **Description:** Search API uses `contains` on `title`, `summary`, `body` — full table scans without GIN indexes.
+- **Description:** Search API uses `contains` on `title`, `summary`, `body` - full table scans without GIN indexes.
 - **Fix:** Add PostgreSQL GIN indexes via raw SQL migration.
 
 ### MEDIUM Impact
@@ -266,7 +266,7 @@
 ## Recommendations
 
 ### Immediate Actions (do now)
-- [ ] Remove hardcoded API keys from `auto-publish/route.ts`, `auto-fetch/route.ts`, `tts/route.ts` — use env vars only
+- [ ] Remove hardcoded API keys from `auto-publish/route.ts`, `auto-fetch/route.ts`, `tts/route.ts` - use env vars only
 - [ ] Add authentication to ALL admin API routes (create `withAuth` wrapper)
 - [ ] Generate strong `NEXTAUTH_SECRET` for production
 - [ ] Set `secure: true` on session cookies in production
@@ -279,7 +279,7 @@
 - [ ] Implement rate limiting on public endpoints (comments, polls, TTS)
 - [ ] Add full-text search indexes for article search
 - [ ] Standardize error response format across all routes
-- [ ] Fix empty catch blocks — add proper error logging
+- [ ] Fix empty catch blocks - add proper error logging
 - [ ] Reduce homepage article fetch from 500 to 150
 
 ### Long-term (backlog)

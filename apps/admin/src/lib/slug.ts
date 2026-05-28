@@ -1,4 +1,4 @@
-// Centralized slug helpers — every article slug in the system MUST go through these.
+// Centralized slug helpers - every article slug in the system MUST go through these.
 // Prevents URL-breaking characters (slashes, spaces, unicode, punctuation) from reaching the DB.
 
 const MAX_SLUG_LEN = 120;
@@ -7,7 +7,7 @@ const MAX_SLUG_LEN = 120;
 // of a headline to an English slug isn't available (server-side path, AI down,
 // or non-news content). Keys cover independent vowels, consonants, dependent
 // vowel signs, anusvara/visarga, and Telugu digits. Conjunct clusters render
-// as their constituent letters (good enough for slugs — not for serious i18n
+// as their constituent letters (good enough for slugs - not for serious i18n
 // transliteration). Missing characters are dropped, which is the right call
 // for URL slugs (punctuation / emoji / etc. shouldn't survive).
 const TELUGU_MAP: Record<string, string> = {
@@ -30,7 +30,7 @@ const TELUGU_MAP: Record<string, string> = {
   "ృ": "r", "ౄ": "rr",
   "ె": "e", "ే": "ee", "ై": "ai",
   "ొ": "o", "ో": "oo", "ౌ": "au",
-  // Anusvara (ం=m), visarga (ః=h), virama (్) — virama suppresses inherent vowel
+  // Anusvara (ం=m), visarga (ః=h), virama (్) - virama suppresses inherent vowel
   "ం": "m", "ః": "h", "్": "",
   // Telugu digits
   "౦": "0", "౧": "1", "౨": "2", "౩": "3", "౪": "4",
@@ -52,7 +52,7 @@ export function transliterateTelugu(s: string): string {
 }
 
 /** Slug placeholders the editor stamps on a brand-new draft. Useful for the
- *  "regenerate from title" check on save — if the slug is still one of these
+ *  "regenerate from title" check on save - if the slug is still one of these
  *  we know the user hasn't customized it yet. */
 const PLACEHOLDER_SLUG_RE = /^(untitled|breaking|news)-\d+$/;
 export function isPlaceholderSlug(slug: string | null | undefined): boolean {
@@ -74,7 +74,7 @@ export function sanitizeSlug(raw: string): string {
 /**
  * Build a fresh slug from a title.
  * Strategy:
- *  1. Try the ASCII (English) portion — yields readable slugs for English / translated headlines.
+ *  1. Try the ASCII (English) portion - yields readable slugs for English / translated headlines.
  *  2. If no usable ASCII (pure Telugu title), transliterate to Latin characters.
  *  3. If even transliteration produces nothing, fall back to a timestamp-based slug.
  *  4. Always sanitize the final result.
@@ -85,7 +85,7 @@ export function buildSlugFromTitle(title: string, fallbackPrefix = "news"): stri
     const clean = sanitizeSlug(ascii);
     if (clean) return clean;
   }
-  // Telugu (or any non-ASCII) title — transliterate.
+  // Telugu (or any non-ASCII) title - transliterate.
   const transliterated = transliterateTelugu(title).trim();
   if (transliterated.length >= 3) {
     const clean = sanitizeSlug(transliterated);

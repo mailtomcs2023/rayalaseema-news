@@ -105,7 +105,7 @@ export function KycBanner() {
         </View>
       </View>
 
-      {/* Progress dots — three steps, current one filled with accent,
+      {/* Progress dots - three steps, current one filled with accent,
           earlier ones filled with a check, later ones empty. */}
       <View style={styles.steps}>
         {([
@@ -151,7 +151,7 @@ export function KycBanner() {
         })}
       </View>
 
-      {/* SUBMITTED — ETA + drafts hint */}
+      {/* SUBMITTED - ETA + drafts hint */}
       {ui.eta ? (
         <View style={styles.metaRow}>
           <Ionicons name="time-outline" size={13} color={ui.accent} />
@@ -165,7 +165,7 @@ export function KycBanner() {
         </View>
       ) : null}
 
-      {/* REJECTED — admin's rejection note (italic, quoted) */}
+      {/* REJECTED - admin's rejection note (italic, quoted) */}
       {status === "REJECTED" && note ? (
         <View style={styles.noteBox}>
           <Text style={styles.noteLabel}>{t("kyc.adminNote")}</Text>
@@ -173,7 +173,7 @@ export function KycBanner() {
         </View>
       ) : null}
 
-      {/* CTA — bold accent button for PENDING / REJECTED */}
+      {/* CTA - bold accent button for PENDING / REJECTED */}
       {ui.cta ? (
         <TouchableOpacity
           style={[styles.cta, { backgroundColor: ui.accent }]}
@@ -213,10 +213,10 @@ function getKycUi(status: KycStatus, t: (k: string) => string): KycUi {
         title: t("kyc.submittedTitle"),
         msg: t("kyc.submittedMsg"),
         eta: t("kyc.etaUsually"),
-        // No "drafts still work" hint anymore — drafts are blocked too while
+        // No "drafts still work" hint anymore - drafts are blocked too while
         // KYC is pending. The msg above already explains the state.
       };
-    // PENDING — account exists, docs not uploaded yet.
+    // PENDING - account exists, docs not uploaded yet.
     default:
       return {
         bg: "#fff7ed",
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
     gap: 14,
     // Hairline border + soft shadow so the card reads as a card even when its
     // tinted background (#eef4ff / #fff7ed / #fff1f1) is close in value to the
-    // screen's #f3f4f6 — otherwise SUBMITTED in particular blends in.
+    // screen's #f3f4f6 - otherwise SUBMITTED in particular blends in.
     borderWidth: 1,
     borderColor: "#e5e7eb",
     shadowColor: "#000",
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
   metaText: { fontSize: 12, fontWeight: "700" },
   draftsText: { fontSize: 11, color: "#6b7280" },
 
-  // Rejection note for REJECTED state — flat-left, rounded-right callout
+  // Rejection note for REJECTED state - flat-left, rounded-right callout
   // so the red accent border reads as an inset marker (admin's note),
   // not a floating card.
   noteBox: {

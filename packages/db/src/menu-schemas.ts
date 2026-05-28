@@ -31,7 +31,7 @@ const targetSchema = z.discriminatedUnion("type", [
 
 const mobileVariantSchema = z.enum(["show", "hide"]);
 
-// Child items — no `children` field allowed (max depth 2).
+// Child items - no `children` field allowed (max depth 2).
 const childItemSchema = z.object({
   id: z.string().min(1),
   label: z.string().trim().min(1).max(80),
@@ -100,7 +100,7 @@ export function resolveItemHref(target: MenuItemTarget): string | null {
 }
 
 // Lazy import of prisma to avoid pulling the client into apps/web edge bundles.
-// getMenu is called from React Server Components — single Prisma query +
+// getMenu is called from React Server Components - single Prisma query +
 // projected to a plain MenuItem[]. Returns [] when the menu is unpublished
 // or missing so headers render gracefully.
 export async function getMenu(location: MenuLocation, prismaClient: any): Promise<MenuItem[]> {

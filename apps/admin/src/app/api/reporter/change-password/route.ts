@@ -9,7 +9,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 // check before the password is replaced.
 export async function POST(req: NextRequest) {
   // Brute-force the current-password check is also a real risk if a token
-  // gets stolen — limit to 10/min/IP same as login.
+  // gets stolen - limit to 10/min/IP same as login.
   const limited = checkRateLimit(req, { max: 10, windowMs: 60_000, prefix: "reporter-change-password" });
   if (limited) return limited;
 

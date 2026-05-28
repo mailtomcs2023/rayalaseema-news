@@ -1,4 +1,4 @@
-# Spec #1 — Unified Content Model
+# Spec #1 - Unified Content Model
 
 **Date:** 2026-05-25
 **Status:** Approved by user (sections 1–3); section 4 pending review
@@ -226,7 +226,7 @@ Add to reach industry-standard parity:
 
 Toolbar layout (top sticky bar):
 ```
-[H▾] [B] [I] [U] [S] [A▾color] [≡highlight] | [• list] [1. list] [☐ task] | [" quote] [</> code] [— rule] |
+[H▾] [B] [I] [U] [S] [A▾color] [≡highlight] | [• list] [1. list] [☐ task] | [" quote] [</> code] [- rule] |
 [⟵] [→] [center] [justify] | [Link] [Image] [▶ YouTube] [Table] | [↶ undo] [↷ redo] [⌫ clear] | [<> source]
 ```
 
@@ -267,11 +267,11 @@ Repoint without changing function signatures (so React components stay unchanged
 | Existing | New |
 |---|---|
 | `/article/[slug]` (preserve) | Same path, reads Content where `type=ARTICLE` |
-| — | `/video/[slug]` (renders video player + payload) |
-| — | `/reel/[slug]` (vertical clip player) |
-| — | `/story/[slug]` (swipeable card viewer for WEB_STORY) |
-| — | `/gallery/[slug]` (PHOTO_GALLERY lightbox) |
-| — | `/cartoon/[slug]` (single-image page with caption) |
+| - | `/video/[slug]` (renders video player + payload) |
+| - | `/reel/[slug]` (vertical clip player) |
+| - | `/story/[slug]` (swipeable card viewer for WEB_STORY) |
+| - | `/gallery/[slug]` (PHOTO_GALLERY lightbox) |
+| - | `/cartoon/[slug]` (single-image page with caption) |
 
 BREAKING_NEWS has no public detail page; only renders in the ticker.
 
@@ -281,7 +281,7 @@ No changes to `apps/web/src/app/page.tsx` rendering. `getFullHomepageData` retur
 
 ## Migration + Rollout
 
-### Step 1 — DB migration
+### Step 1 - DB migration
 
 Single squashed migration file: `packages/db/prisma/migrations/<ts>_unified_content_model/migration.sql`.
 
@@ -294,14 +294,14 @@ Migration script does:
 6. `CREATE TABLE "ContentPayment" (...)` copying from `ArticlePayment` shape with `contentId` FK
 7. `DROP TABLE` (cascade): `Photo`, `PhotoGallery`, `WebStory`, `Cartoon`, `Video`, `Reel`, `BreakingNews`, `ArticleTag`, `ArticleRevision`, `ArticlePayment`, `Article` (in dependency order)
 
-### Step 2 — Backend swap
+### Step 2 - Backend swap
 
 - New `/api/content` route + Zod schemas.
 - Delete 7 old API namespaces.
 - Update `/api/auto-publish`, `/api/auto-fetch`, `/api/cron/publish-scheduled` to write `Content` rows.
 - Update `apps/web/src/lib/db-queries.ts` per the table above.
 
-### Step 3 — Admin shell
+### Step 3 - Admin shell
 
 - Build `/content` list page (modeled on `/articles`).
 - Build type-picker modal.
@@ -309,19 +309,19 @@ Migration script does:
 - Replace sidebar.
 - Delete dead admin pages and route files.
 
-### Step 4 — Public routes
+### Step 4 - Public routes
 
 - New page files for `/video`, `/reel`, `/story`, `/gallery`, `/cartoon`.
 - Update `/article/[slug]` data source.
 
-### Step 5 — Deploy
+### Step 5 - Deploy
 
 - Single PR, single deploy.
 - **Destructive**: drops ~10 tables on prod. User already wiped Articles; the ~20 seed rows in Stories/Videos/Galleries/Cartoons/BreakingNews are dev-seed artifacts (`fill-content.ts`).
 - Add `pg_dump` step to `.github/workflows/deploy.yml` immediately before `prisma migrate deploy`.
 - Backup stored in `/home/azureuser/db-backups/pre-content-unify-<ts>.sql`.
 
-### Step 6 — Cleanup
+### Step 6 - Cleanup
 
 - Delete dead admin pages, API routes, components (e.g., old `crud-table.tsx` use sites if obsolete).
 - Update `packages/db/scripts/fill-content.ts` to insert into `Content` (or delete the script if no longer needed).
@@ -334,7 +334,7 @@ Migration script does:
 | Single-PR migration breaks if any step fails | Each Phase A–J shipped as its own PR; foundational schema migration in Phase A is the only destructive step. |
 | `payload` JSON drift over time | Zod schema per type; validated on POST/PUT; ad-hoc audit script in `packages/db/scripts/validate-payloads.ts` |
 | FK rename on `Comment` breaks existing comments | Rename preserves data; covered by integration test |
-| URL break for `/article/[slug]` deep links | None — route preserved |
+| URL break for `/article/[slug]` deep links | None - route preserved |
 | TipTap color + text-style order matters | text-style loaded before color; documented in inline comment |
 | Editorial flow on BREAKING_NEWS feels heavy | Type-picker modal sets initial status to SUBMITTED for breaking (skips Draft step). Per-type default in `/api/content` POST handler. |
 | Image crop UX with Telugu titles | `react-image-crop` is layout-agnostic; smoke-test with Telugu alt text in QA |
@@ -351,7 +351,7 @@ Migration script does:
 
 - Drag-drop Page Builder for homepage and category pages → **Spec #2**
 - Menu Builder for header nav + sidebar → **Spec #3**
-- New content types beyond the 7 (Podcast, Live Blog) — handled by enum extension later
+- New content types beyond the 7 (Podcast, Live Blog) - handled by enum extension later
 - Per-type custom editorial flows (single flow for now)
 - Bulk RSS / NewsData import beyond current auto-publish
 - AMP / Web Stories AMP variant
@@ -373,7 +373,7 @@ Migration script does:
 
 Broken into 10 phases / 25 issues. See epic #104 for live status.
 
-**Note:** Original A1 (#105) was split into A1 (additive only — add Content tables) + A1B (#188, rename FKs on Comment/SocialPost/HeadlineTest/ArticleReview) + A1C (#189, drop old tables) after the implementation discovery that Article is referenced by ~6 FKs across the codebase, not just Comment as the original issue described. A1B + A1C run at the END of the epic (after all other code repointing is complete) to keep blast radius small and let intermediate phases ship safely.
+**Note:** Original A1 (#105) was split into A1 (additive only - add Content tables) + A1B (#188, rename FKs on Comment/SocialPost/HeadlineTest/ArticleReview) + A1C (#189, drop old tables) after the implementation discovery that Article is referenced by ~6 FKs across the codebase, not just Comment as the original issue described. A1B + A1C run at the END of the epic (after all other code repointing is complete) to keep blast radius small and let intermediate phases ship safely.
 
 | Phase | Issue | Title |
 |---|---|---|

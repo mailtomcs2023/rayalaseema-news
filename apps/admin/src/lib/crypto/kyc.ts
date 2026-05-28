@@ -1,5 +1,5 @@
 // Field-level encryption for KYC + banking PII (Aadhaar, PAN, bank account
-// number). Uses AES-256-GCM via Node's built-in `crypto` module — no third-
+// number). Uses AES-256-GCM via Node's built-in `crypto` module - no third-
 // party deps, no external KMS round-trip per row.
 //
 // Storage format: "kyc1:<base64-iv>:<base64-ciphertext>:<base64-authtag>"
@@ -68,14 +68,14 @@ export function encrypt(plaintext: string | null | undefined): string | null {
 
 // Decrypt an encrypted envelope. Returns the plaintext, or the input
 // unchanged if it's not in our encrypted format (back-compat for rows
-// stored before encryption was rolled out — they remain readable).
+// stored before encryption was rolled out - they remain readable).
 //
 // Throws only on a corrupted envelope (bad base64 / wrong auth tag / wrong
 // key). Callers that handle a mix of trusted-and-untrusted ciphertexts
 // should wrap in try/catch and treat decrypt failure as "data tampered".
 export function decrypt(value: string | null | undefined): string | null {
   if (value == null || value === "") return null;
-  if (!isEncrypted(value)) return value; // plaintext legacy row — return as-is
+  if (!isEncrypted(value)) return value; // plaintext legacy row - return as-is
   const parts = value.split(":");
   if (parts.length !== 4) {
     throw new Error("Invalid encrypted envelope shape");
@@ -90,7 +90,7 @@ export function decrypt(value: string | null | undefined): string | null {
   return pt.toString("utf8");
 }
 
-// Convenience for the ReporterProfile shape — call on every read path that
+// Convenience for the ReporterProfile shape - call on every read path that
 // returns the profile to a client. Mutates a shallow copy; original input
 // is left untouched. Decrypt failures are surfaced as null + console.error
 // so a single corrupted row doesn't 500 the whole listing.
@@ -114,7 +114,7 @@ export function decryptProfileFields<T extends ProfileLike>(profile: T): T {
   return out as T;
 }
 
-// Mirror of decryptProfileFields for the write side — used when accepting
+// Mirror of decryptProfileFields for the write side - used when accepting
 // an admin/reporter form submission that includes Aadhaar/PAN/bank fields.
 export function encryptProfileFields<T extends Record<string, unknown>>(data: T): T {
   const out = { ...data } as Record<string, unknown>;

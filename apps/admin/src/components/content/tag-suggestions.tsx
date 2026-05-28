@@ -2,17 +2,17 @@
 
 // Tag suggestion chip row, shown directly under the Tags input in the
 // content editor. Loads /api/categories/[id]/suggested-tags whenever the
-// editor's category changes; renders the result as a scrollable horizontal
-// row of clickable chips. Click adds the tag to the parent's tags state;
-// chips for tags that are already present are dimmed (still clickable to
-// re-add is a no-op via the parent's dedup).
+// editor's category changes; renders the result as a horizontal row of
+// clickable chips.
 //
-// Source markers ride along on each chip — "BOTH" and "USAGE" get a small
-// dot indicator because those are the tags the newsroom is actually using,
-// not just the AI-seed baseline.
+// Chip states:
+//   • Not added → white pill, Sparkles (curated) or TrendingUp (usage) icon
+//                 on the left; click adds the tag to the parent's tags input.
+//   • Added     → brand-tinted pill, red X icon on the RIGHT; click removes
+//                 the tag from the parent's tags input.
 
 import { useEffect, useState } from "react";
-import { Sparkles, TrendingUp } from "lucide-react";
+import { Sparkles, TrendingUp, X as XIcon } from "lucide-react";
 
 interface SuggestedTag {
   id: string;
@@ -27,9 +27,10 @@ interface Props {
   /** Lowercase set of names already in the parent's Tags input. */
   currentNames: Set<string>;
   onAddTag: (name: string) => void;
+  onRemoveTag: (name: string) => void;
 }
 
-export function TagSuggestions({ categoryId, currentNames, onAddTag }: Props) {
+export function TagSuggestions({ categoryId, currentNames, onAddTag, onRemoveTag }: Props) {
   const [tags, setTags] = useState<SuggestedTag[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,7 +77,7 @@ export function TagSuggestions({ categoryId, currentNames, onAddTag }: Props) {
   if (error) {
     return (
       <p style={{ fontSize: 11, color: "#b91c1c", marginTop: 6 }}>
-        Couldn't load suggestions — {error}
+        Couldn't load suggestions - {error}
       </p>
     );
   }
@@ -103,18 +104,63 @@ export function TagSuggestions({ categoryId, currentNames, onAddTag }: Props) {
         {tags.map((t) => {
           const isAdded = currentNames.has(t.name.toLowerCase());
           const showTrend = t.source === "USAGE" || t.source === "BOTH";
+
+          // Added chips: tinted bg, red X replaces the leading Sparkles/Trend
+          // icon (same slot, same alignment) so the chip layout is identical
+          // to the unadded state - only the leading glyph changes. Click
+          // removes the tag.
+          if (isAdded) {
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => onRemoveTag(t.name)}
+                title="Click to remove from tags"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  padding: "3px 9px",
+                  borderRadius: 999,
+                  border: "1px solid #fecaca",
+                  background: "#fef2f2",
+                  color: "#7f1d1d",
+                  fontSize: 12,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  lineHeight: 1.4,
+                  transition: "background 120ms, border-color 120ms",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "#fee2e2";
+                  e.currentTarget.style.borderColor = "#fca5a5";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "#fef2f2";
+                  e.currentTarget.style.borderColor = "#fecaca";
+                }}
+              >
+                <XIcon
+                  aria-hidden="true"
+                  size={11}
+                  strokeWidth={2.5}
+                  style={{ color: "#dc2626" }}
+                />
+                {t.name}
+              </button>
+            );
+          }
+
+          // Not added: white pill with source icon, click adds.
           return (
             <button
               key={t.id}
               type="button"
               onClick={() => onAddTag(t.name)}
-              disabled={isAdded}
               title={
-                isAdded
-                  ? "Already added"
-                  : showTrend
-                    ? `Used on ${t.usageCount} article${t.usageCount === 1 ? "" : "s"} in this category`
-                    : "Suggested tag"
+                showTrend
+                  ? `Used on ${t.usageCount} article${t.usageCount === 1 ? "" : "s"} in this category`
+                  : "Suggested tag"
               }
               style={{
                 display: "inline-flex",
@@ -123,21 +169,19 @@ export function TagSuggestions({ categoryId, currentNames, onAddTag }: Props) {
                 padding: "3px 9px",
                 borderRadius: 999,
                 border: "1px solid #e5e7eb",
-                background: isAdded ? "#f3f4f6" : "#fff",
-                color: isAdded ? "#9ca3af" : "#374151",
+                background: "#fff",
+                color: "#374151",
                 fontSize: 12,
                 fontWeight: 500,
-                cursor: isAdded ? "default" : "pointer",
+                cursor: "pointer",
                 lineHeight: 1.4,
                 transition: "background 120ms, border-color 120ms",
               }}
               onMouseEnter={(e) => {
-                if (isAdded) return;
                 e.currentTarget.style.background = "#f9fafb";
                 e.currentTarget.style.borderColor = "#d1d5db";
               }}
               onMouseLeave={(e) => {
-                if (isAdded) return;
                 e.currentTarget.style.background = "#fff";
                 e.currentTarget.style.borderColor = "#e5e7eb";
               }}

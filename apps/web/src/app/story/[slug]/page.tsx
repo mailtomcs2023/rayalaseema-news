@@ -1,4 +1,4 @@
-// /story/[slug] — WEB_STORY Content type detail page (Spec #1 #111).
+// /story/[slug] - WEB_STORY Content type detail page (Spec #1 #111).
 // Renders payload.slides as a swipeable card carousel (CSS scroll-snap so we
 // don't ship a swiper lib for the MVP). Each slide = full-bleed image + caption.
 import { notFound } from "next/navigation";

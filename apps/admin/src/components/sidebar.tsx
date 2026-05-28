@@ -9,34 +9,34 @@ import type { Role } from "@/lib/roles";
 // Key used to persist the sidebar's nav-scroll position across navigations.
 // The sidebar component remounts on every route change (it's imported by
 // each page rather than living in a (dashboard) layout), so the <nav>
-// scrollTop resets to 0 on click — making the active item jump out of view
+// scrollTop resets to 0 on click - making the active item jump out of view
 // if the user had scrolled to find it. Storing the offset in sessionStorage
 // (so it clears on tab close) preserves the scroll across remounts.
 const SIDEBAR_SCROLL_KEY = "admin-sidebar-scroll";
 
 // Each nav item declares which roles can see it. The set is the same as
-// canVisit() in lib/roles.ts — if a route is blocked there, it's hidden
+// canVisit() in lib/roles.ts - if a route is blocked there, it's hidden
 // here too so a user never sees a link that 403s when clicked.
 //
-//   ADMIN       — everything
-//   EDITOR      — full editorial surface (Content, Review, ePaper, polls,
+//   ADMIN       - everything
+//   EDITOR      - full editorial surface (Content, Review, ePaper, polls,
 //                 comments, mandi, profile-requests, audit log) but blocked
 //                 from HR / finance / settings / categories / desks / ads /
 //                 ePaper Templates
-//   SUB_EDITOR  — review-focused only: Dashboard, Content, Review Queue
-//   REPORTER    — never sees this sidebar (uses /reporter portal)
+//   SUB_EDITOR  - review-focused only: Dashboard, Content, Review Queue
+//   REPORTER    - never sees this sidebar (uses /reporter portal)
 const ALL: Role[] = ["ADMIN", "EDITOR", "SUB_EDITOR"];
 const EDITORIAL: Role[] = ["ADMIN", "EDITOR"];
 const ADMIN_ONLY: Role[] = ["ADMIN"];
 
 const navItems: { name: string; href: string; icon: string; roles: Role[] }[] = [
   { name: "Dashboard", href: "/", roles: ALL, icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
-  // Unified Content (Spec #1 #113) — single menu replaces Articles, Breaking News,
+  // Unified Content (Spec #1 #113) - single menu replaces Articles, Breaking News,
   // Videos, Photo Gallery, Web Stories, Reels, Cartoons, News Feed. Type filter
   // chips on the /content page let editors narrow to one content type.
   { name: "Content", href: "/content", roles: ALL, icon: "M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" },
   // News Feed (restored after H1 #131 cleanup). External news sources
-  // (NewsData.io + Google News RSS) — import-as-draft per article.
+  // (NewsData.io + Google News RSS) - import-as-draft per article.
   { name: "News Feed", href: "/news-feed", roles: EDITORIAL, icon: "M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v12a2 2 0 01-2 2zM9 8h6M9 12h6M9 16h4" },
   { name: "Review Queue", href: "/review", roles: ALL, icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" },
   { name: "Categories", href: "/categories", roles: ADMIN_ONLY, icon: "M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" },
@@ -49,14 +49,14 @@ const navItems: { name: string; href: string; icon: string; roles: Role[] }[] = 
   { name: "ePaper Ads", href: "/epaper-ads", roles: EDITORIAL, icon: "M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" },
   { name: "ePaper Images", href: "/epaper-images", roles: EDITORIAL, icon: "M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" },
   { name: "ePaper Analytics", href: "/epaper-analytics", roles: EDITORIAL, icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" },
-  // Page Builder (Spec #2) — admin-editable templates for the public homepage
+  // Page Builder (Spec #2) - admin-editable templates for the public homepage
   // + every /category/<slug> page. Sub-pages live under /page-builder/.
   { name: "Page Builder", href: "/page-builder", roles: EDITORIAL, icon: "M4 5a2 2 0 012-2h12a2 2 0 012 2v3H4V5zM4 10h16v9a2 2 0 01-2 2H6a2 2 0 01-2-2v-9zm4 3h2v2H8v-2zm4 0h6v2h-6v-2z" },
-  // Menu Builder (Spec #3 #177) — three named menus (header / footer /
+  // Menu Builder (Spec #3 #177) - three named menus (header / footer /
   // mobile) editable as a drag-drop tree.
   { name: "Menu Builder", href: "/menu-builder/header", roles: EDITORIAL, icon: "M4 6h16M4 12h16M4 18h7" },
   { name: "Ads", href: "/ads", roles: ADMIN_ONLY, icon: "M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" },
-  // Reporters merged into /users — admins reach reporter KYC + profile
+  // Reporters merged into /users - admins reach reporter KYC + profile
   // from the merged Users table by filtering Role → Reporter, which auto-
   // shows Phone / District / KYC / Updates columns. The /reporters route
   // still exists for direct edits but no longer has its own nav entry.
@@ -71,7 +71,7 @@ export function Sidebar() {
   const pathname = usePathname();
   // `status` tells us whether NextAuth has finished its session probe. During
   // the loading state we render every item so the sidebar isn't visibly
-  // empty for ~200–500 ms after every page load — the API still 403s any
+  // empty for ~200–500 ms after every page load - the API still 403s any
   // route the user shouldn't reach, so this is a UX optimisation, not a
   // security boundary.
   const { data: session, status } = useSession();
@@ -88,7 +88,7 @@ export function Sidebar() {
   }, [open]);
 
   // Restore nav scroll position on mount (the sidebar remounts on every
-  // route change because it lives in each page rather than a layout —
+  // route change because it lives in each page rather than a layout -
   // without this, clicking a link further down the nav resets the scroll
   // to the top of the list, hiding the item the user just selected).
   useEffect(() => {
@@ -127,17 +127,17 @@ export function Sidebar() {
         className={`admin-sidebar${open ? " open" : ""}`}
         style={{ width: 240, height: "100vh", background: "#111827", color: "#fff", position: "fixed", left: 0, top: 0, display: "flex", flexDirection: "column", overflow: "hidden", zIndex: 50 }}
       >
-        {/* Logo — wordmark alone, vertically centered. Mobile drawer closes
+        {/* Logo - wordmark alone, vertically centered. Mobile drawer closes
             by tapping the backdrop (admin-backdrop), so no explicit close
             button is rendered. */}
         <div style={{ padding: "18px 20px", borderBottom: "1px solid #1f2937", display: "flex", alignItems: "center" }}>
-          {/* White-on-transparent wordmark — sidebar bg is #111827, so the
+          {/* White-on-transparent wordmark - sidebar bg is #111827, so the
               inverse logo (apps/admin/public/logo-inverse.svg) reads cleanly. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-inverse.svg" alt="Rayalaseema Express" style={{ height: 44, width: "auto", display: "block" }} />
         </div>
 
-        {/* Nav — filtered by the signed-in user's role. The API-side
+        {/* Nav - filtered by the signed-in user's role. The API-side
             requireAuth([...]) check stays authoritative; this is just so a
             user doesn't see a link that would 403 when clicked. */}
         <nav ref={navRef} className="sidebar-nav" style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>

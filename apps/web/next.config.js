@@ -1,22 +1,75 @@
 /** @type {import('next').NextConfig} */
-// Spec #4 E4 (#223) — caching strategy:
+// Spec #4 E4 (#223) - caching strategy:
 //   - sitemap.xml / news-sitemap.xml / sitemap-index.xml / rss/* routes
 //     use `export const revalidate = N` so the edge caches a single
 //     copy per N seconds; the Prisma query no longer fires on every
 //     crawler request.
 //   - Full Cache Components opt-in (cacheLife profiles + cacheTag +
-//     updateTag) deferred to a focused migration sprint — it changes
+//     updateTag) deferred to a focused migration sprint - it changes
 //     default rendering behaviour across the whole app and needs its
 //     own QA pass. Tracked as a follow-up to E4.
+
+// Security headers for the public web. Slightly looser than admin since
+// reader-facing pages need third-party embeds (YouTube, social cards,
+// AdSense once enabled). HSTS prod-only; clickjacking + sniffing locked
+// down; Permissions-Policy denies invasive features by default.
+const securityHeaders = [
+  ...(process.env.NODE_ENV === "production"
+    ? [
+        {
+          key: "Strict-Transport-Security",
+          value: "max-age=31536000; includeSubDomains; preload",
+        },
+      ]
+    : []),
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+  },
+];
+
 const nextConfig = {
   typescript: { ignoreBuildErrors: true },
   transpilePackages: ["@rayalaseema/ui", "@rayalaseema/db", "@rayalaseema/seo-schema"],
   images: {
+    // Modern formats - Next.js negotiates the best one the browser
+    // supports. AVIF is ~30% smaller than WebP and ~50% smaller than JPEG
+    // at the same visual quality; major editorial-traffic win.
+    formats: ["image/avif", "image/webp"],
+    // 1-year CDN cache on the optimized variants. Source URL is part of
+    // the cache key so swapping a featured image bypasses immediately.
+    minimumCacheTTL: 60 * 60 * 24 * 365,
     remotePatterns: [
+      // CDNs we've shipped with.
       { protocol: "https", hostname: "res.cloudinary.com" },
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "http", hostname: "localhost" },
+      // Azure Blob - primary upload destination. Allows any account name
+      // under the `*.blob.core.windows.net` wildcard so deploys to a new
+      // storage account don't need a config change.
+      { protocol: "https", hostname: "**.blob.core.windows.net" },
+      // Free-image-search picks (Pexels, Pixabay, iStock CDN). When the
+      // editor inserts an image via the search modal it lands as one of
+      // these direct URLs.
+      { protocol: "https", hostname: "images.pexels.com" },
+      { protocol: "https", hostname: "pixabay.com" },
+      { protocol: "https", hostname: "cdn.pixabay.com" },
+      { protocol: "https", hostname: "media.istockphoto.com" },
+      // Sakshi / Eenadu / common wire-image hosts that the auto-fetch
+      // pipeline ingests as og:image. Add more here if a publisher gets
+      // through the scraper but their image host is blocked.
+      { protocol: "https", hostname: "**.gumlet.io" },
+      { protocol: "https", hostname: "**.akamaized.net" },
+      { protocol: "https", hostname: "**.cloudfront.net" },
+      { protocol: "https", hostname: "**.eenadu.net" },
+      { protocol: "https", hostname: "**.sakshi.com" },
     ],
+  },
+  async headers() {
+    return [{ source: "/:path*", headers: securityHeaders }];
   },
 };
 

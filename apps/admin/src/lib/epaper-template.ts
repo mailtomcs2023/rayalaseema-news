@@ -1,4 +1,4 @@
-// Dense broadsheet e-paper templates — Eenadu-style multi-column layout.
+// Dense broadsheet e-paper templates - Eenadu-style multi-column layout.
 // Rendered by Playwright (headless Chromium) to a 1200x2000 broadsheet PNG.
 
 export interface EpaperArticle {
@@ -44,7 +44,7 @@ export function renderBroadsheetPage(o: PageOptions): string {
          <div class="mast-side">ఈ-ఎడిషన్<br/>${esc(o.dateLabel)}</div>
          <div class="mast-mid">
            <div class="mast-logo">రాయలసీమ ఎక్స్‌ప్రెస్</div>
-           <div class="mast-tag">— THE VOICE OF RAYALASEEMA —</div>
+           <div class="mast-tag">- THE VOICE OF RAYALASEEMA -</div>
          </div>
          <div class="mast-side r">కర్నూలు · నంద్యాల · అనంతపురం<br/>కడప · తిరుపతి · చిత్తూరు</div>
        </div>
@@ -54,17 +54,17 @@ export function renderBroadsheetPage(o: PageOptions): string {
          <span class="secbar-meta">రాయలసీమ ఎక్స్‌ప్రెస్ · ${esc(o.dateLabel)} · పేజీ ${o.pageNumber}</span>
        </div>`;
 
-  // Lead — spans 4 cols: kicker, banner headline, byline, photo, 3-col justified dek
+  // Lead - spans 4 cols: kicker, banner headline, byline, photo, 3-col justified dek
   const lead = `
     <article class="lead" data-slug="${esc(o.lead.slug)}">
       ${o.lead.categoryName ? `<div class="kicker">${esc(o.lead.categoryName)}</div>` : ""}
       <h1 class="lead-hl">${esc(o.lead.title)}</h1>
-      ${o.lead.deskName ? `<div class="byline">— ${esc(o.lead.deskName)}</div>` : ""}
+      ${o.lead.deskName ? `<div class="byline">- ${esc(o.lead.deskName)}</div>` : ""}
       ${img(o.lead.featuredImage, "lead-img")}
       ${o.lead.summary ? `<p class="lead-dek">${esc(o.lead.summary)}</p>` : ""}
     </article>`;
 
-  // Majors — 2 stories stacked in the right 2 cols
+  // Majors - 2 stories stacked in the right 2 cols
   const majors = `
     <div class="majcol">
       ${o.majors
@@ -75,14 +75,14 @@ export function renderBroadsheetPage(o: PageOptions): string {
           ${img(a.featuredImage, "maj-img")}
           ${a.categoryName ? `<div class="kicker sm">${esc(a.categoryName)}</div>` : ""}
           <h2 class="maj-hl">${esc(a.title)}</h2>
-          ${a.deskName ? `<div class="byline sm">— ${esc(a.deskName)}</div>` : ""}
+          ${a.deskName ? `<div class="byline sm">- ${esc(a.deskName)}</div>` : ""}
           ${a.summary ? `<p class="maj-dek">${esc(a.summary)}</p>` : ""}
         </article>`
         )
         .join("")}
     </div>`;
 
-  // Secondary — 3-across band
+  // Secondary - 3-across band
   const secondary = `
     <div class="secrow">
       ${o.secondary
@@ -97,7 +97,7 @@ export function renderBroadsheetPage(o: PageOptions): string {
         .join("")}
     </div>`;
 
-  // Briefs — 2-col headline list
+  // Briefs - 2-col headline list
   const briefs = o.briefs.length
     ? `<div class="briefs">
          <div class="briefs-head">క్లుప్త వార్తలు</div>

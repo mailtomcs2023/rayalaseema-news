@@ -1,4 +1,4 @@
-// Page Builder (Spec #2) — composite blocks list. CRUD wired through the
+// Page Builder (Spec #2) - composite blocks list. CRUD wired through the
 // page-builder/composites API. Composites are populated by the visual
 // editor's "Group into composite" action (F1 #168); this page handles
 // name/slug/description maintenance + delete.
@@ -21,7 +21,7 @@ export default async function CompositesPage() {
     slug: r.slug,
     description: r.description,
     blockCount: Array.isArray(r.blocks) ? (r.blocks as unknown[]).length : 0,
-    createdBy: r.createdBy?.name || "—",
+    createdBy: r.createdBy?.name || "-",
     updatedAt: r.updatedAt.toISOString(),
   }));
 

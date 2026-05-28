@@ -5,7 +5,7 @@
 //   the recruitment team fills in by hand:
 //     Contributor Name | Phone | Status | Group | Group Added | Notes
 //
-// Re-run after any AC/mandal/district change — the file is overwritten and
+// Re-run after any AC/mandal/district change - the file is overwritten and
 // any in-progress edits in the file should be merged before that.
 //
 // Run from packages/db:
@@ -20,7 +20,7 @@ import * as path from "path";
 
 const prisma = new PrismaClient();
 
-// Status pick-list for the dropdown column. Keep short — long lists make the
+// Status pick-list for the dropdown column. Keep short - long lists make the
 // dropdown unwieldy in Excel.
 const STATUS_OPTIONS = ["Searching", "Contacted", "Confirmed", "Onboarded", "Declined"];
 
@@ -62,7 +62,7 @@ async function gather(): Promise<DistrictBundle[]> {
     const rows: MandalRow[] = [];
     for (const ac of d.constituencies) {
       if (ac.mandals.length === 0) {
-        // Still list the AC even if no mandals seeded — recruitment can flag it.
+        // Still list the AC even if no mandals seeded - recruitment can flag it.
         rows.push({
           acNumber: ac.acNumber!,
           acTe: ac.name,
@@ -130,7 +130,7 @@ function buildSummary(wb: ExcelJS.Workbook, districts: DistrictBundle[]) {
   // Brand banner
   ws.mergeCells("A1:G1");
   const banner = ws.getCell("A1");
-  banner.value = "రాయలసీమ ఎక్స్‌ప్రెస్ — Contributor Recruitment Tracker";
+  banner.value = "రాయలసీమ ఎక్స్‌ప్రెస్ - Contributor Recruitment Tracker";
   banner.font = { bold: true, color: { argb: "FFFFFFFF" }, name: "Noto Serif Telugu", size: 16 };
   banner.alignment = { vertical: "middle", horizontal: "center" };
   banner.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BRAND_RED } };
@@ -160,7 +160,7 @@ function buildSummary(wb: ExcelJS.Workbook, districts: DistrictBundle[]) {
 
     const rowIndex = ws.rowCount + 1; // row number for formulas
     const districtSheetName = `${d.nameEn}`;
-    // "Onboarded" — count rows on the district tab where Status column = "Onboarded".
+    // "Onboarded" - count rows on the district tab where Status column = "Onboarded".
     // Status column is column I on every district tab (see addDistrictSheet column order).
     const onboardedFormula = `COUNTIF('${districtSheetName}'!I:I,"Onboarded")`;
     const coverageFormula = `IF(E${rowIndex}=0,0,F${rowIndex}/E${rowIndex})`;
@@ -211,7 +211,7 @@ function addDistrictSheet(wb: ExcelJS.Workbook, d: DistrictBundle) {
   // Banner
   ws.mergeCells("A1:L1");
   const banner = ws.getCell("A1");
-  banner.value = `${d.nameTe} (${d.nameEn}) — ${d.rows.length} mandal rows`;
+  banner.value = `${d.nameTe} (${d.nameEn}) - ${d.rows.length} mandal rows`;
   banner.font = { bold: true, color: { argb: "FFFFFFFF" }, name: "Noto Serif Telugu", size: 14 };
   banner.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
   banner.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BRAND_RED } };
@@ -249,7 +249,7 @@ function addDistrictSheet(wb: ExcelJS.Workbook, d: DistrictBundle) {
     error: `Pick one of: ${STATUS_OPTIONS.join(", ")}`,
   });
 
-  // Group Added dropdown (column K) — Yes / No
+  // Group Added dropdown (column K) - Yes / No
   ws.dataValidations.add(`K${dataStart}:K${dataEnd}`, {
     type: "list",
     allowBlank: true,

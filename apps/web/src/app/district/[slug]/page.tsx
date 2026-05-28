@@ -87,7 +87,7 @@ export default async function DistrictPage({ params }: { params: Promise<{ slug:
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: stringifyJsonLd(breadcrumbLd) }} />
       <Header config={config} breakingNews={[]} />
 
-      {/* District header — plain white bg, title in dark text, matches site shell */}
+      {/* District header - plain white bg, title in dark text, matches site shell */}
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: "16px 12px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <div>
           <span style={{ fontFamily: "var(--font-telugu-heading), serif", fontSize: 26, fontWeight: 800, color: "var(--n-900, #111827)" }}>
@@ -116,7 +116,7 @@ export default async function DistrictPage({ params }: { params: Promise<{ slug:
               marginBottom: 14,
             }}
           >
-            {district.name} జిల్లా వార్తలు త్వరలో — ప్రస్తుతం తాజా వార్తలు చూపిస్తున్నాము.
+            {district.name} జిల్లా వార్తలు త్వరలో - ప్రస్తుతం తాజా వార్తలు చూపిస్తున్నాము.
           </div>
         )}
 

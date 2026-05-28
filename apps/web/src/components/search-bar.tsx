@@ -24,7 +24,7 @@ export function SearchBar({ open, onClose }: SearchBarProps) {
   const id = useId();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Esc closes — only listen while open.
+  // Esc closes - only listen while open.
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {

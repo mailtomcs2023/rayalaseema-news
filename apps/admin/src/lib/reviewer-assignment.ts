@@ -3,7 +3,7 @@
 //
 //   1. Look up all ACTIVE SUB_EDITOR users whose UserCategory rows include
 //      the article's category.
-//   2. Count their current "open" workload — Content rows where
+//   2. Count their current "open" workload - Content rows where
 //      assignedReviewerId === them AND status ∈ {SUBMITTED, IN_REVIEW}.
 //      That's their backlog they haven't acted on yet. We deliberately
 //      count ACROSS all their categories so a sub-editor on Politics +
@@ -28,7 +28,7 @@ interface PickOptions {
  * Returns the userId of the least-loaded sub-editor in `categoryId`, or null
  * if no sub-editor is assigned to that category (caller falls back to pool).
  *
- * Safe to call inside a transaction — pass the transaction client via
+ * Safe to call inside a transaction - pass the transaction client via
  * `opts.tx` and the workload count joins the transaction's snapshot.
  */
 export async function pickLeastLoadedReviewer(
@@ -39,7 +39,7 @@ export async function pickLeastLoadedReviewer(
   if (!categoryId) return null;
   const db = (opts.tx ?? prisma) as PrismaClient;
 
-  // Step 1 — active sub-editors in this category.
+  // Step 1 - active sub-editors in this category.
   const reviewers = await db.user.findMany({
     where: {
       role: "SUB_EDITOR",
@@ -53,7 +53,7 @@ export async function pickLeastLoadedReviewer(
   // Short-circuit: one reviewer = no algorithm needed.
   if (ids.length === 1) return ids[0];
 
-  // Step 2 — open workload count per reviewer (across all their categories).
+  // Step 2 - open workload count per reviewer (across all their categories).
   const counts = await db.content.groupBy({
     by: ["assignedReviewerId"],
     where: {
@@ -63,14 +63,14 @@ export async function pickLeastLoadedReviewer(
     _count: true,
   });
 
-  // Step 3 — build {id → count}, defaulting un-listed reviewers to 0.
+  // Step 3 - build {id → count}, defaulting un-listed reviewers to 0.
   const countMap = new Map<string, number>();
   for (const id of ids) countMap.set(id, 0);
   for (const c of counts as Array<{ assignedReviewerId: string | null; _count: number }>) {
     if (c.assignedReviewerId) countMap.set(c.assignedReviewerId, c._count);
   }
 
-  // Step 4 — find min, collect ties, pick random tiebreaker.
+  // Step 4 - find min, collect ties, pick random tiebreaker.
   let minCount = Infinity;
   const tied: string[] = [];
   for (const [id, count] of countMap.entries()) {

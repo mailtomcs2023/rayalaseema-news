@@ -16,7 +16,7 @@ import { encrypt } from "@/lib/crypto/kyc";
 //      but the existing rejectionNote is cleared so admin sees a fresh
 //      submission rather than the stale rejection state.
 //
-// VERIFIED reporters cannot resubmit through here — their KYC is locked.
+// VERIFIED reporters cannot resubmit through here - their KYC is locked.
 // Profile-field requests (e.g. updating Aadhaar after verification) go
 // through the separate `/api/reporter/profile/request-change` flow which
 // preserves the audit trail.
@@ -78,7 +78,7 @@ export async function PATCH(req: NextRequest) {
         panCardUrl,
         photoUrl,
         kycStatus: "SUBMITTED",
-        // Wipe any prior rejection note — the reporter has answered the feedback.
+        // Wipe any prior rejection note - the reporter has answered the feedback.
         kycRejectionNote: null,
       },
     });

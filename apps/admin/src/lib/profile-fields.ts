@@ -5,7 +5,7 @@
 // re-opens KYC ("kyc"-critical, pauses earnings until admin re-verifies) or
 // affects payment routing ("bank"-critical, payments delayed until verified).
 //
-// Email, role and kycStatus are intentionally absent — they are admin-only.
+// Email, role and kycStatus are intentionally absent - they are admin-only.
 
 import { KycStatus } from "@rayalaseema/db";
 
@@ -119,7 +119,7 @@ export const PROFILE_FIELDS = {
   primaryDistrict:    { model: "journalist", column: "primaryDistrict", kind: "string",       critical: null,  validate: optStr(60, "District") },
   secondaryDistricts: { model: "journalist", column: "secondaryDistricts", kind: "string-array", critical: null, validate: stringArr(20) },
 
-  // ── KYC documents (critical: kyc — pauses earnings until admin re-verifies)
+  // ── KYC documents (critical: kyc - pauses earnings until admin re-verifies)
   aadhaarNumber:      { model: "journalist", column: "aadhaarNumber",   kind: "string",       critical: "kyc", validate: aadhaar12 },
   aadhaarFrontUrl:    { model: "journalist", column: "aadhaarFrontUrl", kind: "url",          critical: "kyc", validate: httpsUrl },
   aadhaarBackUrl:     { model: "journalist", column: "aadhaarBackUrl",  kind: "url",          critical: "kyc", validate: httpsUrl },
@@ -128,7 +128,7 @@ export const PROFILE_FIELDS = {
   idCardUrl:          { model: "journalist", column: "idCardUrl",       kind: "url",          critical: "kyc", validate: httpsUrl },
   photoUrl:           { model: "journalist", column: "photoUrl",        kind: "url",          critical: "kyc", validate: httpsUrl },
 
-  // ── Bank / payment (critical: bank — payments delayed until admin verifies)
+  // ── Bank / payment (critical: bank - payments delayed until admin verifies)
   upiId:              { model: "journalist", column: "upiId",           kind: "string",       critical: "bank", validate: upiId },
   bankName:           { model: "journalist", column: "bankName",        kind: "string",       critical: "bank", validate: reqStr(2, 80, "Bank name") },
   bankAccount:        { model: "journalist", column: "bankAccount",     kind: "string",       critical: "bank", validate: acctNum },
@@ -143,7 +143,7 @@ export const PROFILE_FIELDS = {
 
 export type ProfileFieldName = keyof typeof PROFILE_FIELDS;
 
-// Fields that cannot be changed via the reporter app at all — admin only.
+// Fields that cannot be changed via the reporter app at all - admin only.
 export const LOCKED_FIELDS = new Set(["email", "role", "kycStatus"]);
 
 export function isValidField(name: string): name is ProfileFieldName {

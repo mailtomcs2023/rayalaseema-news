@@ -5,7 +5,7 @@
 // signatures → cuts/trims → collates, the bound booklet reads 1, 2, 3...N.
 //
 // Supports 2-up (single fold, broadsheet half-sheet) and 4-up (two folds,
-// quarter-sheet — 8 pages per press sheet).
+// quarter-sheet - 8 pages per press sheet).
 //
 // Sig math for a single 2-up signature of N=4 pages:
 //   sheet front: [4, 1]
@@ -51,7 +51,7 @@ export async function imposePdf(srcBytes: Uint8Array, foldType: FoldType): Promi
   // closes; the press operator trims the blanks during finishing.
   const padded = Math.ceil(pageCount / sigPages) * sigPages;
   if (padded > pageCount) {
-    // Append blank pages — same dimensions as page 1 so sheet alignment holds.
+    // Append blank pages - same dimensions as page 1 so sheet alignment holds.
     const first = src.getPage(0);
     const { width, height } = first.getSize();
     for (let i = pageCount; i < padded; i++) src.addPage([width, height]);
@@ -65,7 +65,7 @@ export async function imposePdf(srcBytes: Uint8Array, foldType: FoldType): Promi
 
   // 4-up = take the 2-up sequence and pair adjacent pages onto a single
   // larger sheet. Simplification: emit the 2-up sequence twice, once for
-  // each fold pair. Real 4-up sigs need quarter-fold rotation — left as a
+  // each fold pair. Real 4-up sigs need quarter-fold rotation - left as a
   // press-shop adjustment (most digital presses do their own n-up).
   // For now: 4up uses the same per-page ordering as 2up but with sigPages=8
   // which already accounts for the larger fold.
@@ -73,7 +73,7 @@ export async function imposePdf(srcBytes: Uint8Array, foldType: FoldType): Promi
   // Materialize the imposed PDF.
   const out = await PDFDocument.create();
   // Map original-page-index → copied-page (avoid re-copying when a page
-  // appears multiple times — though for imposition each page appears once).
+  // appears multiple times - though for imposition each page appears once).
   const reader = sequence.map((n) => n - 1);
   const copied = await out.copyPages(src, reader);
   for (const p of copied) out.addPage(p);

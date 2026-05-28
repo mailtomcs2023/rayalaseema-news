@@ -6,14 +6,14 @@ import { KycBanner } from "@/components/reporter/kyc-banner";
 import { SignOutButton } from "@/components/reporter/sign-out-button";
 import { ShieldCheck } from "lucide-react";
 
-// Reporter Profile — mirrors the Expo ProfileScreen.
+// Reporter Profile - mirrors the Expo ProfileScreen.
 // Avatar hero • role + KYC pills • optional KYC rejection box •
 // grouped settings-style menu rows • sign out.
 //
 // The mobile app has dedicated editor screens for every section
 // (/profile-section/<key>, /profile-password, /kyc). The web portal is
 // read-only for now; tapping a row sends the reporter back to the mobile
-// app for editing — same constraint as the rest of the reporter web UI.
+// app for editing - same constraint as the rest of the reporter web UI.
 
 const KYC_PILL: Record<string, { label: string; bg: string; text: string }> = {
   PENDING: { label: "KYC pending", bg: "#fef3c7", text: "#92400e" },
@@ -61,7 +61,7 @@ export default async function ReporterProfilePage() {
 
   const p = data.reporterProfile;
 
-  // Pending profile-update requests — drives the badge on the row.
+  // Pending profile-update requests - drives the badge on the row.
   // ProfileUpdateRequest is keyed by ReporterProfile.id, not User.id.
   const pendingCount = (await prisma.reporterProfile
     .findUnique({
@@ -84,7 +84,7 @@ export default async function ReporterProfilePage() {
       <div style={{ paddingTop: 14 }}>
         <KycBanner userId={userId} />
 
-        {/* Avatar hero card — large centred avatar + name + role/KYC pills. */}
+        {/* Avatar hero card - large centred avatar + name + role/KYC pills. */}
         <div
           style={{
             background: "#fff",
@@ -122,7 +122,7 @@ export default async function ReporterProfilePage() {
             )}
           </div>
           <p style={{ fontSize: 20, lineHeight: "26px", fontWeight: 800, color: "#111", textAlign: "center" }}>
-            {data.name || "—"}
+            {data.name || "-"}
           </p>
           <div
             style={{
@@ -181,8 +181,8 @@ export default async function ReporterProfilePage() {
           ) : null}
         </div>
 
-        {/* Section group — Personal / Address / KYC / Bank.
-            The rows are read-only on web (no edit screens exist yet) — show
+        {/* Section group - Personal / Address / KYC / Bank.
+            The rows are read-only on web (no edit screens exist yet) - show
             a subtitle summary and a chevron, but don't link anywhere. */}
         <MenuGroup>
           <MenuRow
@@ -225,7 +225,7 @@ export default async function ReporterProfilePage() {
           />
         </MenuGroup>
 
-        {/* Pending requests — only when there's something to look at. */}
+        {/* Pending requests - only when there's something to look at. */}
         {pendingCount > 0 ? (
           <MenuGroup>
             <MenuRow
@@ -239,7 +239,7 @@ export default async function ReporterProfilePage() {
           </MenuGroup>
         ) : null}
 
-        {/* Email — locked. Web UI is informational; editing requires admin. */}
+        {/* Email - locked. Web UI is informational; editing requires admin. */}
         <MenuGroup>
           <MenuRow
             iconBg="#64748b14"
@@ -258,7 +258,7 @@ export default async function ReporterProfilePage() {
             iconColor="#FF2C2C"
             iconPath="M12 11a4 4 0 100-8 4 4 0 000 8zM6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"
             label="Phone"
-            sub={data.phone || "—"}
+            sub={data.phone || "-"}
             last
           />
         </MenuGroup>
@@ -387,7 +387,7 @@ function MenuRow({
         </svg>
       )}
       {/* `last` prop kept for API symmetry with the Expo MenuRow but unused
-          here — dividers are sibling elements instead of an inset border. */}
+          here - dividers are sibling elements instead of an inset border. */}
       {void last}
     </div>
   );

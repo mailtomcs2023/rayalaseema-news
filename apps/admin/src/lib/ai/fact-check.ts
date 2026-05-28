@@ -3,7 +3,7 @@
 // Returns a list of drift issues; the pipeline orchestrator decides whether
 // to repair (re-run compose with constraints) or accept.
 //
-// Model: GPT-4.1-mini (deployment "gpt41-mini") — same cheap model as
+// Model: GPT-4.1-mini (deployment "gpt41-mini") - same cheap model as
 // extract. Fact-check is comparison, no Telugu generation.
 import { chat, parseJsonEnvelope } from "./client";
 import { factCheckSystemPrompt } from "./style-guide";

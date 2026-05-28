@@ -30,12 +30,12 @@ export function loginSchema(t: TFn) {
   });
 }
 
-// Register — step 1: personal details. Required fields are marked * in the UI.
+// Register - step 1: personal details. Required fields are marked * in the UI.
 // Pincode is required because the admin uses it to route the reporter to the
 // correct district desk for the editorial workflow.
 export function step1Schema(t: TFn) {
   // Confirm-email is a typo-catcher (we don't send OTP, so we can't prove
-  // ownership — at least force the reporter to type their email twice so a
+  // ownership - at least force the reporter to type their email twice so a
   // silent typo doesn't create a useless account they can never log in to).
   // Compared case-insensitively + trimmed to match how the server stores it.
   return z.object({
@@ -51,7 +51,7 @@ export function step1Schema(t: TFn) {
   );
 }
 
-// Register — step 2: KYC. Everything is required.
+// Register - step 2: KYC. Everything is required.
 export function step2Schema(t: TFn) {
   return z.object({
     aadhaarNumber: z.string().regex(AADHAAR_RE, t("validation.aadhaar")),
@@ -63,7 +63,7 @@ export function step2Schema(t: TFn) {
   });
 }
 
-// Register — step 3: bank / payout. Bank account is required; UPI is optional
+// Register - step 3: bank / payout. Bank account is required; UPI is optional
 // but format-checked when provided.
 export function step3Schema(t: TFn) {
   return z.object({
@@ -74,7 +74,7 @@ export function step3Schema(t: TFn) {
   });
 }
 
-// Profile — change password. The new password must be at least 8 chars and
+// Profile - change password. The new password must be at least 8 chars and
 // the confirmation field must match it.
 export function changePasswordSchema(t: TFn) {
   return z
@@ -89,7 +89,7 @@ export function changePasswordSchema(t: TFn) {
     });
 }
 
-// New Article — title and body required, a category must be picked.
+// New Article - title and body required, a category must be picked.
 export function articleSchema(t: TFn) {
   return z.object({
     title: z.string().trim().min(1, t("validation.required")),

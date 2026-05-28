@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 
-// POST /api/epaper/print-pdf — body { editionId }
+// POST /api/epaper/print-pdf - body { editionId }
 // CMYK + crop marks + 3 mm bleeds, suitable for handing to the press.
 // Stub: returns 503 until Ghostscript or pdf-lib upgrade ships.
 //

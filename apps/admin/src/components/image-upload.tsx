@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 interface Props {
   value: string;
   onChange: (url: string) => void;
-  // Optional — when provided, renders a "Search images" action chip inside the
+  // Optional - when provided, renders a "Search images" action chip inside the
   // empty-state. Used by the content editor to open the free-images modal.
   // Consumers that don't need this leave it undefined and the chip disappears.
   onSearchClick?: () => void;
@@ -19,7 +19,7 @@ interface Props {
 export function ImageUpload({ value, onChange, onSearchClick }: Props) {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
-  // URL field stays inline + always visible — editors paste image URLs often
+  // URL field stays inline + always visible - editors paste image URLs often
   // enough that hiding it behind a toggle adds a click for no reason.
   const [urlDraft, setUrlDraft] = useState("");
   // True when the <img> failed to load. Most often: editor pasted a page
@@ -27,7 +27,7 @@ export function ImageUpload({ value, onChange, onSearchClick }: Props) {
   // surface this as a clear error block instead of silently rendering a
   // broken-image placeholder + alt text.
   const [imgError, setImgError] = useState(false);
-  // Reset the error state whenever `value` changes — a new URL gets a
+  // Reset the error state whenever `value` changes - a new URL gets a
   // fresh chance to load.
   useEffect(() => {
     setImgError(false);
@@ -66,12 +66,12 @@ export function ImageUpload({ value, onChange, onSearchClick }: Props) {
     setUrlDraft("");
   };
 
-  // ───── Preview state — an image is already set ─────────────────────────
+  // ───── Preview state - an image is already set ─────────────────────────
   if (value) {
     return (
       <div className="space-y-2">
         {imgError ? (
-          // Load failed — show an explanatory block instead of a broken
+          // Load failed - show an explanatory block instead of a broken
           // <img>. Most common cause: pasted page URL, not image URL.
           <div className="flex flex-col gap-3 rounded-md border border-amber-300 bg-amber-50 p-4">
             <div className="flex items-start gap-2">
@@ -103,7 +103,7 @@ export function ImageUpload({ value, onChange, onSearchClick }: Props) {
           </div>
         )}
 
-        {/* Persistent action row — always visible (no hover gate). Replaces
+        {/* Persistent action row - always visible (no hover gate). Replaces
             the old overlay-on-hover pattern so editors can see the URL +
             controls at a glance. Same shape as the empty-state row, plus
             a Remove button. */}
@@ -168,7 +168,7 @@ export function ImageUpload({ value, onChange, onSearchClick }: Props) {
           </Button>
         </div>
 
-        {/* Current URL — small, always-visible reference. Truncates with
+        {/* Current URL - small, always-visible reference. Truncates with
             ellipsis but is selectable on click so editors can copy it. */}
         <p
           className="select-all truncate text-[11px] text-muted-foreground"
@@ -177,7 +177,7 @@ export function ImageUpload({ value, onChange, onSearchClick }: Props) {
           {value}
         </p>
 
-        {/* Hidden file input — wired up so Replace file works without
+        {/* Hidden file input - wired up so Replace file works without
             re-mounting between states. */}
         <input
           ref={fileRef}
@@ -193,7 +193,7 @@ export function ImageUpload({ value, onChange, onSearchClick }: Props) {
     );
   }
 
-  // ───── Empty state — no image yet ──────────────────────────────────────
+  // ───── Empty state - no image yet ──────────────────────────────────────
   return (
     <div className="space-y-2">
       {/* Primary affordance: dropzone. Click anywhere = file picker, drag
@@ -236,10 +236,10 @@ export function ImageUpload({ value, onChange, onSearchClick }: Props) {
         )}
       </div>
 
-      {/* URL row — always visible, no toggle. Most editors paste a URL
+      {/* URL row - always visible, no toggle. Most editors paste a URL
           when importing from another source, so making them click "Paste
           URL" first added an extra step for the common path. The Use
-          action lives inside the input as a text affordance — it only
+          action lives inside the input as a text affordance - it only
           lights up when there's something to apply. */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
@@ -258,7 +258,7 @@ export function ImageUpload({ value, onChange, onSearchClick }: Props) {
                 applyUrl();
               }
             }}
-            placeholder="Paste image URL — https://…"
+            placeholder="Paste image URL - https://…"
             className="h-9 bg-white pl-8 pr-14"
           />
           <button
@@ -283,7 +283,7 @@ export function ImageUpload({ value, onChange, onSearchClick }: Props) {
         )}
       </div>
 
-      {/* Hidden file input — single source for both the dropzone click
+      {/* Hidden file input - single source for both the dropzone click
           and the keyboard Enter affordance above. */}
       <input
         ref={fileRef}

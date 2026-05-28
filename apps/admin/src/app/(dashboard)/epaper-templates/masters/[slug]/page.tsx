@@ -14,10 +14,10 @@ interface Master {
   geometryOverride: unknown;
 }
 
-// /epaper-templates/masters/[slug] — master editor route (#143).
+// /epaper-templates/masters/[slug] - master editor route (#143).
 //
 // Reuses the same Canvas + Rulers + ZoomBar composition as the page editor.
-// Save is explicit (no auto-save) — masters affect many editions, so the
+// Save is explicit (no auto-save) - masters affect many editions, so the
 // operator confirms before propagation.
 export default function MasterEditorPage() {
   const params = useParams();

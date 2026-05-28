@@ -5,7 +5,7 @@ import { ReporterShell } from "@/components/reporter/reporter-shell";
 import { KycBanner } from "@/components/reporter/kyc-banner";
 import { ArticlesClient } from "@/components/reporter/articles-client";
 
-// Reporter Articles — mirrors the Expo ArticlesScreen.
+// Reporter Articles - mirrors the Expo ArticlesScreen.
 // Status filter chips + advanced filter/sort sheet (search, sort, categories,
 // date range, photo filter). The status chip lives in the URL so a reload
 // keeps the chosen tab; everything else is client-side filter state.

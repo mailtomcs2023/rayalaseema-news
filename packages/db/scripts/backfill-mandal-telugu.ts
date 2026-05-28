@@ -4,7 +4,7 @@
 // mandal name to its standard Telugu form (sourced from AP gov mandal lists +
 // Wikipedia Telugu articles).
 //
-// Idempotent — re-running just re-applies the same mapping.
+// Idempotent - re-running just re-applies the same mapping.
 //
 // Run:  cd packages/db && bunx tsx scripts/backfill-mandal-telugu.ts
 
@@ -288,7 +288,7 @@ async function main() {
 
   console.log(`Updated: ${updated}, already-Telugu: ${skipped}`);
   if (missing.size > 0) {
-    console.warn(`Missing Telugu mapping for ${missing.size} mandal names — add them to TE{}:`);
+    console.warn(`Missing Telugu mapping for ${missing.size} mandal names - add them to TE{}:`);
     for (const n of [...missing].sort()) console.warn(`  "${n}": "???",`);
   }
 }

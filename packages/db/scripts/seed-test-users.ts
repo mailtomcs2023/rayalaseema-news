@@ -30,7 +30,7 @@ async function main() {
   for (const s of SEEDS) {
     const passwordHash = await hash(s.password, 10);
 
-    // Don't overwrite the display name on existing rows — those addresses
+    // Don't overwrite the display name on existing rows - those addresses
     // may already point at named accounts (e.g. "Rajesh Kumar"). The seed
     // is about role + password, not identity.
     const user = await prisma.user.upsert({
@@ -61,7 +61,7 @@ async function main() {
     }
 
     // Sub editors are scoped to a list of categories via UserCategory. With
-    // no assignments, their review queue is empty even when articles exist —
+    // no assignments, their review queue is empty even when articles exist -
     // counts and list both filter by `categoryId IN <empty set>`. Seed every
     // active category so the test sub editor can review across the board.
     if (user.role === "SUB_EDITOR") {

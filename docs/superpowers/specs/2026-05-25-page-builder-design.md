@@ -1,4 +1,4 @@
-# Spec #2 — Page Builder
+# Spec #2 - Page Builder
 
 **Date:** 2026-05-25
 **Status:** Approved by user (sections 1–4)
@@ -13,7 +13,7 @@ Replace hardcoded layouts in `apps/web/src/app/page.tsx` and `apps/web/src/app/c
 
 - Current homepage and category pages are hardcoded JSX. Adding a section ("Election Day Hero") requires a code deploy.
 - Newsroom wants to swap layouts for big events (elections, festivals, breaking stories) without engineering involvement.
-- Foundation for Spec #3 (Menu Builder) — menu entries can point to layouts the same way.
+- Foundation for Spec #3 (Menu Builder) - menu entries can point to layouts the same way.
 
 ## Decisions locked (13)
 
@@ -142,7 +142,7 @@ model CompositeBlock {
 
 | `type` | Component | Configurable props |
 |---|---|---|
-| `ReturnVisitBanner` | `<ReturnVisitBanner>` | — |
+| `ReturnVisitBanner` | `<ReturnVisitBanner>` | - |
 | `AdHeaderLeaderboard` | `<AdHeaderLeaderboard>` | `position` |
 | `AboveFold` | `<AboveFold>` | `districtCount`, `latestCount`, `excludeCategories[]` |
 | `AdBannerMid` | `<AdBannerMid>` | `position` |
@@ -188,7 +188,7 @@ Page Builder
 │ Palette  │  Canvas (iframe, live WYSIWYG, real DB) │ Config    │
 │ ─ Hero   │                                          │ panel     │
 │ ─ Above  │  ┌────────────────────────────────┐     │           │
-│   Fold   │  │ [Block 1 — live render]       │     │ Selected: │
+│   Fold   │  │ [Block 1 - live render]       │     │ Selected: │
 │ ─ News   │  ├────────────────────────────────┤     │ <type>    │
 │   Band   │  │ [Block 2]                  ◄── │ ◄── │ <props>   │
 │ ─ Cinema │  ├────────────────────────────────┤     │           │
@@ -303,13 +303,13 @@ Each entry maps `type → { component, fetcher }`. Fetcher takes `(config, pageC
 
 Idempotent (skips templates whose `slug` already exists). Creates:
 
-1. **Default Homepage** — blocks identical to current `apps/web/src/app/page.tsx`:
+1. **Default Homepage** - blocks identical to current `apps/web/src/app/page.tsx`:
    - ReturnVisitBanner, AdHeaderLeaderboard, AboveFold, AdBannerMid, SectionBand(politics), CinemaBand, VideoSection, SectionBand(sports), CategoryPair × 4 (national+business, crime+technology, agriculture+international, education+health), AdLeaderboard, WebStories, PhotoGallery, AdInFeedBanner
 
-2. **Standard Category** — blocks identical to current `apps/web/src/app/category/[slug]/page.tsx`:
+2. **Standard Category** - blocks identical to current `apps/web/src/app/category/[slug]/page.tsx`:
    - Branded header (resolves from page context), lead + 4-grid + rest list, TrendingSidebar rail, optional CricketScores (sports only), optional Cartoon (politics only), footer ads
 
-3. **Movie Reviews Category** — clone of Standard with `CinemaBand` block instead of plain news rail (demonstrates customisation).
+3. **Movie Reviews Category** - clone of Standard with `CinemaBand` block instead of plain news rail (demonstrates customisation).
 
 ### Seeded assignments
 
@@ -376,9 +376,9 @@ After this script, public routes look identical to pre-Spec #2; layouts now edit
 
 ## Out of scope (future)
 
-- District pages (`/district/[slug]`) — add later by extending assignment patterns
-- Article detail page (`/article/[slug]`) — stays code-driven
-- Special pages (ePaper, search, gallery detail, video detail) — code-driven
+- District pages (`/district/[slug]`) - add later by extending assignment patterns
+- Article detail page (`/article/[slug]`) - stays code-driven
+- Special pages (ePaper, search, gallery detail, video detail) - code-driven
 - Multi-author real-time collaboration (Yjs / Liveblocks)
 - A/B testing two templates against same URL with traffic split
 - Theme system (per-template colors / fonts)

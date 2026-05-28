@@ -8,7 +8,7 @@ import { createHash } from "node:crypto";
 //
 // DPDPA Sec 12 / GDPR Article 17 right-to-erasure. Anonymizes the user
 // rather than hard-deleting because authored articles must stay published
-// (public-interest journalism — DPDPA permits anonymization in lieu of
+// (public-interest journalism - DPDPA permits anonymization in lieu of
 // erasure when the data forms part of editorial record).
 //
 // Effect:

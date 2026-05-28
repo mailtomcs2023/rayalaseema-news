@@ -1,4 +1,4 @@
-// /news/<slug>-<id8> — fallback route for articles that lack a constituency
+// /news/<slug>-<id8> - fallback route for articles that lack a constituency
 // tag. Once Phase G2 ships (NER auto-tagging on publish) + editors backfill
 // the existing corpus, this route's traffic shrinks to near-zero and the
 // fallback can be removed.
@@ -23,7 +23,7 @@ async function resolveArticle(slugid: string) {
   const article = await getArticleBySlug(parsed.slug);
   if (!article || !article.slug) return null;
   if (!suffixMatchesId(parsed.suffix, article.id)) return null;
-  // If the article DOES have a constituency, send to canonical geo URL —
+  // If the article DOES have a constituency, send to canonical geo URL -
   // /news/ is the orphan fallback only.
   const canonicalPath = articleHref(article);
   const requestedPath = `/news/${slugid}`;

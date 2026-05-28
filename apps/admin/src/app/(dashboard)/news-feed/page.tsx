@@ -1,4 +1,4 @@
-// News Feed — restored after H1 #131 cleanup. Browse free news sources
+// News Feed - restored after H1 #131 cleanup. Browse free news sources
 // (NewsData.io + Google News RSS) and import a result as a draft Content
 // row in one click. The new draft drops into /content list for further
 // AI translation / editing.
@@ -25,8 +25,8 @@ interface NewsItem {
 type Provider = "newsdata" | "googlenews";
 
 const PROVIDERS: { value: Provider; label: string; note: string }[] = [
-  { value: "newsdata", label: "NewsData.io", note: "API key — Telugu + English, image URLs included" },
-  { value: "googlenews", label: "Google News RSS", note: "No key — wider sources, no image URLs (use image search after import)" },
+  { value: "newsdata", label: "NewsData.io", note: "API key - Telugu + English, image URLs included" },
+  { value: "googlenews", label: "Google News RSS", note: "No key - wider sources, no image URLs (use image search after import)" },
 ];
 
 export default function NewsFeedPage() {
@@ -145,14 +145,14 @@ export default function NewsFeedPage() {
         </div>
 
         <p style={{ fontSize: 11, color: "#6b7280", marginBottom: 14 }}>
-          Source: <b>{PROVIDERS.find((p) => p.value === provider)?.label}</b> — {PROVIDERS.find((p) => p.value === provider)?.note}
+          Source: <b>{PROVIDERS.find((p) => p.value === provider)?.label}</b> - {PROVIDERS.find((p) => p.value === provider)?.note}
         </p>
 
         {error && (
           <div style={{ background: "#fef2f2", border: "1px solid #fecaca", padding: "10px 14px", borderRadius: 8, fontSize: 13, color: "#dc2626", marginBottom: 14 }}>
             {error}
             {error.toLowerCase().includes("not configured") && (
-              <span> — set <code>NEWSDATA_API_KEY</code> in admin env, or switch to Google News (no key needed).</span>
+              <span> - set <code>NEWSDATA_API_KEY</code> in admin env, or switch to Google News (no key needed).</span>
             )}
           </div>
         )}

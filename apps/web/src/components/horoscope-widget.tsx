@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 
-// Zodiac glyphs kept (content, not chrome — readers recognize them)
+// Zodiac glyphs kept (content, not chrome - readers recognize them)
 const rashiList = [
   { id: "mesha", name: "మేషం", icon: "♈" },
   { id: "vrushabha", name: "వృషభం", icon: "♉" },

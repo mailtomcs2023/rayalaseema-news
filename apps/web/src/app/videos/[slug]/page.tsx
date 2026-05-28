@@ -1,4 +1,4 @@
-// Spec #1 A1C (#189) — legacy /videos/[slug] route reads Content where
+// Spec #1 A1C (#189) - legacy /videos/[slug] route reads Content where
 // type=VIDEO. The newer canonical path is /video/[slug] (D1 #111); this
 // page stays for backward-compat with any links that point at /videos/...
 import type { Metadata } from "next";
@@ -66,7 +66,7 @@ export default async function VideoPage({
   if (!video) notFound();
   const vid = ytId(video.videoUrl);
 
-  // Related — same category, else latest. Shape the rows to VideoGrid's expected shape.
+  // Related - same category, else latest. Shape the rows to VideoGrid's expected shape.
   const relatedRaw = await prisma.content.findMany({
     where: {
       type: "VIDEO",

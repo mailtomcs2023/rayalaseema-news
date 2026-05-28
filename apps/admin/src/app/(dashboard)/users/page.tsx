@@ -1,6 +1,6 @@
 "use client";
 
-// /users — admin user management. Mirrors the table architecture of
+// /users - admin user management. Mirrors the table architecture of
 // /journalists (Tanstack React Table + shadcn primitives): search +
 // faceted role filter + column visibility + sortable columns + bulk select +
 // per-row dropdown. Create/edit happens in a small Dialog form.
@@ -31,6 +31,7 @@ import {
   Columns3Icon,
   EllipsisIcon,
   FilterIcon,
+  CopyIcon,
   ListFilterIcon,
   RefreshCwIcon,
   Sparkles,
@@ -38,6 +39,8 @@ import {
   UserPlusIcon,
 } from "lucide-react";
 import { z } from "zod";
+import { toast } from "sonner";
+import { isProtectedUser } from "@/lib/protected-users";
 import Link from "next/link";
 import {
   useCallback,
@@ -124,7 +127,7 @@ interface User {
   // about it.
   assignedCategories?: { category: { id: string; name: string; nameEn: string } }[];
   mustChangePassword?: boolean;
-  // Reporter-only — null for every other role. Nested pending-update count
+  // Reporter-only - null for every other role. Nested pending-update count
   // drives the "Review N" deep link in the merged Users table.
   reporterProfile?: {
     id: string;
@@ -156,7 +159,7 @@ interface UserRow {
 function toRow(u: User): UserRow {
   return {
     id: u.id,
-    name: u.name || "—",
+    name: u.name || "-",
     email: u.email,
     role: u.role,
     active: u.active,
@@ -194,7 +197,7 @@ const KYC_BADGE: Record<string, string> = {
   REJECTED: "border-red-300 bg-red-50 text-red-700",
 };
 
-// Multi-column text search — matches against name + email + phone.
+// Multi-column text search - matches against name + email + phone.
 const userSearchFilter: FilterFn<UserRow> = (row, _columnId, filterValue: string) => {
   if (!filterValue) return true;
   const q = filterValue.toLowerCase();
@@ -211,7 +214,7 @@ function fmtDate(iso: string) {
   try {
     return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
   } catch {
-    return "—";
+    return "-";
   }
 }
 
@@ -231,17 +234,24 @@ export default function UsersPage() {
   // without having to pre-filter by role.
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
-  const [sorting, setSorting] = useState<SortingState>([{ id: "name", desc: false }]);
+  // Newest-first default - admins almost always want to see "who did I
+  // just add?" at the top. Users can still click any column header to
+  // re-sort (name A→Z is one click away).
+  const [sorting, setSorting] = useState<SortingState>([{ id: "joinedAt", desc: true }]);
 
   const [formFor, setFormFor] = useState<{ mode: "create" } | { mode: "edit"; user: User } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<UserRow[] | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
+    // /api/users now returns { items, hasMore, nextCursor, total, limit }
+    // (PR 2 - cursor pagination). The UI still loads everything client-side
+    // and paginates via TanStack until PR 12 switches to true cursor mode.
     fetch("/api/users")
       .then((r) => r.json())
-      .then((rows: User[]) => {
-        setData(Array.isArray(rows) ? rows.map(toRow) : []);
+      .then((data: { items?: User[] }) => {
+        const rows = Array.isArray(data?.items) ? data.items : [];
+        setData(rows.map(toRow));
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -252,7 +262,7 @@ export default function UsersPage() {
   }, [load]);
 
   // Auto-hide the Role column when the user has filtered to REPORTER only
-  // — everyone in view shares the same role so the column is redundant.
+  // - everyone in view shares the same role so the column is redundant.
   // Reporter-specific columns stay visible regardless (em-dash for non-
   // reporters) so the table layout is consistent across filter states.
   useEffect(() => {
@@ -281,12 +291,13 @@ export default function UsersPage() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        alert(data.error || "Verify failed");
+        toast.error(data.error || "Verify failed");
         return;
       }
+      toast.success(`${row.name}'s KYC verified.`);
       load();
     } catch (e: any) {
-      alert(e.message || "Verify failed");
+      toast.error(e.message || "Verify failed");
     }
   }, []);
 
@@ -370,7 +381,7 @@ export default function UsersPage() {
         size: 115,
         cell: ({ row }) => {
           const p = row.original.phone;
-          return p ? <span className="tabular-nums">{p}</span> : <span className="text-muted-foreground">—</span>;
+          return p ? <span className="tabular-nums">{p}</span> : <span className="text-muted-foreground">-</span>;
         },
       },
       {
@@ -379,7 +390,7 @@ export default function UsersPage() {
         size: 100,
         cell: ({ row }) => {
           const d = row.original.district;
-          return d ? <span className="capitalize">{d}</span> : <span className="text-muted-foreground">—</span>;
+          return d ? <span className="capitalize">{d}</span> : <span className="text-muted-foreground">-</span>;
         },
       },
       {
@@ -388,7 +399,7 @@ export default function UsersPage() {
         size: 95,
         cell: ({ row }) => {
           const s = row.original.kycStatus;
-          if (!s) return <span className="text-muted-foreground">—</span>;
+          if (!s) return <span className="text-muted-foreground">-</span>;
           return (
             <Badge variant="outline" className={cn("border text-[10px] font-semibold uppercase tracking-wide", KYC_BADGE[s] ?? "border-slate-300 bg-slate-50 text-slate-700")}>
               {s}
@@ -403,7 +414,7 @@ export default function UsersPage() {
         cell: ({ row }) => {
           const count = row.original.pendingUpdates;
           const reporterId = row.original.reporterProfileId;
-          if (!reporterId) return <span className="text-muted-foreground">—</span>;
+          if (!reporterId) return <span className="text-muted-foreground">-</span>;
           return count > 0 ? (
             <Link href={`/profile-requests?reporterId=${reporterId}`}>
               <Button size="sm" variant="default" className="h-7 gap-1.5 px-2.5">
@@ -468,7 +479,7 @@ export default function UsersPage() {
     state: { columnFilters, columnVisibility, pagination, sorting },
   });
 
-  // Role facet — multi-select filter chips behind a Popover.
+  // Role facet - multi-select filter chips behind a Popover.
   const roleColumn = table.getColumn("role");
   const uniqueRoleValues = useMemo(() => {
     if (!roleColumn) return [] as string[];
@@ -499,25 +510,32 @@ export default function UsersPage() {
         }),
       );
       const failures = results.filter((x) => x.error);
+      const succeeded = results.length - failures.length;
       table.resetRowSelection();
       setConfirmDelete(null);
       load();
       // Surface per-user 409s ("user has authored content") so the admin
-      // knows which rows still need Deactivate instead.
+      // knows which rows still need Deactivate instead. One toast per
+      // failure (capped at 3) so a bulk delete of 10 doesn't spam.
       if (failures.length > 0) {
-        const msg = failures
-          .map((f) => `${f.row.name}: ${f.error}`)
-          .join("\n");
-        alert(`Some users couldn't be deleted:\n\n${msg}`);
+        const shown = failures.slice(0, 3);
+        for (const f of shown) {
+          toast.error(`${f.row.name}: ${f.error}`);
+        }
+        const hidden = failures.length - shown.length;
+        if (hidden > 0) toast.error(`…and ${hidden} more couldn't be deleted.`);
       }
-    } catch {
+      if (succeeded > 0) {
+        toast.success(`Deleted ${succeeded} user${succeeded === 1 ? "" : "s"}.`);
+      }
+    } catch (e) {
       setConfirmDelete(null);
-      alert("Delete failed. Please try again.");
+      toast.error((e as Error)?.message || "Delete failed. Please try again.");
     }
   };
 
   // Toggle a single user's `active` flag via the PUT endpoint. Distinct from
-  // Delete (which is a permanent DB remove) — Deactivate keeps the row but
+  // Delete (which is a permanent DB remove) - Deactivate keeps the row but
   // blocks sign-in and pulls the user out of review pools.
   const handleToggleActive = async (row: UserRow) => {
     const nextActive = !row.active;
@@ -529,12 +547,13 @@ export default function UsersPage() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        alert(data.error || `Failed (HTTP ${res.status})`);
+        toast.error(data.error || `Failed (HTTP ${res.status})`);
         return;
       }
+      toast.success(`${row.name} ${nextActive ? "activated" : "deactivated"}.`);
       load();
-    } catch {
-      alert("Toggle failed. Please try again.");
+    } catch (e) {
+      toast.error((e as Error)?.message || "Toggle failed. Please try again.");
     }
   };
 
@@ -649,7 +668,7 @@ export default function UsersPage() {
             </DropdownMenu>
 
             <div className="ms-auto flex items-center gap-3">
-              {/* Refetch — re-runs /api/users via load(). spin while loading
+              {/* Refetch - re-runs /api/users via load(). spin while loading
                   so it's clear the click did something. */}
               <Button
                 aria-label="Refresh users"
@@ -664,17 +683,26 @@ export default function UsersPage() {
                   className={cn("opacity-70", loading && "animate-spin")}
                 />
               </Button>
-              {table.getSelectedRowModel().rows.length > 0 && (
-                <Button
-                  variant="outline"
-                  onClick={() =>
-                    setConfirmDelete(table.getSelectedRowModel().rows.map((r) => r.original))
-                  }
-                >
-                  <TrashIcon aria-hidden="true" className="-ms-1 opacity-60" size={16} />
-                  Delete ({table.getSelectedRowModel().rows.length})
-                </Button>
-              )}
+              {(() => {
+                // Selection may include protected seed accounts - filter them
+                // out so the bulk Delete button only ever queues deletes the
+                // server will accept. Label reflects the deletable count.
+                const allSelected = table.getSelectedRowModel().rows.map((r) => r.original);
+                const deletable = allSelected.filter((r) => !isProtectedUser(r.email));
+                if (deletable.length === 0) return null;
+                return (
+                  <Button
+                    variant="outline"
+                    onClick={() => setConfirmDelete(deletable)}
+                  >
+                    <TrashIcon aria-hidden="true" className="-ms-1 opacity-60" size={16} />
+                    Delete {deletable.length}
+                    {deletable.length !== allSelected.length && (
+                      <span className="opacity-70">{` of ${allSelected.length}`}</span>
+                    )}
+                  </Button>
+                );
+              })()}
               <Button onClick={() => setFormFor({ mode: "create" })}>
                 <UserPlusIcon aria-hidden="true" className="-ms-1 opacity-90" size={16} />
                 Add User
@@ -682,7 +710,7 @@ export default function UsersPage() {
             </div>
           </div>
 
-          {/* Table — wrapper scrolls horizontally on narrow viewports so
+          {/* Table - wrapper scrolls horizontally on narrow viewports so
               the rest of the page chrome stays put (sidebar / pagination
               don't shift). table-fixed + per-column widths keep alignment
               stable while scrolling. */}
@@ -745,8 +773,9 @@ export default function UsersPage() {
             </Table>
           </div>
 
-          {/* Pagination */}
-          <div className="flex items-center justify-between gap-8">
+          {/* Pagination row - page-size on the left, range counter + nav
+              buttons grouped together on the right. No empty gap in middle. */}
+          <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <Label className="max-sm:sr-only" htmlFor={id}>
                 Rows per page
@@ -768,8 +797,8 @@ export default function UsersPage() {
               </Select>
             </div>
 
-            <div className="flex grow justify-end whitespace-nowrap text-sm text-muted-foreground">
-              <p aria-live="polite">
+            <div className="flex items-center gap-3">
+              <p aria-live="polite" className="whitespace-nowrap text-sm text-muted-foreground">
                 <span className="text-foreground">
                   {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}-
                   {Math.min(
@@ -782,10 +811,9 @@ export default function UsersPage() {
                 </span>{" "}
                 of <span className="text-foreground">{table.getRowCount().toString()}</span>
               </p>
-            </div>
 
-            <Pagination>
-              <PaginationContent>
+              <Pagination className="mx-0 w-auto">
+                <PaginationContent>
                 <PaginationItem>
                   <Button
                     aria-label="First page"
@@ -834,8 +862,9 @@ export default function UsersPage() {
                     <ChevronLastIcon aria-hidden="true" size={16} />
                   </Button>
                 </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+                </PaginationContent>
+              </Pagination>
+            </div>
           </div>
         </div>
       </main>
@@ -862,7 +891,7 @@ export default function UsersPage() {
               {confirmDelete && confirmDelete.length > 1 ? "s" : ""}?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This removes the account from the database — there is no undo.
+              This removes the account from the database - there is no undo.
               Users who have authored articles can&apos;t be deleted; for those,
               use <strong>Deactivate</strong> in the row menu instead (the user
               can no longer sign in but their content stays attributed).
@@ -914,7 +943,7 @@ function RowActions({
         {/* Reporter-specific quick actions. Shown only on REPORTER rows so
             the menu stays lean for everyone else. The full KYC review
             workflow (reject with mandatory note, document viewer, banking
-            inspection) lives on /reporters — the link below routes there. */}
+            inspection) lives on /reporters - the link below routes there. */}
         {isReporter && (
           <>
             <DropdownMenuSeparator />
@@ -940,20 +969,25 @@ function RowActions({
         )}
 
         <DropdownMenuSeparator />
-        {/* Deactivate / Activate — soft action. Flips User.active so the
+        {/* Deactivate / Activate - soft action. Flips User.active so the
             user can no longer sign in (and is pulled out of review pools)
-            but their authored content + audit trail stay intact. */}
+            but their authored content + audit trail stay intact. Allowed
+            on protected seed accounts (deactivate is reversible). */}
         <DropdownMenuItem onSelect={() => onToggleActive(row)}>
           {row.active ? "Deactivate" : "Activate"}
         </DropdownMenuItem>
-        <DropdownMenuItem
-          onSelect={() => onDelete(row)}
-          className="text-destructive focus:text-destructive"
-        >
-          {/* Hard delete — permanently removes the row. Blocked server-side
-              if the user has authored content; admins use Deactivate then. */}
-          Delete
-        </DropdownMenuItem>
+        {/* Delete is hidden entirely for the four canonical seed accounts.
+            The server-side guard in DELETE /api/users/[id] also refuses, so
+            even a hand-crafted request returns 403 - this is just so the
+            option never appears in the UI. */}
+        {!isProtectedUser(row.email) && (
+          <DropdownMenuItem
+            onSelect={() => onDelete(row)}
+            className="text-destructive focus:text-destructive"
+          >
+            Delete
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -964,7 +998,7 @@ function RowActions({
 // ------------------------------ Zod schema ------------------------------
 
 // `mode` is captured at submit time to swap "password required" rules
-// between create (must have one) and edit (optional — empty means keep
+// between create (must have one) and edit (optional - empty means keep
 // current). Categories are validated as an array but the requirement that
 // SUB_EDITOR / EDITOR have at least one is enforced via `refine` so the
 // error attaches to the right field.
@@ -1011,7 +1045,7 @@ interface CategoryOption {
   id: string;
   name: string;
   nameEn: string;
-  // The category's brand colour from the DB — used to tint the selected
+  // The category's brand colour from the DB - used to tint the selected
   // chip in the assigned-categories picker. Falls back to the brand red.
   color?: string | null;
 }
@@ -1032,7 +1066,7 @@ function UserFormDialog({
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<User["role"]>(user?.role ?? "REPORTER");
   const [active, setActive] = useState<boolean>(user?.active ?? true);
-  // Default to forcing change on first login for new accounts — admin types
+  // Default to forcing change on first login for new accounts - admin types
   // a temporary password and the user picks their own next time in. Editing
   // an existing user mirrors whatever the row currently has.
   const [mustChangePassword, setMustChangePassword] = useState<boolean>(
@@ -1040,7 +1074,7 @@ function UserFormDialog({
   );
 
   // Categories: fetched once on mount; selected state pre-fills from the
-  // user being edited (when role is SUB_EDITOR / EDITOR — Admin/Reporter
+  // user being edited (when role is SUB_EDITOR / EDITOR - Admin/Reporter
   // ignore this even if it was set previously).
   const [allCategories, setAllCategories] = useState<CategoryOption[]>([]);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>(
@@ -1189,6 +1223,24 @@ function UserFormDialog({
               <Button
                 type="button"
                 variant="outline"
+                disabled={!password}
+                onClick={async () => {
+                  if (!password) return;
+                  try {
+                    await navigator.clipboard.writeText(password);
+                    toast.success("Password copied");
+                  } catch {
+                    toast.error("Couldn't copy - clipboard blocked");
+                  }
+                }}
+                aria-label="Copy password"
+                title="Copy password to clipboard"
+              >
+                <CopyIcon className="size-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
                 onClick={onGeneratePassword}
                 aria-label="Generate password"
                 title="Generate a strong password"
@@ -1232,14 +1284,14 @@ function UserFormDialog({
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              {role === "ADMIN" && "Full access — HR, payments, settings, every editorial action."}
+              {role === "ADMIN" && "Full access - HR, payments, settings, every editorial action."}
               {role === "EDITOR" && "Editorial workflow (approve, publish) + Page Builder + ePaper. Assign categories below."}
               {role === "SUB_EDITOR" && "Reviews articles in assigned categories. Cannot approve or publish."}
               {role === "REPORTER" && "Writes own articles. Uses the reporter mobile/web app, not this admin."}
             </p>
           </div>
 
-          {/* Categories — MultiSelect dropdown with search, select-all/clear,
+          {/* Categories - MultiSelect dropdown with search, select-all/clear,
               and removable pills in the trigger. Same UX as the
               wds-shadcn-registry multi-select but built on the primitives
               already in this app (Popover + Checkbox), no `cmdk` dependency. */}

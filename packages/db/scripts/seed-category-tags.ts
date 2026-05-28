@@ -6,7 +6,7 @@
 // top-N most-used tags from the actual ContentTag history, so the chip row
 // evolves over time as the newsroom uses tags on real articles.
 //
-// Idempotent — re-running upserts Tag rows and creates the link only if it
+// Idempotent - re-running upserts Tag rows and creates the link only if it
 // doesn't exist. Safe in the deploy hot path.
 //
 // To add tags for a new category created via the admin UI: add a key here
@@ -19,7 +19,7 @@ const prisma = new PrismaClient();
 
 // Map of category slug → list of { Telugu name, lowercase Latin slug }.
 // The Telugu name is what readers see on the article; the slug becomes the
-// URL fragment for /tag/<slug> pages. Keep tags specific to the category —
+// URL fragment for /tag/<slug> pages. Keep tags specific to the category -
 // generic words like "వార్తలు" (news) belong everywhere so they help nowhere.
 const CATEGORY_TAG_SEED: Record<string, Array<{ name: string; slug: string }>> = {
   // ─── Top-level beats ───────────────────────────────────────────────────
@@ -523,7 +523,7 @@ const CATEGORY_TAG_SEED: Record<string, Array<{ name: string; slug: string }>> =
   // NOTE: Rayalaseema districts (kurnool, nandyal, ananthapuramu, sri-sathya-sai,
   // ysr-kadapa, annamayya, tirupati, chittoor) live in the District table,
   // not Category. Tags scoped to a specific district aren't surfaced via
-  // this chip-row today — they belong on articles via Constituency, not
+  // this chip-row today - they belong on articles via Constituency, not
   // Category. When/if district hub pages get their own Category rows, add
   // their tag seeds here.
 };
@@ -545,7 +545,7 @@ async function main() {
   for (const [catSlug, tags] of Object.entries(CATEGORY_TAG_SEED)) {
     const cat = catBySlug.get(catSlug);
     if (!cat) {
-      console.log(`  ⏭  ${catSlug} — category not in DB, skipping`);
+      console.log(`  ⏭  ${catSlug} - category not in DB, skipping`);
       skippedCategories++;
       continue;
     }
@@ -556,7 +556,7 @@ async function main() {
       // Tag has BOTH `name` and `slug` as unique, so we have to try both
       // before creating. This lets a Telugu name reused across two seed
       // entries (e.g. "మ్యూచువల్ ఫండ్" in both Market and Personal Finance)
-      // resolve to a single shared Tag row — the first slug seen wins.
+      // resolve to a single shared Tag row - the first slug seen wins.
       let tag =
         (await prisma.tag.findUnique({ where: { slug: t.slug } })) ??
         (await prisma.tag.findUnique({ where: { name: t.name } }));
@@ -580,13 +580,13 @@ async function main() {
     totalTagsCreated += tagsThisCat;
     const label = cat.nameEn ?? cat.slug;
     if (linksThisCat > 0 || tagsThisCat > 0) {
-      console.log(`  ✓ ${label} — ${linksThisCat} new links, ${tagsThisCat} new tag rows`);
+      console.log(`  ✓ ${label} - ${linksThisCat} new links, ${tagsThisCat} new tag rows`);
     } else {
-      console.log(`  · ${label} — already seeded`);
+      console.log(`  · ${label} - already seeded`);
     }
   }
 
-  // Flag any active categories that have no entry in the seed map yet — the
+  // Flag any active categories that have no entry in the seed map yet - the
   // newsroom can fill those in later via PRs to this file.
   const seededSlugs = new Set(Object.keys(CATEGORY_TAG_SEED));
   const unseeded = allCats.filter((c) => !seededSlugs.has(c.slug)).map((c) => c.nameEn ?? c.slug);

@@ -1,4 +1,4 @@
-// Page Builder (Spec #2) — Test URL tool. Given a URL path, returns the
+// Page Builder (Spec #2) - Test URL tool. Given a URL path, returns the
 // assignment that would win (or null) using the shared resolver from
 // packages/db (priority DESC → pattern length DESC tie-break).
 //

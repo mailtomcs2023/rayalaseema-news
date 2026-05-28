@@ -4,7 +4,7 @@ export type LocationKind = "DISTRICT" | "CONSTITUENCY" | "MANDAL";
 
 export type Confidence = "HIGH" | "MEDIUM" | "LOW";
 
-/** One row in the location gazetteer — fed to the NER detector. */
+/** One row in the location gazetteer - fed to the NER detector. */
 export interface LocationEntry {
   id: string;
   kind: LocationKind;
@@ -12,7 +12,7 @@ export interface LocationEntry {
   name: string;
   /** English name, e.g. "Kurnool" */
   nameEn: string;
-  /** Optional parent linkage — used for disambiguation when names collide. */
+  /** Optional parent linkage - used for disambiguation when names collide. */
   parentDistrictSlug?: string;
   parentConstituencySlug?: string;
 }
@@ -32,7 +32,7 @@ export interface LocationMention {
 
 /** Final NER output for one article. */
 export interface NerResult {
-  /** Strongest single mention — feeds the article's primary location URL. */
+  /** Strongest single mention - feeds the article's primary location URL. */
   primary: LocationMention | null;
   /** All distinct mentions across the chain. */
   mentions: LocationMention[];

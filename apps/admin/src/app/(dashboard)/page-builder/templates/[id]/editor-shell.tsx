@@ -1,9 +1,9 @@
 "use client";
 
-// Page Builder (Spec #2) — visual editor 3-pane shell.
+// Page Builder (Spec #2) - visual editor 3-pane shell.
 //
 //   Header   : [← Back] [name + slug] [Status]  [Mobile|Desktop] [Save] [Publish]
-//   Palette  : list of built-in block types + composite blocks (drag source — E2)
+//   Palette  : list of built-in block types + composite blocks (drag source - E2)
 //   Canvas   : iframe → /page-builder/preview/[id]?draft=1 (web origin)
 //   Config   : per-block-type form (E4) when a block is selected
 //
@@ -96,7 +96,7 @@ export function EditorShell({
     return src && Array.isArray(src.blocks) ? src : { version: 1, blocks: [] };
   });
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  // Multi-select (F1 #168) — Ctrl/Cmd+click on an outline row toggles
+  // Multi-select (F1 #168) - Ctrl/Cmd+click on an outline row toggles
   // membership. Anchored to single-select state so the rest of the
   // editor (config panel) keeps working with the primary selection.
   const [multiSelectedIds, setMultiSelectedIds] = useState<Set<string>>(() => new Set());
@@ -126,7 +126,7 @@ export function EditorShell({
   const previewSrc = `${webUrl}/page-builder/preview/${initial.id}?draft=1&_n=${iframeNonce.current}`;
 
   // Reload the iframe whenever the draft changes (E3+ will replace this
-  // with surgical postMessage updates — for E1 the full reload keeps the
+  // with surgical postMessage updates - for E1 the full reload keeps the
   // canvas in sync without protocol work).
   const refreshPreview = useCallback(() => {
     if (!iframeRef.current) return;
@@ -143,7 +143,7 @@ export function EditorShell({
         setSelectedId(data.blockId);
       }
       // `page-builder:ready` / `page-builder:blocks` are observed but not
-      // acted on here — H1 (#171) will use them for a "preview ready"
+      // acted on here - H1 (#171) will use them for a "preview ready"
       // spinner and an orphan-block warning.
     }
     window.addEventListener("message", onMessage);
@@ -170,7 +170,7 @@ export function EditorShell({
     [layout.blocks, selectedId],
   );
 
-  // Auto-save (E5 #167) — 5 s of layout inactivity ⇒ flush draft to the
+  // Auto-save (E5 #167) - 5 s of layout inactivity ⇒ flush draft to the
   // server. Tracks the last-saved JSON so we don't re-PUT identical
   // payloads (e.g. after a server-driven refresh).
   const layoutRef = useRef<Layout>(layout);
@@ -273,11 +273,11 @@ export function EditorShell({
         const remoteAt = new Date(json.updatedAt).getTime();
         if (remoteAt > openedAtRef.current + 2000) {
           setOtherEditorWarning(
-            "Someone else has saved this template since you opened it. Your next save will overwrite their changes — refresh first if you want to keep theirs.",
+            "Someone else has saved this template since you opened it. Your next save will overwrite their changes - refresh first if you want to keep theirs.",
           );
         }
       } catch {
-        /* ignore — transient network */
+        /* ignore - transient network */
       }
     }, 15000);
     return () => clearInterval(interval);
@@ -368,7 +368,7 @@ export function EditorShell({
     }
     const composite = await res.json();
 
-    // Find the index of the first selected block — that's where the
+    // Find the index of the first selected block - that's where the
     // Composite reference goes. Strip all multi-selected blocks and
     // splice the new Composite block in.
     const firstIdx = layout.blocks.findIndex((b) => multiSelectedIds.has(b.id));
@@ -930,7 +930,7 @@ function ConfigPanel({
             onChange={(e) => onChange({ compositeId: e.target.value })}
             style={inp}
           >
-            <option value="">— Pick a composite —</option>
+            <option value="">- Pick a composite -</option>
             {composites.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}

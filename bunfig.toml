@@ -1,7 +1,7 @@
 # Workspace-wide Bun config.
 #
-# linker = "hoisted" makes Bun install dependencies the way npm/yarn do —
-# a single copy of each version lifted to the top-level node_modules — rather
+# linker = "hoisted" makes Bun install dependencies the way npm/yarn do -
+# a single copy of each version lifted to the top-level node_modules - rather
 # than Bun's default "isolated" mode which creates a separate cache slot per
 # consumer. The isolated mode tripped expo-doctor's "duplicate dependencies"
 # check because it sees the same version of expo / @expo/vector-icons /

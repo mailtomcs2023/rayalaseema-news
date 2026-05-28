@@ -1,9 +1,9 @@
-// AUTO-GENERATED — Rayalaseema pincode maps. Do not edit by hand.
+// AUTO-GENERATED - Rayalaseema pincode maps. Do not edit by hand.
 // Source: India Post directory ('india-pincode') + location-data.json.
 //
-// pincodeToDistrict     — 385 pincodes. District = dataset majority,
+// pincodeToDistrict     - 385 pincodes. District = dataset majority,
 //                         sibling-corrected against the post-2022 constituency map.
-// pincodeToConstituency — 230 pincodes whose post-office town matched a
+// pincodeToConstituency - 230 pincodes whose post-office town matched a
 //                         mandal. The rest: the reporter picks from the dropdown.
 
 export const pincodeToDistrict: Record<string, string> = {

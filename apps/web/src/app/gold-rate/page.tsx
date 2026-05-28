@@ -1,8 +1,8 @@
-// Spec #4 K1 (#246) — /gold-rate page.
+// Spec #4 K1 (#246) - /gold-rate page.
 //
 // Single canonical URL. Daily-updated table of gold + silver rates across
 // the Telugu commerce cities we cover. NOT geo-fanout (no per-mandal
-// pages) — gold price is essentially the same across cities, with a tiny
+// pages) - gold price is essentially the same across cities, with a tiny
 // makig-charge / GST delta. Editor populates rows from
 // SiteConfig.precious_metal_source (admin UI in a follow-up).
 
@@ -12,12 +12,12 @@ import { Footer } from "@/components/footer";
 import { prisma } from "@rayalaseema/db";
 import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 
-export const revalidate = 600; // 10 min — rates only update a few times a day
+export const revalidate = 600; // 10 min - rates only update a few times a day
 
 const SITE_URL = process.env.SITE_URL || "https://rayalaseemaexpress.com";
 
 export const metadata: Metadata = {
-  title: "Gold rate today in Andhra Pradesh — Rayalaseema Express News",
+  title: "Gold rate today in Andhra Pradesh - Rayalaseema Express News",
   description:
     "Today's gold and silver rates in Hyderabad, Vijayawada, Tirupati, Kurnool, Anantapuramu, Kadapa, Nellore, Chittoor. 22K + 24K gold + silver per gram. Updated daily.",
   alternates: { canonical: `${SITE_URL}/gold-rate` },
@@ -76,7 +76,7 @@ export default async function GoldRatePage() {
           Gold &amp; silver rates today
         </h1>
         <p style={{ fontSize: 14, color: "#888", marginBottom: 24 }}>
-          ఈరోజు బంగారం, వెండి ధరలు · Updated {rows[0]?.date.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) || "—"}
+          ఈరోజు బంగారం, వెండి ధరలు · Updated {rows[0]?.date.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) || "-"}
         </p>
 
         {byCity.size === 0 ? (
@@ -102,7 +102,7 @@ export default async function GoldRatePage() {
                     {list.map((r) => (
                       <tr key={r.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
                         <td style={{ padding: "8px", fontWeight: 600 }}>{r.metal === "GOLD" ? "Gold" : "Silver"}</td>
-                        <td style={{ padding: "8px" }}>{r.purity || "—"}</td>
+                        <td style={{ padding: "8px" }}>{r.purity || "-"}</td>
                         <td style={{ padding: "8px", textAlign: "right", fontFamily: "monospace", fontWeight: 600 }}>{formatPrice(r)}</td>
                       </tr>
                     ))}
@@ -115,7 +115,7 @@ export default async function GoldRatePage() {
 
         <p style={{ fontSize: 12, color: "#888", marginTop: 24, lineHeight: 1.6 }}>
           Rates shown here are indicative wholesale rates; jeweller showroom prices vary by ~3-8% for making charges + GST.
-          Source: editorial desk · {rows[0]?.source || "—"}.
+          Source: editorial desk · {rows[0]?.source || "-"}.
         </p>
       </main>
       <Footer />

@@ -1,4 +1,4 @@
-// Page Builder (Spec #2) — single-assignment endpoint.
+// Page Builder (Spec #2) - single-assignment endpoint.
 //   PUT    → edit pattern / priority / active / templateId (ADMIN + EDITOR)
 //   DELETE → remove                                        (ADMIN + EDITOR)
 

@@ -62,7 +62,7 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
   const [config, setConfig] = useState(initialConfig);
   const [breakingNews, setBreakingNews] = useState(initialBreaking);
   const [tickerPaused, setTickerPaused] = useState(false);
-  // Spec #3 E1 (#183) — admin-published HEADER menu, fetched on mount.
+  // Spec #3 E1 (#183) - admin-published HEADER menu, fetched on mount.
   // While loading or when unpublished, we fall back to the hardcoded
   // `mainNavItems` + `dropdownItems` above so the nav is never empty.
   const [adminTop, setAdminTop] = useState<typeof mainNavItems | null>(null);
@@ -89,7 +89,7 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
     if (Object.keys(config).length === 0) {
       fetch("/api/config").then((r) => r.json()).then(setConfig).catch(() => {});
     }
-    // Spec #3 E1 — admin-published HEADER menu replaces hardcoded items
+    // Spec #3 E1 - admin-published HEADER menu replaces hardcoded items
     // when present. Items at depth 0 with children become the dropdown;
     // items without children become inline nav.
     fetch("/api/menu/header").then((r) => r.json()).then((data) => {
@@ -133,11 +133,11 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
     }).catch(() => {});
   }, []);
 
-  // Active nav items — admin menu wins when published; otherwise hardcoded.
+  // Active nav items - admin menu wins when published; otherwise hardcoded.
   const activeMain = adminTop || mainNavItems;
   const activeDrop = adminDrop || dropdownItems;
 
-  // ⌘K / Ctrl+K opens the search palette — canonical shadcn behaviour.
+  // ⌘K / Ctrl+K opens the search palette - canonical shadcn behaviour.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
@@ -152,11 +152,11 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
   return (
     <>
       <header className="bg-white">
-      {/* Breaking News Ticker — 40px-tall row. Inner children share the
+      {/* Breaking News Ticker - 40px-tall row. Inner children share the
           parent's height via items-center + height: 100%, so the BREAKING
           badge and the ticker line up perfectly with no extra padding gap
           above or below the bar. Text bumped to 14px to match the taller
-          row — 13px looked stranded in a 40px container. */}
+          row - 13px looked stranded in a 40px container. */}
       <div style={{ background: "#000", overflow: "hidden", whiteSpace: "nowrap" as const, height: 40 }}>
         <div style={{ display: "flex", alignItems: "center", height: "100%" }}>
           <span style={{ background: "var(--color-brand)", color: "#fff", padding: "0 16px", height: "100%", fontSize: 14, fontWeight: 900, lineHeight: 1, flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
@@ -206,7 +206,7 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
         </div>
       </div>
 
-      {/* Search panel — slow reveal via framer-motion, shadcn Input inside */}
+      {/* Search panel - slow reveal via framer-motion, shadcn Input inside */}
       <SearchBar open={searchOpen} onClose={() => setSearchOpen(false)} />
 
       {/* Masthead - Eenadu style: Logo left, ad center, links right */}
@@ -243,9 +243,9 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
           {/* Center: spacer (desktop only) */}
           <div className="hidden lg:block flex-1" />
 
-          {/* Right: Tabs + E-Paper (desktop) — monochrome icons, brand-tinted */}
+          {/* Right: Tabs + E-Paper (desktop) - monochrome icons, brand-tinted */}
           <div className="hidden lg:flex flex-col items-end gap-1.5 shrink-0">
-            {/* Top row: Latest & Search tabs — fixed h-8 + inline-flex centering
+            {/* Top row: Latest & Search tabs - fixed h-8 + inline-flex centering
                 so the differently-sized SVG icons and the Telugu text all sit
                 on the same visual midline. */}
             <div className="flex h-8 overflow-hidden" style={{ border: "1px solid var(--paper-edge)", borderRadius: "var(--r-md)" }}>
@@ -295,13 +295,13 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
       </div>
       </header>
 
-      {/* Navigation Bar — sticky across the page scroll. Lives OUTSIDE <header>
+      {/* Navigation Bar - sticky across the page scroll. Lives OUTSIDE <header>
           so its containing block is <body>, otherwise position:sticky would
           stop the moment the (short) header ends. */}
       <nav className="nav-gradient shadow-md relative sticky top-0 z-40">
         <div className="container-news">
           {/* h-10 on the <ul> + items-stretch on flex makes every <li>
-              (and its child link/button) fill the full nav-bar height —
+              (and its child link/button) fill the full nav-bar height -
               so the active-state bg-white/20 paints the entire row top-
               to-bottom, not just the inline content area. */}
           <ul className="hidden lg:flex items-stretch h-10">
@@ -361,7 +361,7 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
                   >
                     {(item as any).isHome ? (
                       // Sized to match the Telugu text x-height in sibling
-                      // links — 22px reads as ~the same visual weight as
+                      // links - 22px reads as ~the same visual weight as
                       // "కర్నూలు" / "నంద్యాల" at 13px Noto Sans Telugu, so
                       // the icon no longer looks short next to the words.
                       <svg className="block" width="22" height="22" fill="#fff" viewBox="0 0 24 24" aria-label="Home">
@@ -401,7 +401,7 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
               </button>
             </div>
 
-            {/* Quick Actions — uniform brand-red tints */}
+            {/* Quick Actions - uniform brand-red tints */}
             <div className="grid grid-cols-4 gap-2 p-3 border-b border-gray-100">
               <Link href="/" onClick={() => setMobileMenuOpen(false)} className="flex flex-col items-center gap-1 p-2 rounded-lg" style={{ background: "var(--color-brand-bg)" }}>
                 <svg className="w-5 h-5" style={{ color: "var(--color-brand)" }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>

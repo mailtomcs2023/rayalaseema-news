@@ -2,7 +2,7 @@
 //
 // Telugu compound words written without spaces (e.g. ఆంధ్రప్రదేశ్రాష్ట్రప్రభుత్వం)
 // don't naturally break at the column edge; the renderer ends up with a
-// ragged right margin or pushing the whole word to next line — leaving an
+// ragged right margin or pushing the whole word to next line - leaving an
 // ugly gap. We insert U+00AD (soft hyphen) at syllable-cluster boundaries
 // so CSS hyphens: auto + lang="te" can break long words gracefully.
 //
@@ -11,9 +11,9 @@
 // characters. Quick + reversible; doesn't need a real corpus.
 
 const TELUGU_RE = /[ఀ-౿]/;
-// Vowel signs (matras) that bind to the preceding consonant — never split between consonant + matra.
+// Vowel signs (matras) that bind to the preceding consonant - never split between consonant + matra.
 const MATRA_RE = /[ా-్ౕౖౢౣ]/;
-// Virama (halant) — joins consonants into a conjunct; never split across virama.
+// Virama (halant) - joins consonants into a conjunct; never split across virama.
 const VIRAMA = "్";
 const SOFT_HYPHEN = "­";
 
@@ -46,5 +46,5 @@ function hyphenateToken(token: string): string {
 export function hyphenateTelugu(text: string | null | undefined): string {
   if (!text) return "";
   // Split on whitespace + punctuation; hyphenate each token, reassemble.
-  return text.split(/(\s+|[,.;:!?()\[\]"'…—–]+)/u).map(hyphenateToken).join("");
+  return text.split(/(\s+|[,.;:!?()\[\]"'…-–]+)/u).map(hyphenateToken).join("");
 }

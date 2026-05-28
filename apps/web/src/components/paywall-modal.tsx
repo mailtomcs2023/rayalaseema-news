@@ -51,7 +51,7 @@ export function PaywallModal({ articleSlug }: { articleSlug: string }) {
         </h2>
         <p style={{ fontFamily: "var(--font-telugu-body), sans-serif", fontSize: 14, color: "#4b5563", lineHeight: 1.6, marginBottom: 16 }}>
           రాయలసీమ ఎక్స్‌ప్రెస్‌లో మరిన్ని కథనాలు చదవడానికి సభ్యత్వం పొందండి.
-          నెలకు కేవలం ₹49 — అపరిమిత యాక్సెస్, ఈ-పేపర్ డౌన్‌లోడ్, ప్రకటనలు లేని అనుభవం.
+          నెలకు కేవలం ₹49 - అపరిమిత యాక్సెస్, ఈ-పేపర్ డౌన్‌లోడ్, ప్రకటనలు లేని అనుభవం.
         </p>
         <div style={{ display: "flex", gap: 10, flexDirection: "column" }}>
           <a href="/subscribe"

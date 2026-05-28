@@ -1,4 +1,4 @@
-// POST /api/menu-builder/menus/[location]/publish — promote draft → live
+// POST /api/menu-builder/menus/[location]/publish - promote draft → live
 // (Spec #3 D1). Snapshots a MenuVersion before promoting, invalidates the
 // web cache via revalidateTag('menu').
 import { NextRequest, NextResponse } from "next/server";

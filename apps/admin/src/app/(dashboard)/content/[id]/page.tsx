@@ -1,4 +1,4 @@
-// /content/[id] — morphing editor (Spec #1 #117 + F2-F6).
+// /content/[id] - morphing editor (Spec #1 #117 + F2-F6).
 //
 // F1 ships: common fields (Title, Slug, Summary, Category, Desk, Constituency,
 // Featured image, Tags, Featured?, Language, Status) + ARTICLE subform (body
@@ -9,7 +9,7 @@
 // the type-specific subform panel surfaces a "coming soon" callout.
 "use client";
 
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChevronDown as ChevronDownIcon } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -51,7 +51,7 @@ export default function ContentEditorPage() {
   const params = useParams();
   const contentId = params.id as string;
 
-  // Role gate — only EDITOR/ADMIN can move content into PUBLISHED / SCHEDULED /
+  // Role gate - only EDITOR/ADMIN can move content into PUBLISHED / SCHEDULED /
   // APPROVED. Sub-editor + reporter see Save Draft only, and the Status
   // dropdown hides the gated values so they can't bypass via the select.
   const { data: session } = useSession();
@@ -74,7 +74,7 @@ export default function ContentEditorPage() {
   const [body, setBody] = useState("");
   const [featuredImage, setFeaturedImage] = useState("");
   const [categoryId, setCategoryId] = useState("");
-  // Multi-category cross-listing — IDs of categories this row should ALSO
+  // Multi-category cross-listing - IDs of categories this row should ALSO
   // appear under (primary stays in categoryId). Editor renders a chip list
   // below the primary dropdown.
   const [additionalCategoryIds, setAdditionalCategoryIds] = useState<string[]>([]);
@@ -128,14 +128,14 @@ export default function ContentEditorPage() {
   const [payloadError, setPayloadError] = useState("");
 
   // AI helpers (translate / editorial / summarize / headline) + URL fetch.
-  // Ported from the legacy /articles/[id] editor — same /api/ai/rewrite and
+  // Ported from the legacy /articles/[id] editor - same /api/ai/rewrite and
   // /api/fetch-news endpoints, now wired into the unified content editor.
   const [aiLoading, setAiLoading] = useState<string | null>(null);
   const [pasteUrl, setPasteUrl] = useState("");
 
   const editorRef = useRef<RichEditorRef>(null);
 
-  // Pipe error/success state through Sonner toasts — the inline banner was
+  // Pipe error/success state through Sonner toasts - the inline banner was
   // removed in the visual refactor, but every existing setError/setSuccess
   // call still surfaces visibly via these effects. Empty-string resets are
   // skipped so a setError("") doesn't trigger a phantom toast.
@@ -150,7 +150,7 @@ export default function ContentEditorPage() {
   // Watches the title with a 1s debounce. If the slug is still a placeholder
   // (`untitled-…` / `breaking-…` / `news-…` / empty) we fire the AI `slug`
   // action and replace it with a short English SEO slug. Two safety nets:
-  //   - userTouchedSlug ref — once the editor types in the slug field, this
+  //   - userTouchedSlug ref - once the editor types in the slug field, this
   //     effect stops touching it. No surprise overwrites.
   //   - Transliteration fallback if AI returns empty / garbage.
   // Reporters never see the slug field but this effect still runs for them,
@@ -172,7 +172,7 @@ export default function ContentEditorPage() {
         const data = await res.json().catch(() => ({}));
         const aiSlug = sanitizeSlug(String(data?.result ?? ""));
         // Guard against AI returning empty, all-numeric, or suspiciously long
-        // output — fall back to client-side transliteration via the shared
+        // output - fall back to client-side transliteration via the shared
         // buildSlugFromTitle helper.
         const next = aiSlug && aiSlug.length >= 3 && aiSlug.length <= 80
           ? aiSlug
@@ -192,7 +192,7 @@ export default function ContentEditorPage() {
 
   const runAI = async (action: "translate" | "editorial" | "summarize" | "headline") => {
     const text = body || summary || title;
-    if (!text) { setError("No content to process — type or paste something first."); return; }
+    if (!text) { setError("No content to process - type or paste something first."); return; }
     setAiLoading(action);
     setError("");
     setSuccess("");
@@ -218,7 +218,7 @@ export default function ContentEditorPage() {
         } else if (action === "headline") {
           setSuccess(String(data.result));
         } else {
-          // Translate / editorial — full body rewrite.
+          // Translate / editorial - full body rewrite.
           const h2 = data.result.match(/<h2[^>]*>(.*?)<\/h2>/);
           if (h2) setTitle(h2[1].replace(/<[^>]+>/g, "").trim());
           const p = data.result.match(/<p[^>]*>(.*?)<\/p>/);
@@ -264,7 +264,7 @@ export default function ContentEditorPage() {
         setBody(data.body);
         editorRef.current?.setContent(data.body);
       }
-      // Always set when fetching fresh from URL — user paste-URL means they
+      // Always set when fetching fresh from URL - user paste-URL means they
       // want the source's image. If they don't want it, they can clear it
       // manually. (Was previously conditional on !featuredImage which
       // silently dropped the source's og:image when an old image lingered.)
@@ -366,7 +366,7 @@ export default function ContentEditorPage() {
     // Capture the status BEFORE save so the success toast can distinguish
     // a state transition ("Article published") from a same-status re-save
     // ("Article updated"). Without this, clicking Update on a PUBLISHED
-    // row toasts "Article published" — confusing since nothing was newly
+    // row toasts "Article published" - confusing since nothing was newly
     // published, it was already live.
     const prevStatus = status;
 
@@ -378,8 +378,11 @@ export default function ContentEditorPage() {
 
     const finalStatus = newStatus || status;
 
+    // `type` is intentionally omitted - content type isn't updatable after
+    // creation, and the PUT schema (.strict()) rejects unknown fields. The
+    // `type === "ARTICLE"` check below still uses the local state variable
+    // to decide whether to send the `body` payload.
     const body_ = {
-      type,
       title,
       slug,
       summary: summary || null,
@@ -481,7 +484,7 @@ export default function ContentEditorPage() {
           <div className="flex-1" />
           {/* Button layout adapts to current status:
               - PUBLISHED/SCHEDULED: single "Update" button that re-saves in the
-                same status (no "Save Draft" — that would silently demote a
+                same status (no "Save Draft" - that would silently demote a
                 live article to draft, which is a destructive surprise).
                 Editors can use the Status dropdown in the right rail to
                 explicitly unpublish if they need to.
@@ -517,7 +520,7 @@ export default function ContentEditorPage() {
           {/* Main column */}
           <Card className="gap-4 py-5">
             <CardContent className="space-y-4">
-              {/* Featured image — pinned at the top so the hero visual is the
+              {/* Featured image - pinned at the top so the hero visual is the
                   first thing the editor sees and confirms before scrolling down
                   to title/body. */}
               <div className="space-y-2">
@@ -539,7 +542,7 @@ export default function ContentEditorPage() {
                     >
                       Crop
                     </Button>
-                    {/* AI enhance row — only visible once an image is set.
+                    {/* AI enhance row - only visible once an image is set.
                         ~$0.06 per operation. Result replaces featuredImage. */}
                     {[
                       { op: "remove-watermark", label: "Remove watermark" },
@@ -554,7 +557,7 @@ export default function ContentEditorPage() {
                         variant="outline"
                         onClick={() => enhanceImage(b.op)}
                         disabled={enhancing !== null}
-                        title={`AI '${b.op}' — gpt-image-2, ~15s, ~$0.06`}
+                        title={`AI '${b.op}' - gpt-image-2, ~15s, ~$0.06`}
                         className={enhancing && enhancing !== b.op ? "opacity-50" : ""}
                       >
                         {enhancing === b.op ? "Running…" : b.label}
@@ -575,7 +578,7 @@ export default function ContentEditorPage() {
                 />
               </div>
 
-              {/* Slug is hidden for REPORTER role — the auto-generation
+              {/* Slug is hidden for REPORTER role - the auto-generation
                   effect above (or the backend safety net at save time)
                   ensures a real slug lands in the DB without the reporter
                   having to think about URLs. Editors/admin keep the field
@@ -610,7 +613,7 @@ export default function ContentEditorPage() {
                 />
               </div>
 
-            {/* AI assist — ARTICLE only. Paste URL → fetch + translate, or
+            {/* AI assist - ARTICLE only. Paste URL → fetch + translate, or
                 run translate / editorial / summarize / headline on the
                 current body. */}
             {type === "ARTICLE" && (
@@ -618,7 +621,7 @@ export default function ContentEditorPage() {
                 <Input
                   value={pasteUrl}
                   onChange={(e) => setPasteUrl(e.target.value)}
-                  placeholder="Paste a source URL (optional) — తెలుగులో రాయండి will fetch + translate it"
+                  placeholder="Paste a source URL (optional) - తెలుగులో రాయండి will fetch + translate it"
                   className="bg-white text-xs md:text-xs"
                 />
                 <div className="flex flex-wrap gap-2">
@@ -669,7 +672,7 @@ export default function ContentEditorPage() {
                   <RichEditor ref={editorRef} content={body} onChange={setBody} />
                 </div>
                 {/* Rating + reviewer-byline are movie-review-only inputs. The
-                    Source URL is also gated to that category — most ARTICLEs
+                    Source URL is also gated to that category - most ARTICLEs
                     are original reporting, not wire imports. The "Fetch +
                     translate" URL bar above already feeds sourceUrl when
                     importing from a foreign site. */}
@@ -726,7 +729,7 @@ export default function ContentEditorPage() {
             </CardContent>
           </Card>
 
-          {/* Sidebar — all controls are shadcn (no native <select> / <input>
+          {/* Sidebar - all controls are shadcn (no native <select> / <input>
               chrome). The "_none" / "_auto" sentinels exist because shadcn
               <Select> refuses an empty-string value; we translate at the
               boundary so the rest of the file still stores "" for "unset". */}
@@ -766,10 +769,11 @@ export default function ContentEditorPage() {
               </div>
             </Section>
 
-            {/* Payment panel — only meaningful for ARTICLE type. Shows the
+            {/* Payment panel - only meaningful for ARTICLE type. Shows the
                 per-article amount + status, with edit pencil for Editors. */}
             {type === "ARTICLE" && <PaymentPanel contentId={contentId} />}
 
+            <Section title="Classification">
               <div className="space-y-1.5">
                 <Label htmlFor="category-select">Primary category</Label>
                 <SearchableSelect
@@ -780,54 +784,72 @@ export default function ContentEditorPage() {
                   searchPlaceholder="Search categories…"
                   // Child categories show their parent's nameEn as sublabel so
                   // "Automobile" reads as "Automobile (Business)". Lookup table
-                  // built once per render — categories list is ~60 rows so this
+                  // built once per render - categories list is ~60 rows so this
                   // is cheap.
                   options={(() => {
                     const byId = new Map(categories.map((c) => [c.id, c.nameEn]));
                     return categories.map((c) => ({
                       value: c.id,
                       label: c.nameEn,
-                      sublabel: c.parentId ? `(${byId.get(c.parentId) ?? "—"})` : undefined,
+                      sublabel: c.parentId ? `(${byId.get(c.parentId) ?? "-"})` : undefined,
                     }));
                   })()}
                 />
               </div>
 
-              {/* Multi-category cross-listing. Clicking a chip toggles. The
-                  primary is hidden from this list (it's already counted). */}
-              <div className="space-y-1.5">
-                <Label>Also list under (optional)</Label>
-                <div className="flex flex-wrap gap-1 rounded-md border bg-gray-50 p-1.5" style={{ minHeight: 36 }}>
-                  {categories.filter((c) => c.id !== categoryId).map((c) => {
-                    const on = additionalCategoryIds.includes(c.id);
-                    return (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() => setAdditionalCategoryIds((prev) =>
-                          prev.includes(c.id) ? prev.filter((x) => x !== c.id) : [...prev, c.id]
-                        )}
-                        className={cn(
-                          "rounded-full border px-2.5 py-0.5 text-[11px] font-semibold transition-colors",
-                          on
-                            ? "border-blue-300 bg-blue-50 text-blue-700"
-                            : "border-gray-200 bg-white text-gray-700 hover:bg-gray-100",
-                        )}
-                      >
-                        {on ? "✓ " : ""}{c.nameEn}
-                      </button>
-                    );
-                  })}
-                  {categories.length === 0 && (
-                    <span className="text-[11px] text-gray-400">Loading…</span>
-                  )}
+              {/* Multi-category cross-listing - collapsed by default so the
+                  sidebar isn't dominated by ~60 chips. Native <details> so
+                  there's no extra dep; the summary shows the current count.
+                  Auto-opens when at least one extra category is already set. */}
+              <details
+                className="group rounded-md border bg-white"
+                open={additionalCategoryIds.length > 0}
+              >
+                <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-xs font-semibold text-gray-700 select-none">
+                  <span>
+                    Also list under{" "}
+                    {additionalCategoryIds.length > 0 ? (
+                      <span className="ml-1 rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">
+                        {additionalCategoryIds.length}
+                      </span>
+                    ) : (
+                      <span className="font-normal text-gray-400">(optional)</span>
+                    )}
+                  </span>
+                  <ChevronDownIcon
+                    aria-hidden="true"
+                    size={14}
+                    className="text-gray-400 transition-transform group-open:rotate-180"
+                  />
+                </summary>
+                <div className="border-t bg-gray-50 p-2">
+                  <div className="flex max-h-48 flex-wrap gap-1 overflow-y-auto">
+                    {categories.filter((c) => c.id !== categoryId).map((c) => {
+                      const on = additionalCategoryIds.includes(c.id);
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => setAdditionalCategoryIds((prev) =>
+                            prev.includes(c.id) ? prev.filter((x) => x !== c.id) : [...prev, c.id]
+                          )}
+                          className={cn(
+                            "rounded-full border px-2.5 py-0.5 text-[11px] font-semibold transition-colors",
+                            on
+                              ? "border-blue-300 bg-blue-50 text-blue-700"
+                              : "border-gray-200 bg-white text-gray-700 hover:bg-gray-100",
+                          )}
+                        >
+                          {on ? "✓ " : ""}{c.nameEn}
+                        </button>
+                      );
+                    })}
+                    {categories.length === 0 && (
+                      <span className="text-[11px] text-gray-400">Loading…</span>
+                    )}
+                  </div>
                 </div>
-                {additionalCategoryIds.length > 0 && (
-                  <p className="text-[11px] text-gray-500">
-                    Cross-listed in {additionalCategoryIds.length} extra categor{additionalCategoryIds.length === 1 ? "y" : "ies"}.
-                  </p>
-                )}
-              </div>
+              </details>
 
               <div className="space-y-1.5">
                 <Label htmlFor="desk-select">Desk (auto-resolves if blank)</Label>
@@ -839,7 +861,7 @@ export default function ContentEditorPage() {
                   searchPlaceholder="Search desks…"
                   // Display strips the publication prefix ("Rayalaseema Express ")
                   // so the dropdown reads "Movie Reviews Desk" / "Business Desk"
-                  // — value (d.id) is unchanged.
+                  // - value (d.id) is unchanged.
                   options={desks.map((d) => ({
                     value: d.id,
                     label: d.nameEn.replace(/^Rayalaseema Express\s+/i, ""),
@@ -908,6 +930,15 @@ export default function ContentEditorPage() {
                     if (existing.some((t) => t.toLowerCase() === lc)) return;
                     setTagsInput([...existing, name].join(", "));
                   }}
+                  onRemoveTag={(name) => {
+                    const lc = name.toLowerCase();
+                    const next = tagsInput
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter(Boolean)
+                      .filter((t) => t.toLowerCase() !== lc);
+                    setTagsInput(next.join(", "));
+                  }}
                 />
               </div>
             </Section>
@@ -929,7 +960,7 @@ export default function ContentEditorPage() {
           onClose={() => setCropSrc(null)}
           onConfirm={async (dataUrl) => {
             // Crop modal returns a data URL. If user skipped crop the data
-            // URL == the original Azure URL we passed in — bail out without
+            // URL == the original Azure URL we passed in - bail out without
             // re-uploading.
             if (!dataUrl.startsWith("data:")) { setCropSrc(null); return; }
             try {

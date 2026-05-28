@@ -1,13 +1,13 @@
-// E4 (#223) — sitemap-index changes rarely; long revalidate.
+// E4 (#223) - sitemap-index changes rarely; long revalidate.
 
 export const revalidate = 3600;
 
-// Spec #4 D1 (#214) — /sitemap-index.xml.
+// Spec #4 D1 (#214) - /sitemap-index.xml.
 //
 // Single submission point for GSC + Bing. References:
 //   - /sitemap.xml         (main sitemap: hubs + categories + articles)
 //   - /news-sitemap.xml    (Google News spec: last-48h articles only)
-//   - /rss/all.xml         (D6 #219 — RSS aggregator pickup)
+//   - /rss/all.xml         (D6 #219 - RSS aggregator pickup)
 //
 // Robots.txt also references this index (see D4 #217). GSC + Bing accept
 // either a sitemap.xml or a sitemap-index.xml as the submission entry;

@@ -13,7 +13,7 @@ import {
   newKycStatusOnRequest,
 } from "@/lib/profile-fields";
 
-// POST { field, value } — reporter requests a change to a single field.
+// POST { field, value } - reporter requests a change to a single field.
 //
 // Behaviour:
 // - email / role / kycStatus are rejected (admin-only).
@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// DELETE /api/reporter/profile/request-change?field=phone — withdraw a
+// DELETE /api/reporter/profile/request-change?field=phone - withdraw a
 // pending request. If it was KYC-critical and we paused the reporter's
 // KYC, restore the previous status.
 export async function DELETE(req: NextRequest) {

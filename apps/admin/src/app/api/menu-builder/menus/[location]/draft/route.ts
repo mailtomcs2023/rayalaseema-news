@@ -1,4 +1,4 @@
-// PUT /api/menu-builder/menus/[location]/draft — save draftItems (Spec #3 D1).
+// PUT /api/menu-builder/menus/[location]/draft - save draftItems (Spec #3 D1).
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, MenuLocation, safeValidateMenuItems } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";

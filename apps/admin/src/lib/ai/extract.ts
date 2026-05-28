@@ -1,7 +1,7 @@
 // Step 1 of the Telugu newsroom pipeline. Mechanical: take English (or any
 // language) source text + return structured JSON capturing the 5W, every
 // quote with its speaker + verb-of-saying, every number, every named person
-// / place / org. Composes pass uses this JSON — never the raw source — so
+// / place / org. Composes pass uses this JSON - never the raw source - so
 // it can't accidentally drag in untranslated English or hallucinate names.
 //
 // Model: GPT-4.1-mini (deployment "gpt41-mini"). Cheap + fast + accurate
@@ -32,9 +32,9 @@ export interface ExtractedFacts {
   source_paragraphs: string[]; // 1-2 sentence chunks from source, for fact-check reference
 }
 
-const EXTRACT_SYSTEM = `You are a news extraction engine. Given an English news article, return a STRICT JSON envelope capturing facts ONLY — no opinions, no rephrasing, no editorializing.
+const EXTRACT_SYSTEM = `You are a news extraction engine. Given an English news article, return a STRICT JSON envelope capturing facts ONLY - no opinions, no rephrasing, no editorializing.
 
-OUTPUT SHAPE (always exactly this — empty arrays / strings when source lacks the info):
+OUTPUT SHAPE (always exactly this - empty arrays / strings when source lacks the info):
 {
   "headline_en": "<original or your best one-line summary, 7-12 words>",
   "dek_en": "<2-line standfirst summarizing the news>",
@@ -53,7 +53,7 @@ OUTPUT SHAPE (always exactly this — empty arrays / strings when source lacks t
 }
 
 RULES:
-- "quotes" array must contain ONLY text that appears between "..." or "..." (or after a clear "said:" colon) in the source. Reporter narration ("X said that Y") is NOT a quote — leave it out of this array.
+- "quotes" array must contain ONLY text that appears between "..." or "..." (or after a clear "said:" colon) in the source. Reporter narration ("X said that Y") is NOT a quote - leave it out of this array.
 - "numbers" captures every figure, percentage, currency amount, or measurement. Currency: keep the symbol in unit ("₹crore", "USD million").
 - "where" captures every location mentioned, not just the dateline.
 - "who" includes every named person + their designation.

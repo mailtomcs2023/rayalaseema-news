@@ -1,4 +1,4 @@
-// Spec #3 G1 #186 — menu schema + resolver unit tests.
+// Spec #3 G1 #186 - menu schema + resolver unit tests.
 //   bun test packages/db
 //
 // Covers:
@@ -11,7 +11,7 @@ import { safeValidateMenuItems, resolveItemHref, type MenuItemTarget } from "../
 
 const id = (s: string) => s.padEnd(8, "0");
 
-describe("menuItemsSchema — target shapes", () => {
+describe("menuItemsSchema - target shapes", () => {
   test("accepts CATEGORY", () => {
     const r = safeValidateMenuItems([
       { id: id("a"), label: "Sports", target: { type: "CATEGORY", categorySlug: "sports" } },
@@ -62,7 +62,7 @@ describe("menuItemsSchema — target shapes", () => {
   });
 });
 
-describe("menuItemsSchema — depth & shape", () => {
+describe("menuItemsSchema - depth & shape", () => {
   test("accepts 2-level nesting (top + children)", () => {
     const r = safeValidateMenuItems([
       {
@@ -85,7 +85,7 @@ describe("menuItemsSchema — depth & shape", () => {
           {
             id: id("b"), label: "AP",
             target: { type: "CATEGORY", categorySlug: "andhra-pradesh" },
-            // @ts-expect-error — child schema has no `children` field; this
+            // @ts-expect-error - child schema has no `children` field; this
             // is the whole point of the depth check.
             children: [{ id: id("c"), label: "Inner", target: { type: "INTERNAL_URL", url: "/x" } }],
           },

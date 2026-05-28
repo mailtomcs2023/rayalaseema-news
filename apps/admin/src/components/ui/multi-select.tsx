@@ -1,6 +1,6 @@
 "use client";
 
-// Multi-select dropdown — same shape + UX as the wds-shadcn-registry
+// Multi-select dropdown - same shape + UX as the wds-shadcn-registry
 // component (https://wds-shadcn-registry.netlify.app/components/multi-select/)
 // but built on the primitives this app already has (Popover + Checkbox)
 // so we don't pull in `cmdk` for one widget.
@@ -98,7 +98,7 @@ export function MultiSelect({
           aria-expanded={open}
           aria-haspopup="listbox"
           className={cn(
-            // Trigger styled like shadcn's Input — same border/ring, but
+            // Trigger styled like shadcn's Input - same border/ring, but
             // multiline-friendly so wrapped pills don't get clipped.
             "flex w-full min-h-9 items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none",
             "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
@@ -201,7 +201,7 @@ export function MultiSelect({
           className="max-h-64 overflow-y-auto p-1"
           onWheel={(e) => {
             // When the popover is nested inside a Dialog, react-remove-scroll
-            // swallows wheel events on portaled siblings — drag-scroll on the
+            // swallows wheel events on portaled siblings - drag-scroll on the
             // scrollbar works but the mouse wheel doesn't. Scroll manually.
             e.currentTarget.scrollTop += e.deltaY;
           }}

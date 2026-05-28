@@ -1,4 +1,4 @@
-// /content/new — type-picker (Spec #1 #116). One click on a tile creates
+// /content/new - type-picker (Spec #1 #116). One click on a tile creates
 // a minimal draft with placeholder title "Untitled <type>" and redirects to
 // /content/[id]. The editor's title input is the next thing the user sees,
 // so a separate step here was redundant.
@@ -218,7 +218,7 @@ export default function NewContentPage() {
                     }
                   }}
                 >
-                  {/* Arrow indicator — fades in on hover */}
+                  {/* Arrow indicator - fades in on hover */}
                   <span
                     data-arrow
                     aria-hidden="true"

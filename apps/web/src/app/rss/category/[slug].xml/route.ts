@@ -1,4 +1,4 @@
-// E4 (#223) — 5-min ISR. dynamic param can't be enumerated at build
+// E4 (#223) - 5-min ISR. dynamic param can't be enumerated at build
 // (categories are user-data), so force-dynamic skips the prerender
 // attempt that was crashing with "Cannot destructure property 'slug' of
 // '(intermediate value)' as it is undefined". Per-request rendering
@@ -6,9 +6,9 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 300;
 
-// Spec #4 D6 (#219) — per-category RSS feed.
+// Spec #4 D6 (#219) - per-category RSS feed.
 //
-// /rss/category/<slug>.xml — 30 most-recent articles in the category.
+// /rss/category/<slug>.xml - 30 most-recent articles in the category.
 // Category subscribers (e.g. cinema, mandi-rates, exam-results) get a
 // focused feed.
 
@@ -59,7 +59,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ slug: string }
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Rayalaseema Express — ${escXml(category.nameEn || category.name)}</title>
+    <title>Rayalaseema Express - ${escXml(category.nameEn || category.name)}</title>
     <link>${siteUrl}/category/${category.slug}</link>
     <atom:link href="${siteUrl}/rss/category/${category.slug}.xml" rel="self" type="application/rss+xml" />
     <description>${escXml(category.nameEn || category.name)} news from Rayalaseema Express.</description>

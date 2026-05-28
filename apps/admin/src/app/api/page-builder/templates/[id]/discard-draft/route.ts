@@ -1,4 +1,4 @@
-// Page Builder (Spec #2) — clear the in-progress draft. The next time the
+// Page Builder (Spec #2) - clear the in-progress draft. The next time the
 // editor opens this template it sees the published layout again.
 
 import { NextRequest, NextResponse } from "next/server";

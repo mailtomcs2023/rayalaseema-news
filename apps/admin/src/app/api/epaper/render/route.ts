@@ -20,7 +20,7 @@ function teluguDate(d: Date): string {
   return `${d.getUTCDate()} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()}, ${days[d.getUTCDay()]}`;
 }
 
-// POST /api/epaper/render?date=YYYY-MM-DD — render the (edited) layout into PDF + page PNGs
+// POST /api/epaper/render?date=YYYY-MM-DD - render the (edited) layout into PDF + page PNGs
 export async function POST(req: NextRequest) {
   const session = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(session)) return session;
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       where: { date_edition: { date: editionDate, edition: editionKey } },
     });
     if (!edition || !edition.layout) {
-      return NextResponse.json({ error: "No draft layout — build a draft first" }, { status: 400 });
+      return NextResponse.json({ error: "No draft layout - build a draft first" }, { status: 400 });
     }
     const pagesPlan = (edition.layout as any).pages as LayoutPage[];
     if (!pagesPlan?.length) {

@@ -59,11 +59,11 @@ function isPrivateV6(addr: string): { blocked: true; reason: string } | null {
   if (lower.startsWith("fe80") || lower.startsWith("fe9") || lower.startsWith("fea") || lower.startsWith("feb")) {
     return { blocked: true, reason: "IPv6 link-local" };
   }
-  // fc00::/7 — unique local addresses (private)
+  // fc00::/7 - unique local addresses (private)
   if (lower.startsWith("fc") || lower.startsWith("fd")) {
     return { blocked: true, reason: "IPv6 unique local" };
   }
-  // ::ffff:0:0/96 — IPv4-mapped — unwrap and recheck against v4 ranges
+  // ::ffff:0:0/96 - IPv4-mapped - unwrap and recheck against v4 ranges
   if (lower.startsWith("::ffff:")) {
     const v4 = lower.slice(7);
     return isPrivateV4(v4);
@@ -82,7 +82,7 @@ export interface SafetyResult {
  *
  * Pass the resolved IP back to the caller's `fetch()` (via the `Host:` header
  * trick) if you want to guarantee a Time-of-Check vs Time-of-Use safety. For
- * the current low-volume use case, blocking before fetch is enough — DNS
+ * the current low-volume use case, blocking before fetch is enough - DNS
  * rebinding on a freshly-validated hostname is impractical inside a single
  * 10-second scrape call.
  */
@@ -111,7 +111,7 @@ export async function isUrlSafeToFetch(rawUrl: string): Promise<SafetyResult> {
     return { safe: true };
   }
 
-  // Hostname — resolve A + AAAA and check every result.
+  // Hostname - resolve A + AAAA and check every result.
   if (host === "localhost" || host.endsWith(".local") || host.endsWith(".internal")) {
     return { safe: false, reason: `Hostname suffix not allowed (${host})` };
   }

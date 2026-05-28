@@ -12,7 +12,8 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "15");
+    // Default 10 matches the admin's standard per-page size.
+    const limit = parseInt(searchParams.get("limit") || "10");
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || "";
     const category = searchParams.get("category") || "";
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
     // change to its URL contract.
     const where: any = { type: "ARTICLE" };
 
-    // `?ids=a,b,c` short-circuits the listing — returns just those rows
+    // `?ids=a,b,c` short-circuits the listing - returns just those rows
     // (used by the e-paper editor to look up article titles by id).
     const idsParam = searchParams.get("ids");
     if (idsParam) {
@@ -65,7 +66,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/articles — Spec #1 #133: compat shim that creates a Content row
+// POST /api/articles - Spec #1 #133: compat shim that creates a Content row
 // with type=ARTICLE. Mirrors prior contract (returns the created row) so
 // legacy callers don't break. New code should POST /api/content directly.
 export async function POST(req: NextRequest) {

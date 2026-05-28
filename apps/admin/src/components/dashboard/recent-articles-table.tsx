@@ -1,9 +1,9 @@
 "use client";
 
-// Dashboard "Recent Articles" widget — visual chrome mirrors the /content
+// Dashboard "Recent Articles" widget - visual chrome mirrors the /content
 // page exactly: overflow-hidden rounded border wrapper, table-fixed with
 // per-column sizes, h-11 headers, last:py-0 cells, h-24 empty state.
-// Pagination + bulk-select are intentionally omitted — this is a 10-row
+// Pagination + bulk-select are intentionally omitted - this is a 10-row
 // preview widget, not a full listing. Use /content for paged browsing.
 
 import {
@@ -56,7 +56,7 @@ interface ArticleRow {
   author: { name: string } | null;
 }
 
-// Per-status badge palette — mirrors /content + /users so a status looks
+// Per-status badge palette - mirrors /content + /users so a status looks
 // identical wherever it appears in the admin.
 const STATUS_BADGE: Record<string, string> = {
   PUBLISHED: "border-emerald-200 bg-emerald-50 text-emerald-700",
@@ -83,7 +83,7 @@ function hexToTint(hex: string | null | undefined, alpha = 0.12): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-// Multi-column search — title + author + category, same pattern as
+// Multi-column search - title + author + category, same pattern as
 // userSearchFilter on /users.
 const articleSearchFilter: FilterFn<ArticleRow> = (row, _columnId, filterValue: string) => {
   if (!filterValue) return true;
@@ -129,7 +129,7 @@ export function RecentArticlesTable({ articles }: { articles: ArticleRow[] }) {
         size: 140,
         cell: ({ row }) => {
           const c = row.original.category;
-          if (!c) return <span className="text-muted-foreground">—</span>;
+          if (!c) return <span className="text-muted-foreground">-</span>;
           const color = c.color || "#FF2C2C";
           return (
             <span
@@ -151,7 +151,7 @@ export function RecentArticlesTable({ articles }: { articles: ArticleRow[] }) {
         header: "Author",
         size: 140,
         cell: ({ row }) => (
-          <span className="text-sm text-muted-foreground">{row.original.author?.name || "—"}</span>
+          <span className="text-sm text-muted-foreground">{row.original.author?.name || "-"}</span>
         ),
       },
       {
@@ -206,7 +206,7 @@ export function RecentArticlesTable({ articles }: { articles: ArticleRow[] }) {
     // shadcn-scope wrapper + space-y-4 matches /content + /users.
     <div className="shadcn-scope space-y-4 p-4">
       <div className="flex flex-wrap items-center gap-3">
-        {/* Search — same Input + icon + clear-button pattern as /content. */}
+        {/* Search - same Input + icon + clear-button pattern as /content. */}
         <div className="relative">
           <Input
             aria-label="Filter by title, author, or category"
@@ -236,7 +236,7 @@ export function RecentArticlesTable({ articles }: { articles: ArticleRow[] }) {
           )}
         </div>
 
-        {/* Column visibility — identical to /content's View button. */}
+        {/* Column visibility - identical to /content's View button. */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline">
@@ -269,7 +269,7 @@ export function RecentArticlesTable({ articles }: { articles: ArticleRow[] }) {
         </span>
       </div>
 
-      {/* Table — overflow-hidden rounded border + table-fixed, identical
+      {/* Table - overflow-hidden rounded border + table-fixed, identical
           markup to /content/page.tsx. */}
       <div className="overflow-hidden rounded-md border bg-background">
         <Table className="table-fixed">

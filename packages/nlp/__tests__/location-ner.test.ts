@@ -1,4 +1,4 @@
-// Spec #4 G1 (#231) — detectLocations unit tests.
+// Spec #4 G1 (#231) - detectLocations unit tests.
 
 import { describe, test, expect } from "bun:test";
 import { detectLocations, type LocationEntry } from "../src";
@@ -53,7 +53,7 @@ describe("detectLocations", () => {
       gazetteer: GAZ,
     });
     // Nandyal appears both as District + Constituency in gazetteer. Primary
-    // is the disambiguator's pick — Constituency wins over District by kind
+    // is the disambiguator's pick - Constituency wins over District by kind
     // rank when both match at HIGH offset.
     expect(r.primary?.locationId === "c-nandyal" || r.primary?.locationId === "d-nandyal").toBeTrue();
   });

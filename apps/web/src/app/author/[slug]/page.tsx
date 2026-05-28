@@ -9,7 +9,7 @@ import { buildPersonSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 
 const SITE_URL = process.env.SITE_URL || "https://rayalaseemaexpress.com";
 
-// Phase A2 (#193) — route now keys on User.publicProfileSlug, not User.id.
+// Phase A2 (#193) - route now keys on User.publicProfileSlug, not User.id.
 // Old /author/<cuid> URLs return 404 (clean cutover; same approach as A0 article
 // migration since the old URLs had no GSC equity to preserve).
 async function fetchAuthor(slug: string) {
@@ -52,7 +52,7 @@ export default async function AuthorPage({
   searchParams?: Promise<{ page?: string }>;
 }) {
   const { slug } = await params;
-  // Spec #4 F5 (#229) — pagination via ?page=N (1-indexed). Cap at the
+  // Spec #4 F5 (#229) - pagination via ?page=N (1-indexed). Cap at the
   // floor of count / ARTICLES_PER_PAGE so deep ?page numbers don't fall
   // through to empty pages with no canonical signal.
   const sp = (await searchParams) || {};

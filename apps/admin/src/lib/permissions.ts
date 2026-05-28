@@ -2,7 +2,7 @@
 //
 // Routes call `requireCan("content.publish")` instead of inlining the role
 // list. When the rules change (e.g. "let Sub-Editors publish breaking news"),
-// you edit this file — not 113 API route files.
+// you edit this file - not 113 API route files.
 //
 // Naming convention: `<resource>.<verb>`, lowercase, dot-separated.
 //   - resource: noun matching the DB / domain model (content, user, category…)
@@ -14,7 +14,7 @@
 import type { Role } from "@prisma/client";
 
 // Named permission → which roles are allowed.
-// IMPORTANT: list roles explicitly. Do NOT add hierarchy/inheritance code —
+// IMPORTANT: list roles explicitly. Do NOT add hierarchy/inheritance code -
 // "Admin > Editor" feels obvious but creates bugs when a permission's
 // allowed set deviates from the order. Always say it out loud.
 export const PERMISSIONS = {
@@ -29,7 +29,7 @@ export const PERMISSIONS = {
   "audit.read":              ["ADMIN"],
   "reporter.verify-kyc":     ["ADMIN"],
   "reporter.reset-password": ["ADMIN"],
-  // Editors review + decide on profile change requests alongside admins —
+  // Editors review + decide on profile change requests alongside admins -
   // they already manage the reporter pool, so KYC/profile field changes
   // fall within their remit. If you want to tighten to admin-only,
   // change the `decide` entry to ["ADMIN"] and routes auto-follow.

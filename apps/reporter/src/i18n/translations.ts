@@ -26,7 +26,7 @@ export const translations = {
     validation: {
       required: "This field is required",
       email: "Enter a valid email address",
-      emailMismatch: "Emails don't match — re-type the same address",
+      emailMismatch: "Emails don't match - re-type the same address",
       phone: "Enter a valid 10-digit phone number",
       password: "Password must be at least 8 characters",
       pincode: "Pincode must be 6 digits",
@@ -41,7 +41,7 @@ export const translations = {
     },
     toggle: {
       title: "Change language",
-      message: "The app will switch to {lang}. English and Telugu are both available — you can change the language anytime.",
+      message: "The app will switch to {lang}. English and Telugu are both available - you can change the language anytime.",
       cancel: "Cancel",
       confirm: "Switch",
     },
@@ -73,7 +73,7 @@ export const translations = {
       city: "City",
       pincode: "Pincode *",
       pincodeFound: "✓ {district}",
-      pincodeOutside: "Pincode not in the Rayalaseema region — pick your district below",
+      pincodeOutside: "Pincode not in the Rayalaseema region - pick your district below",
       primaryDistrict: "Primary District *",
       experienceLabel: "Previous media experience",
       experiencePlaceholder: "Select your experience",
@@ -113,7 +113,7 @@ export const translations = {
       cameraPermission: "Camera permission required",
       submittedTitle: "Registration Submitted!",
       submittedMsg: "Your KYC documents are under review. You'll be notified once verified.",
-      // Placeholder hints — short, professional. Labels carry the field name +
+      // Placeholder hints - short, professional. Labels carry the field name +
       // required asterisk; placeholders show the format / a short example so
       // the input itself stays unambiguous when it's empty.
       fullNamePlaceholder: "Enter your full name",
@@ -245,7 +245,7 @@ export const translations = {
         message: "Once an editor approves a submitted article, you'll find it here before it goes live.",
       },
       rejected: {
-        title: "No rejections — nice work!",
+        title: "No rejections - nice work!",
         message: "Articles sent back for changes appear here with the editor's feedback. Empty is a good sign.",
       },
       published: {
@@ -306,7 +306,7 @@ export const translations = {
       emptyPending: "Nothing pending. Submit an article to start.",
       emptyApproved: "No approved payments yet.",
       emptySettled: "No settled payments yet. Earnings appear here after admin pays out.",
-      emptyCancelled: "No cancelled payments — every payment has stayed on track.",
+      emptyCancelled: "No cancelled payments - every payment has stayed on track.",
       // Row meta
       whyRejected: "Why it was rejected",
       // iOS date-picker sheet
@@ -445,7 +445,7 @@ export const translations = {
       submitSuccessMsg: "Your documents are with admin. We'll notify you once verified.",
       // Alert shown when an unverified reporter taps + / "Write your first
       // article". One title + a per-status message + an optional "Go to KYC"
-      // CTA (hidden when SUBMITTED — nothing for the reporter to do).
+      // CTA (hidden when SUBMITTED - nothing for the reporter to do).
       gate: {
         title: "KYC not approved yet",
         pending: "You need to complete your KYC before writing articles. Upload your documents to get started.",
@@ -481,7 +481,7 @@ export const translations = {
     validation: {
       required: "ఈ ఫీల్డ్ తప్పనిసరి",
       email: "సరైన ఇమెయిల్ చిరునామా నమోదు చేయండి",
-      emailMismatch: "ఇమెయిల్‌లు సరిపోలడం లేదు — అదే చిరునామాను మళ్లీ టైప్ చేయండి",
+      emailMismatch: "ఇమెయిల్‌లు సరిపోలడం లేదు - అదే చిరునామాను మళ్లీ టైప్ చేయండి",
       phone: "సరైన 10-అంకెల ఫోన్ నంబర్ నమోదు చేయండి",
       password: "పాస్‌వర్డ్ కనీసం 8 అక్షరాలు ఉండాలి",
       pincode: "పిన్‌కోడ్ 6 అంకెలు ఉండాలి",
@@ -496,7 +496,7 @@ export const translations = {
     },
     toggle: {
       title: "భాష మార్చండి",
-      message: "యాప్ {lang}లోకి మారుతుంది. ఇంగ్లీష్ మరియు తెలుగు రెండూ అందుబాటులో ఉన్నాయి — మీరు భాషను ఎప్పుడైనా మార్చుకోవచ్చు.",
+      message: "యాప్ {lang}లోకి మారుతుంది. ఇంగ్లీష్ మరియు తెలుగు రెండూ అందుబాటులో ఉన్నాయి - మీరు భాషను ఎప్పుడైనా మార్చుకోవచ్చు.",
       cancel: "రద్దు చేయి",
       confirm: "మార్చు",
     },
@@ -528,7 +528,7 @@ export const translations = {
       city: "నగరం",
       pincode: "పిన్‌కోడ్ *",
       pincodeFound: "✓ {district}",
-      pincodeOutside: "ఈ పిన్‌కోడ్ రాయలసీమలో లేదు — కింద మీ జిల్లాను ఎంచుకోండి",
+      pincodeOutside: "ఈ పిన్‌కోడ్ రాయలసీమలో లేదు - కింద మీ జిల్లాను ఎంచుకోండి",
       primaryDistrict: "ప్రధాన జిల్లా *",
       experienceLabel: "గత మీడియా అనుభవం",
       experiencePlaceholder: "మీ అనుభవాన్ని ఎంచుకోండి",
@@ -685,7 +685,7 @@ export const translations = {
       },
       submitted: {
         title: "సమీక్ష కోసం వేచి ఉన్నవి ఏవీ లేవు",
-        message: "మీరు సమర్పించిన వార్తలు ఎడిటర్ తీసుకునే వరకు ఇక్కడ ఉంటాయి. రాయడం ప్రారంభించండి — మీ వార్త ఈ జాబితాలో కనిపిస్తుంది.",
+        message: "మీరు సమర్పించిన వార్తలు ఎడిటర్ తీసుకునే వరకు ఇక్కడ ఉంటాయి. రాయడం ప్రారంభించండి - మీ వార్త ఈ జాబితాలో కనిపిస్తుంది.",
         action: "మీ మొదటి వార్తను రాయండి",
       },
       inReview: {
@@ -697,7 +697,7 @@ export const translations = {
         message: "ఎడిటర్ సమర్పించిన వార్తను ఆమోదించిన తర్వాత, అది ప్రచురణకు ముందు ఇక్కడ కనిపిస్తుంది.",
       },
       rejected: {
-        title: "తిరస్కరణలు లేవు — బాగుంది!",
+        title: "తిరస్కరణలు లేవు - బాగుంది!",
         message: "మార్పుల కోసం తిరిగి పంపిన వార్తలు ఎడిటర్ ఫీడ్‌బ్యాక్‌తో ఇక్కడ కనిపిస్తాయి. ఖాళీగా ఉండటం మంచి సూచన.",
       },
       published: {
@@ -756,7 +756,7 @@ export const translations = {
       emptyPending: "పెండింగ్‌లో ఏదీ లేదు. ప్రారంభించడానికి ఒక వార్తను సమర్పించండి.",
       emptyApproved: "ఇంకా ఆమోదిత చెల్లింపులు లేవు.",
       emptySettled: "ఇంకా చెల్లించబడిన చెల్లింపులు లేవు. అడ్మిన్ చెల్లించిన తర్వాత ఆదాయం ఇక్కడ కనిపిస్తుంది.",
-      emptyCancelled: "రద్దు చేయబడిన చెల్లింపులు లేవు — ప్రతి చెల్లింపు సరిగ్గా జరిగింది.",
+      emptyCancelled: "రద్దు చేయబడిన చెల్లింపులు లేవు - ప్రతి చెల్లింపు సరిగ్గా జరిగింది.",
       // Row meta
       whyRejected: "ఎందుకు తిరస్కరించబడింది",
       // iOS date-picker sheet

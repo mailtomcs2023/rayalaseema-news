@@ -6,12 +6,12 @@ import { checkRateLimit } from "@/lib/rate-limit";
 
 // Mobile login for the reporter (Expo) app.
 //
-// Plain JSON in / JSON out — deliberately NOT the NextAuth web flow
+// Plain JSON in / JSON out - deliberately NOT the NextAuth web flow
 // (CSRF token + credentials callback + session cookie + 302 redirect),
 // which React Native's fetch cannot perform reliably. One POST, one JSON
 // response with the user object the app stores locally.
 export async function POST(req: NextRequest) {
-  // Brute-force guard — 10 attempts per minute per IP. Enough headroom for a
+  // Brute-force guard - 10 attempts per minute per IP. Enough headroom for a
   // reporter fat-fingering the password a few times, tight enough that
   // automated credential-stuffing has to wait ~6 seconds between guesses.
   const limited = checkRateLimit(req, { max: 10, windowMs: 60_000, prefix: "reporter-login" });
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
     // Case-insensitive lookup so capitalisation typed at login doesn't matter.
     // reporterProfile is pulled so we can return the reporter's KYC state
-    // along with the token — the Expo app reads it from AsyncStorage and
+    // along with the token - the Expo app reads it from AsyncStorage and
     // shows a "KYC under verification" banner / gates Submit + Earnings
     // until kycStatus === "VERIFIED".
     const user = await prisma.user.findFirst({
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Same response for "no such user" and "wrong password" — don't leak which.
+    // Same response for "no such user" and "wrong password" - don't leak which.
     if (!user || !user.active || !(await compare(String(password), user.passwordHash))) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }

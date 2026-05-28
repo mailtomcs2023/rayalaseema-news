@@ -1,5 +1,6 @@
 import { articleHref } from "@/lib/article-href";
 import Link from "next/link";
+import Image from "next/image";
 
 interface AFArticle {
   id: string;
@@ -37,7 +38,7 @@ function timeAgo(iso?: string | null): string {
 /**
  * Regional above-fold for Rayalaseema Express:
  *  - LEAD: biggest hard-news story (headline + dek + hero image)
- *  - DISTRICT GRID: 2x4, one cell per Rayalaseema district — local-first identity
+ *  - DISTRICT GRID: 2x4, one cell per Rayalaseema district - local-first identity
  *  - RAIL: breaking news pinned on top + latest news below
  */
 export function AboveFold({
@@ -54,13 +55,23 @@ export function AboveFold({
   return (
     <section className="af">
       <div className="af-body">
-        {/* MAIN — lead + district grid */}
+        {/* MAIN - lead + district grid */}
         <div className="af-main">
           {/* LEAD */}
           <div className="af-lead">
             <Link href={articleHref(lead)} className="af-lead-img" aria-label={lead.title}>
               {lead.featuredImage ? (
-                <img src={lead.featuredImage} alt={lead.title} loading="eager" />
+                // Homepage hero - `priority` because this drives LCP. The
+                // existing .af-lead-img img CSS rule handles object-fit +
+                // aspect-ratio so we just pass intrinsic-ratio hints here.
+                <Image
+                  src={lead.featuredImage}
+                  alt={lead.title}
+                  width={1200}
+                  height={750}
+                  sizes="(max-width: 768px) 100vw, 680px"
+                  priority
+                />
               ) : (
                 <div className="af-noimg">RE</div>
               )}
@@ -76,7 +87,7 @@ export function AboveFold({
             </div>
           </div>
 
-          {/* DISTRICT GRID — 2x4, local-first */}
+          {/* DISTRICT GRID - 2x4, local-first */}
           <div className="af-dist-head">
             రాయలసీమ జిల్లాలు <span aria-hidden="true">›</span>
           </div>
@@ -108,7 +119,7 @@ export function AboveFold({
           </div>
         </div>
 
-        {/* RAIL — breaking + latest */}
+        {/* RAIL - breaking + latest */}
         <aside className="af-rail">
           {breaking.length > 0 && (
             <div className="af-breaking">
@@ -281,7 +292,7 @@ export function AboveFold({
           font-style: italic;
         }
 
-        /* RAIL — breaking */
+        /* RAIL - breaking */
         .af-breaking {
           background: var(--brand-soft, #FFF1F1);
           border: 1px solid var(--brand, #E01B1B);
@@ -308,7 +319,7 @@ export function AboveFold({
         }
         .af-breaking-item:first-of-type { border-top: none; }
 
-        /* RAIL — latest */
+        /* RAIL - latest */
         .af-rail-head { border-bottom: 2px solid var(--n-900, #111827); }
         .af-rail-item {
           display: block;

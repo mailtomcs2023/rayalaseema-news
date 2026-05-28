@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   const now = new Date();
   try {
     // Spec #1 #109: query unified Content table. Cron now flips ALL content
-    // types (Article, Video, Reel, Story, Cartoon, Breaking) — anything with
+    // types (Article, Video, Reel, Story, Cartoon, Breaking) - anything with
     // status=SCHEDULED past its scheduledAt becomes PUBLISHED.
     const due = await prisma.content.findMany({
       where: { status: "SCHEDULED", scheduledAt: { lte: now } },
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// GET — diagnostics (auth not required, returns counts only)
+// GET - diagnostics (auth not required, returns counts only)
 export async function GET() {
   const now = new Date();
   const [pending, dueNow] = await Promise.all([

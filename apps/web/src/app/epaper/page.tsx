@@ -8,7 +8,7 @@ import { getSiteConfig } from "@/lib/db-queries";
 
 export const metadata: Metadata = {
   title: "ఈ-పేపర్ | రాయలసీమ ఎక్స్‌ప్రెస్",
-  description: "రాయలసీమ ఎక్స్‌ప్రెస్ ఈ-పేపర్ — ప్రధాన + జిల్లా ఎడిషన్లు.",
+  description: "రాయలసీమ ఎక్స్‌ప్రెస్ ఈ-పేపర్ - ప్రధాన + జిల్లా ఎడిషన్లు.",
 };
 
 const EDITION_NAMES: Record<string, string> = {
@@ -34,7 +34,7 @@ export default async function EpaperPage({
   const editionKey = edition || "main";
 
   // Ready editions, newest first. Explicitly exclude KILLED workflow state
-  // even though killed editions have active=false too — defense in depth.
+  // even though killed editions have active=false too - defense in depth.
   const editions = await prisma.epaperEdition.findMany({
     where: { active: true, status: "ready", NOT: { workflowState: "KILLED" } },
     orderBy: { date: "desc" },

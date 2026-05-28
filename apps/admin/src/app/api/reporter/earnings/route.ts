@@ -1,4 +1,4 @@
-// /api/reporter/earnings — payment-centric view of the signed-in reporter's
+// /api/reporter/earnings - payment-centric view of the signed-in reporter's
 // articles. Returns four buckets the mobile + web Earnings screens render
 // as tabs, plus a per-category breakdown for the "what's my best category"
 // comparison.
@@ -6,7 +6,7 @@
 // Pending   = CALCULATED (sub-editor set the amount, article in review)
 // Approved  = APPROVED   (article published, awaiting payout)
 // Settled   = PAID       (money transferred)
-// Cancelled = CANCELLED  (sub-editor rejected after setting an amount — we
+// Cancelled = CANCELLED  (sub-editor rejected after setting an amount - we
 //                         keep the row visible so the reporter sees what
 //                         happened, with the rejection note attached)
 // PROCESSING + DISPUTED are unused in v1 and skipped.
@@ -142,7 +142,7 @@ export async function GET(req: NextRequest) {
       else if (p.status === "CANCELLED") cancelled.push(row);
     }
 
-    // Per-category totals — only counts PAID rows so reporters compare
+    // Per-category totals - only counts PAID rows so reporters compare
     // *realised* income, not pending estimates. Sorted high → low so the
     // first entry is their best-earning category.
     const byCategoryMap = new Map<string, ApiCategoryTotal>();

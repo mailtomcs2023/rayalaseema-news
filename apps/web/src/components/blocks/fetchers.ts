@@ -1,8 +1,8 @@
-// Page Builder (Spec #2) — per-block data fetchers.
+// Page Builder (Spec #2) - per-block data fetchers.
 //
 // Each fetcher takes (config, pageContext) and returns the data props the
 // matching React component expects. Fetchers query the unified Content table
-// directly (Spec #1 #110 — Article/Video/etc. are dormant; reads go through
+// directly (Spec #1 #110 - Article/Video/etc. are dormant; reads go through
 // Content). This file is intentionally separate from apps/web/src/lib/db-queries.ts
 // so the page-builder layer can evolve independently from the legacy callers.
 

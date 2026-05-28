@@ -4,7 +4,7 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-// Soft-delete auto-filter (Spec #1 follow-up — see Content.deletedAt).
+// Soft-delete auto-filter (Spec #1 follow-up - see Content.deletedAt).
 // Every `content.findMany / findFirst / count / aggregate` call gets
 // `deletedAt: null` injected into its where clause unless the caller
 // explicitly sets `deletedAt` (e.g. trash view = `deletedAt: { not: null }`).
@@ -77,6 +77,9 @@ export {
 } from "@prisma/client";
 
 export * from "./payload-schemas";
+export * from "./content-input-schemas";
+export * from "./user-input-schemas";
+export * from "./taxonomy-input-schemas";
 export * from "./menu-schemas";
 export * from "./page-builder-schemas";
 export * from "./page-builder-pattern";

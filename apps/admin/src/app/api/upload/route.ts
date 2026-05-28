@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     const inBuf: Buffer = Buffer.from(await file.arrayBuffer());
 
     // Strip EXIF (GPS / camera body / original photographer) + stamp our
-    // copyright + force orientation upright. GIFs skip processing — sharp
+    // copyright + force orientation upright. GIFs skip processing - sharp
     // would collapse the animation to a single frame.
     let outBuf: Buffer = inBuf;
     let outCt: string = file.type;

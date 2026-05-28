@@ -1,4 +1,4 @@
-// Page Builder (Spec #2) — render a single block from a layout tree.
+// Page Builder (Spec #2) - render a single block from a layout tree.
 //
 // `mobileVariant`:
 //   "show"         → render normally (default)

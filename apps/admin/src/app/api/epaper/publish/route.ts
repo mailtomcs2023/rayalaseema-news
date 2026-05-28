@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 
-// POST /api/epaper/publish — body { editionId }
+// POST /api/epaper/publish - body { editionId }
 // On PUBLISHED state transition, fire:
-//   1. Update web/epaper to point to this edition (already auto — newest active edition wins)
+//   1. Update web/epaper to point to this edition (already auto - newest active edition wins)
 //   2. WhatsApp blast with PDF link (Twilio API or wa-bot)
 //   3. OneSignal push notification to subscribers
 //   4. Tweet edition link
@@ -26,13 +26,13 @@ export async function POST(req: NextRequest) {
     if (!edition.pdfUrl) return NextResponse.json({ error: "Render the edition first (no pdfUrl yet)" }, { status: 400 });
 
     // Step 1: flip workflow + active. Web /epaper picks the newest active+ready
-    // automatically — no other change needed for web release.
+    // automatically - no other change needed for web release.
     await prisma.epaperEdition.update({
       where: { id: editionId },
       data: { active: true, workflowState: "PUBLISHED", status: "ready" },
     });
 
-    const headline = `రాయలసీమ ఎక్స్‌ప్రెస్ — ${edition.date.toLocaleDateString("te-IN", { day: "numeric", month: "long", year: "numeric" })} ఎడిషన్ విడుదలైంది`;
+    const headline = `రాయలసీమ ఎక్స్‌ప్రెస్ - ${edition.date.toLocaleDateString("te-IN", { day: "numeric", month: "long", year: "numeric" })} ఎడిషన్ విడుదలైంది`;
     const siteUrl = process.env.SITE_URL || "https://rayalaseemaexpress.com";
     const editionUrl = `${siteUrl}/epaper?date=${edition.date.toISOString().slice(0, 10)}`;
 
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     const skippedReason: Record<string, string> = {};
     const errors: Record<string, string> = {};
 
-    // OneSignal web push — gated on app id + rest key.
+    // OneSignal web push - gated on app id + rest key.
     if (process.env.ONESIGNAL_APP_ID && process.env.ONESIGNAL_REST_KEY) {
       try {
         const r = await fetch("https://api.onesignal.com/notifications", {
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
       skippedReason.push = "Set ONESIGNAL_APP_ID + ONESIGNAL_REST_KEY";
     }
 
-    // X / Twitter v2 — bearer token must hold tweet.write scope.
+    // X / Twitter v2 - bearer token must hold tweet.write scope.
     if (process.env.X_BEARER_TOKEN) {
       try {
         const r = await fetch("https://api.twitter.com/2/tweets", {
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
       skippedReason.tweet = "Set X_BEARER_TOKEN with tweet.write scope";
     }
 
-    // WhatsApp via Twilio Conversations — broadcasts to E.164 opt-in list
+    // WhatsApp via Twilio Conversations - broadcasts to E.164 opt-in list
     // stored in TWILIO_WHATSAPP_TO (comma-separated). Replace with DB table
     // when subscriber opt-in flow ships.
     if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_WHATSAPP_FROM && process.env.TWILIO_WHATSAPP_TO) {

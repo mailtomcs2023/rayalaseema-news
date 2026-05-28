@@ -1,4 +1,4 @@
-// Page Builder (Spec #2) — list version snapshots for a template.
+// Page Builder (Spec #2) - list version snapshots for a template.
 //   GET /api/page-builder/templates/[id]/versions
 // Returns most-recent-first; layout JSON is included so the operator
 // can do a preview-diff before restoring. The history page lazy-loads

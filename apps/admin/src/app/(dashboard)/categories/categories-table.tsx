@@ -1,4 +1,4 @@
-// Categories list — client-side TanStack + shadcn Table (mirrors /content).
+// Categories list - client-side TanStack + shadcn Table (mirrors /content).
 // Dataset is small (≈60 rows), so pagination/sorting/filtering all run in
 // memory. CRUD is wired to /api/categories with the same translate-from-
 // English + auto-slug ergonomics the legacy CrudTable shipped with.
@@ -36,6 +36,7 @@ import {
   PlusIcon,
   TrashIcon,
 } from "lucide-react";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 
@@ -112,6 +113,9 @@ export interface CategoryRow {
   parentId: string | null;
   parent?: { id: string; nameEn: string; slug: string } | null;
   _count?: { contents: number };
+  // ISO string from the server (JSON round-trip flattens Date). Used as the
+  // table's default sort so newest-first surfaces freshly added categories.
+  createdAt: string;
 }
 
 interface FormState {
@@ -136,7 +140,7 @@ const EMPTY_FORM: FormState = {
   active: true,
 };
 
-// Search across English name, Telugu name, slug — covers the cases an
+// Search across English name, Telugu name, slug - covers the cases an
 // editor is most likely to type.
 const fuzzyFilterFn: FilterFn<CategoryRow> = (row, _columnId, filterValue) => {
   const haystack = `${row.original.nameEn} ${row.original.name} ${row.original.slug}`.toLowerCase();
@@ -164,9 +168,18 @@ export function CategoriesTable({ data: initialData }: { data: CategoryRow[] }) 
   useEffect(() => setData(initialData), [initialData]);
 
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  const [sorting, setSorting] = useState<SortingState>([{ id: "sortOrder", desc: false }]);
-  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 25 });
+  // sortOrder + createdAt columns are hidden by default - they exist only
+  // so the table can sort rows by them. View menu lets a user opt them
+  // visible if they want to verify the numeric / timestamp values.
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
+    sortOrder: false,
+    createdAt: false,
+  });
+  // Default sort = newest-first, so the row an admin just added appears
+  // at the top. Clicking a header overrides; the table doesn't lock the
+  // order to creation time.
+  const [sorting, setSorting] = useState<SortingState>([{ id: "createdAt", desc: true }]);
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
   const [formFor, setFormFor] = useState<{ mode: "create" } | { mode: "edit"; row: CategoryRow } | null>(null);
@@ -176,12 +189,9 @@ export function CategoriesTable({ data: initialData }: { data: CategoryRow[] }) 
   const [confirmBulkDelete, setConfirmBulkDelete] = useState<CategoryRow[] | null>(null);
   const [bulkLoading, setBulkLoading] = useState(false);
 
-  const [toast, setToast] = useState<{ msg: string; type: "error" | "success" } | null>(null);
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3000);
-    return () => clearTimeout(t);
-  }, [toast]);
+  // Toasts now go through Sonner (the global <Toaster> is mounted in
+  // apps/admin/src/app/providers.tsx). No local state needed - toast.success()
+  // / toast.error() from anywhere queue + dismiss themselves.
 
   const openEdit = useCallback((row: CategoryRow) => setFormFor({ mode: "edit", row }), []);
   const openDelete = useCallback((row: CategoryRow) => setConfirmDelete(row), []);
@@ -261,7 +271,7 @@ export function CategoriesTable({ data: initialData }: { data: CategoryRow[] }) 
           row.original.parent ? (
             <span className="text-xs text-muted-foreground">{row.original.parent.nameEn}</span>
           ) : (
-            <span className="text-xs text-muted-foreground/60">—</span>
+            <span className="text-xs text-muted-foreground/60">-</span>
           ),
       },
       {
@@ -299,6 +309,37 @@ export function CategoriesTable({ data: initialData }: { data: CategoryRow[] }) 
         header: () => <span className="sr-only">Actions</span>,
         cell: ({ row }) => (
           <RowActions row={row.original} onEdit={openEdit} onDelete={openDelete} />
+        ),
+      },
+      // Hidden by default - exists so the table can sort by it. View menu
+      // lets an admin reveal it to verify or troubleshoot the numeric order.
+      {
+        accessorKey: "sortOrder",
+        header: "Order",
+        size: 80,
+        cell: ({ row }) => (
+          <span className="tabular-nums text-sm text-muted-foreground">
+            {row.original.sortOrder}
+          </span>
+        ),
+      },
+      // Hidden by default - backs the "newest-first" default sort. Sorting
+      // by ISO timestamp string works because the format is lexicographically
+      // ordered the same as chronologically.
+      {
+        accessorKey: "createdAt",
+        header: "Created",
+        size: 140,
+        cell: ({ row }) => (
+          <span className="text-xs text-muted-foreground">
+            {row.original.createdAt
+              ? new Date(row.original.createdAt).toLocaleDateString(undefined, {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                })
+              : "-"}
+          </span>
         ),
       },
     ],
@@ -340,17 +381,15 @@ export function CategoriesTable({ data: initialData }: { data: CategoryRow[] }) 
       );
       const failed = results.filter((r) => !r.ok).length;
       const ok = results.length - failed;
-      setToast({
-        msg:
-          failed === 0
-            ? `${active ? "Activated" : "Deactivated"} ${ok}`
-            : `${ok} updated, ${failed} failed`,
-        type: failed === 0 ? "success" : "error",
-      });
+      if (failed === 0) {
+        toast.success(`${active ? "Activated" : "Deactivated"} ${ok}`);
+      } else {
+        toast.error(`${ok} updated, ${failed} failed`);
+      }
       setRowSelection({});
       refresh();
     } catch (e: any) {
-      setToast({ msg: e.message || "Bulk update failed", type: "error" });
+      toast.error(e.message || "Bulk update failed");
     } finally {
       setBulkLoading(false);
     }
@@ -367,18 +406,16 @@ export function CategoriesTable({ data: initialData }: { data: CategoryRow[] }) 
       );
       const failed = results.filter((r) => !r.ok).length;
       const ok = results.length - failed;
-      setToast({
-        msg:
-          failed === 0
-            ? `Deleted ${ok}`
-            : `${ok} deleted, ${failed} failed — categories with articles can't be deleted`,
-        type: failed === 0 ? "success" : "error",
-      });
+      if (failed === 0) {
+        toast.success(`Deleted ${ok}`);
+      } else {
+        toast.error(`${ok} deleted, ${failed} failed - categories with articles can't be deleted`);
+      }
       setConfirmBulkDelete(null);
       setRowSelection({});
       refresh();
     } catch (e: any) {
-      setToast({ msg: e.message || "Bulk delete failed", type: "error" });
+      toast.error(e.message || "Bulk delete failed");
       setConfirmBulkDelete(null);
     } finally {
       setBulkLoading(false);
@@ -405,18 +442,6 @@ export function CategoriesTable({ data: initialData }: { data: CategoryRow[] }) 
 
   return (
     <div className="shadcn-scope space-y-4">
-      {/* Toast — fixed top-right, auto-dismiss */}
-      {toast && (
-        <div
-          className={cn(
-            "fixed right-5 top-5 z-50 rounded-md px-4 py-2 text-sm font-semibold text-white shadow-lg",
-            toast.type === "error" ? "bg-red-600" : "bg-green-600",
-          )}
-        >
-          {toast.msg}
-        </div>
-      )}
-
       {/* Filters toolbar */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative">
@@ -545,57 +570,63 @@ export function CategoriesTable({ data: initialData }: { data: CategoryRow[] }) 
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <div className="ms-auto flex items-center gap-3">
-          <span className="text-sm text-muted-foreground">
-            {table.getRowCount()} categor{table.getRowCount() === 1 ? "y" : "ies"}
-          </span>
+        <div className="ms-auto flex items-center gap-2">
+          {/* Bulk actions slide into the toolbar when rows are selected -
+              no separate banner, no layout jump. Shown to the LEFT of the
+              count + Add button so the primary "Add" action keeps its
+              right-most position regardless of selection state. */}
+          {/* Bulk actions - each label carries the selection count so the
+              user always sees how many rows the action will hit. No standalone
+              "N selected" pill, no Cancel button: un-tick the header checkbox
+              (or any row) to clear the selection. */}
+          {selectedRows.length > 0 && (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
+                disabled={bulkLoading}
+                onClick={() => handleBulkActive(true)}
+              >
+                Activate {selectedRows.length}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                disabled={bulkLoading}
+                onClick={() => handleBulkActive(false)}
+              >
+                Deactivate {selectedRows.length}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                disabled={bulkLoading}
+                onClick={() => setConfirmBulkDelete(selectedRows)}
+              >
+                <TrashIcon aria-hidden="true" className="-ms-1 opacity-70" size={14} />
+                Delete {selectedRows.length}
+              </Button>
+              {/* Visual divider between bulk-action group and the static
+                  toolbar trailer so the eye groups them correctly. */}
+              <div className="mx-1 h-5 w-px bg-border" />
+            </>
+          )}
+          {/* Total counter hidden while a selection is active so the focus
+              stays on the count baked into each bulk-action button label. */}
+          {selectedRows.length === 0 && (
+            <span className="text-sm text-muted-foreground">
+              {table.getRowCount()} categor{table.getRowCount() === 1 ? "y" : "ies"}
+            </span>
+          )}
           <Button onClick={() => setFormFor({ mode: "create" })}>
             <PlusIcon aria-hidden="true" className="-ms-1 opacity-90" size={16} />
             Add Category
           </Button>
         </div>
       </div>
-
-      {/* Bulk action bar — only when rows are selected. */}
-      {selectedRows.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-4 py-2.5">
-          <span className="text-sm font-bold text-blue-700">
-            {selectedRows.length} selected
-          </span>
-          <div className="flex-1" />
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
-            disabled={bulkLoading}
-            onClick={() => handleBulkActive(true)}
-          >
-            Activate
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
-            disabled={bulkLoading}
-            onClick={() => handleBulkActive(false)}
-          >
-            Deactivate
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
-            disabled={bulkLoading}
-            onClick={() => setConfirmBulkDelete(selectedRows)}
-          >
-            <TrashIcon aria-hidden="true" className="-ms-1 opacity-70" size={14} />
-            Delete {selectedRows.length}
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => setRowSelection({})}>
-            Cancel
-          </Button>
-        </div>
-      )}
 
       {/* Table */}
       <div className="overflow-hidden rounded-md border bg-background">
@@ -657,8 +688,9 @@ export function CategoriesTable({ data: initialData }: { data: CategoryRow[] }) 
         </Table>
       </div>
 
-      {/* Pagination */}
-      <div className="flex items-center justify-between gap-8">
+      {/* Pagination row - two groups: page-size on the left, range counter +
+          nav buttons grouped together on the right (no more empty middle gap). */}
+      <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Label className="max-sm:sr-only" htmlFor={`${id}-pagesize`}>
             Rows per page
@@ -679,8 +711,8 @@ export function CategoriesTable({ data: initialData }: { data: CategoryRow[] }) 
             </SelectContent>
           </Select>
         </div>
-        <div className="flex grow justify-end whitespace-nowrap text-sm text-muted-foreground">
-          <p aria-live="polite">
+        <div className="flex items-center gap-3">
+          <p aria-live="polite" className="whitespace-nowrap text-sm text-muted-foreground">
             <span className="text-foreground">
               {table.getRowCount() === 0
                 ? 0
@@ -693,9 +725,8 @@ export function CategoriesTable({ data: initialData }: { data: CategoryRow[] }) 
             </span>{" "}
             of <span className="text-foreground">{table.getRowCount()}</span>
           </p>
-        </div>
-        <Pagination>
-          <PaginationContent>
+          <Pagination className="mx-0 w-auto">
+            <PaginationContent>
             <PaginationItem>
               <Button
                 aria-label="Go to first page"
@@ -740,8 +771,9 @@ export function CategoriesTable({ data: initialData }: { data: CategoryRow[] }) 
                 <ChevronLastIcon aria-hidden="true" size={16} />
               </Button>
             </PaginationItem>
-          </PaginationContent>
-        </Pagination>
+            </PaginationContent>
+          </Pagination>
+        </div>
       </div>
 
       {/* Create / edit dialog */}
@@ -750,11 +782,11 @@ export function CategoriesTable({ data: initialData }: { data: CategoryRow[] }) 
         topLevelCategories={data.filter((c) => !c.parentId)}
         onClose={() => setFormFor(null)}
         onSaved={(msg) => {
-          setToast({ msg, type: "success" });
+          toast.success(msg);
           setFormFor(null);
           refresh();
         }}
-        onError={(msg) => setToast({ msg, type: "error" })}
+        onError={(msg) => toast.error(msg)}
       />
 
       {/* Bulk delete confirmation */}
@@ -769,7 +801,7 @@ export function CategoriesTable({ data: initialData }: { data: CategoryRow[] }) 
               {(confirmBulkDelete?.length ?? 0) === 1 ? "y" : "ies"}?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Categories with linked articles cannot be deleted — the API will reject those and the
+              Categories with linked articles cannot be deleted - the API will reject those and the
               rest will be removed.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -795,7 +827,7 @@ export function CategoriesTable({ data: initialData }: { data: CategoryRow[] }) 
               {(confirmDelete?._count?.contents ?? 0) > 0
                 ? `This category has ${confirmDelete?._count?.contents} article${
                     confirmDelete?._count?.contents === 1 ? "" : "s"
-                  }. The delete API will reject this — reassign or archive those first.`
+                  }. The delete API will reject this - reassign or archive those first.`
                 : "This cannot be undone."}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -809,15 +841,15 @@ export function CategoriesTable({ data: initialData }: { data: CategoryRow[] }) 
                   const res = await fetch(`/api/categories/${confirmDelete.id}`, { method: "DELETE" });
                   if (!res.ok) {
                     const json = await res.json().catch(() => ({}));
-                    setToast({ msg: json.error || `Delete failed (HTTP ${res.status})`, type: "error" });
+                    toast.error(json.error || `Delete failed (HTTP ${res.status})`);
                     setConfirmDelete(null);
                     return;
                   }
-                  setToast({ msg: "Deleted", type: "success" });
+                  toast.success(`Deleted "${confirmDelete.nameEn}"`);
                   setConfirmDelete(null);
                   refresh();
                 } catch (e: any) {
-                  setToast({ msg: e.message || "Delete failed", type: "error" });
+                  toast.error(e.message || "Delete failed");
                   setConfirmDelete(null);
                 }
               }}
@@ -912,7 +944,7 @@ function CategoryFormDialog({
     setForm((f) => {
       const derived = slugify(value);
       // Only auto-update the slug while it still matches what we last derived
-      // — once the user edits it, leave them alone.
+      // - once the user edits it, leave them alone.
       const slugCol = !f.slug || f.slug === autoDerivedSlug ? derived : f.slug;
       return { ...f, nameEn: value, slug: slugCol };
     });
@@ -981,7 +1013,7 @@ function CategoryFormDialog({
     }
   };
 
-  // Editing a category can't re-parent it to itself — filter it out of the
+  // Editing a category can't re-parent it to itself - filter it out of the
   // parent dropdown.
   const parentOptions = topLevelCategories.filter(
     (c) => !isEdit || (target.mode === "edit" && c.id !== target.row.id),

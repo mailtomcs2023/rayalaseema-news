@@ -1,4 +1,4 @@
-// Page Builder (Spec #2) — version history table for a single template.
+// Page Builder (Spec #2) - version history table for a single template.
 // Restore copies the chosen snapshot into draftLayout (preserves the
 // currently published layout) so the operator can review the restored
 // version inside the editor before publishing.
@@ -26,7 +26,7 @@ export default async function VersionsPage({ params }: { params: Promise<{ id: s
   const data = versions.map((v) => ({
     id: v.id,
     editNote: v.editNote,
-    editorName: v.editedBy?.name || v.editedBy?.email || "—",
+    editorName: v.editedBy?.name || v.editedBy?.email || "-",
     blockCount: Array.isArray((v.layout as { blocks?: unknown[] })?.blocks)
       ? ((v.layout as { blocks: unknown[] }).blocks.length)
       : 0,
@@ -45,12 +45,12 @@ export default async function VersionsPage({ params }: { params: Promise<{ id: s
             ← Back to editor
           </Link>
           <h1 style={{ fontSize: 20, fontWeight: 700, color: "#111827", margin: "6px 0 2px" }}>
-            Version history — {tpl.name}
+            Version history - {tpl.name}
           </h1>
           <p style={{ fontSize: 12, color: "#6b7280", margin: 0 }}>
             Each publish snapshots the layout. Restoring copies a snapshot
             into the draft slot so you can review (and re-edit) before
-            re-publishing — the live layout doesn't change until you publish.
+            re-publishing - the live layout doesn't change until you publish.
           </p>
         </div>
 

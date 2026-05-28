@@ -1,14 +1,14 @@
-// POST /api/images/enhance { url, op } — AI image edit via Azure OpenAI
+// POST /api/images/enhance { url, op } - AI image edit via Azure OpenAI
 // gpt-image-2's /images/edits endpoint. Downloads the source image, sends
 // it + a per-operation prompt to the model, runs the output through the
 // same EXIF-strip + RE-stamp pipeline as every other image surface,
 // rehosts on Azure Blob, returns the new URL.
 //
 // Operations:
-//   remove-watermark — strip logos, source attributions, channel bugs
-//   enhance          — sharpen / restore detail / fix exposure
-//   upscale          — 2x resolution while preserving content
-//   restore          — fix old / blurry / damaged photos
+//   remove-watermark - strip logos, source attributions, channel bugs
+//   enhance          - sharpen / restore detail / fix exposure
+//   upscale          - 2x resolution while preserving content
+//   restore          - fix old / blurry / damaged photos
 //
 // Cost: gpt-image-2 edits ~$0.06 per 1024x1024 image. Same Azure resource
 // as /api/images/generate.
@@ -24,8 +24,8 @@ const DEPLOYMENT = process.env.AZURE_IMAGES_DEPLOYMENT || "gpt-image";
 const API_VERSION = process.env.AZURE_IMAGES_API_VERSION || "2025-04-01-preview";
 
 const OP_PROMPTS: Record<string, string> = {
-  "remove-watermark": "Remove all watermarks, logos, channel bugs, source attributions, and overlay text from this image. Preserve the underlying photograph exactly — same subjects, same composition, same colors. Output a clean photojournalism-quality image suitable for newspaper publication.",
-  "enhance": "Enhance this photograph for newspaper publication: improve sharpness, restore detail, correct exposure if needed, reduce noise. Preserve all content exactly — same subjects, framing, colors. Output a clean photojournalism-quality result.",
+  "remove-watermark": "Remove all watermarks, logos, channel bugs, source attributions, and overlay text from this image. Preserve the underlying photograph exactly - same subjects, same composition, same colors. Output a clean photojournalism-quality image suitable for newspaper publication.",
+  "enhance": "Enhance this photograph for newspaper publication: improve sharpness, restore detail, correct exposure if needed, reduce noise. Preserve all content exactly - same subjects, framing, colors. Output a clean photojournalism-quality result.",
   "upscale": "Upscale this image to higher resolution while preserving all detail and content. Same subjects, same composition, same colors. Output a sharp photojournalism-quality image.",
   "restore": "Restore this damaged or low-quality photograph. Fix blur, scratches, fading, color casts. Preserve all subjects + composition exactly. Output a clean photojournalism-quality result suitable for newspaper publication.",
 };
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `op must be one of ${ALLOWED_OPS.join(", ")} (or pass customPrompt)` }, { status: 400 });
     }
 
-    // SSRF guard — same one /api/images/process uses.
+    // SSRF guard - same one /api/images/process uses.
     const safety = await isUrlSafeToFetch(url);
     if (!safety.safe) {
       return NextResponse.json({ error: `Refusing to fetch: ${safety.reason}` }, { status: 400 });
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
       ? customPrompt.slice(0, 1000)
       : OP_PROMPTS[opKey];
 
-    // Azure OpenAI image edits — multipart/form-data with `image` + `prompt`.
+    // Azure OpenAI image edits - multipart/form-data with `image` + `prompt`.
     // The model accepts JPEG / PNG / WebP. gpt-image-2 returns b64.
     const form = new FormData();
     const ext = ct === "image/png" ? "png" : ct === "image/webp" ? "webp" : "jpg";

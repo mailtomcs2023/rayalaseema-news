@@ -1,4 +1,4 @@
-// Spec #1 #110 — apps/web data layer reads from the unified Content table.
+// Spec #1 #110 - apps/web data layer reads from the unified Content table.
 //
 // Function signatures preserved so consumer components (above-fold, cinema-band,
 // video-section, etc.) don't change. Per-type payload fields are projected to
@@ -22,7 +22,7 @@ function sanitizeAdRow<T extends { htmlContent?: string | null }>(ad: T): T {
 }
 
 // Articles written before the new admin Content workspace existed are
-// "old-style" — they should NOT appear on the homepage / category pages that
+// "old-style" - they should NOT appear on the homepage / category pages that
 // were redesigned for the new template. Detail pages (/article/[slug]),
 // search, tag, and author pages still surface them so existing links keep
 // working. Bump this date if the cutover moment changes.
@@ -43,7 +43,7 @@ function projectArticle<T extends { payload?: unknown }>(row: T) {
   };
 }
 
-// VIDEO payload projection — components want { thumbnailUrl, videoUrl, duration }
+// VIDEO payload projection - components want { thumbnailUrl, videoUrl, duration }
 // at the top level. duration was a string ("12:45") on the old Video table; we
 // keep it that way by formatting the integer seconds from the payload.
 function projectVideo<T extends { featuredImage: string | null; viewCount: number; payload?: unknown }>(row: T) {
@@ -60,7 +60,7 @@ function projectVideo<T extends { featuredImage: string | null; viewCount: numbe
   };
 }
 
-// REEL payload — { clipUrl, duration }. views formatted as string for compat with
+// REEL payload - { clipUrl, duration }. views formatted as string for compat with
 // the old Reel.views (string column like "2.5L").
 function projectReel<T extends { featuredImage: string | null; viewCount: number; payload?: unknown }>(row: T) {
   const p = (row.payload as Record<string, unknown> | null) || {};
@@ -72,7 +72,7 @@ function projectReel<T extends { featuredImage: string | null; viewCount: number
   };
 }
 
-// WEB_STORY — { slides: [{image, caption?}] }. imageUrl maps to featuredImage
+// WEB_STORY - { slides: [{image, caption?}] }. imageUrl maps to featuredImage
 // (cover image); category was a free-text string on the old WebStory.
 function projectWebStory<T extends { featuredImage: string | null; payload?: unknown }>(row: T) {
   const p = (row.payload as Record<string, unknown> | null) || {};
@@ -87,7 +87,7 @@ function projectWebStory<T extends { featuredImage: string | null; payload?: unk
   };
 }
 
-// PHOTO_GALLERY — { photos: [{url, caption?}] }. Old _count.photos was the
+// PHOTO_GALLERY - { photos: [{url, caption?}] }. Old _count.photos was the
 // number of GalleryPhoto rows; we replace it with payload.photos.length.
 function projectPhotoGallery<T extends { featuredImage: string | null; payload?: unknown }>(row: T) {
   const p = (row.payload as Record<string, unknown> | null) || {};
@@ -100,7 +100,7 @@ function projectPhotoGallery<T extends { featuredImage: string | null; payload?:
   };
 }
 
-// CARTOON — { caption?, date ISO }. Old Cartoon table had imageUrl + caption +
+// CARTOON - { caption?, date ISO }. Old Cartoon table had imageUrl + caption +
 // date columns; consumers read `.imageUrl`, `.caption`, `.date` directly.
 function projectCartoon<T extends { featuredImage: string | null; payload?: unknown }>(row: T) {
   const p = (row.payload as Record<string, unknown> | null) || {};
@@ -112,7 +112,7 @@ function projectCartoon<T extends { featuredImage: string | null; payload?: unkn
   };
 }
 
-// BREAKING_NEWS — { priority, expiresAt? }. Old BreakingNews used `headline`
+// BREAKING_NEWS - { priority, expiresAt? }. Old BreakingNews used `headline`
 // (we now use `title`) and had priority + expiresAt as columns.
 function projectBreakingNews<T extends { title: string; payload?: unknown }>(row: T) {
   const p = (row.payload as Record<string, unknown> | null) || {};
@@ -262,7 +262,7 @@ export async function getArticleBySlug(slug: string) {
 
 // Generic detail-page helpers per ContentType (Spec #1 #111). Each returns
 // null when the slug isn't found, the type doesn't match, or the row isn't
-// PUBLISHED — so the calling page can render a clean notFound().
+// PUBLISHED - so the calling page can render a clean notFound().
 
 export async function getVideoBySlug(slug: string) {
   const row = await prisma.content.findUnique({
@@ -330,7 +330,7 @@ export async function incrementViewCount(contentId: string) {
 
 // ========== MULTIMEDIA QUERIES ==========
 
-// Live cricket scores — RapidAPI "Cricket API Free Data" (cricbuzz-format).
+// Live cricket scores - RapidAPI "Cricket API Free Data" (cricbuzz-format).
 // Live matches first; falls back to upcoming fixtures. Returns [] when unavailable.
 export interface CricketMatch {
   id: string;
@@ -468,7 +468,7 @@ export async function getCartoons(limit = 5) {
   return rows.map(projectCartoon);
 }
 
-// ---------- Ads (unchanged — Ad is its own table, not unified) ----------
+// ---------- Ads (unchanged - Ad is its own table, not unified) ----------
 
 export async function getAdsByPosition(position: string) {
   const rows = await prisma.ad.findMany({

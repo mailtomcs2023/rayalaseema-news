@@ -2,7 +2,7 @@ import { Sidebar } from "@/components/sidebar";
 import { CrudTable } from "@/components/crud-table";
 import { prisma } from "@rayalaseema/db";
 
-// Library page for e-paper ad assets — DTP / ad-ops uploads creative here once,
+// Library page for e-paper ad assets - DTP / ad-ops uploads creative here once,
 // then drops it into any ad block on /epaper.
 export default async function EpaperAdsPage() {
   const data = await prisma.epaperAdAsset.findMany({ orderBy: { createdAt: "desc" } });

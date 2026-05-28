@@ -1,4 +1,4 @@
-// /api/content/[id]/pib-approve — Spec #1 (#107), PIB approval gate.
+// /api/content/[id]/pib-approve - Spec #1 (#107), PIB approval gate.
 // Ported from /api/articles/[id]/pib-approve. Required Body: { pibReferenceNumber }.
 // ADMIN-only.
 import { NextRequest, NextResponse } from "next/server";

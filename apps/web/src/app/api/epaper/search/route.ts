@@ -4,12 +4,12 @@ import { prisma } from "@rayalaseema/db";
 // GET /api/epaper/search?q=<text>&limit=50
 //
 // Full-text search across past editions. Two parallel sources:
-//   1. Article DB — when the matching article was placed on any rendered
+//   1. Article DB - when the matching article was placed on any rendered
 //      EpaperPage, surface the edition+page so the reader can jump there.
-//   2. EpaperPage.ocrText — Tesseract output for legacy/uploaded PDFs that
+//   2. EpaperPage.ocrText - Tesseract output for legacy/uploaded PDFs that
 //      predate the article-DB era (populated by background OCR worker).
 //
-// Public — readers search the archive. KILLED editions excluded.
+// Public - readers search the archive. KILLED editions excluded.
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
   const q = (sp.get("q") || "").trim();
@@ -89,7 +89,7 @@ export async function GET(req: NextRequest) {
       edition: p.edition.edition,
       pageNumber: p.pageNumber,
       pageLabel: p.label,
-      title: `${p.label} — Page ${p.pageNumber}`,
+      title: `${p.label} - Page ${p.pageNumber}`,
       snippet: (t.slice(start, end) || "").trim() + (end < t.length ? "…" : ""),
     };
   });

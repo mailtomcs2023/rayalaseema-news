@@ -17,7 +17,7 @@ async function findEdition(req: NextRequest) {
   return prisma.epaperEdition.findUnique({ where: { date_edition: { date, edition: editionKey } } });
 }
 
-// GET /api/epaper/ads?date=&edition= — list ads for the edition
+// GET /api/epaper/ads?date=&edition= - list ads for the edition
 export async function GET(req: NextRequest) {
   const session = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(session)) return session;
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/epaper/ads?date=&edition= — upload an ad (formData: file, pageNumber, slot, linkUrl)
+// POST /api/epaper/ads?date=&edition= - upload an ad (formData: file, pageNumber, slot, linkUrl)
 export async function POST(req: NextRequest) {
   const session = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(session)) return session;
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// DELETE /api/epaper/ads?id= — remove an ad
+// DELETE /api/epaper/ads?id= - remove an ad
 export async function DELETE(req: NextRequest) {
   const session = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(session)) return session;

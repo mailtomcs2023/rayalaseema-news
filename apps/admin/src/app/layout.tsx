@@ -6,7 +6,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Admin | Rayalaseema Express CMS",
   description: "Content Management System for Rayalaseema Express",
-  // Spec #4 C10 (#213) — never index the admin app. Locks every page in the
+  // Spec #4 C10 (#213) - never index the admin app. Locks every page in the
   // CMS out of Google / Bing / AI-crawler caches. Applied at the root layout
   // so child routes inherit; explicit per-page robots can opt back in if we
   // ever surface a public-facing page from the admin domain (none today).
@@ -23,8 +23,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // suppressHydrationWarning on <html> + <body> silences the noisy hydration
   // error that fires when browser extensions (Scribe, ColorZilla, Grammarly,
   // password managers, ad blockers, etc.) inject attributes into the DOM
-  // BEFORE React hydrates. The mismatch is benign — extensions can't affect
-  // our rendered tree — and Next.js docs recommend this exact pattern for
+  // BEFORE React hydrates. The mismatch is benign - extensions can't affect
+  // our rendered tree - and Next.js docs recommend this exact pattern for
   // the root layout. It only suppresses warnings on those two elements; any
   // real hydration mismatch deeper in the tree still surfaces.
   return (

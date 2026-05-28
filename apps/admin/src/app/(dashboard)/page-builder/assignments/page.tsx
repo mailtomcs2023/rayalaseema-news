@@ -1,4 +1,4 @@
-// Page Builder (Spec #2) — assignments list page. Server-renders the
+// Page Builder (Spec #2) - assignments list page. Server-renders the
 // initial rows; the client component owns create/edit/delete + Test URL.
 
 import { Sidebar } from "@/components/sidebar";

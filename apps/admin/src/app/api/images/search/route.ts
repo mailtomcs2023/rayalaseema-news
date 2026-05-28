@@ -2,10 +2,10 @@
 //
 // Free image search for the editor's "Find image" panel. Two providers:
 //
-//   pexels  — CC0-style license, safe for commercial reuse, always-on.
+//   pexels  - CC0-style license, safe for commercial reuse, always-on.
 //             Requires PEXELS_API_KEY env.
-//   google  — Google Custom Search JSON API. Wider catalog but most results
-//             are COPYRIGHTED — surfaced as a research tool only. Requires
+//   google  - Google Custom Search JSON API. Wider catalog but most results
+//             are COPYRIGHTED - surfaced as a research tool only. Requires
 //             GOOGLE_CSE_KEY + GOOGLE_CSE_ID env.
 //
 // Returns: { provider, results: [{ thumbUrl, fullUrl, sourceUrl, photographer, license }] }
@@ -43,7 +43,7 @@ async function searchGoogle(query: string): Promise<Hit[]> {
   const url = `https://www.googleapis.com/customsearch/v1?key=${key}&cx=${cx}&searchType=image&num=10&safe=active&q=${encodeURIComponent(query)}`;
   const res = await fetch(url);
   if (!res.ok) {
-    // Surface Google's actual error message — common cases:
+    // Surface Google's actual error message - common cases:
     //   "API key not valid" -> wrong / unset GOOGLE_CSE_KEY
     //   "Custom Search API has not been used in project ..." -> API not enabled
     //   "Invalid Value" -> cx (engine ID) is wrong
@@ -63,7 +63,7 @@ async function searchGoogle(query: string): Promise<Hit[]> {
     fullUrl: i.link,
     sourceUrl: i.image?.contextLink || null,
     photographer: i.displayLink || null,
-    license: "⚠ COPYRIGHT UNKNOWN — verify license before publishing",
+    license: "⚠ COPYRIGHT UNKNOWN - verify license before publishing",
   }));
 }
 
@@ -89,7 +89,7 @@ export async function GET(req: NextRequest) {
     if (/not configured/i.test(e?.message || "")) {
       return NextResponse.json({ error: e.message }, { status: 503 });
     }
-    // Image search upstream errors are not sensitive — surface the message so
+    // Image search upstream errors are not sensitive - surface the message so
     // the admin can see "API not enabled / wrong cx / image search off" etc.
     console.error("[images/search]", e);
     return NextResponse.json({ error: e?.message || "Image search failed" }, { status: 502 });

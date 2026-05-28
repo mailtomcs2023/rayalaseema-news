@@ -1,4 +1,4 @@
-// Spec #4 G1 (#231) — Location NER detector.
+// Spec #4 G1 (#231) - Location NER detector.
 //
 // Dictionary-based exact-token matcher across the District / Constituency /
 // Mandal gazetteer. Designed to be cheap (a single pass per article body)
@@ -7,9 +7,9 @@
 // because location names are proper nouns + distinctive in Telugu/English.
 //
 // Confidence rules:
-//   HIGH    — match falls inside the headline OR the first 100 chars of body
-//   MEDIUM  — match falls in chars 100..600 (the "lede" band)
-//   LOW     — match falls anywhere later in the body
+//   HIGH    - match falls inside the headline OR the first 100 chars of body
+//   MEDIUM  - match falls in chars 100..600 (the "lede" band)
+//   LOW     - match falls anywhere later in the body
 //
 // Disambiguation:
 //   - Same name appears at multiple location levels (e.g. "Nandyal" is a
@@ -20,7 +20,7 @@
 //     or constituency is ALSO mentioned in the article; fall back to first
 //     match by character offset.
 //
-// The detector does NOT mutate Prisma directly — the caller (admin publish
+// The detector does NOT mutate Prisma directly - the caller (admin publish
 // hook in G2 #232) takes the NerResult + writes ContentLocation rows. This
 // keeps the package portable and testable in isolation.
 
@@ -29,7 +29,7 @@ import type { LocationEntry, LocationMention, NerResult, Confidence, LocationKin
 interface DetectArgs {
   /** Article headline. Title-matches always get HIGH confidence. */
   title: string;
-  /** Article body — plain text OR HTML. We strip HTML tags before scanning. */
+  /** Article body - plain text OR HTML. We strip HTML tags before scanning. */
   body: string;
   /** Gazetteer fed from the District/Constituency/Mandal Prisma tables. */
   gazetteer: LocationEntry[];
@@ -143,7 +143,7 @@ function disambiguate(mentions: LocationMention[], gazetteer: LocationEntry[]): 
       result.push(group[0]);
       continue;
     }
-    // Multiple sibling matches — prefer one whose parent district is in the text.
+    // Multiple sibling matches - prefer one whose parent district is in the text.
     const preferred = group.find((m) => {
       const loc = gazetteer.find((g) => g.id === m.locationId);
       return loc?.parentDistrictSlug && mentionedDistrictSlugs.has(loc.parentDistrictSlug);
@@ -151,7 +151,7 @@ function disambiguate(mentions: LocationMention[], gazetteer: LocationEntry[]): 
     if (preferred) {
       result.push(preferred);
     } else {
-      // Keep the first-occurrence one and drop the others — conservative.
+      // Keep the first-occurrence one and drop the others - conservative.
       const earliest = [...group].sort((a, b) => a.firstOffset - b.firstOffset)[0];
       result.push(earliest);
     }
@@ -166,7 +166,7 @@ function disambiguate(mentions: LocationMention[], gazetteer: LocationEntry[]): 
 export function detectLocations(args: DetectArgs): NerResult {
   const title = (args.title || "").trim();
   const body = stripHtml(args.body || "");
-  // Combined haystack — title is at offset 0, body starts at title.length+1.
+  // Combined haystack - title is at offset 0, body starts at title.length+1.
   const haystack = `${title} \n ${body}`;
   const titleLen = title.length + 3; // include the "\n " spacer
 

@@ -129,7 +129,7 @@ export function Footer({ config: initialConfig = {} }: FooterProps) {
             <h4 className="text-white font-semibold mb-4 text-sm uppercase tracking-wider">
               లింకులు
             </h4>
-            {/* Spec #4 C9 (#212) — site-wide trust + policy link bar. All 12
+            {/* Spec #4 C9 (#212) - site-wide trust + policy link bar. All 12
                 E-E-A-T pages are reachable from every page on the site so
                 Google + AI-search crawlers see consistent organization-level
                 signals. */}

@@ -88,7 +88,7 @@ export function ProfileScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#FF2C2C"]} tintColor="#FF2C2C" />}
       >
-        {/* Avatar hero — tap to change profile photo */}
+        {/* Avatar hero - tap to change profile photo */}
         <View style={styles.hero}>
           <TouchableOpacity
             activeOpacity={0.85}
@@ -109,7 +109,7 @@ export function ProfileScreen() {
               <Ionicons name="camera" size={14} color="#fff" />
             </View>
           </TouchableOpacity>
-          <Text style={styles.name} numberOfLines={1}>{data.user.name || "—"}</Text>
+          <Text style={styles.name} numberOfLines={1}>{data.user.name || "-"}</Text>
           <View style={styles.heroPills}>
             {prettyRole ? (
               <View style={styles.rolePill}>
@@ -131,7 +131,7 @@ export function ProfileScreen() {
           ) : null}
         </View>
 
-        {/* Section list — each pushes to its own detail page.
+        {/* Section list - each pushes to its own detail page.
             Exception: the KYC row routes to the full /kyc upload form while
             the reporter isn't VERIFIED yet (PENDING / SUBMITTED / REJECTED).
             That form is the single-shot submission flow; the per-field
@@ -154,7 +154,7 @@ export function ProfileScreen() {
           })}
         </View>
 
-        {/* Pending requests — only show the row when there's something to see */}
+        {/* Pending requests - only show the row when there's something to see */}
         {data.requests.length > 0 ? (
           <View style={styles.group}>
             <MenuRow
@@ -168,7 +168,7 @@ export function ProfileScreen() {
           </View>
         ) : null}
 
-        {/* Email — locked. Tapping shows the contact-admin alert. */}
+        {/* Email - locked. Tapping shows the contact-admin alert. */}
         <View style={styles.group}>
           <MenuRow
             icon="mail-outline"

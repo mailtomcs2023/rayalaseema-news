@@ -14,7 +14,7 @@ const SEGMENTS: { code: Lang; label: string }[] = [
 export function LanguageToggle({ onDark = false }: { onDark?: boolean }) {
   const { lang, setLang, t } = useT();
 
-  // Tapping a language buzzes, then confirms the switch — the prompt reassures
+  // Tapping a language buzzes, then confirms the switch - the prompt reassures
   // the reporter the app stays bilingual and the choice can be changed anytime.
   const handlePress = (code: Lang) => {
     Haptics.selectionAsync();

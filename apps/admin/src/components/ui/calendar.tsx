@@ -25,7 +25,7 @@ const sameDay = (a?: Date, b?: Date) =>
   a.getMonth() === b.getMonth() &&
   a.getDate() === b.getDate();
 
-/** A self-contained month calendar — no external date library. */
+/** A self-contained month calendar - no external date library. */
 export function Calendar({
   selected,
   onSelect,

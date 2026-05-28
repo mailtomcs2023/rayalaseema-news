@@ -27,7 +27,7 @@ export function ReturnVisitBanner() {
         localStorage.setItem("visit-streak", "1");
       } else {
         // Gap > 3 days
-        setMessage(`${diff} రోజుల తర్వాత తిరిగి వచ్చారు — మీరు miss అయిన వార్తలు చూడండి`);
+        setMessage(`${diff} రోజుల తర్వాత తిరిగి వచ్చారు - మీరు miss అయిన వార్తలు చూడండి`);
         setShow(true);
         localStorage.setItem("visit-streak", "1");
       }

@@ -1,4 +1,4 @@
-// POST /api/images/process { url } — download an external image, strip its
+// POST /api/images/process { url } - download an external image, strip its
 // EXIF (GPS / camera body / original photographer), stamp Rayalaseema
 // Express as copyright + artist, re-host on Azure Blob, return the new URL.
 //
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     if (!url || typeof url !== "string") {
       return NextResponse.json({ error: "url required" }, { status: 400 });
     }
-    // SSRF guard — same one /api/ai/rewrite uses for the scrape path. Blocks
+    // SSRF guard - same one /api/ai/rewrite uses for the scrape path. Blocks
     // 127.0.0.1, 169.254.169.254 (cloud metadata), private ranges, DNS rebind.
     const safety = await isUrlSafeToFetch(url);
     if (!safety.safe) {

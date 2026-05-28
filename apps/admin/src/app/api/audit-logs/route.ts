@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 
-// GET /api/audit-logs — filter by actor / action / resource / date range, paginated
+// GET /api/audit-logs - filter by actor / action / resource / date range, paginated
 //
 // Admin + EDITOR can view. Lower roles get 403 (audit data is sensitive).
 export async function GET(req: NextRequest) {
@@ -11,7 +11,9 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "30")));
+    // Default 10 matches the admin's standard per-page size. Hard cap at
+    // 100 to protect the audit-log query (gets big fast in prod).
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "10")));
     const offset = (page - 1) * limit;
 
     const actorId = searchParams.get("actorId") || "";

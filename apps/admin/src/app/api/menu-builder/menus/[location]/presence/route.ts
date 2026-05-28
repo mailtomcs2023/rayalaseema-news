@@ -1,8 +1,8 @@
-// Spec #3 F1 #185 — presence heartbeat for the menu editor.
+// Spec #3 F1 #185 - presence heartbeat for the menu editor.
 //
 // Single-process in-memory store. Two editors on the same location see each
 // other via 10s heartbeats; entries older than 30s are evicted. The store is
-// per-process (no Redis) — adequate for the admin app, which runs as one PM2
+// per-process (no Redis) - adequate for the admin app, which runs as one PM2
 // instance. If we ever scale to multiple admin workers, swap in Redis.
 //
 // POST = heartbeat (current user pings). GET = list of OTHER active users.

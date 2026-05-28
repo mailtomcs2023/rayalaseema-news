@@ -1,4 +1,4 @@
-// Spec #3 E2 (#184) — seed HEADER / FOOTER / MOBILE menus with values that
+// Spec #3 E2 (#184) - seed HEADER / FOOTER / MOBILE menus with values that
 // mirror the pre-Spec-3 hardcoded nav in apps/web/src/components/header.tsx
 // + footer.tsx + mobile-menu.tsx. Idempotent: skips a location that already
 // has rows so re-runs from deploy.yml don't overwrite admin edits.
@@ -114,7 +114,7 @@ const FOOTER_ITEMS = [
   },
 ];
 
-// Mobile bottom-sheet — same as header districts + sections, no dropdown
+// Mobile bottom-sheet - same as header districts + sections, no dropdown
 // (mobile already shows a slide-out list, no need to nest).
 const MOBILE_ITEMS = [
   ...HEADER_TOP_DISTRICTS.map((d) => districtItem(d.label, d.slug)),
@@ -125,7 +125,7 @@ const MOBILE_ITEMS = [
 async function seed(location: MenuLocation, name: string, items: unknown[]) {
   const existing = await prisma.menu.findUnique({ where: { location } });
   if (existing) {
-    console.log(`  ${location}: already exists (id ${existing.id}) — skipping.`);
+    console.log(`  ${location}: already exists (id ${existing.id}) - skipping.`);
     return;
   }
   const m = await prisma.menu.create({
@@ -141,7 +141,7 @@ async function seed(location: MenuLocation, name: string, items: unknown[]) {
 }
 
 async function main() {
-  console.log("Seeding menus (idempotent — skips existing locations)...");
+  console.log("Seeding menus (idempotent - skips existing locations)...");
   await seed(MenuLocation.HEADER, "Header navigation", HEADER_ITEMS);
   await seed(MenuLocation.FOOTER, "Footer links", FOOTER_ITEMS);
   await seed(MenuLocation.MOBILE, "Mobile bottom sheet", MOBILE_ITEMS);

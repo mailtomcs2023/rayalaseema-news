@@ -1,6 +1,6 @@
 "use client";
 
-// Page Builder (Spec #2) — templates list table client component.
+// Page Builder (Spec #2) - templates list table client component.
 // Owns Create (+ Clone from existing), Delete dialogs. Edit is a link to
 // /page-builder/templates/[id] (visual editor, E1+).
 
@@ -145,7 +145,7 @@ export function TemplatesTable({ initialRows }: { initialRows: Row[] }) {
                 </td>
                 <td style={td}>
                   {r.patterns.length === 0 ? (
-                    <span style={{ color: "#9ca3af" }}>—</span>
+                    <span style={{ color: "#9ca3af" }}>-</span>
                   ) : (
                     r.patterns.map((p) => (
                       <code
@@ -307,7 +307,7 @@ function CreateModal({
           onChange={(e) => setCloneFromId(e.target.value)}
           style={inp}
         >
-          <option value="">— Start blank —</option>
+          <option value="">- Start blank -</option>
           {existing.map((r) => (
             <option key={r.id} value={r.id}>
               {r.name} ({r.slug})

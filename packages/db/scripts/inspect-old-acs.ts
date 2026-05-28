@@ -1,5 +1,5 @@
 // Inspect: which old (acNumber=null) constituencies exist, what they map to.
-// Read-only — prints a table for review before Phase 2 remap.
+// Read-only - prints a table for review before Phase 2 remap.
 //
 // Run from packages/db:  bunx tsx scripts/inspect-old-acs.ts
 
@@ -45,7 +45,7 @@ async function main() {
   console.log(`\n=== MATCHED (${matched.length}) ===`);
   for (const l of matched) console.log(l);
 
-  console.log(`\n=== UNMATCHED (${unmatched.length}) — need manual review ===`);
+  console.log(`\n=== UNMATCHED (${unmatched.length}) - need manual review ===`);
   for (const l of unmatched) console.log(l);
 
   console.log(`\nTotals: old=${oldACs.length}, new=${newACs.length}, matched=${matched.length}, unmatched=${unmatched.length}`);

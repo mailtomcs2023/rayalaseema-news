@@ -1,6 +1,6 @@
 // Telugu-passthrough polish mode. When the source is already Telugu,
 // running it through extract (Telugu → English JSON) + compose
-// (JSON → Telugu) loses the specifics — named persons, numbers,
+// (JSON → Telugu) loses the specifics - named persons, numbers,
 // quotes get summarized away and the compose step fills the gap with
 // generic political-rally boilerplate. Reported repeatedly by the
 // editor on real Sakshi / Hmtv / Eenadu source URLs.
@@ -25,9 +25,9 @@ export interface PolishedArticle {
   meta_description_en: string;
 }
 
-const POLISH_SYSTEM = `You are a senior copy editor at Eenadu's Hyderabad desk. The article below is ALREADY in Telugu. Your job is to POLISH it for newspaper publication — NOT to rewrite, summarize, or expand.
+const POLISH_SYSTEM = `You are a senior copy editor at Eenadu's Hyderabad desk. The article below is ALREADY in Telugu. Your job is to POLISH it for newspaper publication - NOT to rewrite, summarize, or expand.
 
-ABSOLUTE RULES — break any and you fail:
+ABSOLUTE RULES - break any and you fail:
 
 1. PRESERVE every fact. Every named person, every number, every place, every quote, every claim, every date, every party / organization / role designation must appear in your output exactly as in the source. If the source names "Daggupati Prasad MLA", your output names "Daggupati Prasad MLA". If the source mentions "12 cluster constituencies", you keep "12 cluster constituencies". NEVER drop a specific name in favor of a generic phrase.
 
@@ -43,13 +43,13 @@ ABSOLUTE RULES — break any and you fail:
    - Fix obvious grammar / typo errors
    - Split a long paragraph into 2-3 sentence chunks
    - Add sub-heads (<h3>) when the source has clearly distinct topic blocks
-   - Produce a headline (<h2>) — 7-12 words, derived ONLY from source facts
-   - Produce a dek (<p class="dek">) — 2-line standfirst summarizing what's already in the source
+   - Produce a headline (<h2>) - 7-12 words, derived ONLY from source facts
+   - Produce a dek (<p class="dek">) - 2-line standfirst summarizing what's already in the source
    - Sort paragraphs into inverted-pyramid order (most important first)
 
 4. SCRIPT INTEGRITY. Output is 100% Telugu Unicode (U+0C00-0C7F). NO Devanagari conjuncts. Latin script only inside the JSON envelope's English fields (slug_en, keywords_en, meta_description_en).
 
-5. OUTPUT FORMAT — strict JSON envelope, nothing else:
+5. OUTPUT FORMAT - strict JSON envelope, nothing else:
 {
   "title_te": "<headline derived from source>",
   "dek_te": "<2-line standfirst, source facts only>",
@@ -93,7 +93,7 @@ export async function polishTelugu(sourceText: string): Promise<PolishedArticle>
 }
 
 // Telugu Unicode (U+0C00-0C7F). Returns true if >=30% of the input's
-// non-whitespace characters are Telugu glyphs — high enough threshold
+// non-whitespace characters are Telugu glyphs - high enough threshold
 // that a news article with a few English brand names still counts as
 // Telugu, low enough that a one-line Telugu caption inside an English
 // page is NOT classified as Telugu.

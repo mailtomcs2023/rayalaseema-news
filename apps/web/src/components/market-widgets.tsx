@@ -9,7 +9,7 @@ interface TickerData {
   cricket: any[] | null;
 }
 
-// Shared data — fetched once, used by all widgets
+// Shared data - fetched once, used by all widgets
 let cachedData: TickerData | null = null;
 let fetchPromise: Promise<TickerData> | null = null;
 
@@ -87,7 +87,7 @@ export function BullionWidget() {
   );
 }
 
-// ===== FOREX — 2-col grid (flag + code stacked w/ price; distinct from Bullion's row list) =====
+// ===== FOREX - 2-col grid (flag + code stacked w/ price; distinct from Bullion's row list) =====
 export function ForexWidget() {
   const data = useTickerData();
   if (!data?.forex?.length) return null;
@@ -143,7 +143,7 @@ export function CricketWidget() {
   );
 }
 
-// ===== MANDI — stacked card per commodity, market as chip (distinct from Bullion row + Forex grid) =====
+// ===== MANDI - stacked card per commodity, market as chip (distinct from Bullion row + Forex grid) =====
 export function MandiWidget() {
   const data = useTickerData();
   if (!data?.mandi?.length) return null;

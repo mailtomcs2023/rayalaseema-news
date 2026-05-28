@@ -1,6 +1,6 @@
 "use client";
 
-// PreflightPanel (#139) — side panel that lists every issue from
+// PreflightPanel (#139) - side panel that lists every issue from
 // /api/epaper/edition/[id]/preflight. Replaces every alert() popup.
 
 import { useEffect, useState } from "react";
@@ -64,7 +64,7 @@ export function PreflightPanel({ editionId, open, onClose, onFocusBlock, reloadK
         {loading && <p style={{ padding: 12, color: "#6b7280", fontSize: 12 }}>Loading…</p>}
         {!loading && issues.length === 0 && (
           <p style={{ padding: 20, textAlign: "center", color: "#16a34a", fontWeight: 700, fontSize: 13 }}>
-            ✓ No issues — ready to publish.
+            ✓ No issues - ready to publish.
           </p>
         )}
         {order.map((sev) => {

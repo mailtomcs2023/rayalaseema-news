@@ -1,4 +1,4 @@
-// /api/payments — list ContentPayment rows for the admin /payments page.
+// /api/payments - list ContentPayment rows for the admin /payments page.
 // Admin-only. Optional `status` filter ("ALL" or any PaymentStatus value).
 //
 // Each row joins through Content so the table can show article title +

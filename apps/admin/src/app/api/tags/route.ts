@@ -13,7 +13,7 @@ function slugify(name: string): string {
     .substring(0, 80);
 }
 
-// GET /api/tags — list tags w/ article counts
+// GET /api/tags - list tags w/ article counts
 export async function GET(req: NextRequest) {
   const session = await requireAuth();
   if (isAuthError(session)) return session;
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
   } catch (e) { return apiError(e); }
 }
 
-// POST /api/tags — create (or return existing) by name
+// POST /api/tags - create (or return existing) by name
 export async function POST(req: NextRequest) {
   const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR", "REPORTER"]);
   if (isAuthError(session)) return session;

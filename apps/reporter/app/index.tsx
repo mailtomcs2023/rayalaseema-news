@@ -3,7 +3,7 @@ import { View, ActivityIndicator } from "react-native";
 import { Redirect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// Auth gate — the first route. Sends a logged-in reporter to the tabs,
+// Auth gate - the first route. Sends a logged-in reporter to the tabs,
 // everyone else to login.
 export default function Index() {
   const [target, setTarget] = useState<string | null>(null);

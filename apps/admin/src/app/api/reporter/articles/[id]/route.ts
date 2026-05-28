@@ -5,17 +5,17 @@ import { pickLeastLoadedReviewer } from "@/lib/reviewer-assignment";
 
 // Reporter-scoped single-article operations.
 //
-// GET    — fetch one of the signed-in reporter's articles (any status).
-// PATCH  — edit the article. Allowed only while status is "SUBMITTED" or
+// GET    - fetch one of the signed-in reporter's articles (any status).
+// PATCH  - edit the article. Allowed only while status is "SUBMITTED" or
 //          "DRAFT" (the reporter still owns the content). Once an editor
 //          picks it up (IN_REVIEW) or it's been decided
 //          (APPROVED/PUBLISHED/REJECTED), the reporter loses edit access.
 //          PATCH also accepts a status field for one specific transition:
 //          DRAFT → SUBMITTED ("submit a draft for review"). No other
 //          status changes are honoured here.
-// DELETE — same window as PATCH: SUBMITTED or DRAFT only.
+// DELETE - same window as PATCH: SUBMITTED or DRAFT only.
 //
-// Reporters can never reach a different author's article — every handler
+// Reporters can never reach a different author's article - every handler
 // checks article.authorId against the bearer-token reporter id and 404s
 // otherwise (we treat "not yours" as "doesn't exist" to avoid leaking ids).
 
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (r.err) return r.err;
   const full = await prisma.content.findUnique({
     where: { id },
-    // Explicit select — keeps the response stable across environments and
+    // Explicit select - keeps the response stable across environments and
     // matches the fields the editor (mobile + web) actually reads.
     select: {
       id: true,
@@ -72,7 +72,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (r.err) return r.err;
   if (!isEditable(r.article.status)) {
     return NextResponse.json(
-      { error: `Article is ${r.article.status} — editing is no longer allowed` },
+      { error: `Article is ${r.article.status} - editing is no longer allowed` },
       { status: 403 },
     );
   }
@@ -96,7 +96,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     // Status: the only transition reporters may make here is
     // DRAFT → SUBMITTED ("send my draft for review"). Anything else is a
-    // hard 403 — we don't let reporters un-submit, approve, or publish.
+    // hard 403 - we don't let reporters un-submit, approve, or publish.
     let willSubmit = false;
     if (status !== undefined && status !== r.article.status) {
       if (r.article.status === "DRAFT" && status === "SUBMITTED") {
@@ -144,7 +144,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   if (r.err) return r.err;
   if (!isEditable(r.article.status)) {
     return NextResponse.json(
-      { error: `Article is ${r.article.status} — deletion is no longer allowed` },
+      { error: `Article is ${r.article.status} - deletion is no longer allowed` },
       { status: 403 },
     );
   }

@@ -1,11 +1,11 @@
 import { ImageResponse } from "next/og";
 import { prisma } from "@rayalaseema/db";
 
-// GET /api/og/[slug] — 1200x630 branded OG image for an article.
+// GET /api/og/[slug] - 1200x630 branded OG image for an article.
 // Renders the headline + brand bar + category label using next/og's
 // ImageResponse (Edge-compatible Satori renderer). #95.
 //
-// Cached at the CDN for 7 days — title changes propagate within a week
+// Cached at the CDN for 7 days - title changes propagate within a week
 // (acceptable for OG card freshness; promoted A/B winners get the new card
 // on next push by appending ?v=<timestamp>).
 export const runtime = "nodejs";

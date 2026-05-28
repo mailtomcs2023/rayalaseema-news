@@ -1,4 +1,4 @@
-// Page Builder (Spec #2) — templates collection endpoint.
+// Page Builder (Spec #2) - templates collection endpoint.
 //
 //   GET  → list templates with active-assignment URLs + version count
 //          (any signed-in admin session can read)
@@ -46,7 +46,7 @@ export async function GET() {
       versionCount: t._count.versions,
       assignmentCount: t._count.assignments,
       patterns: t.assignments.map((a) => a.pattern),
-      createdBy: t.createdBy?.name || "—",
+      createdBy: t.createdBy?.name || "-",
       createdAt: t.createdAt,
       updatedAt: t.updatedAt,
     }));

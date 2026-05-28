@@ -1,8 +1,8 @@
-// /content — unified content list (Spec #1 #114). Replaces /articles, /videos,
+// /content - unified content list (Spec #1 #114). Replaces /articles, /videos,
 // /reels, /stories, /gallery, /cartoons, /breaking-news, /news-feed list pages.
 //
-// Table chrome mirrors the /journalists page — TanStack React Table + shadcn
-// Table/Pagination/Popover/DropdownMenu — but pagination/filtering stay
+// Table chrome mirrors the /journalists page - TanStack React Table + shadcn
+// Table/Pagination/Popover/DropdownMenu - but pagination/filtering stay
 // server-side because the catalogue is large (manualPagination: true). The
 // API currently has no sort param so column sorting is disabled; the chip
 // row at the top filters by ContentType and is unique to this page.
@@ -144,7 +144,7 @@ export default function ContentListPage() {
   const id = useId();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Role gate for the Delete action — mirrors /api/content/[id] DELETE rules:
+  // Role gate for the Delete action - mirrors /api/content/[id] DELETE rules:
   //   ADMIN: anything
   //   REPORTER: own rows + DRAFT/SUBMITTED only
   //   SUB_EDITOR / EDITOR: DRAFT/SUBMITTED only
@@ -173,10 +173,12 @@ export default function ContentListPage() {
   const [categories, setCategories] = useState<CategoryOpt[]>([]);
 
   // Persist page-size selection to localStorage so it sticks across visits.
+  // Default 10 (matches every other admin table). A previously-saved
+  // value in localStorage still wins so users keep their personal choice.
   const [pagination, setPagination] = useState<PaginationState>(() => {
-    if (typeof window === "undefined") return { pageIndex: 0, pageSize: 15 };
+    if (typeof window === "undefined") return { pageIndex: 0, pageSize: 10 };
     const stored = parseInt(window.localStorage.getItem("contentListLimit") || "");
-    const ps = [10, 15, 25, 50, 100].includes(stored) ? stored : 15;
+    const ps = [10, 15, 25, 50, 100].includes(stored) ? stored : 10;
     return { pageIndex: 0, pageSize: ps };
   });
   useEffect(() => {
@@ -191,7 +193,7 @@ export default function ContentListPage() {
   const [autoFetchOpen, setAutoFetchOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<ContentRow[] | null>(null);
 
-  // Reset to page 0 whenever a filter changes — otherwise we'd keep page=3
+  // Reset to page 0 whenever a filter changes - otherwise we'd keep page=3
   // while the underlying result set just shrunk to 1 page.
   useEffect(() => {
     setPagination((p) => ({ ...p, pageIndex: 0 }));
@@ -296,7 +298,7 @@ export default function ContentListPage() {
         enableSorting: false,
         cell: ({ row }) => {
           const c = row.original.category;
-          if (!c) return <span className="text-muted-foreground">—</span>;
+          if (!c) return <span className="text-muted-foreground">-</span>;
           return (
             <span
               className="inline-block rounded px-2 py-0.5 text-[11px] font-semibold text-white"
@@ -348,7 +350,7 @@ export default function ContentListPage() {
           }
           return (
             <span className="text-xs text-muted-foreground">
-              {r.publishedAt ? new Date(r.publishedAt).toLocaleDateString() : "—"}
+              {r.publishedAt ? new Date(r.publishedAt).toLocaleDateString() : "-"}
             </span>
           );
         },
@@ -371,7 +373,7 @@ export default function ContentListPage() {
     [canDelete],
   );
 
-  // ─── table instance — server-driven, so manualPagination + pageCount ────
+  // ─── table instance - server-driven, so manualPagination + pageCount ────
   const table = useReactTable({
     data: rows,
     columns,
@@ -447,7 +449,7 @@ export default function ContentListPage() {
         </p>
 
         <div className="shadcn-scope space-y-4">
-          {/* Type filter chips — unique to /content. Narrows by ContentType. */}
+          {/* Type filter chips - unique to /content. Narrows by ContentType. */}
           <div className="flex flex-wrap gap-1.5">
             {TYPE_ORDER.map((t) => {
               const isActive = typeFilter === t;
@@ -617,10 +619,54 @@ export default function ContentListPage() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <div className="ms-auto flex items-center gap-3">
-              <span className="text-sm text-muted-foreground">
-                {total} item{total === 1 ? "" : "s"}
-              </span>
+            <div className="ms-auto flex items-center gap-2">
+              {/* Total counter - hidden while a bulk selection is active so
+                  the toolbar focuses on the per-action counts baked into the
+                  button labels themselves (Publish 7 / Unpublish 7 / Delete 7). */}
+              {selectedRows.length === 0 && (
+                <span className="text-sm whitespace-nowrap text-muted-foreground">
+                  {total} item{total === 1 ? "" : "s"}
+                </span>
+              )}
+
+              {/* Bulk actions - render inline when at least one row is
+                  selected. Each label carries the selection count so users
+                  always see what the action will hit. Cancel button removed:
+                  un-tick the header checkbox (or any row) to clear. */}
+              {selectedRows.length > 0 && (
+                <>
+                  <Button
+                    variant="outline"
+                    className="border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
+                    disabled={bulkLoading}
+                    onClick={() => handleBulkStatus("PUBLISHED")}
+                  >
+                    Publish {selectedRows.length}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                    disabled={bulkLoading}
+                    onClick={() => handleBulkStatus("DRAFT")}
+                  >
+                    Unpublish {selectedRows.length}
+                  </Button>
+                  {deletableSelected.length > 0 && (
+                    <Button
+                      variant="outline"
+                      className="border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                      disabled={bulkLoading}
+                      onClick={() => setConfirmDelete(deletableSelected)}
+                    >
+                      <TrashIcon aria-hidden="true" className="-ms-1 opacity-70" size={14} />
+                      {deletableSelected.length === selectedRows.length
+                        ? `Delete ${selectedRows.length}`
+                        : `Delete ${deletableSelected.length} of ${selectedRows.length}`}
+                    </Button>
+                  )}
+                </>
+              )}
+
               <WithTooltip
                 side="bottom"
                 text={"Bulk-fetch from NewsData.io, translate to Telugu via Azure OpenAI,\nand save as DRAFT in the review queue."}
@@ -641,51 +687,6 @@ export default function ContentListPage() {
               </Link>
             </div>
           </div>
-
-          {/* Bulk action bar — only when rows are selected. */}
-          {selectedRows.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-4 py-2.5">
-              <span className="text-sm font-bold text-blue-700">
-                {selectedRows.length} selected
-              </span>
-              <div className="flex-1" />
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
-                disabled={bulkLoading}
-                onClick={() => handleBulkStatus("PUBLISHED")}
-              >
-                Publish
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
-                disabled={bulkLoading}
-                onClick={() => handleBulkStatus("DRAFT")}
-              >
-                Unpublish
-              </Button>
-              {deletableSelected.length > 0 && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
-                  disabled={bulkLoading}
-                  onClick={() => setConfirmDelete(deletableSelected)}
-                >
-                  <TrashIcon aria-hidden="true" className="-ms-1 opacity-70" size={14} />
-                  {deletableSelected.length === selectedRows.length
-                    ? `Delete ${selectedRows.length}`
-                    : `Delete ${deletableSelected.length} of ${selectedRows.length}`}
-                </Button>
-              )}
-              <Button size="sm" variant="ghost" onClick={() => setRowSelection({})}>
-                Cancel
-              </Button>
-            </div>
-          )}
 
           {/* Table */}
           <div
@@ -732,8 +733,9 @@ export default function ContentListPage() {
             </Table>
           </div>
 
-          {/* Pagination */}
-          <div className="flex items-center justify-between gap-8">
+          {/* Pagination row - page-size on the left, range counter + nav
+              buttons grouped together on the right. No empty gap in middle. */}
+          <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <Label className="max-sm:sr-only" htmlFor={`${id}-pagesize`}>
                 Rows per page
@@ -754,8 +756,8 @@ export default function ContentListPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex grow justify-end whitespace-nowrap text-sm text-muted-foreground">
-              <p aria-live="polite">
+            <div className="flex items-center gap-3">
+              <p aria-live="polite" className="whitespace-nowrap text-sm text-muted-foreground">
                 <span className="text-foreground">
                   {total === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1}
                   -
@@ -763,9 +765,8 @@ export default function ContentListPage() {
                 </span>{" "}
                 of <span className="text-foreground">{total}</span>
               </p>
-            </div>
-            <Pagination>
-              <PaginationContent>
+              <Pagination className="mx-0 w-auto">
+                <PaginationContent>
                 <PaginationItem>
                   <Button
                     aria-label="Go to first page"
@@ -810,8 +811,9 @@ export default function ContentListPage() {
                     <ChevronLastIcon aria-hidden="true" size={16} />
                   </Button>
                 </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+                </PaginationContent>
+              </Pagination>
+            </div>
           </div>
 
           {/* Delete confirmation */}
@@ -848,7 +850,7 @@ export default function ContentListPage() {
       <AutoFetchModal
         open={autoFetchOpen}
         onClose={() => setAutoFetchOpen(false)}
-        // Modal stays open on step 3 with the per-category Results table —
+        // Modal stays open on step 3 with the per-category Results table -
         // that's a richer confirmation than a one-line alert. We just need to
         // refresh the list in the background so the new DRAFT rows appear
         // when the user closes the modal. No alert, no full-page reload.

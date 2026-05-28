@@ -1,15 +1,15 @@
 import { prisma } from "@rayalaseema/db";
 import { articleHref } from "@/lib/article-href";
 
-// E4 (#223) — `revalidate` keeps news-sitemap fresh at the edge (60s)
+// E4 (#223) - `revalidate` keeps news-sitemap fresh at the edge (60s)
 // without hitting the DB on every Googlebot crawl.
 
 export const revalidate = 60;
 
-// Spec #4 D2 (#215) — Google News sitemap with the 48-hour freshness
+// Spec #4 D2 (#215) - Google News sitemap with the 48-hour freshness
 // filter the Google News protocol expects. Articles older than 48h drop
 // out automatically; Google News pulls the sitemap every few minutes
-// and stale entries silently disappear. Cached for 60s — short enough
+// and stale entries silently disappear. Cached for 60s - short enough
 // that a freshly-published article shows up quickly but long enough
 // that the Prisma query isn't hit on every crawler request.
 

@@ -10,7 +10,7 @@ import { decryptProfileFields } from "@/lib/crypto/kyc";
 // Per-field collapse: for each field we surface only the LATEST request,
 // and only if it's still actionable (PENDING) or unresolved in the
 // reporter's eyes (REJECTED). An older REJECTED that has since been
-// superseded by an APPROVED request for the same field is dropped — the
+// superseded by an APPROVED request for the same field is dropped - the
 // reporter has already moved on, and the new value is reflected on the
 // profile object above.
 export async function GET(req: NextRequest) {
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
     });
 
     // Group by field. Because the rows are sorted newest-first, the first
-    // hit per field IS the latest one — no further sorting needed.
+    // hit per field IS the latest one - no further sorting needed.
     const latestByField = new Map<string, (typeof recent)[number]>();
     for (const r of recent) {
       if (!latestByField.has(r.field)) latestByField.set(r.field, r);
@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
         id: user.id, name: user.name, email: user.email, phone: user.phone,
         role: user.role, avatar: user.avatar,
       },
-      // Decrypt PII before handing back to the mobile app — the reporter
+      // Decrypt PII before handing back to the mobile app - the reporter
       // sees their own data in plaintext on their device.
       profile: decryptProfileFields(user.reporterProfile),
       requests,

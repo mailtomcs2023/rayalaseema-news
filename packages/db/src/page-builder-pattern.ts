@@ -1,4 +1,4 @@
-// Page Builder (Spec #2) — URL pattern matcher + assignment resolver.
+// Page Builder (Spec #2) - URL pattern matcher + assignment resolver.
 // Spec: docs/superpowers/specs/2026-05-25-page-builder-design.md §"Pattern matcher"
 //
 // Pattern grammar:

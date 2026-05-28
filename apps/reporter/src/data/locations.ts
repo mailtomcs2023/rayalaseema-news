@@ -1,4 +1,4 @@
-// AUTO-GENERATED from packages/db/prisma/location-data.json — do not edit by hand.
+// AUTO-GENERATED from packages/db/prisma/location-data.json - do not edit by hand.
 // Assembly constituencies grouped by district slug. Bundled into the reporter
 // app because the Register screen is pre-login and cannot call the
 // authenticated /api/locations endpoint.

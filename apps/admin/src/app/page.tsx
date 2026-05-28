@@ -68,7 +68,7 @@ export default async function DashboardPage() {
         <div className="quick-grid">
           {[
             // "New Content" and "Breaking News" both land on the /content/new
-            // type picker right now — until the picker supports a `?type=` query
+            // type picker right now - until the picker supports a `?type=` query
             // to skip straight to BREAKING_NEWS, both shortcuts share the same
             // href. Key off label (unique) instead of href so React doesn't warn.
             { label: "New Content", href: "/content/new", icon: "+" },
@@ -83,7 +83,7 @@ export default async function DashboardPage() {
           ))}
         </div>
 
-        {/* Recent Articles — TanStack table extracted into a client
+        {/* Recent Articles - TanStack table extracted into a client
             component. Server keeps the data fetch in this RSC; the client
             component just renders + handles sort/visibility. Visual chrome
             (wrapper, table-fixed, h-11 headers, last:py-0 cells, h-24 empty

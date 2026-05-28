@@ -12,17 +12,17 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // One screen, two modes:
 //
-//   CREATE  — opened via /new-article. POSTs to /api/reporter/articles.
+//   CREATE  - opened via /new-article. POSTs to /api/reporter/articles.
 //             Buttons: [Save Draft] [Submit for Review].
 //
-//   EDIT    — opened via /new-article?id=<articleId>. GETs the article on
+//   EDIT    - opened via /new-article?id=<articleId>. GETs the article on
 //             mount, pre-fills every field, PATCHes on save. Buttons depend
 //             on status:
 //               DRAFT     → [Delete] [Save Draft] [Submit for Review]
 //               SUBMITTED → [Delete] [Save Changes]
 //               anything else → read-only (banner + disabled inputs, no buttons)
 //
-// Status colours for the read-only banner — taken straight from the badges
+// Status colours for the read-only banner - taken straight from the badges
 // in the lists so the visual language matches.
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   DRAFT:     { bg: "#f3f4f6", text: "#555" },
@@ -129,7 +129,7 @@ export function NewArticleScreen() {
   }, [id, t]);
   useEffect(() => { loadArticle(); }, [loadArticle]);
 
-  // Categories — same pattern as before; inline retry on failure.
+  // Categories - same pattern as before; inline retry on failure.
   const loadCategories = useCallback(async () => {
     setCatLoading(true);
     setCatError("");
@@ -147,11 +147,11 @@ export function NewArticleScreen() {
 
   useLayoutEffect(() => {
     if (!editing) {
-      // CREATE mode — plain string title.
+      // CREATE mode - plain string title.
       navigation.setOptions({ title: t("nav.newArticle"), headerTitle: undefined });
       return;
     }
-    // EDIT mode — render a custom header so the status sits as a small
+    // EDIT mode - render a custom header so the status sits as a small
     // semibold caption directly under the "Edit Article" title, removing the
     // need for a duplicate in-content heading.
     const sc = STATUS_COLORS[status] || STATUS_COLORS.DRAFT;
@@ -254,13 +254,13 @@ export function NewArticleScreen() {
       };
 
       if (editing) {
-        // EDIT mode — PATCH. Only include `status` when promoting a draft.
+        // EDIT mode - PATCH. Only include `status` when promoting a draft.
         const patchBody: Record<string, unknown> = { ...baseBody };
         if (intent === "submit" && status === "DRAFT") patchBody.status = "SUBMITTED";
         if (featuredImage !== undefined) patchBody.featuredImage = featuredImage;
         await api(`/api/reporter/articles/${id}`, { method: "PATCH", body: patchBody });
       } else {
-        // CREATE mode — POST. `status` decides DRAFT vs SUBMITTED at insert.
+        // CREATE mode - POST. `status` decides DRAFT vs SUBMITTED at insert.
         await api("/api/reporter/articles", {
           method: "POST",
           body: {
@@ -272,7 +272,7 @@ export function NewArticleScreen() {
         });
       }
 
-      // Alert title/message — mirror the existing copy so reporters see the
+      // Alert title/message - mirror the existing copy so reporters see the
       // same confirmation strings whether they're creating, drafting, or
       // editing.
       const willSubmit = intent === "submit";
@@ -360,7 +360,7 @@ export function NewArticleScreen() {
         <Text style={styles.readOnlyHint}>{t("editArticle.readOnlyHint")}</Text>
       )}
 
-      {/* Photo — moved to the top so the hero anchors the screen. Pickers
+      {/* Photo - moved to the top so the hero anchors the screen. Pickers
           are hidden in read-only mode; the preview still renders. */}
       <Text style={styles.label}>{t("newArticle.featuredImage")}</Text>
       {!readOnly && (
@@ -389,7 +389,7 @@ export function NewArticleScreen() {
       />
       <FieldError message={errors.title} />
 
-      {/* Summary — multi-line textarea. `textAlignVertical: top` is required
+      {/* Summary - multi-line textarea. `textAlignVertical: top` is required
           on Android so the caret starts at the top instead of being centered
           vertically (iOS already does this with multiline). */}
       <Text style={styles.label}>{t("newArticle.summary")}</Text>
@@ -416,7 +416,7 @@ export function NewArticleScreen() {
       />
       <FieldError message={errors.body} />
 
-      {/* AI Translate — hide in read-only mode. Solid brand-red pill with a
+      {/* AI Translate - hide in read-only mode. Solid brand-red pill with a
           sparkles icon to signal it's an assistive AI action. */}
       {!readOnly && (
         <TouchableOpacity
@@ -486,7 +486,7 @@ export function NewArticleScreen() {
       )}
       <FieldError message={errors.categoryId} />
 
-      {/* Action row — adapts to mode:
+      {/* Action row - adapts to mode:
           CREATE                        → [Save Draft] [Submit]
           EDIT DRAFT                    → [Delete] [Save Draft] [Submit]
           EDIT SUBMITTED                → [Delete] [Save Changes]
@@ -527,7 +527,7 @@ export function NewArticleScreen() {
               </Text>
             </TouchableOpacity>
           ) : (
-            // KYC not verified — render a disabled, locked-looking button with
+            // KYC not verified - render a disabled, locked-looking button with
             // a hint so the reporter understands they can save drafts but not
             // submit until admin verifies.
             <View style={[styles.submitBtn, styles.submitBtnLocked]}>
@@ -555,7 +555,7 @@ const styles = StyleSheet.create({
   // consonant baseline and need extra line-height + a top-anchored caret;
   // without these the top of the glyph is clipped by the default content box.
   headlineInput: { minHeight: 64, paddingTop: 12, paddingBottom: 12, lineHeight: 24, textAlignVertical: "top" },
-  // Summary textarea — grows from ~4 lines tall, content top-anchored.
+  // Summary textarea - grows from ~4 lines tall, content top-anchored.
   textarea: { minHeight: 100, paddingTop: 12, lineHeight: 22 },
   inputError: { borderColor: "#dc2626" },
   inputDisabled: { backgroundColor: "#f3f4f6", color: "#555" },
@@ -571,7 +571,7 @@ const styles = StyleSheet.create({
   translateBtnBusy: { opacity: 0.7 },
   translateText: { color: "#fff", fontSize: 14, fontWeight: "700", letterSpacing: 0.2 },
 
-  // Wraps to multiple rows so every category is visible at once — no
+  // Wraps to multiple rows so every category is visible at once - no
   // horizontal scroll. Vertical gap on row-wrap is handled by the same `gap`.
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, paddingVertical: 4, marginBottom: 12 },
   chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: "#fff", borderWidth: 1, borderColor: "#e5e7eb" },
@@ -596,7 +596,7 @@ const styles = StyleSheet.create({
   deleteBtn: { flex: 1, flexDirection: "row", gap: 6, padding: 16, backgroundColor: "#fff", borderRadius: 10, borderWidth: 1, borderColor: "#fecaca", alignItems: "center", justifyContent: "center" },
   deleteText: { fontSize: 14, fontWeight: "700", color: "#dc2626" },
   // CREATE mode keeps Save Draft at flex 1 next to Submit (flex 2).
-  // EDIT-DRAFT mode adds the Delete button — keep all three at flex 1, 1, 2.
+  // EDIT-DRAFT mode adds the Delete button - keep all three at flex 1, 1, 2.
   draftBtn: { flex: 1, padding: 16, backgroundColor: "#fff", borderRadius: 10, borderWidth: 1, borderColor: "#ddd", alignItems: "center", justifyContent: "center" },
   draftBtnFlex1: { flex: 1, padding: 16, backgroundColor: "#fff", borderRadius: 10, borderWidth: 1, borderColor: "#ddd", alignItems: "center", justifyContent: "center" },
   draftText: { fontSize: 14, fontWeight: "700", color: "#555" },

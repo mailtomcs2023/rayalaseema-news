@@ -1,6 +1,6 @@
-// Spec #4 A3 (#194) — backfill lat/lng for District/Constituency/Mandal from
+// Spec #4 A3 (#194) - backfill lat/lng for District/Constituency/Mandal from
 // OpenStreetMap Nominatim. Feeds NewsArticle contentLocation + spatialCoverage
-// JSON-LD downstream (Phase B1 #197). Idempotent — skips rows already set
+// JSON-LD downstream (Phase B1 #197). Idempotent - skips rows already set
 // unless --force is passed.
 //
 // Nominatim policy: ≤1 req/sec + real User-Agent. We sleep 1.5s between

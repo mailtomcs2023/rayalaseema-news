@@ -40,7 +40,7 @@ interface Field {
   // fills this field with the Telugu translation via /api/ai/rewrite.
   translateFromKey?: string;
   // When set, this field auto-fills with a slugified version of the source
-  // key as the user types — until the user manually edits the slug.
+  // key as the user types - until the user manually edits the slug.
   slugFromKey?: string;
 }
 
@@ -151,7 +151,7 @@ export function CrudTable({ title, apiPath, columns, data, fields }: CrudTablePr
       const next = { ...prev, [key]: value };
       // Cascade: if another field auto-derives its slug from `key`, refresh it.
       // Only refresh when the slug field is empty or still matches the slug
-      // we previously derived — preserves manual edits.
+      // we previously derived - preserves manual edits.
       for (const f of fields) {
         if (f.slugFromKey === key) {
           const currentSlug = String(prev[f.key] || "");
@@ -167,7 +167,7 @@ export function CrudTable({ title, apiPath, columns, data, fields }: CrudTablePr
 
   return (
     <>
-      {/* Toast — fixed top-right, auto-dismisses */}
+      {/* Toast - fixed top-right, auto-dismisses */}
       {toast && (
         <div
           style={{
@@ -235,7 +235,7 @@ export function CrudTable({ title, apiPath, columns, data, fields }: CrudTablePr
                       ) : col.type === "link" ? (
                         val ? "Yes" : "-"
                       ) : col.type === "url" ? (
-                        // Image columns — render a small thumbnail when the cell
+                        // Image columns - render a small thumbnail when the cell
                         // is an image URL (epaper-ads, epaper-images). Falls
                         // back to the URL text if the image fails to load.
                         val ? (

@@ -2,7 +2,7 @@
 //   - 1 root GEOGRAPHIC desk (Rayalaseema Express)
 //   - 1 per district (8) under root
 //   - 1 per constituency (55) under matching district
-//   - 1 TOPICAL per active root category (~21 — skip "editorial", handled by EDITORIAL branch)
+//   - 1 TOPICAL per active root category (~21 - skip "editorial", handled by EDITORIAL branch)
 //   - 3 EDITORIAL: Editorial / Opinion / Letters
 //
 // Run:  cd packages/db && bunx tsx scripts/seed-desks.ts

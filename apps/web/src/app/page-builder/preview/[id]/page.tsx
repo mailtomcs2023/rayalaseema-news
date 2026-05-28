@@ -1,4 +1,4 @@
-// Page Builder (Spec #2) — public iframe preview route for the admin
+// Page Builder (Spec #2) - public iframe preview route for the admin
 // editor. apps/admin loads this URL inside the canvas iframe with
 // ?draft=1 so the operator sees the in-progress draftLayout (falling
 // back to the published layout when no draft exists). The page emits
@@ -32,7 +32,7 @@ export default async function PreviewPage({
   });
   if (!tpl) return notFound();
 
-  // Default URL context = "/" — the editor can override (E5+) via the
+  // Default URL context = "/" - the editor can override (E5+) via the
   // ?url= query so the operator can preview a category template against
   // a real category slug.
   const urlPath = sp.url || "/";

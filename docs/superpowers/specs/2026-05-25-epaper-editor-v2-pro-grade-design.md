@@ -1,4 +1,4 @@
-# ePaper Editor v2 — Pro-Grade Redesign
+# ePaper Editor v2 - Pro-Grade Redesign
 
 **Date:** 2026-05-25
 **Status:** Brainstorming output, ready for implementation plan
@@ -10,12 +10,12 @@
 
 User audit of the current editor surfaced concrete defects:
 
-- Hardcoded "30 rows" — invented unit, not grounded in real broadsheet math.
-- Hardcoded page size 300×560 mm — wrong (Eenadu = 330×520 mm live area).
-- 12-column grid — wrong (Eenadu/Sakshi/Hindu all use 8 columns).
-- Drag-overflow popup blocks the operator with a `window.alert` — described as "childish".
-- No master-page concept — masthead/cities band duplicated per page, edits don't propagate.
-- Hard blocks instead of preflight warnings — diverges from InDesign/Quark/Affinity convention.
+- Hardcoded "30 rows" - invented unit, not grounded in real broadsheet math.
+- Hardcoded page size 300×560 mm - wrong (Eenadu = 330×520 mm live area).
+- 12-column grid - wrong (Eenadu/Sakshi/Hindu all use 8 columns).
+- Drag-overflow popup blocks the operator with a `window.alert` - described as "childish".
+- No master-page concept - masthead/cities band duplicated per page, edits don't propagate.
+- Hard blocks instead of preflight warnings - diverges from InDesign/Quark/Affinity convention.
 
 Research (Eenadu mech data, Sakshi/Hindu rate cards, Adobe InDesign docs) confirms:
 
@@ -33,7 +33,7 @@ Research (Eenadu mech data, Sakshi/Hindu rate cards, Adobe InDesign docs) confir
 1. Use real Indian broadsheet geometry (Eenadu-equivalent).
 2. Drop the row-count fiction; coordinates in mm.
 3. Operator can place blocks anywhere with column-snap, free Y.
-4. Off-page never blocks the drag — surfaced via a preflight panel.
+4. Off-page never blocks the drag - surfaced via a preflight panel.
 5. Repeating elements (masthead, folio, cities band) live in master pages, propagate on edit.
 6. Migrate existing edition layouts losslessly; legacy renderer keeps published archive readable.
 7. Each phase ships independently; v2 lives behind a feature flag until proven.
@@ -60,8 +60,8 @@ Research (Eenadu mech data, Sakshi/Hindu rate cards, Adobe InDesign docs) confir
 
 ```ts
 type PageGeometry = {
-  trim:   { w: 381, h: 578 };   // mm — sheet edge
-  live:   { w: 330, h: 520 };   // mm — printable area, centered
+  trim:   { w: 381, h: 578 };   // mm - sheet edge
+  live:   { w: 330, h: 520 };   // mm - printable area, centered
   margin: { top: 29, outer: 25.5, inner: 25.5, bottom: 29 }; // derived
   cols: 8;
   colWidth: 40.6;               // (330 - 7*gutter) / 8
@@ -94,7 +94,7 @@ Hold **Alt** during drag/resize bypasses snap (operator override).
 - Visible elements:
   - **Live-area boundary**: 1px red rect at 330 × 520 mm
   - **Column guides**: 8 cyan vertical lines + dimmed gutters
-  - **Baseline grid**: pink horizontal lines every 4.23 mm (toggleable, default off — too noisy)
+  - **Baseline grid**: pink horizontal lines every 4.23 mm (toggleable, default off - too noisy)
   - **Bleed band**: dotted 3mm outside live area (jacket ads only)
 - Free Y; column-locked X/W.
 
@@ -115,7 +115,7 @@ model EpaperMaster {
 }
 ```
 
-- `EpaperTemplate.masterSlug?: String` — template inherits master.
+- `EpaperTemplate.masterSlug?: String` - template inherits master.
 - `EpaperPage.layout` shape gains `masterSlug?` so per-page override is possible.
 - Editor renders master blocks first, dimmed + non-interactive.
 - **Detach from master** action: copies master block to page layout, removes master ref → block becomes editable.
@@ -138,7 +138,7 @@ type Issue = {
 ```
 
 - Each row: severity color dot + page#/block + 1-line detail + click → focus that block in canvas
-- Top-bar chip: `⚠ 12 issues (3 blocking)` — click opens panel
+- Top-bar chip: `⚠ 12 issues (3 blocking)` - click opens panel
 - **Workflow gate**: APPROVED → PUBLISHED transition refuses when any blocking issue exists; operator can downgrade per-issue severity (audit-logged)
 - Default severity table:
   - `overflow` (block past trim) → blocking
@@ -187,10 +187,10 @@ function migrateLegacyLayout(blocks: GridBlock[]): MmBlock[] {
 ## 12. New / changed files
 
 **New:**
-- `apps/admin/src/lib/epaper/geometry.ts` — PageGeometry, snap helpers, `migrateLegacyLayout`
-- `apps/admin/src/lib/epaper/preflight.ts` — issue collector + severity
-- `apps/admin/src/components/epaper/canvas.tsx` — moveable + selecto wrapper
-- `apps/admin/src/components/epaper/ruler.tsx` — top + left mm rulers
+- `apps/admin/src/lib/epaper/geometry.ts` - PageGeometry, snap helpers, `migrateLegacyLayout`
+- `apps/admin/src/lib/epaper/preflight.ts` - issue collector + severity
+- `apps/admin/src/components/epaper/canvas.tsx` - moveable + selecto wrapper
+- `apps/admin/src/components/epaper/ruler.tsx` - top + left mm rulers
 - `apps/admin/src/components/epaper/preflight-panel.tsx`
 - `apps/admin/src/components/epaper/master-overlay.tsx`
 - `apps/admin/src/app/(dashboard)/epaper-templates/masters/[slug]/page.tsx`
@@ -198,10 +198,10 @@ function migrateLegacyLayout(blocks: GridBlock[]): MmBlock[] {
 - Prisma migration: `EpaperMaster`, `EpaperTemplate.masterSlug`, `EpaperEdition.pageGeometry`, `EpaperPage.layout` shape
 
 **Changed:**
-- `apps/admin/src/app/(dashboard)/epaper/page.tsx` — strip `DraggableBlockGrid`; mount Canvas + Preflight + Ruler; toolbar adapted
-- `apps/admin/src/lib/epaper/render-layout.ts` — branch on `coordSystem`
-- `packages/db/scripts/seed-epaper-templates.ts` — link templates to masters; drop masthead/section-band blocks from page layouts
-- `apps/admin/src/lib/epaper/quality.ts` — feeds `preflight.ts`
+- `apps/admin/src/app/(dashboard)/epaper/page.tsx` - strip `DraggableBlockGrid`; mount Canvas + Preflight + Ruler; toolbar adapted
+- `apps/admin/src/lib/epaper/render-layout.ts` - branch on `coordSystem`
+- `packages/db/scripts/seed-epaper-templates.ts` - link templates to masters; drop masthead/section-band blocks from page layouts
+- `apps/admin/src/lib/epaper/quality.ts` - feeds `preflight.ts`
 
 **Removed (after Phase 5):**
 - `react-grid-layout` dep
@@ -212,14 +212,14 @@ function migrateLegacyLayout(blocks: GridBlock[]): MmBlock[] {
 
 | Phase | Scope | Risk | Deliverable |
 |---|---|---|---|
-| 1 | Schema + geometry lib + migrateLegacyLayout + render branch | Low — additive | Backend ready, no UI change |
-| 2 | New Canvas behind `?editor=v2` flag | Low — opt-in | Side-by-side test against v1 |
+| 1 | Schema + geometry lib + migrateLegacyLayout + render branch | Low - additive | Backend ready, no UI change |
+| 2 | New Canvas behind `?editor=v2` flag | Low - opt-in | Side-by-side test against v1 |
 | 3 | Preflight panel + master overlay | Medium | v2 reaches v1 parity |
 | 4 | Master pages CRUD + propagation | Medium | New v2-only feature |
-| 5 | Flip default to v2; remove RGL after 7 days stable | Medium — cutover | Old editor gone |
+| 5 | Flip default to v2; remove RGL after 7 days stable | Medium - cutover | Old editor gone |
 
 Each phase = independent PR. Estimated 2–3 weeks total dev.
 
 ## 14. Open questions
 
-None — all 6 scope questions answered during brainstorming. Implementation plan to be drafted next via `writing-plans` skill.
+None - all 6 scope questions answered during brainstorming. Implementation plan to be drafted next via `writing-plans` skill.

@@ -22,12 +22,12 @@ type Router = ReturnType<typeof useRouter>;
 /**
  * Gate for article-creation entry points (FAB, empty-state CTAs, etc).
  *
- * Returns true only if the reporter's KYC is VERIFIED — in which case the
+ * Returns true only if the reporter's KYC is VERIFIED - in which case the
  * caller proceeds with the navigation. Otherwise an Alert tailored to the
  * current KYC state explains the block; the caller does nothing further.
  *
  * The server enforces the same rule on POST /api/reporter/articles, so this
- * is a UX hint — not the security boundary.
+ * is a UX hint - not the security boundary.
  */
 export async function requireVerifiedKyc(
   t: (k: string) => string,

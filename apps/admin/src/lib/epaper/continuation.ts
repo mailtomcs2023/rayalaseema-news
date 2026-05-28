@@ -13,7 +13,7 @@ export interface Block {
   locked?: boolean;
   content?: string;
   href?: string;
-  // Continuation metadata — set on BOTH source and continuation blocks.
+  // Continuation metadata - set on BOTH source and continuation blocks.
   // Source block: { continuesToPage, continuesToBlockId }
   // Continuation block: { continuesFromPage, continuesFromBlockId, bodyStart, articleId (same article) }
   continuesToPage?: number;
@@ -32,7 +32,7 @@ interface PageBundle {
 /**
  * Estimate how many characters of plain-text body fit visibly in a story block.
  * Numbers are empirical for the broadsheet render grid (1480×2760 px, 92px rows,
- * 12 cols). Headline-only blocks (secondary/brief) return 0 — they can't host a
+ * 12 cols). Headline-only blocks (secondary/brief) return 0 - they can't host a
  * continuation tail.
  */
 export function estimateCapacity(b: Block): number {
@@ -122,7 +122,7 @@ export async function buildContinuations(editionId: string): Promise<number> {
   }
   if (articleIds.size === 0) return 0;
 
-  // Pull body lengths only — keep payload tiny. (Spec #1 #133 → Content.)
+  // Pull body lengths only - keep payload tiny. (Spec #1 #133 → Content.)
   const bodies = await prisma.content.findMany({
     where: { id: { in: [...articleIds] }, type: "ARTICLE" },
     select: { id: true, body: true },

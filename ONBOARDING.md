@@ -1,14 +1,14 @@
-# Rayalaseema Express — Developer Onboarding
+# Rayalaseema Express - Developer Onboarding
 
-Get a new developer to an identical local setup — same code, same data.
+Get a new developer to an identical local setup - same code, same data.
 
 ## What you receive
 
 | Item | Source |
 |------|--------|
 | Code | This Git repo (`git clone`) |
-| Database data (categories, districts, ~334 articles, e-paper) | `db-snapshot.sql` — sent separately, **not in git** |
-| API keys | Filled into `.env` — get from team lead, never committed |
+| Database data (categories, districts, ~334 articles, e-paper) | `db-snapshot.sql` - sent separately, **not in git** |
+| API keys | Filled into `.env` - get from team lead, never committed |
 
 ## Prerequisites
 
@@ -30,12 +30,12 @@ psql -U postgres -c "CREATE DATABASE rayalaseema_express;"
 # 3. Restore the data snapshot (file sent by team lead)
 psql -U postgres -d rayalaseema_express < db-snapshot.sql
 
-# 4. Environment — copy the template into BOTH apps, fill values
+# 4. Environment - copy the template into BOTH apps, fill values
 cp .env.example apps/web/.env
 cp .env.example apps/admin/.env
 #   REQUIRED: DATABASE_URL, NEXTAUTH_SECRET
 #   OPTIONAL: AZURE_OPENAI_*, NEWSDATA_API_KEY, AZURE_STORAGE_CONNECTION_STRING,
-#             RAPIDAPI_CRICKET_KEY — blank = that feature returns 503, app still runs
+#             RAPIDAPI_CRICKET_KEY - blank = that feature returns 503, app still runs
 
 # 5. Prisma client
 cd packages/db && bunx prisma generate && cd ../..
@@ -48,7 +48,7 @@ bun run --filter=admin dev    # admin → http://localhost:3001
 ## Without API keys
 
 The app **boots fine** with only `DATABASE_URL` + `NEXTAUTH_SECRET`. Each integration
-degrades independently — a missing key makes that one route return `503 "X not configured"`,
+degrades independently - a missing key makes that one route return `503 "X not configured"`,
 it never crashes the app. Fill keys only for features you're working on.
 
 ## Refreshing the data snapshot

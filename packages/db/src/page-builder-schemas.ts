@@ -1,4 +1,4 @@
-// Page Builder (Spec #2) — Zod schemas for layout JSON and per-block configs.
+// Page Builder (Spec #2) - Zod schemas for layout JSON and per-block configs.
 // Spec: docs/superpowers/specs/2026-05-25-page-builder-design.md
 //
 // Layout JSON shape (stored in Template.layout / Template.draftLayout):
@@ -158,12 +158,12 @@ export const layoutSchema = z
 
 export type Layout = z.infer<typeof layoutSchema>;
 
-// CompositeBlock.blocks shape — same as layout.blocks but stored standalone.
+// CompositeBlock.blocks shape - same as layout.blocks but stored standalone.
 // Cycle detection in the renderer (#169) prevents Composite-of-Composite loops.
 export const compositeBlocksSchema = z.array(blockSchema);
 export type CompositeBlocks = z.infer<typeof compositeBlocksSchema>;
 
-// Built-in (non-Composite) block type list — used by the palette + registry.
+// Built-in (non-Composite) block type list - used by the palette + registry.
 export const BUILTIN_BLOCK_TYPES = [
   "ReturnVisitBanner",
   "AdHeaderLeaderboard",

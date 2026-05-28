@@ -1,12 +1,12 @@
-// Spec #4 D4 (#217) — robots.txt with AI bot blocks.
+// Spec #4 D4 (#217) - robots.txt with AI bot blocks.
 //
 // Allow Google + Bing + their image / news variants. Block the AI crawlers
-// that scrape content for LLM training without sending traffic back —
+// that scrape content for LLM training without sending traffic back -
 // GPTBot (OpenAI), ClaudeBot (Anthropic), CCBot (Common Crawl), PerplexityBot,
 // Google-Extended (Google AI training, separate from Search), Bytespider
 // (ByteDance / TikTok), anthropic-ai (older Anthropic identifier).
 //
-// We intentionally allow the Search-side bots from the same companies —
+// We intentionally allow the Search-side bots from the same companies -
 // Perplexity's user-facing search crawler is distinct from PerplexityBot
 // and uses a different user agent; we want our content cited in AI Mode
 // answers, just not free-mined for training.
@@ -17,7 +17,7 @@ import type { MetadataRoute } from "next";
 
 const PUBLIC_DISALLOW = [
   "/api/",
-  "/search",            // dynamic search pages — no SEO value
+  "/search",            // dynamic search pages - no SEO value
   "/admin/",
   "/_next/",
   "/*?preview=*",       // preview-mode URLs
@@ -72,7 +72,7 @@ export default function robots(): MetadataRoute.Robots {
       // Kagi Sherpa, etc.) via the wildcard rule above which permits them.
       ...AI_TRAINING_BOTS.map((bot) => ({ userAgent: bot, disallow: "/" })),
     ],
-    // Submit the index — Bing + GSC follow it to the per-purpose sitemaps.
+    // Submit the index - Bing + GSC follow it to the per-purpose sitemaps.
     sitemap: [
       `${siteUrl}/sitemap-index.xml`,
       `${siteUrl}/sitemap.xml`,

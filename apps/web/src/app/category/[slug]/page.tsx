@@ -1,5 +1,5 @@
 // Public category page. Layout is admin-editable via Page Builder (Spec #2).
-// TemplateRenderer resolves "/category/<slug>" against the assignment table —
+// TemplateRenderer resolves "/category/<slug>" against the assignment table -
 // the seeded /category/* assignment (#158) points it at the Standard Category
 // template; /category/movie-reviews has a higher-priority assignment pointing
 // at the Movie Reviews template that swaps the news rail for a CinemaBand.
@@ -27,7 +27,7 @@ export async function generateMetadata({
   const siteUrl = process.env.SITE_URL || "https://rayalaseemaexpress.com";
   return {
     title: `${cat.name} | రాయలసీమ ఎక్స్‌ప్రెస్`,
-    description: cat.description || `${cat.name} — తాజా వార్తలు, విశ్లేషణలు`,
+    description: cat.description || `${cat.name} - తాజా వార్తలు, విశ్లేషణలు`,
     alternates: { canonical: `${siteUrl}/category/${slug}` },
     openGraph: {
       title: cat.name,
@@ -62,7 +62,7 @@ export default async function CategoryPage({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: stringifyJsonLd(breadcrumbLd) }} />
       <Header config={config} breakingNews={[]} />
       <main style={{ maxWidth: 1280, margin: "0 auto", padding: "18px 12px 48px" }}>
-        {/* Spec #4 F4 (#228) — category header with name + description so
+        {/* Spec #4 F4 (#228) - category header with name + description so
             the hub has its own content surface for crawlers. The
             TemplateRenderer-rendered article grid follows below. */}
         <header style={{ marginBottom: 18, paddingBottom: 12, borderBottom: "1px solid #e5e7eb" }}>

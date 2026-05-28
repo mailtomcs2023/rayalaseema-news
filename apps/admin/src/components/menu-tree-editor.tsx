@@ -36,7 +36,7 @@ interface Props {
   versionCount: number;
   categories: Category[];
   recentContent: ContentRow[];
-  // Spec #3 F1 #185 — broken-link detection. Pre-computed sets of currently
+  // Spec #3 F1 #185 - broken-link detection. Pre-computed sets of currently
   // valid CATEGORY slugs and CONTENT ids referenced by this menu. Any item
   // whose target points outside these sets gets a ⚠ icon + banner.
   validCategorySlugs: string[];
@@ -62,7 +62,7 @@ export function MenuTreeEditor(props: Props) {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dirty = useRef(false);
 
-  // Sets from props recomputed once per render — referenced by the
+  // Sets from props recomputed once per render - referenced by the
   // ItemRow / banner code to flag broken targets.
   const validCategorySet = new Set(props.validCategorySlugs);
   const validContentSet = new Set(props.validContentIds);
@@ -86,7 +86,7 @@ export function MenuTreeEditor(props: Props) {
     return false;
   };
 
-  // Debounced auto-save — 5s after the last edit. The status pill in the
+  // Debounced auto-save - 5s after the last edit. The status pill in the
   // header reflects the save state.
   const queueSave = useCallback(() => {
     dirty.current = true;
@@ -149,7 +149,7 @@ export function MenuTreeEditor(props: Props) {
           const data = await res.json();
           setOtherEditors(data.others || []);
         }
-      } catch { /* swallow — presence is non-critical */ }
+      } catch { /* swallow - presence is non-critical */ }
     };
     tick();
     const iv = setInterval(tick, 10_000);
@@ -204,7 +204,7 @@ export function MenuTreeEditor(props: Props) {
   };
 
   // Demote a top-level item to a child of the item above (only if the
-  // item has no children — depth limit max 2).
+  // item has no children - depth limit max 2).
   const nest = (topIdx: number) => {
     if (topIdx === 0) return;
     const item = tree[topIdx];
@@ -254,7 +254,7 @@ export function MenuTreeEditor(props: Props) {
             {tree.length} top-level item{tree.length === 1 ? "" : "s"}
             {tree.length > 10 && props.location === "header" && (
               <span style={{ color: "#b45309", marginLeft: 8 }}>
-                ⚠ Header has &gt;10 items — may overflow on narrow screens.
+                ⚠ Header has &gt;10 items - may overflow on narrow screens.
               </span>
             )}
           </p>
@@ -307,7 +307,7 @@ export function MenuTreeEditor(props: Props) {
           <strong>⚠ {brokenItems.length} item{brokenItems.length === 1 ? "" : "s"} reference deleted content:</strong>
           <ul style={{ margin: "6px 0 0 18px" }}>
             {brokenItems.slice(0, 6).map((b, i) => (
-              <li key={i}><b>{b.label}</b> — {b.reason}</li>
+              <li key={i}><b>{b.label}</b> - {b.reason}</li>
             ))}
             {brokenItems.length > 6 && <li>…and {brokenItems.length - 6} more</li>}
           </ul>
@@ -318,12 +318,12 @@ export function MenuTreeEditor(props: Props) {
           session was seen on this location in the last 30s. */}
       {otherEditors.length > 0 && (
         <div style={{ background: "#eef2ff", border: "1px solid #c7d2fe", padding: "8px 14px", borderRadius: 8, fontSize: 12, color: "#3730a3", marginBottom: 12 }}>
-          👥 Also editing now: {otherEditors.map((e) => e.name).join(", ")} — last writer wins.
+          👥 Also editing now: {otherEditors.map((e) => e.name).join(", ")} - last writer wins.
         </div>
       )}
 
       <div style={{ display: "grid", gridTemplateColumns: "260px 1fr 320px", gap: 16 }}>
-        {/* PALETTE — 4 target type adders */}
+        {/* PALETTE - 4 target type adders */}
         <div style={{ background: "#fff", borderRadius: 10, padding: 14, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
           <h3 style={{ fontSize: 13, fontWeight: 700, color: "#111", marginBottom: 10 }}>Add item</h3>
 
@@ -425,7 +425,7 @@ function CategoryPicker({ categories, onPick }: { categories: Category[]; onPick
   return (
     <div style={{ display: "flex", gap: 6 }}>
       <select value={v} onChange={(e) => setV(e.target.value)} style={inp}>
-        <option value="">— pick —</option>
+        <option value="">- pick -</option>
         {categories.map((c) => <option key={c.slug} value={c.slug}>{c.nameEn}</option>)}
       </select>
       <button onClick={() => { const c = categories.find((x) => x.slug === v); if (c) { onPick(c); setV(""); } }}
@@ -544,7 +544,7 @@ function ItemConfig({
           <Label>Category</Label>
           <select value={item.target.categorySlug}
             onChange={(e) => onChange({ target: { type: "CATEGORY", categorySlug: e.target.value } })} style={inp}>
-            <option value="">— pick —</option>
+            <option value="">- pick -</option>
             {categories.map((c) => <option key={c.slug} value={c.slug}>{c.nameEn}</option>)}
           </select>
         </>
@@ -576,7 +576,7 @@ function ItemConfig({
               const c = recentContent.find((r) => r.id === e.target.value);
               onChange({ target: { type: "CONTENT", contentId: e.target.value, contentTypeCache: c?.type, contentSlugCache: c?.slug || undefined } });
             }} style={inp}>
-            <option value="">— pick —</option>
+            <option value="">- pick -</option>
             {recentContent.slice(0, 50).map((r) => (
               <option key={r.id} value={r.id}>[{r.type}] {r.title.slice(0, 40)}</option>
             ))}

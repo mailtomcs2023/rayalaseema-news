@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   } catch (e) { return apiError(e); }
 }
 
-// POST /api/epaper/image-assets — create
+// POST /api/epaper/image-assets - create
 export async function POST(req: NextRequest) {
   const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR"]);
   if (isAuthError(session)) return session;

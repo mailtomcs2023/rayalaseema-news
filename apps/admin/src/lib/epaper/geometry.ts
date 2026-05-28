@@ -6,13 +6,13 @@
 // (mm-v2 path).
 
 export type PageGeometry = {
-  trim:   { w: number; h: number };   // mm — sheet edge
-  live:   { w: number; h: number };   // mm — printable area (centered inside trim)
+  trim:   { w: number; h: number };   // mm - sheet edge
+  live:   { w: number; h: number };   // mm - printable area (centered inside trim)
   margin: { top: number; outer: number; inner: number; bottom: number };
   cols: number;
-  colWidth: number;                   // mm — derived: (live.w - (cols-1)*gutter) / cols
+  colWidth: number;                   // mm - derived: (live.w - (cols-1)*gutter) / cols
   gutter: number;                     // mm
-  baseline: number;                   // mm — body-text leading (12pt ≈ 4.23mm Telugu-safe)
+  baseline: number;                   // mm - body-text leading (12pt ≈ 4.23mm Telugu-safe)
 };
 
 // Eenadu-equivalent default (matches the 8-col broadsheet used by every
@@ -90,7 +90,7 @@ export function offPageAmount(b: BlockBounds, g: PageGeometry = DEFAULT_GEOMETRY
 
 // ============ Geometry resolver ============
 
-/** Read effective geometry — edition override → default. */
+/** Read effective geometry - edition override → default. */
 export function resolveGeometry(editionOverride: unknown): PageGeometry {
   if (!editionOverride || typeof editionOverride !== "object") return DEFAULT_GEOMETRY;
   const override = editionOverride as Partial<PageGeometry>;

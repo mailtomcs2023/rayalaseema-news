@@ -7,7 +7,7 @@ import { ReactNode } from "react";
 
 // Web mirror of the Expo reporter app's chrome: red rounded header with the
 // inverse logo on top, four-tab nav strip at the bottom (and as a side rail on
-// desktop). The reporter never sees the admin sidebar — only their own four
+// desktop). The reporter never sees the admin sidebar - only their own four
 // surfaces: Home, My Articles, Earnings, Profile.
 export function ReporterShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -21,7 +21,7 @@ export function ReporterShell({ children }: { children: ReactNode }) {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f3f4f6", display: "flex", flexDirection: "column" }}>
-      {/* Brand header — bottom-rounded red banner matching ScreenHeader in Expo.
+      {/* Brand header - bottom-rounded red banner matching ScreenHeader in Expo.
           Sticky so it stays pinned while the page scrolls underneath, the way
           the native Expo header does. */}
       <header
@@ -41,7 +41,7 @@ export function ReporterShell({ children }: { children: ReactNode }) {
         <img src="/logo-inverse.svg" alt="Rayalaseema Express" style={{ height: 32, display: "block" }} />
       </header>
 
-      {/* Page body — leaves room for the fixed bottom tab bar. Pages own
+      {/* Page body - leaves room for the fixed bottom tab bar. Pages own
           their own top padding so layout matches the Expo `paddingTop`
           values exactly. Headings inside reset their browser-default top/
           bottom margins (see the global rule in the <style> block below). */}
@@ -54,7 +54,7 @@ export function ReporterShell({ children }: { children: ReactNode }) {
           // headings, and chips all align on the same vertical line.
           paddingLeft: 14,
           paddingRight: 14,
-          // Tab bar (~56) + FAB clearance (~80 to bottom) — keep the last
+          // Tab bar (~56) + FAB clearance (~80 to bottom) - keep the last
           // article card from being hidden behind the floating "+" button.
           paddingBottom: 140,
           maxWidth: 960,
@@ -66,7 +66,7 @@ export function ReporterShell({ children }: { children: ReactNode }) {
         {children}
       </main>
 
-      {/* Floating "new article" button — only shown on Home + Articles, the
+      {/* Floating "new article" button - only shown on Home + Articles, the
           same two screens that show a FAB in the Expo app. Hidden on
           Earnings, Profile, and the editor itself. */}
       {(pathname === "/reporter" || pathname === "/reporter/articles") && (
@@ -79,7 +79,7 @@ export function ReporterShell({ children }: { children: ReactNode }) {
         </Link>
       )}
 
-      {/* Bottom tab bar — fixed to the viewport, matching the native tab bar */}
+      {/* Bottom tab bar - fixed to the viewport, matching the native tab bar */}
       <nav className="reporter-tabs">
         {tabs.map((t) => {
           // Home is active only on exact /reporter; deeper tabs match either

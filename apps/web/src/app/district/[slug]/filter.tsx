@@ -20,7 +20,7 @@ export function ConstituencyFilter({ constituencies }: { constituencies: Constit
   const router = useRouter();
 
   return (
-    // Radix-backed Select via shadcn. value="" is intentionally NOT set —
+    // Radix-backed Select via shadcn. value="" is intentionally NOT set -
     // we want the trigger to show only the placeholder until a real
     // constituency is picked, and Radix doesn't allow "" as a SelectItem
     // value (it's reserved for "clear"). We just navigate on selection.

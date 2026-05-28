@@ -4,7 +4,7 @@
 // district-master section-band + folio              used by DISTRICT templates
 // section-master  section-band + folio              used by SECTION templates
 //
-// All coords in mm against the 330×520 mm live area. Idempotent — upserts by slug.
+// All coords in mm against the 330×520 mm live area. Idempotent - upserts by slug.
 // Run: bun packages/db/scripts/seed-epaper-masters.ts
 
 import { PrismaClient } from "@prisma/client";

@@ -5,7 +5,7 @@ import { Stack, useRouter } from "expo-router";
 import { useT } from "../src/i18n";
 import { ProfilePasswordView } from "../src/screens/profile/PasswordView";
 
-// "Change Password" detail screen — wraps the shared view with a localised
+// "Change Password" detail screen - wraps the shared view with a localised
 // title and an explicit back button.
 export default function ProfilePasswordRoute() {
   const { t } = useT();

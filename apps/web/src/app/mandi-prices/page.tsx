@@ -1,4 +1,4 @@
-// Spec #4 K2 (#247) — /mandi-prices page.
+// Spec #4 K2 (#247) - /mandi-prices page.
 //
 // Single canonical URL using the existing MandiPrice model. Filter by
 // commodity + market name client-side; daily-updated server-side.
@@ -9,12 +9,12 @@ import { Footer } from "@/components/footer";
 import { prisma } from "@rayalaseema/db";
 import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 
-export const revalidate = 1800; // 30 min — mandi prices update once or twice a day
+export const revalidate = 1800; // 30 min - mandi prices update once or twice a day
 
 const SITE_URL = process.env.SITE_URL || "https://rayalaseemaexpress.com";
 
 export const metadata: Metadata = {
-  title: "Today's mandi prices — Rayalaseema Express News",
+  title: "Today's mandi prices - Rayalaseema Express News",
   description:
     "Latest commodity prices from Andhra Pradesh mandis. Chilli, cotton, turmeric, paddy, groundnut, maize, tomato, onion rates from major Rayalaseema markets. Updated daily.",
   alternates: { canonical: `${SITE_URL}/mandi-prices` },
@@ -49,7 +49,7 @@ export default async function MandiPricesPage() {
     "@context": "https://schema.org",
     "@type": "NewsArticle",
     headline: "Today's mandi prices across Rayalaseema markets",
-    description: "Latest commodity prices — chilli, cotton, turmeric, paddy, groundnut, maize, tomato, onion — from major AP mandis.",
+    description: "Latest commodity prices - chilli, cotton, turmeric, paddy, groundnut, maize, tomato, onion - from major AP mandis.",
     datePublished: rows[0]?.date.toISOString() || new Date().toISOString(),
     dateModified: rows[0]?.date.toISOString() || new Date().toISOString(),
     publisher: { "@type": "NewsMediaOrganization", name: "Rayalaseema Express News", url: SITE_URL },
@@ -67,7 +67,7 @@ export default async function MandiPricesPage() {
           Today's mandi prices
         </h1>
         <p style={{ fontSize: 14, color: "#888", marginBottom: 24 }}>
-          ఈరోజు మండీ ధరలు · Updated {rows[0]?.date.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) || "—"}
+          ఈరోజు మండీ ధరలు · Updated {rows[0]?.date.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) || "-"}
         </p>
 
         {byCommodity.size === 0 ? (

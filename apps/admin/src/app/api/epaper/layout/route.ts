@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 
-// GET /api/epaper/layout?date= — edition layout + titles of referenced articles
+// GET /api/epaper/layout?date= - edition layout + titles of referenced articles
 export async function GET(req: NextRequest) {
   const session = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(session)) return session;
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// PUT /api/epaper/layout?date= — save edited layout
+// PUT /api/epaper/layout?date= - save edited layout
 export async function PUT(req: NextRequest) {
   const session = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(session)) return session;

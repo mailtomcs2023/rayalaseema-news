@@ -10,7 +10,7 @@ import { API_URL } from "../../api/client";
 import { changePasswordSchema, fieldErrors } from "../../lib/validation";
 
 /**
- * Standalone Change Password screen. Self-service (no admin approval) —
+ * Standalone Change Password screen. Self-service (no admin approval) -
  * the only profile field reporters can change without a request flow.
  */
 export function ProfilePasswordView() {

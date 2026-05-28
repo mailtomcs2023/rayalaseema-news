@@ -8,7 +8,7 @@ import { ArticleEditor } from "@/components/reporter/article-editor";
 // New-article page for the reporter web portal. Mirrors the Expo
 // NewArticleScreen (create mode). Reporters who haven't completed KYC can
 // still save drafts, but the "Submit for Review" button is replaced by a
-// locked hint — same UX rule as the mobile app.
+// locked hint - same UX rule as the mobile app.
 export default async function NewReporterArticle() {
   const session = await auth();
   if (!session?.user) redirect("/login");

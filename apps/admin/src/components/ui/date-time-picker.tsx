@@ -36,7 +36,7 @@ function formatDisplay(d: Date): string {
 }
 
 /**
- * Shadcn date+time picker — drop-in replacement for `<input type="datetime-local">`.
+ * Shadcn date+time picker - drop-in replacement for `<input type="datetime-local">`.
  * Value is a "YYYY-MM-DDTHH:MM" local-time string (no timezone). Pass `""` to
  * clear. `onChange("")` fires when the user clicks Clear.
  */
@@ -88,7 +88,7 @@ export function DateTimePicker({
   };
 
   const commitTime = () => {
-    if (!parsed) return; // no date picked yet — time edits ignored
+    if (!parsed) return; // no date picked yet - time edits ignored
     const h = Math.min(23, Math.max(0, Number(hour) || 0));
     const m = Math.min(59, Math.max(0, Number(minute) || 0));
     commit(new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), h, m));

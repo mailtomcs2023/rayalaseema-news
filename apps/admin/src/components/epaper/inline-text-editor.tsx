@@ -43,7 +43,7 @@ export function InlineTextEditor({
         blockquote: multiline ? undefined : false,
         codeBlock: multiline ? undefined : false,
         horizontalRule: false,
-        // TipTap v3 removed `history` from StarterKit options — the History
+        // TipTap v3 removed `history` from StarterKit options - the History
         // extension is bundled with default depth 100. Customize via
         // disabling here + .extend({ depth: 50 }) if we need shallower undo.
       }),

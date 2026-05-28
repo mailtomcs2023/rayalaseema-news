@@ -37,12 +37,12 @@ function idSuffix(id: string): string {
  * Builds the canonical public URL for an article.
  *
  * - Geo-tagged article (has constituency): `/[district]/[constituency]/<slug>-<id8>`
- * - Untagged article: `/news/<slug>-<id8>` — fallback that will shrink to near-zero
+ * - Untagged article: `/news/<slug>-<id8>` - fallback that will shrink to near-zero
  *   once G2 (NER auto-tagging) lands and editors backfill the existing corpus.
  *
  * If `slug` is missing (e.g. BREAKING_NEWS with no public URL), returns `#` so
  * callers can render an inert link rather than crash. Callers should not link to
- * articles without slugs in the first place — guard upstream.
+ * articles without slugs in the first place - guard upstream.
  *
  * Reserved-slug check: if a district happens to share a slug with a reserved
  * root (e.g. someone seeds `about` as a district), we fall through to /news/ to

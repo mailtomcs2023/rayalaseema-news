@@ -7,7 +7,7 @@ import { FIELDS, previewNewValue, getCurrentValue, type ProfileResponse, type Pe
 import { EditSheet } from "./EditSheet";
 
 /**
- * The "Pending Changes" detail screen — lists every PENDING and recent
+ * The "Pending Changes" detail screen - lists every PENDING and recent
  * REJECTED change request. Tapping a row reopens its edit sheet so the
  * reporter can revise or withdraw.
  */

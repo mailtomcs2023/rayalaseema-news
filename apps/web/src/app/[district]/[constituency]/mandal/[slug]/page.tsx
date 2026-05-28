@@ -1,6 +1,6 @@
-// Spec #4 F3 (#227) — mandal hub page at /[district]/[constituency]/[mandal].
+// Spec #4 F3 (#227) - mandal hub page at /[district]/[constituency]/[mandal].
 //
-// Lightest hub tier — mandals don't have their own MLA, lat/lng often
+// Lightest hub tier - mandals don't have their own MLA, lat/lng often
 // missing from OSM, and article tagging by mandal won't fill out until
 // Phase G2 (NER auto-tagging on publish) lands. Until then this page
 // falls through to the parent constituency's article list so it's never
@@ -8,7 +8,7 @@
 //
 // URL collision note: the [slugid] route at
 // /[district]/[constituency]/[slugid] also matches three-segment URLs.
-// Next.js resolves by file specificity — the [mandal] segment is the
+// Next.js resolves by file specificity - the [mandal] segment is the
 // less-specific catch-all here, so we must explicitly detect an article
 // slug (ends with -<id8>) and 404 if matched here, OR detect mandal
 // existence before rendering article-shape URLs through this route.
@@ -32,12 +32,12 @@ const SITE_URL = process.env.SITE_URL || "https://rayalaseemaexpress.com";
 
 // Route shape: /[district]/[constituency]/mandal/[slug]. The /mandal/ prefix
 // was added when this hub clashed with the article slugid route at the same
-// depth — both /district/constituency/<x> patterns collided.
+// depth - both /district/constituency/<x> patterns collided.
 type Params = Promise<{ district: string; constituency: string; slug: string }>;
 
 // Article slug pattern (from articleHref): "<text>-<8 hex>". Now lives at a
 // different path so the looksLikeArticleSlug guard is no longer load-bearing
-// for disambiguation — kept as a defensive 404 for someone visiting a
+// for disambiguation - kept as a defensive 404 for someone visiting a
 // hand-crafted /mandal/<articleslug> URL.
 function looksLikeArticleSlug(s: string): boolean {
   return /-[a-z0-9]{8}$/.test(s);
@@ -81,7 +81,7 @@ export default async function MandalPage({ params }: { params: Params }) {
   const p = await params;
   const mandal = await resolveMandal(p);
   if (!mandal) return notFound();
-  // Verify the URL chain — mandal slug must belong to the constituency named
+  // Verify the URL chain - mandal slug must belong to the constituency named
   // in the URL, which in turn must belong to the named district.
   if (
     mandal.constituency.slug !== p.constituency ||

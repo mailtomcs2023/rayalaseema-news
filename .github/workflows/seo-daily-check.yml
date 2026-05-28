@@ -1,6 +1,6 @@
 name: SEO Daily Health Check
 
-# Spec #4 H7 (#240) — daily SEO health check.
+# Spec #4 H7 (#240) - daily SEO health check.
 # Runs nightly at 03:00 IST (21:30 UTC the previous day). Posts a digest
 # to the SEO_HEALTH_WEBHOOK Slack/Discord/email-relay endpoint.
 

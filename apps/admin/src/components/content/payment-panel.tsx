@@ -87,7 +87,7 @@ export function PaymentPanel({ contentId }: { contentId: string }) {
   }, [contentId]);
 
   // No panel until there's an actual payment row to show. While loading and
-  // before the sub-editor sets a payment, the sidebar stays clean — the panel
+  // before the sub-editor sets a payment, the sidebar stays clean - the panel
   // appears the moment real data exists.
   if (loading || !payment) return null;
 

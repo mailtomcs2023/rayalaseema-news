@@ -1,4 +1,4 @@
-// One-shot rebuild — inserts the 55 correct Rayalaseema ACs.
+// One-shot rebuild - inserts the 55 correct Rayalaseema ACs.
 // Uses temp slugs `new-ac-<NN>` to avoid colliding with the existing 78 wrong rows.
 // Phase 2 will remap mandals + articles to these new rows, then delete the old 78
 // and rename slugs to clean `<english-slug>-<acNumber>`.
@@ -16,7 +16,7 @@ interface AC {
   districtSlug: string;
 }
 
-// 55 Rayalaseema ACs — 2024 AP delimitation (AC No 120..175, missing 123 = pre-Sullurpeta number)
+// 55 Rayalaseema ACs - 2024 AP delimitation (AC No 120..175, missing 123 = pre-Sullurpeta number)
 const ACS: AC[] = [
   // Tirupati (7)
   { no: 120, en: "Gudur", te: "గూడూరు", districtSlug: "tirupati" },

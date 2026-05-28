@@ -13,7 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 
-// API_URL is the single source of truth in api/client.ts — imported above.
+// API_URL is the single source of truth in api/client.ts - imported above.
 
 export function LoginScreen() {
   const { t } = useT();
@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
   toggleRow: { flexDirection: "row", justifyContent: "flex-end", marginBottom: 4 },
   logo: { width: 240, height: 48, alignSelf: "center", marginBottom: 4 },
   // Fixed lineHeight / height values below keep the layout identical in English
-  // and Telugu — Telugu glyphs are taller, so without these the card resizes.
+  // and Telugu - Telugu glyphs are taller, so without these the card resizes.
   title: { fontSize: 24, lineHeight: 32, fontWeight: "800", color: "#111", textAlign: "center", marginTop: 4, paddingTop: 14 },
   subtitle: { fontSize: 13, lineHeight: 20, color: "#888", textAlign: "center", marginBottom: 24 },
   input: { borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 10, height: 52, paddingHorizontal: 14, fontSize: 15, marginBottom: 12, backgroundColor: "#fafafa" },

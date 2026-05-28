@@ -4,7 +4,7 @@ import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 import { convertPdfToCmyk, isCmykEnabled } from "@/lib/epaper/cmyk-pipe";
 import { uploadBuffer } from "@/lib/blob";
 
-// POST /api/epaper/cmyk — body { editionId }
+// POST /api/epaper/cmyk - body { editionId }
 //
 // Converts edition.pdfUrl (sRGB from web render) to CMYK with optional press
 // ICC profile via Ghostscript. Returns the CMYK PDF blob URL. #101.

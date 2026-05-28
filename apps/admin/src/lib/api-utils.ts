@@ -9,7 +9,7 @@ interface AuthSession {
 }
 
 // Resolve the current session into either AuthSession or an error response.
-// Internal — both requireAuth and requireCan delegate here so the session-
+// Internal - both requireAuth and requireCan delegate here so the session-
 // fetch + 401-on-failure logic stays in one place.
 async function resolveSession(): Promise<AuthSession | NextResponse> {
   try {
@@ -32,7 +32,7 @@ async function resolveSession(): Promise<AuthSession | NextResponse> {
 
 /**
  * Authorize an API request against a named permission. Preferred over
- * `requireAuth([...])` — when "who can publish?" changes, you edit
+ * `requireAuth([...])` - when "who can publish?" changes, you edit
  * `lib/permissions.ts` instead of finding every `requireAuth(["ADMIN",
  * "EDITOR"])` callsite.
  */

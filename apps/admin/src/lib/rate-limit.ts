@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 // is empty, requests get a 429 with a `Retry-After` header. Counters live in
 // a Map and self-expire so memory stays bounded.
 //
-// Limitations: a single process — fine for the current single-instance Azure
+// Limitations: a single process - fine for the current single-instance Azure
 // App Service deploy. If we ever scale out horizontally, swap the Map for a
 // Redis-backed store and the rest of the call sites stay the same.
 
@@ -17,7 +17,7 @@ interface Bucket {
 
 const buckets = new Map<string, Bucket>();
 
-// Periodic sweep — drops expired buckets so the Map can't grow forever from
+// Periodic sweep - drops expired buckets so the Map can't grow forever from
 // transient IPs hitting the endpoint once. Runs every 5 minutes.
 const SWEEP_MS = 5 * 60_000;
 let sweepTimer: ReturnType<typeof setInterval> | null = null;
@@ -43,7 +43,7 @@ function getClientIp(req: NextRequest): string {
   }
   const xreal = req.headers.get("x-real-ip");
   if (xreal) return xreal.trim();
-  // NextRequest doesn't expose req.ip in all runtimes — fall back to a stable
+  // NextRequest doesn't expose req.ip in all runtimes - fall back to a stable
   // bucket name so the limiter at least counts unknown-IP traffic together.
   return "unknown";
 }

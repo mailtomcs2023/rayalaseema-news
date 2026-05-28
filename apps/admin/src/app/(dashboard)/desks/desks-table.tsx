@@ -1,4 +1,4 @@
-// Desks list — client-side TanStack + shadcn Table (mirrors /categories).
+// Desks list - client-side TanStack + shadcn Table (mirrors /categories).
 // Dataset is small (~30 rows even with auto-seeded geographic desks), so
 // pagination/sorting/filtering all run in memory. CRUD is wired to
 // /api/desks with the same dialog ergonomics as the rest of the admin.
@@ -32,6 +32,7 @@ import {
   EllipsisIcon,
   FilterIcon,
   ListFilterIcon,
+  Languages,
   PlusIcon,
   RefreshCwIcon,
   TrashIcon,
@@ -39,6 +40,8 @@ import {
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 
+import { deskCreateSchema } from "@rayalaseema/db/schemas";
+import { sanitizeSlug } from "@/lib/slug";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -93,7 +96,7 @@ import {
 const BRANCHES = ["TOPICAL", "GEOGRAPHIC", "EDITORIAL"] as const;
 type Branch = (typeof BRANCHES)[number];
 
-// Branch badge palette — same shape as the type-chip palette on /content.
+// Branch badge palette - same shape as the type-chip palette on /content.
 const BRANCH_BADGE: Record<string, string> = {
   TOPICAL: "border-blue-200 bg-blue-100 text-blue-800",
   GEOGRAPHIC: "border-emerald-200 bg-emerald-100 text-emerald-800",
@@ -109,6 +112,9 @@ export interface DeskRow {
   sortOrder: number;
   active: boolean;
   _count?: { contents: number };
+  // ISO string from the server (JSON round-trip flattens Date). Backs the
+  // table's default "newest-first" sort.
+  createdAt: string;
 }
 
 interface FormState {
@@ -154,19 +160,24 @@ export function DesksTable({ data: initialData }: { data: DeskRow[] }) {
   useEffect(() => setData(initialData), [initialData]);
 
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  // createdAt column hidden by default - exists only so the table can sort
+  // by it. View menu lets an admin reveal it if they want to verify dates.
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
+    createdAt: false,
+  });
+  // Default sort = newest-first, so the row an admin just added appears at
+  // the top. Clicking any column header overrides.
   const [sorting, setSorting] = useState<SortingState>([
-    { id: "branch", desc: false },
-    { id: "nameEn", desc: false },
+    { id: "createdAt", desc: true },
   ]);
-  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 25 });
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
   const [formFor, setFormFor] = useState<{ mode: "create" } | { mode: "edit"; row: DeskRow } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<DeskRow | null>(null);
   const [confirmBulkDelete, setConfirmBulkDelete] = useState<DeskRow[] | null>(null);
   const [bulkLoading, setBulkLoading] = useState(false);
-  // Refresh button — re-runs the server fetch via router.refresh(). We track
+  // Refresh button - re-runs the server fetch via router.refresh(). We track
   // the loading state locally so the icon can spin without a route loader.
   const [refreshing, setRefreshing] = useState(false);
 
@@ -180,7 +191,7 @@ export function DesksTable({ data: initialData }: { data: DeskRow[] }) {
   const refresh = useCallback(() => {
     setRefreshing(true);
     router.refresh();
-    // No explicit "done" event from router.refresh — clear after a short delay.
+    // No explicit "done" event from router.refresh - clear after a short delay.
     setTimeout(() => setRefreshing(false), 800);
   }, [router]);
 
@@ -290,6 +301,24 @@ export function DesksTable({ data: initialData }: { data: DeskRow[] }) {
           <RowActions row={row.original} onEdit={openEdit} onDelete={openDelete} />
         ),
       },
+      // Hidden by default - backs the "newest-first" default sort. ISO
+      // timestamp strings sort lexicographically the same as chronologically.
+      {
+        accessorKey: "createdAt",
+        header: "Created",
+        size: 140,
+        cell: ({ row }) => (
+          <span className="text-xs text-muted-foreground">
+            {row.original.createdAt
+              ? new Date(row.original.createdAt).toLocaleDateString(undefined, {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                })
+              : "-"}
+          </span>
+        ),
+      },
     ],
     [openEdit, openDelete],
   );
@@ -374,7 +403,7 @@ export function DesksTable({ data: initialData }: { data: DeskRow[] }) {
         msg:
           failed === 0
             ? `Deleted ${ok}`
-            : `${ok} deleted, ${failed} failed — desks with articles can't be deleted`,
+            : `${ok} deleted, ${failed} failed - desks with articles can't be deleted`,
         type: failed === 0 ? "success" : "error",
       });
       setConfirmBulkDelete(null);
@@ -530,6 +559,46 @@ export function DesksTable({ data: initialData }: { data: DeskRow[] }) {
         </DropdownMenu>
 
         <div className="ms-auto flex items-center gap-2">
+          {/* Bulk actions slide into the toolbar to the left of Refresh +
+              Add Desk when rows are selected - no separate banner, no
+              layout jump. Same pattern as /categories. */}
+          {/* Bulk actions - each label carries the count, no standalone
+              "N selected" pill, no Cancel button. Un-tick the header
+              checkbox (or any row) to clear the selection. Same pattern
+              as /content and /categories. */}
+          {selectedRows.length > 0 && (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
+                disabled={bulkLoading}
+                onClick={() => handleBulkActive(true)}
+              >
+                Activate {selectedRows.length}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                disabled={bulkLoading}
+                onClick={() => handleBulkActive(false)}
+              >
+                Deactivate {selectedRows.length}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                disabled={bulkLoading}
+                onClick={() => setConfirmBulkDelete(selectedRows)}
+              >
+                <TrashIcon aria-hidden="true" className="-ms-1 opacity-70" size={14} />
+                Delete {selectedRows.length}
+              </Button>
+              <div className="mx-1 h-5 w-px bg-border" />
+            </>
+          )}
           <Button
             aria-label="Refresh desks"
             title="Refresh"
@@ -549,47 +618,6 @@ export function DesksTable({ data: initialData }: { data: DeskRow[] }) {
           </Button>
         </div>
       </div>
-
-      {/* Bulk action bar — only when rows are selected. */}
-      {selectedRows.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-4 py-2.5">
-          <span className="text-sm font-bold text-blue-700">
-            {selectedRows.length} selected
-          </span>
-          <div className="flex-1" />
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
-            disabled={bulkLoading}
-            onClick={() => handleBulkActive(true)}
-          >
-            Activate
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
-            disabled={bulkLoading}
-            onClick={() => handleBulkActive(false)}
-          >
-            Deactivate
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
-            disabled={bulkLoading}
-            onClick={() => setConfirmBulkDelete(selectedRows)}
-          >
-            <TrashIcon aria-hidden="true" className="-ms-1 opacity-70" size={14} />
-            Delete {selectedRows.length}
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => setRowSelection({})}>
-            Cancel
-          </Button>
-        </div>
-      )}
 
       {/* Table */}
       <div className="overflow-hidden rounded-md border bg-background">
@@ -651,8 +679,9 @@ export function DesksTable({ data: initialData }: { data: DeskRow[] }) {
         </Table>
       </div>
 
-      {/* Pagination */}
-      <div className="flex items-center justify-between gap-8">
+      {/* Pagination row - page-size on the left, range counter + nav
+          buttons grouped together on the right. No empty gap in middle. */}
+      <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Label className="max-sm:sr-only" htmlFor={`${id}-pagesize`}>
             Rows per page
@@ -673,8 +702,8 @@ export function DesksTable({ data: initialData }: { data: DeskRow[] }) {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex grow justify-end whitespace-nowrap text-sm text-muted-foreground">
-          <p aria-live="polite">
+        <div className="flex items-center gap-3">
+          <p aria-live="polite" className="whitespace-nowrap text-sm text-muted-foreground">
             <span className="text-foreground">
               {table.getRowCount() === 0
                 ? 0
@@ -687,9 +716,8 @@ export function DesksTable({ data: initialData }: { data: DeskRow[] }) {
             </span>{" "}
             of <span className="text-foreground">{table.getRowCount()}</span>
           </p>
-        </div>
-        <Pagination>
-          <PaginationContent>
+          <Pagination className="mx-0 w-auto">
+            <PaginationContent>
             <PaginationItem>
               <Button
                 aria-label="Go to first page"
@@ -734,8 +762,9 @@ export function DesksTable({ data: initialData }: { data: DeskRow[] }) {
                 <ChevronLastIcon aria-hidden="true" size={16} />
               </Button>
             </PaginationItem>
-          </PaginationContent>
-        </Pagination>
+            </PaginationContent>
+          </Pagination>
+        </div>
       </div>
 
       <DeskFormDialog
@@ -761,7 +790,7 @@ export function DesksTable({ data: initialData }: { data: DeskRow[] }) {
               {(confirmBulkDelete?.length ?? 0) === 1 ? "" : "s"}?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Desks with linked articles cannot be deleted — the API will reject those and the rest
+              Desks with linked articles cannot be deleted - the API will reject those and the rest
               will be removed.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -787,7 +816,7 @@ export function DesksTable({ data: initialData }: { data: DeskRow[] }) {
               {(confirmDelete?._count?.contents ?? 0) > 0
                 ? `This desk has ${confirmDelete?._count?.contents} article${
                     confirmDelete?._count?.contents === 1 ? "" : "s"
-                  }. The delete API will reject this — reassign or archive those first.`
+                  }. The delete API will reject this - reassign or archive those first.`
                 : "This cannot be undone."}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -869,7 +898,17 @@ function DeskFormDialog({
   const isEdit = target?.mode === "edit";
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [translating, setTranslating] = useState(false);
   const [error, setError] = useState("");
+  // Per-field errors from Zod safeParse (client side) OR from the
+  // backend's `fieldErrors` (uniqueness, FK constraint, anything Zod can't
+  // see). Keyed by field name (`name`, `nameEn`, `slug`, …) so each
+  // input can render its own error directly underneath.
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+  // Stop auto-slug from clobbering an admin who's manually edited it.
+  // Flipped true on the first slug field interaction or when loading an
+  // existing edit row (their saved slug is authoritative).
+  const userTouchedSlug = useRef(false);
 
   useEffect(() => {
     if (!target) return;
@@ -884,20 +923,75 @@ function DeskFormDialog({
         sortOrder: r.sortOrder ?? 0,
         active: r.active,
       });
+      userTouchedSlug.current = true; // existing slug wins
     } else {
       setForm(EMPTY_FORM);
+      userTouchedSlug.current = false;
     }
   }, [target]);
 
   const set = (key: keyof FormState, value: any) => setForm((f) => ({ ...f, [key]: value }));
 
+  // Auto-derive slug from the English name on every keystroke until the
+  // admin types directly in the slug field (or this is an edit). Uses
+  // the project's shared sanitizer so the result matches what the
+  // server would accept on submit.
+  //
+  // sanitizeSlug() (not buildSlugFromTitle) - the latter has a
+  // length >= 3 floor that falls back to a `desk-<timestamp>` placeholder,
+  // which would make the slug field jump to a long meaningless string
+  // as the admin types the first one or two characters. With
+  // sanitizeSlug, short input stays short, empty input stays empty
+  // (placeholder "auto-generated" then visibly shows through).
+  const onNameEnChange = (value: string) => {
+    setForm((f) => ({
+      ...f,
+      nameEn: value,
+      slug: userTouchedSlug.current ? f.slug : sanitizeSlug(value),
+    }));
+  };
+
+  // Translate the English name into Telugu via the existing AI route
+  // (`action: "phrase"` - short-text, no HTML, no article structure).
+  // No-op when there's nothing to translate or a translation is in flight.
+  const translateNameToTelugu = async () => {
+    if (!form.nameEn.trim() || translating) return;
+    setTranslating(true);
+    setError("");
+    try {
+      const res = await fetch("/api/ai/rewrite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: form.nameEn.trim(), action: "phrase" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error || "Translate failed");
+      } else if (data.result) {
+        // Strip any stray tags / quotes the model might wrap with.
+        const clean = String(data.result).replace(/<[^>]+>/g, "").replace(/^["“'']+|["”'']+$/g, "").trim();
+        if (clean) setForm((f) => ({ ...f, name: clean }));
+      }
+    } catch (e: any) {
+      setError(e.message || "Translate failed");
+    }
+    setTranslating(false);
+  };
+
   const save = async () => {
-    if (!form.name.trim() || !form.nameEn.trim() || !form.slug.trim()) {
-      setError("Telugu name, English name and slug are required.");
+    // Client-side Zod check using the SAME schema the server enforces
+    // (imported from @rayalaseema/db/schemas). Catches length / format
+    // problems before the network round-trip and renders per-field
+    // errors so the user sees exactly which input is wrong.
+    setError("");
+    setFieldErrors({});
+    const parsed = deskCreateSchema.safeParse(form);
+    if (!parsed.success) {
+      setFieldErrors(parsed.error.flatten().fieldErrors as Record<string, string[]>);
+      setError("Please fix the highlighted fields.");
       return;
     }
     setSaving(true);
-    setError("");
     try {
       const url = isEdit && target.mode === "edit"
         ? `/api/desks/${target.row.id}`
@@ -906,10 +1000,15 @@ function DeskFormDialog({
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(parsed.data),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
+        // Server-side validation (e.g. unique-slug DB error, FK miss) -
+        // surface its per-field map alongside the generic message.
+        if (json.fieldErrors) {
+          setFieldErrors(json.fieldErrors);
+        }
         setError(json.error || "Could not save");
         setSaving(false);
         return;
@@ -922,6 +1021,15 @@ function DeskFormDialog({
     }
   };
 
+  // Small helper - renders a red error line under a field if Zod or the
+  // server flagged it. Hides itself when there's no error so each field
+  // keeps its compact spacing.
+  const FieldError = ({ name }: { name: string }) => {
+    const msgs = fieldErrors[name];
+    if (!msgs?.length) return null;
+    return <p className="text-xs text-destructive">{msgs[0]}</p>;
+  };
+
   return (
     <Dialog open={!!target} onOpenChange={(open) => !open && !saving && onClose()}>
       <DialogContent className="max-h-[88vh] max-w-xl overflow-y-auto">
@@ -930,30 +1038,53 @@ function DeskFormDialog({
           <DialogDescription>
             {isEdit
               ? "Update this desk's display name, slug, or branch."
-              : "Create a new editorial desk. Most desks are auto-seeded from districts and categories — only add new ones for EDITORIAL branches or one-off bureaus."}
+              : "Create a new editorial desk. The slug auto-derives from the English name."}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="desk-name-te">Name (Telugu) *</Label>
-            <Input
-              id="desk-name-te"
-              value={form.name}
-              onChange={(e) => set("name", e.target.value)}
-              placeholder="Byline text shown to readers"
-              lang="te"
-            />
-          </div>
-
+          {/* English first - admins type the English label, the slug
+              auto-derives from it, and the Translate button below
+              fills the Telugu field via AI. */}
           <div className="space-y-1.5">
             <Label htmlFor="desk-name-en">Name (English) *</Label>
             <Input
               id="desk-name-en"
               value={form.nameEn}
-              onChange={(e) => set("nameEn", e.target.value)}
+              onChange={(e) => onNameEnChange(e.target.value)}
               placeholder="English name (admin only)"
+              maxLength={200}
+              aria-invalid={!!fieldErrors.nameEn?.length}
             />
+            <FieldError name="nameEn" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="desk-name-te">Name (Telugu) *</Label>
+            {/* Mirrors the /categories dialog - Telugu input + icon-only
+                Translate button on the right, single flex row. */}
+            <div className="flex gap-2">
+              <Input
+                id="desk-name-te"
+                value={form.name}
+                onChange={(e) => set("name", e.target.value)}
+                placeholder="Byline text shown to readers"
+                lang="te"
+                maxLength={200}
+                aria-invalid={!!fieldErrors.name?.length}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={translateNameToTelugu}
+                disabled={translating || !form.nameEn.trim()}
+                title="Translate English to Telugu"
+              >
+                <Languages size={16} className={translating ? "animate-pulse" : ""} />
+              </Button>
+            </div>
+            <FieldError name="name" />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -962,10 +1093,20 @@ function DeskFormDialog({
               <Input
                 id="desk-slug"
                 value={form.slug}
-                onChange={(e) => set("slug", e.target.value)}
-                placeholder="desk-something"
+                onChange={(e) => {
+                  // Mark the slug as user-controlled so the English-name
+                  // auto-derive (above) stops overwriting on subsequent
+                  // keystrokes. No way back to "auto" without re-opening
+                  // the dialog - by design, it's the admin's slug now.
+                  userTouchedSlug.current = true;
+                  set("slug", e.target.value);
+                }}
+                placeholder="auto-generated"
                 className="font-mono text-xs"
+                maxLength={120}
+                aria-invalid={!!fieldErrors.slug?.length}
               />
+              <FieldError name="slug" />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="desk-sort">Sort order</Label>

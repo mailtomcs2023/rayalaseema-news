@@ -1,8 +1,8 @@
-// Page Builder (Spec #2) — single-template endpoint.
+// Page Builder (Spec #2) - single-template endpoint.
 //
 //   GET    → fetch (any signed-in session)
 //   PUT    → rename / re-describe (ADMIN + EDITOR)
-//   DELETE → delete (+ cascade assignments + versions) — ADMIN only
+//   DELETE → delete (+ cascade assignments + versions) - ADMIN only
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";

@@ -9,7 +9,7 @@
 //   bun run --cwd packages/db packages/db/scripts/encrypt-kyc-backfill.ts
 //
 // Requires KYC_ENCRYPTION_KEY in the env (same one the app uses).
-// Exits non-zero on the first row that fails to encrypt — so you notice
+// Exits non-zero on the first row that fails to encrypt - so you notice
 // before the rest of the table partial-migrates.
 
 import { PrismaClient } from "@prisma/client";
@@ -54,7 +54,7 @@ async function main() {
       const v = (p as any)[field] as string | null;
       if (v == null || v === "") continue;
       if (isEncrypted(v)) {
-        // Already encrypted from a prior run — leave alone.
+        // Already encrypted from a prior run - leave alone.
         continue;
       }
       try {
@@ -87,7 +87,7 @@ async function main() {
   console.log(`Done. Encrypted: ${touched}, skipped (already done): ${skipped}, failed: ${failed}.`);
 
   if (failed > 0) {
-    console.error("Some rows failed — investigate above. Re-run after fixing; the script is idempotent.");
+    console.error("Some rows failed - investigate above. Re-run after fixing; the script is idempotent.");
     process.exit(1);
   }
 }

@@ -3,7 +3,7 @@
 // Top-level Person schema for the /author/<publicProfileSlug> page. The
 // NewsArticle generator (B1) embeds a similar Person payload as a sub-field
 // of `author`, but this builder produces a free-standing Person with full
-// @context — appropriate for a dedicated author profile page.
+// @context - appropriate for a dedicated author profile page.
 //
 // `publicProfileSlug` and `sameAs` are REQUIRED for Discover / AI-search
 // citation. The Feb 2026 Discover core update demoted publishers without

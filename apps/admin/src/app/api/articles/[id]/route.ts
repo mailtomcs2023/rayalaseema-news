@@ -1,4 +1,4 @@
-// /api/articles/[id] — Spec #1 #133 compat shim over Content where type=ARTICLE.
+// /api/articles/[id] - Spec #1 #133 compat shim over Content where type=ARTICLE.
 // Legacy callers (ePaper editor, reporter app) keep working.
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";

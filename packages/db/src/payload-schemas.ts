@@ -10,28 +10,28 @@ import { ContentType } from "@prisma/client";
 
 // ---------- Type-specific schemas ----------
 
-// ARTICLE — common case: long-form text with optional movie-review fields.
+// ARTICLE - common case: long-form text with optional movie-review fields.
 // sourceUrl is promoted to a top-level Content column, not in payload.
 export const articlePayloadSchema = z.object({
   rating: z.number().min(0).max(5).optional(),
   reviewerName: z.string().trim().min(1).max(100).optional(),
 }).strict();
 
-// VIDEO — YouTube / hosted player. Duration in seconds.
+// VIDEO - YouTube / hosted player. Duration in seconds.
 export const videoPayloadSchema = z.object({
   videoUrl: z.string().url(),
   duration: z.number().int().nonnegative(),
   thumbnailUrl: z.string().url().optional(),
 }).strict();
 
-// REEL — short vertical clip, similar shape to VIDEO but the URL is typically
+// REEL - short vertical clip, similar shape to VIDEO but the URL is typically
 // hosted on Azure Blob (no YouTube embeds).
 export const reelPayloadSchema = z.object({
   clipUrl: z.string().url(),
   duration: z.number().int().nonnegative(),
 }).strict();
 
-// WEB_STORY — swipeable cards. At least one slide required.
+// WEB_STORY - swipeable cards. At least one slide required.
 export const webStoryPayloadSchema = z.object({
   slides: z.array(
     z.object({
@@ -41,7 +41,7 @@ export const webStoryPayloadSchema = z.object({
   ).min(1).max(20),
 }).strict();
 
-// PHOTO_GALLERY — multi-photo collection. At least one photo required.
+// PHOTO_GALLERY - multi-photo collection. At least one photo required.
 export const photoGalleryPayloadSchema = z.object({
   photos: z.array(
     z.object({
@@ -51,13 +51,13 @@ export const photoGalleryPayloadSchema = z.object({
   ).min(1).max(100),
 }).strict();
 
-// CARTOON — single image with optional caption + publish date (ISO).
+// CARTOON - single image with optional caption + publish date (ISO).
 export const cartoonPayloadSchema = z.object({
   caption: z.string().max(500).optional(),
   date: z.string().datetime(),
 }).strict();
 
-// BREAKING_NEWS — ticker headline. No body, no slug, no image. Priority
+// BREAKING_NEWS - ticker headline. No body, no slug, no image. Priority
 // drives sort order in the ticker; expiresAt is optional auto-hide time.
 export const breakingNewsPayloadSchema = z.object({
   priority: z.number().int().min(1).max(10),
@@ -101,7 +101,7 @@ export function validatePayload<T extends ContentType>(
   return schema.parse(payload) as PayloadFor<T>;
 }
 
-// Safe variant — returns { success, data | error } instead of throwing.
+// Safe variant - returns { success, data | error } instead of throwing.
 // Useful when you want to render field-level errors back to the client.
 export function safeValidatePayload<T extends ContentType>(
   type: T,
