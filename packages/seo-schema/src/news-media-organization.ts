@@ -50,6 +50,14 @@ interface BuildArgs {
   /** ISO 8601 date string, e.g. "2026-01-15". */
   foundingDate?: string;
   policies?: EditorialPolicies;
+  /**
+   * Optional `disambiguatingDescription` for the org. Useful when the brand
+   * name collides with another well-known entity — e.g. "Rayalaseema Express"
+   * is also Indian Railways train 12793/12794, and we use this field to tell
+   * Google + AI engines we are a separate entity (the news publication, not
+   * the train).
+   */
+  disambiguatingDescription?: string;
 }
 
 function buildContactPoint(cp: ContactPoint): Record<string, unknown> {
@@ -79,14 +87,21 @@ function buildAddress(a: AddressInput): Record<string, unknown> {
  * consistent organization-level signals on every URL.
  */
 export function buildNewsMediaOrganizationSchema(args: BuildArgs): JsonLd {
-  const { publisher, sameAs, contactPoint, address, foundingDate, policies } = args;
+  const { publisher, sameAs, contactPoint, address, foundingDate, policies, disambiguatingDescription } = args;
   const same = (sameAs || []).filter(Boolean);
+  // Build alternateName: include the Telugu name plus the bare English brand
+  // when publicationName has a disambiguator suffix (e.g. "... News").
+  const altNames: string[] = [publisher.publicationNameTe];
+  if (publisher.publicationName.endsWith(" News")) {
+    altNames.push(publisher.publicationName.replace(/ News$/, ""));
+  }
 
   return {
     "@context": "https://schema.org",
     "@type": "NewsMediaOrganization",
     name: publisher.publicationName,
-    alternateName: publisher.publicationNameTe,
+    alternateName: altNames.length === 1 ? altNames[0] : altNames,
+    disambiguatingDescription,
     url: publisher.siteUrl,
     logo: {
       "@type": "ImageObject",

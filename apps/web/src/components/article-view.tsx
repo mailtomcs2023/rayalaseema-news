@@ -82,6 +82,15 @@ export function ArticleView({ article, related, trending, siteUrl }: Props) {
       publishedAt: article.publishedAt,
       updatedAt: article.updatedAt,
       articleSection: a.category?.nameEn || article.category.name,
+      // Spec #4 brand disambiguation + AI-search keyword signal. Tags + the
+      // category English name fed in as a comma-joined keyword list — AI
+      // engines (Perplexity / ChatGPT / Gemini) read it; Google doesn't but
+      // ignores it harmlessly.
+      keywords: [
+        ...(article.tags || []).map((t) => t.tag.name),
+        a.category?.nameEn,
+        a.category?.name,
+      ].filter((s): s is string => Boolean(s)),
     },
     author: {
       name: article.author.name,

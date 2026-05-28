@@ -31,6 +31,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 interface Category { id: string; name: string; nameEn: string; slug: string; parentId?: string | null }
@@ -73,6 +74,10 @@ export default function ContentEditorPage() {
   const [body, setBody] = useState("");
   const [featuredImage, setFeaturedImage] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  // Multi-category cross-listing — IDs of categories this row should ALSO
+  // appear under (primary stays in categoryId). Editor renders a chip list
+  // below the primary dropdown.
+  const [additionalCategoryIds, setAdditionalCategoryIds] = useState<string[]>([]);
   const [deskId, setDeskId] = useState("");
   const [constituencyId, setConstituencyId] = useState("");
   const [status, setStatus] = useState("DRAFT");
@@ -84,6 +89,34 @@ export default function ContentEditorPage() {
   // After picking from search OR pasting a URL, hand the (already EXIF-
   // stripped, RE-stamped) image to the crop modal so the user can frame it.
   const [cropSrc, setCropSrc] = useState<string | null>(null);
+  // Per-operation AI enhance state (loading flag + last error). Result
+  // URL replaces featuredImage in place.
+  const [enhancing, setEnhancing] = useState<string | null>(null);
+
+  const enhanceImage = async (op: string) => {
+    if (!featuredImage || enhancing) return;
+    if (!confirm(`Run AI '${op}' on the current featured image? Takes ~15s + ~$0.06.`)) return;
+    setEnhancing(op);
+    setError("");
+    try {
+      const res = await fetch("/api/images/enhance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: featuredImage, op }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.url) {
+        setError(data.error || `Enhance failed (${res.status})`);
+      } else {
+        setFeaturedImage(data.url);
+        setSuccess(`✨ '${op}' applied. Review before publishing.`);
+        setTimeout(() => setSuccess(""), 5000);
+      }
+    } catch (e: any) {
+      setError(e.message || "Enhance failed");
+    }
+    setEnhancing(null);
+  };
 
   // ARTICLE-specific (payload)
   const [rating, setRating] = useState<string>("");
@@ -231,7 +264,11 @@ export default function ContentEditorPage() {
         setBody(data.body);
         editorRef.current?.setContent(data.body);
       }
-      if (data.ogImage && !featuredImage) setFeaturedImage(data.ogImage);
+      // Always set when fetching fresh from URL — user paste-URL means they
+      // want the source's image. If they don't want it, they can clear it
+      // manually. (Was previously conditional on !featuredImage which
+      // silently dropped the source's og:image when an old image lingered.)
+      if (data.ogImage) setFeaturedImage(data.ogImage);
       if (data.slug) setSlug(data.slug);
       setSourceUrl(pasteUrl.trim());
       setPasteUrl("");
@@ -272,6 +309,7 @@ export default function ContentEditorPage() {
       setBody(row.body || "");
       setFeaturedImage(row.featuredImage || "");
       setCategoryId(row.categoryId || "");
+      setAdditionalCategoryIds(Array.isArray(row.additionalCategoryIds) ? row.additionalCategoryIds : []);
       setDeskId(row.deskId || "");
       setConstituencyId(row.constituencyId || "");
       setStatus(row.status || "DRAFT");
@@ -348,6 +386,7 @@ export default function ContentEditorPage() {
       body: type === "ARTICLE" ? body : null,
       featuredImage: featuredImage || null,
       categoryId: categoryId || null,
+      additionalCategoryIds: additionalCategoryIds.filter((id) => id && id !== categoryId),
       deskId: deskId || null,
       constituencyId: constituencyId || null,
       status: finalStatus,
@@ -488,6 +527,41 @@ export default function ContentEditorPage() {
                   onChange={setFeaturedImage}
                   onSearchClick={() => setImageSearchOpen(true)}
                 />
+                {/* Crop opens the crop modal so the editor can reframe before
+                    publishing. Disabled until an image is set. */}
+                {featuredImage && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setCropSrc(featuredImage)}
+                    >
+                      Crop
+                    </Button>
+                    {/* AI enhance row — only visible once an image is set.
+                        ~$0.06 per operation. Result replaces featuredImage. */}
+                    {[
+                      { op: "remove-watermark", label: "Remove watermark" },
+                      { op: "enhance", label: "Enhance" },
+                      { op: "upscale", label: "Upscale" },
+                      { op: "restore", label: "Restore" },
+                    ].map((b) => (
+                      <Button
+                        key={b.op}
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => enhanceImage(b.op)}
+                        disabled={enhancing !== null}
+                        title={`AI '${b.op}' — gpt-image-2, ~15s, ~$0.06`}
+                        className={enhancing && enhancing !== b.op ? "opacity-50" : ""}
+                      >
+                        {enhancing === b.op ? "Running…" : b.label}
+                      </Button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Common */}
@@ -696,9 +770,8 @@ export default function ContentEditorPage() {
                 per-article amount + status, with edit pencil for Editors. */}
             {type === "ARTICLE" && <PaymentPanel contentId={contentId} />}
 
-            <Section title="Classification">
               <div className="space-y-1.5">
-                <Label htmlFor="category-select">Category</Label>
+                <Label htmlFor="category-select">Primary category</Label>
                 <SearchableSelect
                   id="category-select"
                   value={categoryId}
@@ -718,6 +791,42 @@ export default function ContentEditorPage() {
                     }));
                   })()}
                 />
+              </div>
+
+              {/* Multi-category cross-listing. Clicking a chip toggles. The
+                  primary is hidden from this list (it's already counted). */}
+              <div className="space-y-1.5">
+                <Label>Also list under (optional)</Label>
+                <div className="flex flex-wrap gap-1 rounded-md border bg-gray-50 p-1.5" style={{ minHeight: 36 }}>
+                  {categories.filter((c) => c.id !== categoryId).map((c) => {
+                    const on = additionalCategoryIds.includes(c.id);
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setAdditionalCategoryIds((prev) =>
+                          prev.includes(c.id) ? prev.filter((x) => x !== c.id) : [...prev, c.id]
+                        )}
+                        className={cn(
+                          "rounded-full border px-2.5 py-0.5 text-[11px] font-semibold transition-colors",
+                          on
+                            ? "border-blue-300 bg-blue-50 text-blue-700"
+                            : "border-gray-200 bg-white text-gray-700 hover:bg-gray-100",
+                        )}
+                      >
+                        {on ? "✓ " : ""}{c.nameEn}
+                      </button>
+                    );
+                  })}
+                  {categories.length === 0 && (
+                    <span className="text-[11px] text-gray-400">Loading…</span>
+                  )}
+                </div>
+                {additionalCategoryIds.length > 0 && (
+                  <p className="text-[11px] text-gray-500">
+                    Cross-listed in {additionalCategoryIds.length} extra categor{additionalCategoryIds.length === 1 ? "y" : "ies"}.
+                  </p>
+                )}
               </div>
 
               <div className="space-y-1.5">
@@ -777,7 +886,7 @@ export default function ContentEditorPage() {
                   placeholder="elections, politics, ap"
                   className="bg-white"
                 />
-                {/* AI-seeded + usage-ranked tag suggestions, scoped to the
+                {/* Curated + usage-ranked tag suggestions, scoped to the
                     currently selected category. Click a chip → appended to
                     the comma-separated input (deduped, case-insensitive). */}
                 <TagSuggestions

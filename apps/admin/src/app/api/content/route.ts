@@ -151,6 +151,9 @@ export async function POST(req: NextRequest) {
       sourceUrl,
       tagNames,
       needsPibApproval,
+      // Multi-category cross-listing. Editor passes an array of category
+      // IDs to ALSO list this content under (primary stays in categoryId).
+      additionalCategoryIds,
     } = body;
 
     // Required validation.
@@ -227,6 +230,16 @@ export async function POST(req: NextRequest) {
         scheduledAt: scheduledDate,
       },
     });
+
+    // Multi-category cross-listing. Dedupe + skip the primary (would be
+    // a redundant join row + violates contentCategory composite PK on
+    // re-save). Silently ignores invalid IDs — Prisma FK rejects them.
+    if (Array.isArray(additionalCategoryIds) && additionalCategoryIds.length > 0) {
+      const extras = [...new Set(additionalCategoryIds.filter((id) => id && id !== content.categoryId))];
+      for (const cid of extras) {
+        await prisma.contentCategory.create({ data: { contentId: content.id, categoryId: cid } }).catch(() => {});
+      }
+    }
 
     // Tags (auto-create missing). Same slugify rules as the legacy article API.
     if (Array.isArray(tagNames) && tagNames.length > 0) {

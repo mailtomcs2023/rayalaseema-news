@@ -1208,6 +1208,8 @@ model Content {
   // table is the source of truth for ALL tagged locations (incl. mandal-level
   // tags + multi-location articles).
   locations       ContentLocation[]
+  // Spec #4 K5 (#250) — optional LiveBlogPosting state.
+  liveBlog        ContentLiveBlog?
 
   @@index([type, status, publishedAt])
   @@index([categoryId, status, publishedAt])
@@ -1460,4 +1462,47 @@ model ContentLocation {
   @@index([locationId, locationType])
   @@index([contentId, primary])
   @@map("content_locations")
+}
+
+// ============ K-PHASE VERTICALS (Spec #4 K1 / K5) ============
+
+// K1 (#246) — daily-updated gold + silver rates per city. Single canonical
+// /gold-rate page reads the latest row per (city, metal, purity) and
+// renders a table. Editor (or a cron in a future iteration) populates
+// rows daily.
+enum PreciousMetal {
+  GOLD
+  SILVER
+}
+
+model PreciousMetalRate {
+  id           String        @id @default(cuid())
+  metal        PreciousMetal
+  city         String        // English city name, e.g. "Hyderabad"
+  cityTe       String?       // Telugu city name
+  purity       String?       // "22K" / "24K" for gold; null for silver
+  pricePerGram Float
+  unit         String        @default("per gram")  // "per gram" / "per 10g" / "per kg"
+  source       String?       // IBJA / IIFL / publisher's own desk
+  date         DateTime      @default(now())
+  active       Boolean       @default(true)
+
+  @@index([metal, city, date])
+  @@index([date, active])
+  @@map("precious_metal_rates")
+}
+
+// K5 (#250) — flag a Content row as a live blog. Editor toggles in admin;
+// LiveBlogPosting JSON-LD variant fires from the schema generator when
+// `isLive` is true. dateModified bumps via cron while live.
+model ContentLiveBlog {
+  contentId         String   @id
+  content           Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  startedAt         DateTime @default(now())
+  endedAt           DateTime?
+  /// Append-only entries: [{ at: ISO, html: string }]
+  entries           Json     @default("[]")
+
+  @@index([endedAt])
+  @@map("content_live_blogs")
 }

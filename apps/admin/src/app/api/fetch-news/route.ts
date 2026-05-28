@@ -67,6 +67,43 @@ export async function GET(req: NextRequest) {
           keywords: [],
         });
       }
+
+      // Google News RSS doesn't include images. Scrape og:image / twitter:image
+      // from each result's article URL in parallel. Per-item 4s timeout keeps
+      // the total bounded under the proxy limit even when one publisher is slow.
+      // Results without an image still come back — image is just null.
+      await Promise.all(items.map(async (item) => {
+        if (!item.sourceUrl) return;
+        try {
+          const ctrl = new AbortController();
+          const t = setTimeout(() => ctrl.abort(), 4000);
+          const r = await fetch(item.sourceUrl, {
+            redirect: "follow",
+            headers: { "User-Agent": "Mozilla/5.0 (compatible; RayalaseemaExpress/1.0)" },
+            signal: ctrl.signal,
+          });
+          clearTimeout(t);
+          if (!r.ok) return;
+          // Only read the first ~80KB of HTML — meta tags live in <head>.
+          const reader = r.body?.getReader();
+          if (!reader) return;
+          let html = "";
+          const dec = new TextDecoder();
+          for (let i = 0; i < 10; i++) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            html += dec.decode(value, { stream: true });
+            if (html.length > 80_000) break;
+          }
+          reader.cancel().catch(() => {});
+          const pickMeta = (re: RegExp) => { const x = html.match(re); return x ? x[1].trim() : null; };
+          const img =
+            pickMeta(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) ||
+            pickMeta(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i) ||
+            pickMeta(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+          if (img) item.imageUrl = img;
+        } catch { /* timeout / network / parse — leave imageUrl null */ }
+      }));
       return NextResponse.json({ total: items.length, articles: items, provider: "googlenews" });
     }
 

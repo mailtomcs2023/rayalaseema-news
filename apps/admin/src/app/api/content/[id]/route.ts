@@ -9,6 +9,45 @@ import { logAudit, diffSummary } from "@/lib/audit";
 import { buildSlugFromTitle, isPlaceholderSlug, sanitizeSlug } from "@/lib/slug";
 import { resolveDeskId } from "@/lib/desk-resolver";
 import { pickLeastLoadedReviewer } from "@/lib/reviewer-assignment";
+import { pingIndexNow } from "@/lib/indexnow";
+import { tagContentLocations } from "@/lib/location-ner-hook";
+import { injectInternalLinks } from "@/lib/internal-linker";
+
+// Build the canonical article URL the same way articleHref() does in apps/web.
+// Kept inline here so admin doesn't take a cross-app import; logic is small
+// + stable enough that drift is unlikely.
+function buildArticleUrl(siteUrl: string, id: string, slug: string, districtSlug: string | null, constituencySlug: string | null): string {
+  const suffix = id.slice(-8).toLowerCase();
+  if (districtSlug && constituencySlug) {
+    return `${siteUrl}/${districtSlug}/${constituencySlug}/${slug}-${suffix}`;
+  }
+  return `${siteUrl}/news/${slug}-${suffix}`;
+}
+
+async function pingArticlePublish(contentId: string, slug: string) {
+  try {
+    const row = await prisma.content.findUnique({
+      where: { id: contentId },
+      select: {
+        id: true,
+        constituency: { select: { slug: true, district: { select: { slug: true } } } },
+      },
+    });
+    const siteUrl = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+    const districtSlug = row?.constituency?.district.slug ?? null;
+    const constituencySlug = row?.constituency?.slug ?? null;
+    const urls = [
+      buildArticleUrl(siteUrl, contentId, slug, districtSlug, constituencySlug),
+      siteUrl,
+      `${siteUrl}/news-sitemap.xml`,
+    ];
+    if (districtSlug) urls.push(`${siteUrl}/district/${districtSlug}`);
+    if (constituencySlug) urls.push(`${siteUrl}/constituency/${constituencySlug}`);
+    await pingIndexNow(urls);
+  } catch (err) {
+    console.warn("[content publish] IndexNow ping failed (non-fatal):", (err as Error).message);
+  }
+}
 
 // GET — single content row with relations the editor needs (category,
 // author, tags). Returns 404 if not found.
@@ -23,6 +62,9 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
         category: true,
         author: { select: { id: true, name: true } },
         tags: { include: { tag: true } },
+        // Cross-listed categories — editor renders these as the "Also list
+        // under" multi-select selection.
+        additionalCategories: { select: { categoryId: true } },
       },
     });
     if (!content) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -31,7 +73,12 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
     if (session.user.role === "REPORTER" && content.authorId !== session.user.id) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
-    return NextResponse.json(content);
+    // Flatten additionalCategories to a simple string[] for the editor.
+    const { additionalCategories, ...rest } = content;
+    return NextResponse.json({
+      ...rest,
+      additionalCategoryIds: additionalCategories.map((x) => x.categoryId),
+    });
   } catch (error) {
     return apiError(error);
   }
@@ -207,6 +254,18 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const content = await prisma.content.update({ where: { id }, data });
 
+    // Additional categories: replace-all when array provided. Editor sends
+    // the full desired set; we wipe + re-create. Skipping the array entirely
+    // leaves cross-listing untouched.
+    if (Array.isArray(body.additionalCategoryIds)) {
+      await prisma.contentCategory.deleteMany({ where: { contentId: id } });
+      const primaryId = (data.categoryId ?? current.categoryId) || null;
+      const extras = [...new Set(body.additionalCategoryIds.filter((cid: string) => cid && cid !== primaryId))];
+      for (const cid of extras) {
+        await prisma.contentCategory.create({ data: { contentId: id, categoryId: cid as string } }).catch(() => {});
+      }
+    }
+
     // Tags: replace-all semantics when tagNames provided.
     if (Array.isArray(body.tagNames)) {
       const slugify = (s: string) => s.toLowerCase().trim().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-").substring(0, 80);
@@ -239,6 +298,32 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       actor: { id: session.user.id, email: session.user.email, role: (session.user as any).role },
       req,
     });
+
+    // Spec #4 D5 (#218) — fire-and-forget IndexNow ping on publish so Bing /
+    // Yandex / Naver pick up the new URL in minutes. Hub URLs also re-ping
+    // so their article-list freshens. Failure is non-fatal.
+    if (action === "content.publish" && content.type === "ARTICLE" && content.slug) {
+      void pingArticlePublish(content.id, content.slug);
+    }
+
+    // Spec #4 G2 (#232) — run location NER on publish + write ContentLocation
+    // rows. Replace-all semantics so re-publishes converge to the freshest
+    // gazetteer pass. Failure is non-fatal — publish still succeeds; the
+    // editor can manually re-tag from the admin UI if NER missed something.
+    if (action === "content.publish" && content.type === "ARTICLE") {
+      try {
+        await tagContentLocations(content.id, content.title, content.body || "");
+        // G3 (#233) — inject up to 2 internal links to the primary district +
+        // constituency hubs. Reads the just-written ContentLocation rows.
+        // Idempotent: no-op if the body already links to the same hubs.
+        const newBody = await injectInternalLinks(content.id, content.body || "");
+        if (newBody !== content.body) {
+          await prisma.content.update({ where: { id: content.id }, data: { body: newBody } });
+        }
+      } catch (err) {
+        console.warn("[content publish] location NER / internal-link failed (non-fatal):", (err as Error).message);
+      }
+    }
 
     return NextResponse.json(content);
   } catch (error) {

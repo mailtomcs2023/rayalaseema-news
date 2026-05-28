@@ -17,3 +17,5 @@ export type { EditorialPolicies, ContactPoint, AddressInput } from "./news-media
 export { buildBreadcrumbListSchema } from "./breadcrumb-list";
 export type { BreadcrumbItem } from "./breadcrumb-list";
 export { buildPersonSchema } from "./person";
+export { buildMovieReviewSchema } from "./movie-review";
+export { buildLiveBlogPostingSchema } from "./live-blog";

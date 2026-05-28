@@ -198,7 +198,14 @@ export async function fetchSectionBand(
       where: {
         type: "ARTICLE",
         status: "PUBLISHED",
-        category: { slug },
+        // Match if either the PRIMARY category OR any of the cross-listed
+        // additionalCategories rows points at this slug. Lets a
+        // movie-review primary-categorized story also surface in
+        // /category/entertainment when the editor opted in.
+        OR: [
+          { category: { slug } },
+          { additionalCategories: { some: { category: { slug } } } },
+        ],
       },
       orderBy: { publishedAt: "desc" },
       take: 30,
@@ -367,7 +374,11 @@ export async function fetchCategoryPair(
         where: {
           type: "ARTICLE",
           status: "PUBLISHED",
-          category: { slug: col.slug },
+          // Primary OR cross-listed (see comment in fetchSectionBand).
+          OR: [
+            { category: { slug: col.slug } },
+            { additionalCategories: { some: { category: { slug: col.slug } } } },
+          ],
         },
         orderBy: { publishedAt: "desc" },
         take: col.leadCount + col.itemsCount,

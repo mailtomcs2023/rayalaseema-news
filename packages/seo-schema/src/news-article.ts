@@ -29,6 +29,9 @@ type ArticleInput = {
   publishedAt?: Date | string | null;
   updatedAt?: Date | string | null;
   articleSection?: string | null;
+  /** Keyword list for AI-search engines (Perplexity, ChatGPT, Gemini all
+   *  parse this). Derived from article tags + category by the caller. */
+  keywords?: string[];
 };
 
 interface BuildArgs {
@@ -137,6 +140,7 @@ export function buildNewsArticleSchema(args: BuildArgs): JsonLd {
     publisher: buildPublisher(publisher),
     mainEntityOfPage: { "@type": "WebPage", "@id": canonicalUrl },
     articleSection: article.articleSection ?? undefined,
+    keywords: article.keywords && article.keywords.length > 0 ? article.keywords.join(", ") : undefined,
     inLanguage: "te",
     contentLocation: contentLoc ? buildPlace(contentLoc) : undefined,
     spatialCoverage: contentLoc ? buildPlace(contentLoc) : undefined,

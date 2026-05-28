@@ -6,6 +6,11 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Admin | Rayalaseema Express CMS",
   description: "Content Management System for Rayalaseema Express",
+  // Spec #4 C10 (#213) — never index the admin app. Locks every page in the
+  // CMS out of Google / Bing / AI-crawler caches. Applied at the root layout
+  // so child routes inherit; explicit per-page robots can opt back in if we
+  // ever surface a public-facing page from the admin domain (none today).
+  robots: { index: false, follow: false, nocache: true, googleBot: { index: false, follow: false } },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

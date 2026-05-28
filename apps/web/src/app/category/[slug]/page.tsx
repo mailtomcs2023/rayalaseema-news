@@ -62,6 +62,20 @@ export default async function CategoryPage({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: stringifyJsonLd(breadcrumbLd) }} />
       <Header config={config} breakingNews={[]} />
       <main style={{ maxWidth: 1280, margin: "0 auto", padding: "18px 12px 48px" }}>
+        {/* Spec #4 F4 (#228) — category header with name + description so
+            the hub has its own content surface for crawlers. The
+            TemplateRenderer-rendered article grid follows below. */}
+        <header style={{ marginBottom: 18, paddingBottom: 12, borderBottom: "1px solid #e5e7eb" }}>
+          <h1 style={{ fontSize: 28, fontWeight: 900, color: "#111" }}>{category.name}</h1>
+          {category.nameEn && (
+            <p style={{ fontSize: 13, color: "#888", marginTop: 2 }}>{category.nameEn}</p>
+          )}
+          {category.description && (
+            <p style={{ fontSize: 15, color: "#444", marginTop: 8, lineHeight: 1.7, maxWidth: 720 }}>
+              {category.description}
+            </p>
+          )}
+        </header>
         <TemplateRenderer
           urlPath={`/category/${slug}`}
           ctx={{ categorySlug: slug }}
