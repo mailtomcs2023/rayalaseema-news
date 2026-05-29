@@ -1,8 +1,38 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Platform } from "react-native";
 import { NativeTabs, Icon, Label, VectorIcon } from "expo-router/unstable-native-tabs";
+import { useSegments } from "expo-router";
+import * as Haptics from "expo-haptics";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useT } from "../../src/i18n";
+
+// NativeTabs doesn't expose a per-trigger onPress (the native tab bar
+// dispatches JUMP_TO internally) - so we approximate "tab clicked" by
+// watching the focused (tabs) segment and firing a selection haptic when
+// it changes. The first-render guard prevents a spurious haptic on app
+// launch / cold start.
+function useTabPressHaptics() {
+  const segments = useSegments();
+  // Last segment under (tabs) names the active tab (home / articles /
+  // earnings / profile). Falls back to the literal "(tabs)" while routing
+  // is settling on first paint - the guard below ignores that initial
+  // value either way.
+  const activeTab = segments[segments.length - 1] ?? "";
+  const prevTab = useRef<string | null>(null);
+  useEffect(() => {
+    if (prevTab.current === null) {
+      prevTab.current = activeTab;
+      return;
+    }
+    if (prevTab.current !== activeTab) {
+      // selectionAsync is the lightest haptic - matches the feel of a
+      // native iOS picker / tab change. Fire-and-forget; failures (e.g.
+      // user-disabled haptics on Android) are silently ignored.
+      Haptics.selectionAsync().catch(() => {});
+      prevTab.current = activeTab;
+    }
+  }, [activeTab]);
+}
 
 // Native bottom tab bar. NativeTabs must be the route's top-level content -
 // nesting it under any sibling view hides the native tab bar - so the shared
@@ -14,6 +44,7 @@ import { useT } from "../../src/i18n";
 // the Android tab bar showed no icons because SF Symbols don't exist there.
 export default function TabsLayout() {
   const { t } = useT();
+  useTabPressHaptics();
   return (
     <NativeTabs
       tintColor="#FF2C2C"
