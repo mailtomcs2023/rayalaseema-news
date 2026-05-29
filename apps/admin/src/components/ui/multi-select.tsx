@@ -20,7 +20,6 @@
 import * as React from "react";
 import { Check, ChevronsUpDown, X, Search } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -224,7 +223,21 @@ export function MultiSelect({
                     checked && "bg-accent/40",
                   )}
                 >
-                  <Checkbox checked={checked} className="pointer-events-none" />
+                  {/* Visual-only checkbox. The real shadcn <Checkbox /> renders
+                      a Radix Primitive.button, which is illegal nested inside
+                      this row's <button> (React/HTML throws a hydration error).
+                      A purely presentational <span> mirrors the checkbox look
+                      without an interactive element - the row's own onClick
+                      handles toggling, so no behaviour is lost. */}
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border border-primary shadow",
+                      checked && "bg-primary text-primary-foreground",
+                    )}
+                  >
+                    {checked && <Check className="h-3.5 w-3.5" />}
+                  </span>
                   <span
                     className="inline-block size-2 rounded-full"
                     style={{ background: o.color || "#9ca3af" }}

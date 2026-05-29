@@ -31,11 +31,16 @@ interface KycUi {
 // The reporter object is set on login by /api/reporter/login and includes:
 //   kycStatus: PENDING | SUBMITTED | VERIFIED | REJECTED
 //   kycRejectionNote: string | null
+//   registrationComplete: boolean - false for admin-created reporters who
+//     haven't filled in their own personal details yet. When false (and
+//     status is still PENDING) the banner swaps "Upload documents" for
+//     "Complete registration" and routes to the multi-step finish flow.
 export function KycBanner() {
   const { t } = useT();
   const router = useRouter();
   const [status, setStatus] = useState<KycStatus | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  const [registrationComplete, setRegistrationComplete] = useState<boolean>(true);
 
   // Fast path on first mount: read whatever's cached in AsyncStorage so the
   // banner renders in one frame, no network wait.
@@ -47,6 +52,10 @@ export function KycBanner() {
         const u = JSON.parse(raw);
         setStatus((u.kycStatus as KycStatus) || null);
         setNote(u.kycRejectionNote || null);
+        // Default to TRUE if the field is missing (older login responses
+        // didn't send it) so existing self-registered reporters don't get
+        // mis-classified as incomplete.
+        setRegistrationComplete(u.registrationComplete !== false);
       } catch {}
     });
     return () => {
@@ -64,16 +73,27 @@ export function KycBanner() {
       const data = await api("/api/reporter/profile");
       const fresh = (data?.profile?.kycStatus as KycStatus) || null;
       const freshNote = (data?.profile?.kycRejectionNote as string | null) ?? null;
+      const freshRegComplete = data?.registrationComplete !== false;
       if (!fresh) return;
       setStatus(fresh);
       setNote(freshNote);
+      setRegistrationComplete(freshRegComplete);
       const raw = await AsyncStorage.getItem("user");
       if (raw) {
         const u = JSON.parse(raw);
-        if (u.kycStatus !== fresh || u.kycRejectionNote !== freshNote) {
+        if (
+          u.kycStatus !== fresh ||
+          u.kycRejectionNote !== freshNote ||
+          u.registrationComplete !== freshRegComplete
+        ) {
           await AsyncStorage.setItem(
             "user",
-            JSON.stringify({ ...u, kycStatus: fresh, kycRejectionNote: freshNote }),
+            JSON.stringify({
+              ...u,
+              kycStatus: fresh,
+              kycRejectionNote: freshNote,
+              registrationComplete: freshRegComplete,
+            }),
           );
         }
       }
@@ -90,6 +110,19 @@ export function KycBanner() {
   );
 
   if (!status || status === "VERIFIED") return null;
+
+  // Admin-created reporter on first sign-in: minimal "complete
+  // registration" card that previews the 3 sections they're about to
+  // fill so the flow doesn't feel like a black box.
+  if (status === "PENDING" && !registrationComplete) {
+    return (
+      <CompleteRegistrationCard
+        onPress={() => router.push("/complete-registration")}
+        t={t}
+      />
+    );
+  }
+
   const ui = getKycUi(status, t);
 
   return (
@@ -190,6 +223,9 @@ export function KycBanner() {
 
 // Each status maps to its own visual identity + the actionable step in the
 // 3-step pipeline. Keeping this as a pure function keeps the JSX above lean.
+//
+// The "admin-created, profile-incomplete" variant is rendered by
+// CompleteRegistrationCard below and doesn't pass through here at all.
 function getKycUi(status: KycStatus, t: (k: string) => string): KycUi {
   switch (status) {
     case "REJECTED":
@@ -216,7 +252,7 @@ function getKycUi(status: KycStatus, t: (k: string) => string): KycUi {
         // No "drafts still work" hint anymore - drafts are blocked too while
         // KYC is pending. The msg above already explains the state.
       };
-    // PENDING - account exists, docs not uploaded yet.
+    // PENDING + registration complete: docs upload remains.
     default:
       return {
         bg: "#fff7ed",
@@ -229,6 +265,49 @@ function getKycUi(status: KycStatus, t: (k: string) => string): KycUi {
         cta: { label: t("kyc.ctaUpload"), route: "/kyc" },
       };
   }
+}
+
+// Very minimal card for admin-created reporters on first sign-in.
+// Title row (with time meta on the right) + 3 inline numbered steps +
+// CTA. Steps share row width with flex:1 each, so the card has no
+// dead right-side gap regardless of language.
+function CompleteRegistrationCard({
+  onPress,
+  t,
+}: {
+  onPress: () => void;
+  t: (k: string, vars?: Record<string, string | number>) => string;
+}) {
+  const steps = [
+    t("welcome.step1Short"),
+    t("welcome.step2Short"),
+    t("welcome.step3Short"),
+  ];
+
+  return (
+    <View style={welcomeStyles.card}>
+      <View style={welcomeStyles.headRow}>
+        <Text style={welcomeStyles.title}>{t("kyc.completeRegistrationTitle")}</Text>
+        <Text style={welcomeStyles.meta}>{t("welcome.metaShort")}</Text>
+      </View>
+
+      <View style={welcomeStyles.stepsRow}>
+        {steps.map((label, i) => (
+          <View key={i} style={welcomeStyles.stepCol}>
+            <View style={welcomeStyles.numChip}>
+              <Text style={welcomeStyles.numText}>{i + 1}</Text>
+            </View>
+            <Text style={welcomeStyles.stepLabel} numberOfLines={1}>{label}</Text>
+          </View>
+        ))}
+      </View>
+
+      <TouchableOpacity style={welcomeStyles.cta} onPress={onPress} activeOpacity={0.85}>
+        <Text style={welcomeStyles.ctaText}>{t("kyc.ctaCompleteRegistration")}</Text>
+        <Ionicons name="arrow-forward" size={16} color="#fff" />
+      </TouchableOpacity>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -314,4 +393,53 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   ctaText: { color: "#fff", fontSize: 14, fontWeight: "800" },
+});
+
+// Compact "complete registration" card. Title + time meta on one
+// row, 3 inline numbered steps below using flex:1 columns, then a
+// full-width amber CTA. White bg + thin amber border, no shadow.
+const welcomeStyles = StyleSheet.create({
+  card: {
+    marginHorizontal: 14,
+    marginTop: 14,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 12,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#fed7aa",
+  },
+  headRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  title: { fontSize: 15, fontWeight: "800", color: "#111", lineHeight: 20, flex: 1 },
+  meta: { fontSize: 11, fontWeight: "700", color: "#b45309" },
+
+  // Steps row - each column shares width equally so labels of any
+  // length (Telugu glyphs run wider) stay aligned and don't push the
+  // others off-screen.
+  stepsRow: { flexDirection: "row", alignItems: "center" },
+  stepCol: { flex: 1, flexDirection: "row", alignItems: "center", gap: 6 },
+  numChip: {
+    width: 18, height: 18, borderRadius: 9,
+    alignItems: "center", justifyContent: "center",
+    backgroundColor: "#f59e0b",
+  },
+  numText: { color: "#fff", fontSize: 10, fontWeight: "800", lineHeight: 12 },
+  stepLabel: { flex: 1, fontSize: 12, fontWeight: "600", color: "#374151", lineHeight: 16 },
+
+  cta: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: "#f59e0b",
+  },
+  ctaText: { color: "#fff", fontSize: 13, fontWeight: "800" },
 });

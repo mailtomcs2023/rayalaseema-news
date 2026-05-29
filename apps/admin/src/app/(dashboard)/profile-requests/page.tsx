@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Sidebar } from "@/components/sidebar";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -132,7 +132,7 @@ function ProfileRequestsPageBody() {
       setPendingCount(data.pendingCount || 0);
     } catch (e: any) {
       console.error(e);
-      alert(e.message);
+      toast.error(e.message);
     } finally {
       setLoading(false);
     }
@@ -161,7 +161,7 @@ function ProfileRequestsPageBody() {
       setApproveTarget(null);
       await load();
     } catch (e: any) {
-      alert(e.message);
+      toast.error(e.message);
     } finally {
       setBusy(false);
     }
@@ -182,7 +182,7 @@ function ProfileRequestsPageBody() {
       setRejectNote("");
       await load();
     } catch (e: any) {
-      alert(e.message);
+      toast.error(e.message);
     } finally {
       setBusy(false);
     }
@@ -190,7 +190,6 @@ function ProfileRequestsPageBody() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f9fafb" }}>
-      <Sidebar />
       <main style={{ flex: 1, padding: "28px 32px", marginLeft: 240 }} className="admin-main">
         <header style={{ marginBottom: 24 }}>
           <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111827", margin: 0 }}>

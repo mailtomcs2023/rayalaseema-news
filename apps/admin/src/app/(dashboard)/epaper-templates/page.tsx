@@ -6,7 +6,6 @@
 // visual block-builder.
 
 import { useEffect, useState } from "react";
-import { Sidebar } from "@/components/sidebar";
 
 interface Template {
   id: string;
@@ -87,7 +86,6 @@ export default function TemplatesPage() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-      <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, color: "#111", marginBottom: 16 }}>ePaper Templates</h1>
 

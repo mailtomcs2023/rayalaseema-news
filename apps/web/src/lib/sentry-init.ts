@@ -21,7 +21,11 @@ export async function initSentryIfConfigured(): Promise<void> {
   const dsn = process.env.SENTRY_DSN_WEB;
   if (!dsn) return;
   try {
+    // @sentry/nextjs is an optional runtime dependency - the catch() below
+    // turns "not installed" into a no-op. The string-form import + @ts-ignore
+    // keep TypeScript quiet without forcing every dev to install the package.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
+    // @ts-ignore - optional peer dependency, may not be installed
     const Sentry = await import("@sentry/nextjs").catch(() => null);
     if (!Sentry || typeof Sentry.init !== "function") {
       // Package not installed; deliberate - leaves Sentry optional.

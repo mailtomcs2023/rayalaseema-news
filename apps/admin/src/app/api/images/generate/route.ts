@@ -20,7 +20,7 @@ const DEPLOYMENT = process.env.AZURE_IMAGES_DEPLOYMENT || "gpt-image";
 const API_VERSION = process.env.AZURE_IMAGES_API_VERSION || "2025-04-01-preview";
 
 export async function POST(req: NextRequest) {
-  const session = await requireAuth(["ADMIN", "EDITOR", "CHIEF_SUB_EDITOR", "SUB_EDITOR", "REPORTER"]);
+  const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR", "REPORTER"]);
   if (isAuthError(session)) return session;
   if (!ENDPOINT || !KEY) {
     return NextResponse.json({

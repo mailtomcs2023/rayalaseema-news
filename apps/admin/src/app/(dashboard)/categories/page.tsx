@@ -1,4 +1,3 @@
-import { Sidebar } from "@/components/sidebar";
 import { prisma } from "@rayalaseema/db";
 import { CategoriesTable, type CategoryRow } from "./categories-table";
 
@@ -21,7 +20,6 @@ export default async function CategoriesPage() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-      <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
         <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111", marginBottom: 4 }}>Categories</h1>
         <p style={{ fontSize: 13, color: "#888", marginBottom: 20 }}>

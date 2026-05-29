@@ -3,6 +3,7 @@ import { prisma } from "@rayalaseema/db";
 import { compare } from "bcryptjs";
 import { createReporterToken } from "@/lib/reporter-auth";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { isRegistrationComplete } from "@/lib/reporter-registration";
 
 // Mobile login for the reporter (Expo) app.
 //
@@ -33,9 +34,15 @@ export async function POST(req: NextRequest) {
       where: { email: { equals: String(email).trim(), mode: "insensitive" } },
       select: {
         id: true, name: true, email: true, role: true, active: true,
-        phone: true, avatar: true, passwordHash: true,
+        phone: true, avatar: true, passwordHash: true, mustChangePassword: true,
         reporterProfile: {
-          select: { kycStatus: true, kycRejectionNote: true },
+          select: {
+            kycStatus: true,
+            kycRejectionNote: true,
+            dateOfBirth: true,
+            address: true,
+            pincode: true,
+          },
         },
       },
     });
@@ -61,6 +68,8 @@ export async function POST(req: NextRequest) {
         avatar: user.avatar,
         kycStatus: user.reporterProfile?.kycStatus || "PENDING",
         kycRejectionNote: user.reporterProfile?.kycRejectionNote || null,
+        mustChangePassword: user.mustChangePassword,
+        registrationComplete: isRegistrationComplete(user.reporterProfile),
       },
     });
   } catch (e: any) {

@@ -366,7 +366,63 @@ function mapInnings(teamName: string, sc: any): { team: string; runs: number; wi
   return { team: teamName, runs: i.runs || 0, wickets: i.wickets || 0, overs: i.overs || 0 };
 }
 
+// ESPN Cricinfo unofficial JSON - no key required. Same endpoint that
+// cricinfo.com/live-cricket-scores fetches client-side. Returns the
+// current page of matches (live + recent + upcoming). When this works we
+// skip the paid RapidAPI tier; we fall back to it only on outage.
+async function espnGetCurrentMatches(): Promise<CricketMatch[] | null> {
+  try {
+    const res = await fetch(
+      "https://hs-consumer-api.espncricinfo.com/v1/pages/matches/current?lang=en&latest=true",
+      {
+        signal: AbortSignal.timeout(6000),
+        next: { revalidate: 60 },
+        headers: { "User-Agent": "RayalaseemaExpress/1.0 (+web)" },
+      },
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const matches: any[] = Array.isArray(data?.matches) ? data.matches : [];
+    if (matches.length === 0) return null;
+    const live = matches.filter((m) => m?.state === "LIVE" || m?.statusType === "LIVE");
+    const pool = live.length > 0 ? live : matches;
+    return pool.slice(0, 4).map((m: any) => {
+      const teams = Array.isArray(m?.teams) ? m.teams : [];
+      const t1 = teams[0]?.team?.abbreviation || teams[0]?.team?.shortName || teams[0]?.team?.name || "T1";
+      const t2 = teams[1]?.team?.abbreviation || teams[1]?.team?.shortName || teams[1]?.team?.name || "T2";
+      const score = teams
+        .filter((t: any) => t?.score)
+        .map((t: any) => ({
+          team: t?.team?.abbreviation || t?.team?.shortName || "",
+          runs: Number(t?.score?.runs ?? 0),
+          wickets: Number(t?.score?.wickets ?? 0),
+          overs: Number(t?.score?.overs ?? 0),
+        }));
+      const isLive = m?.state === "LIVE" || m?.statusType === "LIVE";
+      const when = m?.startTime ? new Date(m.startTime) : null;
+      return {
+        id: String(m?.objectId || m?.id || `${t1}-${t2}`),
+        name: m?.title || `${t1} vs ${t2}`,
+        status: m?.statusText || m?.status || (isLive ? "లైవ్" : "షెడ్యూల్"),
+        teams: [t1, t2] as [string, string],
+        score,
+        venue: m?.ground?.longName || m?.ground?.name || undefined,
+        time: !isLive && when
+          ? when.toLocaleString("te-IN", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+          : undefined,
+        isLive,
+      };
+    });
+  } catch {
+    return null;
+  }
+}
+
 export async function getCricketScores(): Promise<CricketMatch[]> {
+  // Try the free ESPN feed first; only fall through to RapidAPI on failure.
+  const espn = await espnGetCurrentMatches();
+  if (espn && espn.length > 0) return espn;
+
   const live = await rapidGet("/cricket-livescores");
   if (Array.isArray(live) && live.length > 0) {
     return live.slice(0, 4).map((m: any) => {

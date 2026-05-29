@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Sidebar } from "@/components/sidebar";
 
 interface MandiPrice {
   id: string; commodity: string; commodityEn: string; market: string; marketEn: string;
@@ -58,7 +57,6 @@ export default function MandiPage() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-      <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
         <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111", marginBottom: 24 }}>Mandi Prices (మండి ధరలు)</h1>
 

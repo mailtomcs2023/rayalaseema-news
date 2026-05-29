@@ -14,7 +14,6 @@
 // external auth.
 
 import Link from "next/link";
-import { Sidebar } from "@/components/sidebar";
 import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError } from "@/lib/api-utils";
 import { redirect } from "next/navigation";
@@ -34,7 +33,7 @@ const ANALYTICS_KEYS = [
 ];
 
 export default async function SeoDashboardPage() {
-  const session = await requireAuth(["ADMIN", "EDITOR", "CHIEF_SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR"]);
   if (isAuthError(session)) redirect("/login");
 
   const now = new Date();
@@ -71,7 +70,6 @@ export default async function SeoDashboardPage() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
-      <Sidebar />
       <main style={{ flex: 1, padding: "32px 24px", background: "#f9fafb" }}>
         <h1 style={{ fontSize: 28, fontWeight: 800, color: "#111", marginBottom: 6 }}>SEO Dashboard</h1>
         <p style={{ fontSize: 13, color: "#888", marginBottom: 28 }}>

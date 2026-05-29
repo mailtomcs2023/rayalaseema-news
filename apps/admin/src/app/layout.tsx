@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { Providers } from "./providers";
 import { auth } from "@/lib/auth";
+import { validateActiveSession } from "@/lib/session-guard";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -20,6 +23,31 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // chrome) renders for ~200-500ms with no role info, then snaps to the
   // role-filtered view once NextAuth's client-side probe resolves.
   const session = await auth();
+
+  // Server-side enforcement of session state. NextAuth's JWT is stateless,
+  // so the cookie can lie (deleted user, mustChangePassword cleared but
+  // JWT still says true, etc.) - every page navigation re-reads from the
+  // DB. React `cache()` dedupes the lookup across this and any downstream
+  // auth()-based reads, so we pay at most one query per request.
+  //
+  // Two enforced transitions:
+  //   - status === "gone"           → /logout (account deleted/inactive)
+  //   - mustChangePassword === true → /change-password (forced rotation)
+  // Both skip when already on the appropriate exit path so we don't loop.
+  const userId = (session?.user as any)?.id as string | undefined;
+  if (userId) {
+    const h = await headers();
+    const pathname = h.get("x-pathname") || "";
+    const onExitPath = pathname === "/login" || pathname === "/logout";
+    if (!onExitPath) {
+      const state = await validateActiveSession(userId);
+      if (state.status === "gone") redirect("/logout?reason=revoked");
+      if (state.mustChangePassword && pathname !== "/change-password") {
+        redirect("/change-password");
+      }
+    }
+  }
+
   // suppressHydrationWarning on <html> + <body> silences the noisy hydration
   // error that fires when browser extensions (Scribe, ColorZilla, Grammarly,
   // password managers, ad blockers, etc.) inject attributes into the DOM

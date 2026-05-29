@@ -10,6 +10,7 @@ import {
   contentUpdateSchema,
 } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
+import { requireKyc } from "@/lib/kyc-guard";
 import { logAudit, diffSummary } from "@/lib/audit";
 import { buildSlugFromTitle, isPlaceholderSlug, sanitizeSlug } from "@/lib/slug";
 import { resolveDeskId } from "@/lib/desk-resolver";
@@ -127,6 +128,20 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       if (body[key] !== undefined) data[key] = body[key];
     }
     if (data.constituencyId === "") data.constituencyId = null;
+
+    // KYC gate - ANY edit/save by a non-ADMIN with unverified KYC is
+    // blocked. ADMINs bypass (see lib/kyc-guard.ts). Previously this only
+    // fired on PUBLISH/SCHEDULE transitions, but editors+sub-editors
+    // shouldn't be mutating editorial content at all before they're
+    // verified. The UI surfaces the 403 + kycRequired flag as a red toast
+    // with a "Complete KYC" action.
+    {
+      const block = await requireKyc(
+        { id: session.user.id, role: session.user.role },
+        "edit articles",
+      );
+      if (block) return block;
+    }
 
     // Manual reviewer assignment was removed - auto-assignment on submit
     // (lib/reviewer-assignment.ts) + category pool fallback is the only
@@ -410,6 +425,17 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR", "REPORTER"]);
   if (isAuthError(session)) return session;
   try {
+    // KYC gate - same rule as create/edit. Unverified non-ADMINs can't
+    // delete editorial content either; the row-level role checks below
+    // still apply on top.
+    {
+      const block = await requireKyc(
+        { id: session.user.id, role: session.user.role },
+        "delete articles",
+      );
+      if (block) return block;
+    }
+
     const { id } = await params;
     const url = new URL(req.url);
     const purge = url.searchParams.get("purge") === "1";

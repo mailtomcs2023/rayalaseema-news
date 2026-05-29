@@ -116,7 +116,7 @@ export default async function RootLayout({
       ? { email: config.contact_email, phone: config.contact_phone, contactType: "editorial" }
       : undefined,
     address: config.contact_address
-      ? { streetAddress: config.contact_address, addressCountry: "IN", region: "Andhra Pradesh" }
+      ? { streetAddress: config.contact_address, country: "IN", region: "Andhra Pradesh" }
       : undefined,
     foundingDate: config.founding_date || undefined,
     policies: {

@@ -30,9 +30,14 @@ export function loginSchema(t: TFn) {
   });
 }
 
+// DOB stored on the form as "YYYY-MM-DD"; the date picker only emits this
+// shape so we just need a length check + the date-shape regex.
+const DOB_RE = /^\d{4}-\d{2}-\d{2}$/;
+
 // Register - step 1: personal details. Required fields are marked * in the UI.
-// Pincode is required because the admin uses it to route the reporter to the
-// correct district desk for the editorial workflow.
+// Mirrors the server-side kycSubmitSchema (packages/db/src/user-input-schemas.ts)
+// so a flow that passes step 1 here also passes the "Submit for review"
+// gate on the server - no surprise 400s after the user has uploaded docs.
 export function step1Schema(t: TFn) {
   // Confirm-email is a typo-catcher (we don't send OTP, so we can't prove
   // ownership - at least force the reporter to type their email twice so a
@@ -44,11 +49,32 @@ export function step1Schema(t: TFn) {
     emailConfirm: z.string().trim().min(1, t("validation.required")),
     phone: z.string().regex(PHONE_RE, t("validation.phone")),
     password: z.string().min(8, t("validation.password")),
+    dateOfBirth: z.string().regex(DOB_RE, t("validation.required")),
+    address: z.string().trim().min(1, t("validation.required")),
+    city: z.string().trim().min(1, t("validation.required")),
     pincode: z.string().regex(/^[0-9]{6}$/, t("validation.pincode")),
+    primaryDistrict: z.string().trim().min(1, t("validation.required")),
   }).refine(
     (d) => d.email.trim().toLowerCase() === d.emailConfirm.trim().toLowerCase(),
     { path: ["emailConfirm"], message: t("validation.emailMismatch") },
   );
+}
+
+// Variant of step1 used by the "Complete registration" flow for reporters
+// the admin created in the portal. Email + password are already set on
+// the server (admin chose them), so the screen hides those fields and
+// this schema drops them. Everything else still has to match the web's
+// kycSubmitSchema personal section.
+export function step1CompleteSchema(t: TFn) {
+  return z.object({
+    fullName: z.string().trim().min(1, t("validation.required")),
+    phone: z.string().regex(PHONE_RE, t("validation.phone")),
+    dateOfBirth: z.string().regex(DOB_RE, t("validation.required")),
+    address: z.string().trim().min(1, t("validation.required")),
+    city: z.string().trim().min(1, t("validation.required")),
+    pincode: z.string().regex(/^[0-9]{6}$/, t("validation.pincode")),
+    primaryDistrict: z.string().trim().min(1, t("validation.required")),
+  });
 }
 
 // Register - step 2: KYC. Everything is required.
@@ -63,14 +89,17 @@ export function step2Schema(t: TFn) {
   });
 }
 
-// Register - step 3: bank / payout. Bank account is required; UPI is optional
-// but format-checked when provided.
+// Register - step 3: bank / payout. EVERY field required as of 2026-05 -
+// editors + sub-editors share the same flow now and payouts can't be
+// pushed with any of these blank, so we'd rather catch it upfront than
+// surface a first-payout failure two weeks later.
 export function step3Schema(t: TFn) {
   return z.object({
+    upiId: z.string().regex(UPI_RE, t("validation.upi")),
     bankName: z.string().trim().min(1, t("validation.required")),
     bankAccount: z.string().regex(ACCOUNT_RE, t("validation.account")),
     bankIfsc: z.string().regex(IFSC_RE, t("validation.ifsc")),
-    upiId: optionalMatch(UPI_RE, t("validation.upi")),
+    bankBranch: z.string().trim().min(1, t("validation.required")),
   });
 }
 

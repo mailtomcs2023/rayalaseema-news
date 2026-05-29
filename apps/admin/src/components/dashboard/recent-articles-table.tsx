@@ -25,10 +25,10 @@ import {
   Columns3Icon,
   ListFilterIcon,
 } from "lucide-react";
-import Link from "next/link";
 import { useId, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { KycGatedLink } from "@/components/kyc-gated-link";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -113,13 +113,16 @@ export function RecentArticlesTable({ articles }: { articles: ArticleRow[] }) {
         enableHiding: false,
         filterFn: articleSearchFilter,
         cell: ({ row }) => (
-          <Link
+          // Title click opens the editor - KycGatedLink so unverified
+          // non-ADMINs get the red KYC toast instead of walking into a
+          // mutate-only page they'd be blocked from saving anyway.
+          <KycGatedLink
             href={`/content/${row.original.id}`}
             className="block max-w-[360px] truncate font-semibold text-foreground hover:text-primary"
-            title={row.original.title}
+            action="edit articles"
           >
-            {row.original.title}
-          </Link>
+            <span title={row.original.title}>{row.original.title}</span>
+          </KycGatedLink>
         ),
       },
       {

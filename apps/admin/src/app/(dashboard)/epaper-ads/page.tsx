@@ -1,4 +1,3 @@
-import { Sidebar } from "@/components/sidebar";
 import { CrudTable } from "@/components/crud-table";
 import { prisma } from "@rayalaseema/db";
 
@@ -9,7 +8,6 @@ export default async function EpaperAdsPage() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-      <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
         <div style={{ marginBottom: 16, padding: 14, background: "#eef2ff", border: "1px solid #c7d2fe", borderRadius: 8, fontSize: 13, color: "#3730a3" }}>
           <strong>Ad asset library.</strong> Upload creative + advertiser metadata once.

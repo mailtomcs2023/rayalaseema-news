@@ -13,6 +13,12 @@ const ADDRESS_MAX = 500;
 
 const cuid = z.string().trim().min(1).max(64);
 
+// Hard upper bound on the categoryIds array. Sized to be effectively
+// uncapped for real usage (the live taxonomy is in the dozens; even a
+// 10x growth still fits comfortably) while still rejecting the
+// pathological 100k-element body that would otherwise hit Prisma.
+const CATEGORY_IDS_MAX = 5000;
+
 const ROLE_VALUES = ["ADMIN", "EDITOR", "SUB_EDITOR", "REPORTER", "USER"] as const;
 const KYC_STATUS_VALUES = ["PENDING", "SUBMITTED", "VERIFIED", "REJECTED"] as const;
 
@@ -33,9 +39,12 @@ export const userCreateSchema = z.object({
   active: z.boolean().optional(),
   // Force-change-on-first-login flag.
   mustChangePassword: z.boolean().optional(),
-  // SUB_EDITOR / EDITOR get assigned to categories. Cap at 50 since a real
-  // sub-editor handles 1-5; anything more is a UI/seed bug.
-  categoryIds: z.array(cuid).max(50).optional(),
+  // SUB_EDITOR / EDITOR get assigned to categories. The cap below is a
+  // request-size guard against pathological bodies, not a business rule -
+  // it must stay well above any realistic total category count so it
+  // never bites real admins (a senior editor owning every category, for
+  // example). Raise it further if the taxonomy grows past a few thousand.
+  categoryIds: z.array(cuid).max(CATEGORY_IDS_MAX).optional(),
 }).strict();
 
 // PUT /api/users/[id] - admin edits an account. Every field optional.
@@ -50,7 +59,7 @@ export const userUpdateSchema = z.object({
   phone: z.string().trim().max(PHONE_MAX).optional().nullable(),
   active: z.boolean().optional(),
   mustChangePassword: z.boolean().optional(),
-  categoryIds: z.array(cuid).max(50).optional(),
+  categoryIds: z.array(cuid).max(CATEGORY_IDS_MAX).optional(),
 }).strict();
 
 // ---------- /api/reporters ----------
@@ -120,6 +129,57 @@ export const reporterActionSchema = z.discriminatedUnion("action", [
   }),
 ]);
 
+// ---------- KYC submit gate (Reporter + Editor + Sub-Editor) ----------
+//
+// Used by /api/reporter/kyc + the web /onboarding/kyc submit handler to
+// guarantee that a profile moving from PENDING/REJECTED → SUBMITTED has
+// every required field populated. The partial save endpoints stay loose;
+// this schema runs at the "Submit for review" boundary only.
+
+// IFSC = 4 letters + 0 + 6 alphanumerics. Codified by RBI.
+const IFSC_RE = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+// Bank account: 9-18 digits. Covers SBI (11), HDFC (14), etc. without
+// being SO loose that "1" passes.
+const ACCOUNT_RE = /^\d{9,18}$/;
+// UPI handle: <handle>@<provider>. Accept letters/digits/dot/underscore/
+// hyphen on the LHS, the provider on the RHS.
+const UPI_RE = /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/;
+// Aadhaar: 12 digits exactly (we store encrypted ciphertext, so the
+// length check applies to the plaintext at the API boundary only).
+const AADHAAR_RE = /^\d{12}$/;
+// PAN: 5 letters + 4 digits + 1 letter. The 4th letter (index 3)
+// signals holder type - P for individual is the common case but we
+// accept the full set ABCFGHLJPT.
+const PAN_RE = /^[A-Z]{3}[ABCFGHLJPT][A-Z]\d{4}[A-Z]$/;
+
+export const kycSubmitSchema = z.object({
+  // Personal
+  fullName: z.string().trim().min(1, "Full name is required").max(NAME_MAX),
+  dateOfBirth: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "DOB must be YYYY-MM-DD"),
+  address: z.string().trim().min(1, "Address is required").max(ADDRESS_MAX),
+  city: z.string().trim().min(1, "City is required").max(100),
+  pincode: z.string().trim().regex(/^\d{6}$/, "Pincode must be 6 digits"),
+  primaryDistrict: z.string().trim().min(1, "Primary district is required").max(100),
+
+  // KYC documents - encrypted aadhaar/pan numbers; *Url are upload URLs
+  aadhaarNumber: z.string().trim().regex(AADHAAR_RE, "Aadhaar must be 12 digits"),
+  aadhaarFrontUrl: z.string().trim().min(1, "Aadhaar front image is required"),
+  aadhaarBackUrl: z.string().trim().min(1, "Aadhaar back image is required"),
+  panNumber: z.string().trim().regex(PAN_RE, "Invalid PAN format"),
+  panCardUrl: z.string().trim().min(1, "PAN card image is required"),
+  photoUrl: z.string().trim().min(1, "Passport-style photo is required"),
+
+  // Bank - ALL mandatory now (was previously optional). Editorial users
+  // get paid via this; admin can't push a payment if any of these is
+  // blank, so requiring upfront avoids first-payout scrambles.
+  upiId: z.string().trim().regex(UPI_RE, "UPI ID must look like name@bank"),
+  bankName: z.string().trim().min(1, "Bank name is required").max(200),
+  bankAccount: z.string().trim().regex(ACCOUNT_RE, "Account must be 9-18 digits"),
+  bankIfsc: z.string().trim().regex(IFSC_RE, "Invalid IFSC (e.g. SBIN0001234)"),
+  bankBranch: z.string().trim().min(1, "Branch is required").max(200),
+}).passthrough();
+
 export type UserCreateInput = z.infer<typeof userCreateSchema>;
 export type UserUpdateInput = z.infer<typeof userUpdateSchema>;
 export type ReporterActionInput = z.infer<typeof reporterActionSchema>;
+export type KycSubmitInput = z.infer<typeof kycSubmitSchema>;

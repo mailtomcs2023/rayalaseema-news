@@ -14,6 +14,7 @@ import {
   contentCreateSchema,
 } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
+import { requireKyc } from "@/lib/kyc-guard";
 import { logAudit } from "@/lib/audit";
 import { sanitizeSlug } from "@/lib/slug";
 import { resolveDeskId } from "@/lib/desk-resolver";
@@ -228,6 +229,23 @@ export async function POST(req: NextRequest) {
       needsPibApproval,
       additionalCategoryIds,
     } = parsed.data;
+
+    // KYC gate. ADMINs bypass; every other role must be VERIFIED to
+    // create editorial content at any status. Was previously per-status
+    // (PUBLISHED/SCHEDULED only, with REPORTER blocked entirely) but
+    // editors+sub-editors should be in the same boat - no drafting, no
+    // scheduling, no publishing before identity is confirmed.
+    {
+      const block = await requireKyc(
+        { id: session.user.id, role: session.user.role },
+        status === "PUBLISHED"
+          ? "publish"
+          : status === "SCHEDULED"
+            ? "schedule"
+            : "create articles",
+      );
+      if (block) return block;
+    }
 
     // Slug optional for BREAKING_NEWS (no public URL); required for everything else.
     // Sanitize + uniqueness check when present.

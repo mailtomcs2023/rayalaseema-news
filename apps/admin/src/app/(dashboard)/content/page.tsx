@@ -32,11 +32,13 @@ import {
   TrashIcon,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { AutoFetchModal } from "@/components/auto-fetch-modal";
-import { Sidebar } from "@/components/sidebar";
+import { KycGatedLink, useKycGate } from "@/components/kyc-gated-link";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -187,6 +189,29 @@ export default function ContentListPage() {
     }
   }, [pagination.pageSize]);
 
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { guard: kycGuard } = useKycGate();
+
+  // Flash from the server-side /content/new KYC guard. When an unverified
+  // user types /content/new directly, the layout redirects here with
+  // ?kyc=blocked - surface the same red toast the in-app gate fires so
+  // they see why nothing happened. The replace() strips the param so a
+  // refresh doesn't re-fire the toast.
+  useEffect(() => {
+    if (searchParams.get("kyc") === "blocked") {
+      toast.error("Your KYC must be verified to create articles.", {
+        description: "Upload your documents from the KYC page to unlock editorial actions.",
+        action: { label: "Complete KYC", onClick: () => router.push("/onboarding/kyc") },
+        duration: 8000,
+      });
+      const params = new URLSearchParams(Array.from(searchParams.entries()));
+      params.delete("kyc");
+      router.replace(`/content${params.toString() ? `?${params}` : ""}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [bulkLoading, setBulkLoading] = useState(false);
@@ -283,12 +308,17 @@ export default function ContentListPage() {
         enableSorting: false,
         enableHiding: false,
         cell: ({ row }) => (
-          <Link
+          // Title doubles as the "open editor" entry point. Unverified
+          // non-ADMINs get the same red KYC toast here as on "+ New Content"
+          // so the list stays readable but clicking through to the editor
+          // is gated alongside every other edit action.
+          <KycGatedLink
             href={`/content/${row.original.id}`}
             className="block max-w-[340px] truncate text-sm font-semibold text-foreground hover:underline"
+            action="edit articles"
           >
             {row.original.title}
-          </Link>
+          </KycGatedLink>
         ),
       },
       {
@@ -395,21 +425,45 @@ export default function ContentListPage() {
     if (selectedRows.length === 0) return;
     setBulkLoading(true);
     try {
-      await Promise.all(
+      const responses = await Promise.all(
         selectedRows.map((r) =>
           fetch(`/api/content/${r.id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ status: newStatus }),
-          })
-        )
+          }).then(async (res) => ({ res, data: await res.json().catch(() => ({})) })),
+        ),
       );
-      setRows((prev) =>
-        prev.map((r) => (rowSelection[r.id] ? { ...r, status: newStatus } : r))
-      );
+
+      // Surface the KYC gate up front - if *any* row was rejected with
+      // kycRequired, the editor's profile isn't VERIFIED yet and none of
+      // the selected rows would have published. Show one actionable
+      // toast instead of a generic "some failed" so they know what to
+      // do next.
+      const kycBlocked = responses.find(({ res, data }) => res.status === 403 && data?.kycRequired);
+      if (kycBlocked) {
+        toast.error(kycBlocked.data.error || "Your KYC must be verified to publish.", {
+          action: { label: "Complete KYC", onClick: () => router.push("/onboarding/kyc") },
+          duration: 8000,
+        });
+        return;
+      }
+
+      const failed = responses.filter(({ res }) => !res.ok).length;
+      const succeeded = responses.length - failed;
+      if (succeeded > 0) {
+        setRows((prev) =>
+          prev.map((r) => (rowSelection[r.id] && responses.find(({ res }, i) => res.ok && selectedRows[i].id === r.id) ? { ...r, status: newStatus } : r)),
+        );
+      }
+      if (failed > 0) {
+        toast.warning(`${succeeded} updated, ${failed} failed`);
+      } else if (succeeded > 0) {
+        toast.success(`Updated ${succeeded} item${succeeded === 1 ? "" : "s"}.`);
+      }
       setRowSelection({});
     } catch {
-      alert("Some updates failed");
+      toast.error("Some updates failed");
     } finally {
       setBulkLoading(false);
     }
@@ -419,20 +473,45 @@ export default function ContentListPage() {
     if (!confirmDelete) return;
     setBulkLoading(true);
     try {
-      const results = await Promise.all(
-        confirmDelete.map((r) => fetch(`/api/content/${r.id}`, { method: "DELETE" }))
+      const responses = await Promise.all(
+        confirmDelete.map((r) =>
+          fetch(`/api/content/${r.id}`, { method: "DELETE" }).then(async (res) => ({
+            res,
+            data: await res.json().catch(() => ({})),
+          })),
+        ),
       );
-      const failed = results.filter((r) => !r.ok).length;
-      const succeeded = results.length - failed;
-      const ids = new Set(confirmDelete.map((r) => r.id));
-      setRows((prev) => prev.filter((r) => !ids.has(r.id)));
+
+      // KYC short-circuit: if the server bounced the first delete with
+      // kycRequired, none of them would have gone through. Surface one
+      // actionable toast and bail out before touching local state.
+      const kycBlocked = responses.find(({ res, data }) => res.status === 403 && data?.kycRequired);
+      if (kycBlocked) {
+        toast.error(kycBlocked.data.error || "Your KYC must be verified to delete articles.", {
+          action: { label: "Complete KYC", onClick: () => router.push("/onboarding/kyc") },
+          duration: 8000,
+        });
+        setConfirmDelete(null);
+        return;
+      }
+
+      const failed = responses.filter(({ res }) => !res.ok).length;
+      const succeeded = responses.length - failed;
+      const okIds = new Set(
+        responses.flatMap(({ res }, i) => (res.ok ? [confirmDelete[i].id] : [])),
+      );
+      setRows((prev) => prev.filter((r) => !okIds.has(r.id)));
       setTotal((t) => t - succeeded);
       setRowSelection({});
       setConfirmDelete(null);
-      if (failed > 0) alert(`${succeeded} deleted, ${failed} failed`);
+      if (failed > 0) {
+        toast.warning(`${succeeded} deleted, ${failed} failed`);
+      } else if (succeeded > 0) {
+        toast.success(`Deleted ${succeeded} item${succeeded === 1 ? "" : "s"}.`);
+      }
     } catch {
       setConfirmDelete(null);
-      alert("Delete failed");
+      toast.error("Delete failed");
     } finally {
       setBulkLoading(false);
     }
@@ -441,7 +520,6 @@ export default function ContentListPage() {
   // ─── render ─────────────────────────────────────────────────────────────
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-      <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
         <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111", marginBottom: 4 }}>Content</h1>
         <p style={{ fontSize: 13, color: "#888", marginBottom: 20 }}>
@@ -639,7 +717,7 @@ export default function ContentListPage() {
                     variant="outline"
                     className="border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
                     disabled={bulkLoading}
-                    onClick={() => handleBulkStatus("PUBLISHED")}
+                    onClick={kycGuard("publish articles", () => handleBulkStatus("PUBLISHED"))}
                   >
                     Publish {selectedRows.length}
                   </Button>
@@ -647,7 +725,7 @@ export default function ContentListPage() {
                     variant="outline"
                     className="border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
                     disabled={bulkLoading}
-                    onClick={() => handleBulkStatus("DRAFT")}
+                    onClick={kycGuard("unpublish articles", () => handleBulkStatus("DRAFT"))}
                   >
                     Unpublish {selectedRows.length}
                   </Button>
@@ -656,7 +734,7 @@ export default function ContentListPage() {
                       variant="outline"
                       className="border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
                       disabled={bulkLoading}
-                      onClick={() => setConfirmDelete(deletableSelected)}
+                      onClick={kycGuard("delete articles", () => setConfirmDelete(deletableSelected))}
                     >
                       <TrashIcon aria-hidden="true" className="-ms-1 opacity-70" size={14} />
                       {deletableSelected.length === selectedRows.length
@@ -673,18 +751,18 @@ export default function ContentListPage() {
               >
                 <Button
                   variant="outline"
-                  onClick={() => setAutoFetchOpen(true)}
+                  onClick={kycGuard("auto-fetch news", () => setAutoFetchOpen(true))}
                 >
                   <SparklesIcon aria-hidden="true" className="-ms-1 opacity-70" size={16} />
                   Auto-fetch news
                 </Button>
               </WithTooltip>
-              <Link href="/content/new">
+              <KycGatedLink href="/content/new" action="create articles">
                 <Button>
                   <PlusIcon aria-hidden="true" className="-ms-1 opacity-90" size={16} />
                   New Content
                 </Button>
-              </Link>
+              </KycGatedLink>
             </div>
           </div>
 
@@ -869,6 +947,7 @@ function RowActions({
   canDelete: boolean;
   onDelete: (row: ContentRow) => void;
 }) {
+  const { guard: kycGuard } = useKycGate();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -880,14 +959,18 @@ function RowActions({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem asChild>
-          <Link href={`/content/${row.id}`}>Edit</Link>
+          {/* Same KYC gate as the title click - the editor is mutate-only,
+              so opening it without VERIFIED is just a path to a toast on save. */}
+          <KycGatedLink href={`/content/${row.id}`} action="edit articles">
+            Edit
+          </KycGatedLink>
         </DropdownMenuItem>
         {canDelete && (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
-              onClick={() => onDelete(row)}
+              onClick={kycGuard("delete articles", () => onDelete(row))}
             >
               Delete
             </DropdownMenuItem>

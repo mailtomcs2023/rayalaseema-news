@@ -11,6 +11,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { toast } from "sonner";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -24,7 +25,6 @@ import {
   ZapIcon,
   type LucideIcon,
 } from "lucide-react";
-import { Sidebar } from "@/components/sidebar";
 
 interface TypeMeta {
   type: string;
@@ -69,7 +69,17 @@ export default function NewContentPage() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error || `Create failed (HTTP ${res.status})`);
+        // KYC gate: server returned 403 with kycRequired:true. Surface as
+        // a red toast with a one-click jump to /onboarding/kyc instead of
+        // a dead-end error message.
+        if (data.kycRequired) {
+          toast.error(data.error || "KYC must be verified to create articles.", {
+            action: { label: "Complete KYC", onClick: () => router.push("/onboarding/kyc") },
+            duration: 8000,
+          });
+        } else {
+          setError(data.error || `Create failed (HTTP ${res.status})`);
+        }
         inflight.current = false;
         setCreating(null);
         return;
@@ -85,7 +95,6 @@ export default function NewContentPage() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f8fafc" }}>
-      <Sidebar />
       <main style={{ marginLeft: 240, flex: 1 }}>
         <div style={{ maxWidth: 1120, margin: "0 auto", padding: "32px 32px 64px" }}>
           {/* Back link */}

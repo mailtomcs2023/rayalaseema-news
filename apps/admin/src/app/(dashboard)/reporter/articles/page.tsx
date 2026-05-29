@@ -30,7 +30,7 @@ export default async function ReporterArticlesPage({
   const VALID = ["SUBMITTED", "IN_REVIEW", "APPROVED", "REJECTED", "PUBLISHED", "DRAFT"];
   const status = sp.status && VALID.includes(sp.status) ? sp.status : "SUBMITTED";
 
-  const [articles, counts, categories] = await Promise.all([
+  const [articles, counts, categories, profile] = await Promise.all([
     prisma.content.findMany({
       where: { type: "ARTICLE", authorId: userId, status: status as any },
       orderBy: { createdAt: "desc" },
@@ -57,7 +57,12 @@ export default async function ReporterArticlesPage({
       select: { id: true, name: true, nameEn: true, color: true },
       orderBy: { name: "asc" },
     }),
+    prisma.reporterProfile.findUnique({
+      where: { userId },
+      select: { kycStatus: true },
+    }),
   ]);
+  const kycStatus = (profile?.kycStatus ?? "PENDING") as "PENDING" | "SUBMITTED" | "VERIFIED" | "REJECTED";
 
   const countByStatus: Record<string, number> = {};
   for (const c of counts) countByStatus[c.status] = c._count._all;
@@ -69,7 +74,7 @@ export default async function ReporterArticlesPage({
   }));
 
   return (
-    <ReporterShell>
+    <ReporterShell kycStatus={kycStatus}>
       <KycBanner userId={userId} />
       <ArticlesClient
         articles={serialised}

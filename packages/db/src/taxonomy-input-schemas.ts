@@ -17,11 +17,13 @@ const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const cuid = z.string().trim().min(1).max(64);
 
-// Reusable string field with friendly error messages - Zod v4 takes
-// per-rule message strings inline.
+// Reusable string field with friendly error messages. Zod v4 collapses
+// the old `required_error` / `invalid_type_error` knobs into the single
+// `error` property; the per-rule `.min(1, msg)` covers "field missing"
+// at the same precision, so we don't need the constructor option at all.
 function nameField(label: string) {
   return z
-    .string({ required_error: `${label} is required` })
+    .string()
     .trim()
     .min(1, `${label} is required`)
     .max(NAME_MAX, `${label} must be at most ${NAME_MAX} characters`);
@@ -29,7 +31,7 @@ function nameField(label: string) {
 
 function slugField() {
   return z
-    .string({ required_error: "Slug is required" })
+    .string()
     .trim()
     .min(1, "Slug is required")
     .max(SLUG_MAX, `Slug must be at most ${SLUG_MAX} characters`)
@@ -62,7 +64,7 @@ const deskCommon = {
   name: nameField("Name (Telugu)"),
   nameEn: nameField("Name (English)"),
   slug: slugField(),
-  branch: z.enum(BRANCH_VALUES, { errorMap: () => ({ message: "Pick a valid branch" }) }),
+  branch: z.enum(BRANCH_VALUES, { error: "Pick a valid branch" }),
   parentId: cuid.optional().nullable(),
   categoryId: cuid.optional().nullable(),
   districtId: cuid.optional().nullable(),

@@ -3,6 +3,7 @@
 import { AlertTriangle, ImageIcon, Link2, Trash2, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -14,9 +15,13 @@ interface Props {
   // empty-state. Used by the content editor to open the free-images modal.
   // Consumers that don't need this leave it undefined and the chip disappears.
   onSearchClick?: () => void;
+  // Forces upload-only mode: no URL paste row, no Search button. Used for
+  // KYC documents where the user must actually upload the file (a URL to
+  // an externally-hosted image isn't verifiable proof). Defaults to false.
+  uploadOnly?: boolean;
 }
 
-export function ImageUpload({ value, onChange, onSearchClick }: Props) {
+export function ImageUpload({ value, onChange, onSearchClick, uploadOnly = false }: Props) {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   // URL field stays inline + always visible - editors paste image URLs often
@@ -44,10 +49,10 @@ export function ImageUpload({ value, onChange, onSearchClick }: Props) {
       if (data.url) {
         onChange(data.url);
       } else {
-        alert(data.error || "Upload failed");
+        toast.error(data.error || "Upload failed");
       }
     } catch (e: any) {
-      alert("Upload failed: " + e.message);
+      toast.error("Upload failed: " + e.message);
     }
     setUploading(false);
   };
@@ -106,45 +111,50 @@ export function ImageUpload({ value, onChange, onSearchClick }: Props) {
         {/* Persistent action row - always visible (no hover gate). Replaces
             the old overlay-on-hover pattern so editors can see the URL +
             controls at a glance. Same shape as the empty-state row, plus
-            a Remove button. */}
+            a Remove button. In `uploadOnly` mode the URL input is hidden
+            (KYC documents must be uploaded, not linked) but Replace file
+            + Remove stay so the user can still swap or clear the asset. */}
         <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <Link2
-              size={14}
-              aria-hidden
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/70"
-            />
-            <Input
-              type="url"
-              value={urlDraft}
-              onChange={(e) => setUrlDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  applyUrl();
-                }
-              }}
-              placeholder="Paste a new image URL to replace…"
-              className="h-9 bg-white pl-8 pr-14"
-            />
-            <button
-              type="button"
-              onClick={applyUrl}
-              disabled={!urlDraft.trim()}
-              className={cn(
-                "absolute right-2 top-1/2 -translate-y-1/2 rounded px-1.5 py-0.5 text-xs font-semibold transition-colors",
-                urlDraft.trim()
-                  ? "text-red-600 hover:bg-red-50 cursor-pointer"
-                  : "text-muted-foreground/40 cursor-not-allowed",
-              )}
-            >
-              Use
-            </button>
-          </div>
+          {!uploadOnly && (
+            <div className="relative flex-1">
+              <Link2
+                size={14}
+                aria-hidden
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/70"
+              />
+              <Input
+                type="url"
+                value={urlDraft}
+                onChange={(e) => setUrlDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    applyUrl();
+                  }
+                }}
+                placeholder="Paste a new image URL to replace…"
+                className="h-9 bg-white pl-8 pr-14"
+              />
+              <button
+                type="button"
+                onClick={applyUrl}
+                disabled={!urlDraft.trim()}
+                className={cn(
+                  "absolute right-2 top-1/2 -translate-y-1/2 rounded px-1.5 py-0.5 text-xs font-semibold transition-colors",
+                  urlDraft.trim()
+                    ? "text-red-600 hover:bg-red-50 cursor-pointer"
+                    : "text-muted-foreground/40 cursor-not-allowed",
+                )}
+              >
+                Use
+              </button>
+            </div>
+          )}
           <Button
             type="button"
             size="sm"
             variant="outline"
+            className={uploadOnly ? "ms-auto" : undefined}
             onClick={() => fileRef.current?.click()}
           >
             <Upload size={14} className="-ms-1 opacity-70" />
@@ -240,48 +250,52 @@ export function ImageUpload({ value, onChange, onSearchClick }: Props) {
           when importing from another source, so making them click "Paste
           URL" first added an extra step for the common path. The Use
           action lives inside the input as a text affordance - it only
-          lights up when there's something to apply. */}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Link2
-            size={14}
-            aria-hidden
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/70"
-          />
-          <Input
-            type="url"
-            value={urlDraft}
-            onChange={(e) => setUrlDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                applyUrl();
-              }
-            }}
-            placeholder="Paste image URL - https://…"
-            className="h-9 bg-white pl-8 pr-14"
-          />
-          <button
-            type="button"
-            onClick={applyUrl}
-            disabled={!urlDraft.trim()}
-            className={cn(
-              "absolute right-2 top-1/2 -translate-y-1/2 rounded px-1.5 py-0.5 text-xs font-semibold transition-colors",
-              urlDraft.trim()
-                ? "text-red-600 hover:bg-red-50 cursor-pointer"
-                : "text-muted-foreground/40 cursor-not-allowed",
-            )}
-          >
-            Use
-          </button>
+          lights up when there's something to apply.
+          Hidden in `uploadOnly` mode (KYC documents) where the user MUST
+          upload an actual file rather than link to an external host. */}
+      {!uploadOnly && (
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Link2
+              size={14}
+              aria-hidden
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/70"
+            />
+            <Input
+              type="url"
+              value={urlDraft}
+              onChange={(e) => setUrlDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  applyUrl();
+                }
+              }}
+              placeholder="Paste image URL - https://…"
+              className="h-9 bg-white pl-8 pr-14"
+            />
+            <button
+              type="button"
+              onClick={applyUrl}
+              disabled={!urlDraft.trim()}
+              className={cn(
+                "absolute right-2 top-1/2 -translate-y-1/2 rounded px-1.5 py-0.5 text-xs font-semibold transition-colors",
+                urlDraft.trim()
+                  ? "text-red-600 hover:bg-red-50 cursor-pointer"
+                  : "text-muted-foreground/40 cursor-not-allowed",
+              )}
+            >
+              Use
+            </button>
+          </div>
+          {onSearchClick && (
+            <Button type="button" size="sm" variant="outline" onClick={onSearchClick}>
+              <ImageIcon size={14} className="-ms-1 opacity-70" />
+              Search free images
+            </Button>
+          )}
         </div>
-        {onSearchClick && (
-          <Button type="button" size="sm" variant="outline" onClick={onSearchClick}>
-            <ImageIcon size={14} className="-ms-1 opacity-70" />
-            Search free images
-          </Button>
-        )}
-      </div>
+      )}
 
       {/* Hidden file input - single source for both the dropzone click
           and the keyboard Enter affordance above. */}

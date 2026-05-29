@@ -61,7 +61,7 @@ export function DialectGlosser() {
 
         const frag = document.createDocumentFragment();
         // Split keeping separators so we can reassemble accurately.
-        const parts = raw.split(/(\s+|[,.;:!?()\[\]"'…-–]+)/u);
+        const parts = raw.split(/(\s+|[,.;:!?()\[\]"'…–\-]+)/u);
         for (const p of parts) {
           const g = map.get(p);
           if (g) {

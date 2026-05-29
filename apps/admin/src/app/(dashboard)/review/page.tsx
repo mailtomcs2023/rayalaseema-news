@@ -2,7 +2,9 @@
 
 import { Fragment, useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
-import { Sidebar } from "@/components/sidebar";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { KycGatedLink, useKycGate } from "@/components/kyc-gated-link";
 import { useSession } from "next-auth/react";
 import {
   ColumnDef,
@@ -155,6 +157,15 @@ export default function ReviewPage() {
   const [bulkRejectNote, setBulkRejectNote] = useState("");
   const [bulkRunning, setBulkRunning] = useState(false);
 
+  // KYC gate - reviewing (approve / reject / publish / pay reporter) is an
+  // editorial action, so editors / sub-editors must be VERIFIED. Short-
+  // circuit at the wrapper functions below so every per-row + bulk button
+  // benefits without each one wrapping its onClick separately. `kycGuard`
+  // is for modal openers (reject / review / return-to-se) so the dialog
+  // doesn't even open when the editor isn't VERIFIED.
+  const { blocked: kycBlocked, kycStatus: gateKycStatus, guard: kycGuard } = useKycGate();
+  const router = useRouter();
+
   // TanStack state
   const [sorting, setSorting] = useState<SortingState>([{ id: "createdAt", desc: true }]);
   const [globalFilter, setGlobalFilter] = useState("");
@@ -196,11 +207,27 @@ export default function ReviewPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Fire a red KYC toast and abort. Centralised so doAction + doBulkAction
+  // both short-circuit identically when the editor isn't VERIFIED yet.
+  const fireKycToast = () => {
+    toast.error("Your KYC must be verified to review articles.", {
+      description:
+        gateKycStatus === "SUBMITTED"
+          ? "Documents are under review - usually verified within 24 hours."
+          : gateKycStatus === "REJECTED"
+            ? "Your last submission was rejected. Re-upload from the KYC page."
+            : "Upload your documents from the KYC page to unlock editorial actions.",
+      action: { label: "Complete KYC", onClick: () => router.push("/onboarding/kyc") },
+      duration: 8000,
+    });
+  };
+
   const doAction = async (
     articleId: string,
     action: string,
     extras?: { note?: string; paymentAmount?: number },
   ) => {
+    if (kycBlocked) { fireKycToast(); return undefined; }
     setActionLoading(articleId);
     const res = await fetch("/api/review", {
       method: "POST",
@@ -219,6 +246,7 @@ export default function ReviewPage() {
     action: string,
     extras?: { note?: string; paymentAmount?: number },
   ) => {
+    if (kycBlocked) { fireKycToast(); return; }
     const ids = Object.keys(rowSelection)
       .map((id) => articles.find((a) => a.id === id))
       .filter((a): a is Article => !!a)
@@ -397,12 +425,13 @@ export default function ReviewPage() {
         header: "Title",
         cell: ({ row }) => (
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <Link
+            <KycGatedLink
               href={`/content/${row.original.id}`}
               style={{ fontSize: 14, fontWeight: 700, color: "#111", textDecoration: "none" }}
+              action="edit articles"
             >
               {row.original.title}
-            </Link>
+            </KycGatedLink>
             {row.original.editorNote ? (
               <button
                 type="button"
@@ -544,7 +573,7 @@ export default function ReviewPage() {
           const a = row.original;
           return (
             <div style={{ display: "flex", gap: 4, flexWrap: "wrap", justifyContent: "flex-end" }}>
-              <Link
+              <KycGatedLink
                 href={`/content/${a.id}`}
                 style={{
                   padding: "4px 10px",
@@ -555,14 +584,17 @@ export default function ReviewPage() {
                   fontWeight: 700,
                   textDecoration: "none",
                 }}
+                action="edit articles"
               >
                 Edit
-              </Link>
+              </KycGatedLink>
               {getActions(a).map((act) =>
                 act.action === "reject" ? (
                   <button
                     key={act.action}
-                    onClick={() => setRejectArticleId(a.id)}
+                    // Modal opener - gate so the reject dialog doesn't pop
+                    // for an editor who can't actually submit it.
+                    onClick={kycGuard("reject articles", () => setRejectArticleId(a.id))}
                     style={{
                       padding: "4px 10px",
                       background: act.bg,
@@ -579,17 +611,24 @@ export default function ReviewPage() {
                 ) : (
                   <button
                     key={act.action}
-                    onClick={() => {
-                      if (act.action === "review") {
-                        openReviewModal({ mode: "single", articleId: a.id, articleTitle: a.title });
-                      } else if (act.action === "return-to-se") {
-                        setReturnTarget({ mode: "single", articleId: a.id, articleTitle: a.title });
-                        setReturnNote("");
-                        setReturnError(null);
-                      } else {
-                        doAction(a.id, act.action);
-                      }
-                    }}
+                    onClick={kycGuard(
+                      act.action === "review"
+                        ? "publish articles"
+                        : act.action === "return-to-se"
+                          ? "return articles"
+                          : `${act.action} articles`,
+                      () => {
+                        if (act.action === "review") {
+                          openReviewModal({ mode: "single", articleId: a.id, articleTitle: a.title });
+                        } else if (act.action === "return-to-se") {
+                          setReturnTarget({ mode: "single", articleId: a.id, articleTitle: a.title });
+                          setReturnNote("");
+                          setReturnError(null);
+                        } else {
+                          doAction(a.id, act.action);
+                        }
+                      },
+                    )}
                     disabled={actionLoading === a.id}
                     style={{
                       padding: "4px 10px",
@@ -656,7 +695,6 @@ export default function ReviewPage() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-      <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
         <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111", marginBottom: 4 }}>Review Queue</h1>
         <p style={{ fontSize: 13, color: "#888", marginBottom: 16 }}>
@@ -769,12 +807,12 @@ export default function ReviewPage() {
                 className={cn("opacity-70", loading && "animate-spin")}
               />
             </Button>
-            <Link href="/content/new">
+            <KycGatedLink href="/content/new" action="create articles">
               <Button>
                 <PlusIcon aria-hidden="true" className="-ms-1 opacity-90" size={16} />
                 New Article
               </Button>
-            </Link>
+            </KycGatedLink>
           </div>
         </div>
 
@@ -802,7 +840,7 @@ export default function ReviewPage() {
                     key={act.action}
                     size="sm"
                     variant="destructive"
-                    onClick={() => setBulkRejectMode(true)}
+                    onClick={kycGuard("reject articles", () => setBulkRejectMode(true))}
                     disabled={bulkRunning}
                   >
                     Reject {selectedCount}
@@ -816,7 +854,7 @@ export default function ReviewPage() {
                   <Button
                     key={act.action}
                     size="sm"
-                    onClick={() => openReviewModal({ mode: "bulk", count: selectedCount })}
+                    onClick={kycGuard("publish articles", () => openReviewModal({ mode: "bulk", count: selectedCount }))}
                     disabled={bulkRunning}
                     style={{ background: act.bg, color: act.color }}
                   >
@@ -831,11 +869,11 @@ export default function ReviewPage() {
                   <Button
                     key={act.action}
                     size="sm"
-                    onClick={() => {
+                    onClick={kycGuard("return articles", () => {
                       setReturnTarget({ mode: "bulk", count: selectedCount });
                       setReturnNote("");
                       setReturnError(null);
-                    }}
+                    })}
                     disabled={bulkRunning}
                     style={{ background: act.bg, color: act.color }}
                   >

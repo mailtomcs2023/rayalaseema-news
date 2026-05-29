@@ -6,6 +6,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useKycGate } from "@/components/kyc-gated-link";
+import { toast } from "sonner";
 
 type Target =
   | { type: "CATEGORY"; categorySlug: string }
@@ -51,6 +53,23 @@ function genId() {
 
 export function MenuTreeEditor(props: Props) {
   const router = useRouter();
+  // KYC gate - every tree mutation flows through `update()` below, so a
+  // single check at that chokepoint covers Add item + per-item edits +
+  // remove. Publish has its own button so it's gated separately. ADMIN
+  // bypasses (useKycGate returns blocked=false for them).
+  const { blocked: kycBlocked, kycStatus: gateKycStatus } = useKycGate();
+  const fireKycToast = (action = "edit the menu") => {
+    toast.error(`Your KYC must be verified to ${action}.`, {
+      description:
+        gateKycStatus === "SUBMITTED"
+          ? "Documents are under review - usually verified within 24 hours."
+          : gateKycStatus === "REJECTED"
+            ? "Your last submission was rejected. Re-upload from the KYC page."
+            : "Upload your documents from the KYC page to unlock editorial actions.",
+      action: { label: "Complete KYC", onClick: () => router.push("/onboarding/kyc") },
+      duration: 8000,
+    });
+  };
   const [tree, setTree] = useState<Item[]>(props.items);
   const [selected, setSelected] = useState<{ topIdx: number; childIdx: number | null } | null>(null);
   const [contentSearch, setContentSearch] = useState("");
@@ -118,6 +137,7 @@ export function MenuTreeEditor(props: Props) {
   };
 
   const handlePublish = async () => {
+    if (kycBlocked) { fireKycToast("publish the menu"); return; }
     await doSave();
     setPublishing(true);
     setError("");
@@ -157,7 +177,14 @@ export function MenuTreeEditor(props: Props) {
   }, [props.location]);
 
   // --- mutators ---
-  const update = (next: Item[]) => { setTree(next); queueSave(); };
+  // Every Add / Edit / Remove eventually flows through here, so gating
+  // once covers the whole tree editor. Blocked clicks fire a red toast
+  // and leave the tree untouched.
+  const update = (next: Item[]) => {
+    if (kycBlocked) { fireKycToast(); return; }
+    setTree(next);
+    queueSave();
+  };
 
   const addItem = (target: Target, label: string) => {
     update([...tree, { id: genId(), label, target, mobileVariant: "show", children: [] }]);
@@ -263,7 +290,12 @@ export function MenuTreeEditor(props: Props) {
         <span style={{ fontSize: 12, color: "#6b7280" }}>
           {saving ? "Saving…" : savedAt ? `Saved ${savedAt.toLocaleTimeString()}` : props.hasUnpublishedDraft ? "Unsaved draft" : props.isPublished ? "Published" : "Unpublished"}
         </span>
-        <button onClick={doSave} disabled={saving}
+        <button
+          onClick={() => {
+            if (kycBlocked) { fireKycToast("save menu drafts"); return; }
+            doSave();
+          }}
+          disabled={saving}
           style={{ padding: "8px 14px", background: "#fff", color: "#374151", border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: saving ? "not-allowed" : "pointer" }}>
           Save Draft
         </button>

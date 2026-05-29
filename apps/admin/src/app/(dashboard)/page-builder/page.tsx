@@ -3,8 +3,7 @@
 // to its own list page (D2/D3/D4). Restricted to ADMIN + EDITOR by the
 // (dashboard) auth wrapper + canVisit() guard.
 
-import Link from "next/link";
-import { Sidebar } from "@/components/sidebar";
+import { KycGatedLink } from "@/components/kyc-gated-link";
 import { prisma } from "@rayalaseema/db";
 
 // Don't prerender - counts must reflect live DB state, and prod DB connection
@@ -58,7 +57,6 @@ export default async function PageBuilderHome() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-      <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: "24px 28px" }}>
         <div style={{ marginBottom: 18 }}>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Page Builder</h1>
@@ -69,9 +67,13 @@ export default async function PageBuilderHome() {
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
           {cards.map((c) => (
-            <Link
+            // KycGatedLink: editing templates / assignments / composite blocks
+            // are publishing-adjacent actions. Editors / sub-editors get the
+            // red KYC toast on click until VERIFIED; ADMINs pass through.
+            <KycGatedLink
               key={c.href}
               href={c.href}
+              action={`open ${c.title.toLowerCase()}`}
               style={{
                 display: "block",
                 background: "#fff",
@@ -103,7 +105,7 @@ export default async function PageBuilderHome() {
                 </span>
               </div>
               <p style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5, margin: 0 }}>{c.blurb}</p>
-            </Link>
+            </KycGatedLink>
           ))}
         </div>
       </main>

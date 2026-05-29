@@ -1,7 +1,45 @@
+// /audit-log - read-only stream of every write the API logged via
+// lib/audit.ts. Server paginates because the table grows unbounded; the
+// client uses TanStack with manualPagination so the chrome matches every
+// other admin list (Content, Users, Reporters) - same Table / Select /
+// Pagination / DatePicker components, same row-click expander pattern.
 "use client";
 
-import { useState, useEffect } from "react";
-import { Sidebar } from "@/components/sidebar";
+import {
+  type ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  type PaginationState,
+  useReactTable,
+} from "@tanstack/react-table";
+import {
+  ChevronFirstIcon,
+  ChevronLastIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+} from "lucide-react";
+import { Fragment, useCallback, useEffect, useId, useMemo, useState } from "react";
+
+import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Pagination, PaginationContent, PaginationItem } from "@/components/ui/pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface AuditLog {
   id: string;
@@ -37,22 +75,53 @@ function actionTone(action: string) {
   return "#475569";
 }
 
+// "_blank" sentinel - shadcn Select rejects empty-string values, so we
+// use this for the "All actions" / "All resources" options and translate
+// back to "" before fetching.
+const ALL = "_all";
+
+const ACTION_OPTIONS = [
+  { value: "article.create", label: "article.create" },
+  { value: "article.update", label: "article.update" },
+  { value: "article.publish", label: "article.publish" },
+  { value: "article.schedule", label: "article.schedule" },
+  { value: "article.delete", label: "article.delete" },
+  { value: "article.restore", label: "article.restore" },
+  { value: "user", label: "user.*" },
+  { value: "auth", label: "auth.*" },
+] as const;
+
+const RESOURCE_OPTIONS = ["article", "user", "category", "comment", "settings"] as const;
+
 export default function AuditLogPage() {
+  const id = useId();
+
+  // Server-driven filters + pagination. Default pageSize 10 matches every
+  // other admin list; users pick higher via the rows-per-page select.
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+
   const [search, setSearch] = useState("");
   const [action, setAction] = useState("");
   const [resource, setResource] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [expanded, setExpanded] = useState<string | null>(null);
-  const limit = 30;
 
+  // Reset to page 0 whenever any filter changes - otherwise we'd keep
+  // page=3 while the result set shrunk to 1 page.
   useEffect(() => {
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
+  }, [search, action, resource, from, to]);
+
+  const load = useCallback(() => {
     setLoading(true);
-    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+    const params = new URLSearchParams({
+      page: String(pagination.pageIndex + 1),
+      limit: String(pagination.pageSize),
+    });
     if (search) params.set("search", search);
     if (action) params.set("action", action);
     if (resource) params.set("resource", resource);
@@ -67,142 +136,288 @@ export default function AuditLogPage() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [page, search, action, resource, from, to]);
+  }, [pagination.pageIndex, pagination.pageSize, search, action, resource, from, to]);
 
-  const totalPages = Math.ceil(total / limit);
+  useEffect(() => { load(); }, [load]);
+
+  const columns = useMemo<ColumnDef<AuditLog>[]>(
+    () => [
+      {
+        accessorKey: "createdAt",
+        header: "When",
+        cell: ({ row }) => (
+          <span className="whitespace-nowrap text-xs text-muted-foreground">
+            {new Date(row.original.createdAt).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "medium" })}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "actor",
+        header: "Actor",
+        cell: ({ row }) => {
+          const log = row.original;
+          return (
+            <span className="text-xs">
+              {log.actor?.name || log.actorEmail || "system"}
+              {log.actorRole && (
+                <span className="ml-1.5 text-[10px] text-muted-foreground">· {log.actorRole}</span>
+              )}
+            </span>
+          );
+        },
+      },
+      {
+        accessorKey: "action",
+        header: "Action",
+        cell: ({ row }) => {
+          const tone = actionTone(row.original.action);
+          return (
+            <span
+              className="inline-block rounded px-2 py-0.5 font-mono text-[11px] font-bold"
+              style={{ background: tone + "22", color: tone }}
+            >
+              {row.original.action}
+            </span>
+          );
+        },
+      },
+      {
+        accessorKey: "resource",
+        header: "Resource",
+        cell: ({ row }) => {
+          const log = row.original;
+          return (
+            <span className="text-xs text-muted-foreground">
+              {log.resource}
+              {log.resourceId && (
+                <span className="ml-1 font-mono text-[11px] text-muted-foreground/70">{log.resourceId.slice(-8)}</span>
+              )}
+            </span>
+          );
+        },
+      },
+      {
+        accessorKey: "ipAddress",
+        header: "IP",
+        cell: ({ row }) => (
+          <span className="font-mono text-[11px] text-muted-foreground">{row.original.ipAddress || "-"}</span>
+        ),
+      },
+    ],
+    [],
+  );
+
+  const table = useReactTable({
+    data: logs,
+    columns,
+    state: { pagination },
+    onPaginationChange: setPagination,
+    pageCount: Math.max(1, Math.ceil(total / pagination.pageSize)),
+    manualPagination: true,
+    getCoreRowModel: getCoreRowModel(),
+    getRowId: (row) => row.id,
+  });
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-      <Sidebar />
-      <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
+    <div className="flex min-h-screen bg-muted/40">
+      <main className="shadcn-scope flex-1 p-6" style={{ marginLeft: 240 }}>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111" }}>Audit Log</h1>
-            <p style={{ fontSize: 13, color: "#888", marginTop: 4 }}>{total.toLocaleString()} entries</p>
+            <h1 className="text-2xl font-extrabold text-foreground">Audit Log</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {total.toLocaleString()} {total === 1 ? "entry" : "entries"}
+            </p>
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="admin-filter-grid" style={{ display: "grid", gridTemplateColumns: "1fr 160px 140px 140px 140px", gap: 8, marginBottom: 16, background: "#fff", padding: 12, borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
-          <input
+        {/* Filters - shadcn Input / Select / DatePicker for consistency
+            with /content, /users, /reporters. */}
+        <div className="mb-4 grid gap-2 rounded-lg border bg-background p-3 shadow-sm md:grid-cols-[1fr_180px_160px_170px_170px]">
+          <Input
             value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            placeholder="Search by email, action, resource ID..."
-            style={{ padding: "8px 12px", border: "1px solid #eee", borderRadius: 8, fontSize: 13, outline: "none" }}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by email, action, resource ID…"
           />
-          <select value={action} onChange={(e) => { setAction(e.target.value); setPage(1); }}
-            style={{ padding: "8px 12px", border: "1px solid #eee", borderRadius: 8, fontSize: 13, outline: "none" }}>
-            <option value="">All actions</option>
-            <option value="article.create">article.create</option>
-            <option value="article.update">article.update</option>
-            <option value="article.publish">article.publish</option>
-            <option value="article.schedule">article.schedule</option>
-            <option value="article.delete">article.delete</option>
-            <option value="article.restore">article.restore</option>
-            <option value="user">user.*</option>
-            <option value="auth">auth.*</option>
-          </select>
-          <select value={resource} onChange={(e) => { setResource(e.target.value); setPage(1); }}
-            style={{ padding: "8px 12px", border: "1px solid #eee", borderRadius: 8, fontSize: 13, outline: "none" }}>
-            <option value="">All resources</option>
-            <option value="article">article</option>
-            <option value="user">user</option>
-            <option value="category">category</option>
-            <option value="comment">comment</option>
-            <option value="settings">settings</option>
-          </select>
-          <input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }}
-            style={{ padding: "8px 12px", border: "1px solid #eee", borderRadius: 8, fontSize: 13, outline: "none" }} />
-          <input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }}
-            style={{ padding: "8px 12px", border: "1px solid #eee", borderRadius: 8, fontSize: 13, outline: "none" }} />
+          <Select
+            value={action || ALL}
+            onValueChange={(v) => setAction(v === ALL ? "" : v)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="All actions" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>All actions</SelectItem>
+              {ACTION_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={resource || ALL}
+            onValueChange={(v) => setResource(v === ALL ? "" : v)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="All resources" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>All resources</SelectItem>
+              {RESOURCE_OPTIONS.map((r) => (
+                <SelectItem key={r} value={r}>{r}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <DatePicker value={from} onChange={setFrom} placeholder="From date" />
+          <DatePicker value={to} onChange={setTo} placeholder="To date" />
         </div>
 
-        {/* Log table */}
-        <div style={{ background: "#fff", borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", opacity: loading ? 0.6 : 1, overflow: "hidden" }}>
-          <div className="table-scroll">
-          <table style={{ width: "100%", minWidth: 640, borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ borderBottom: "2px solid #f3f4f6" }}>
-                <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 12, color: "#888", fontWeight: 600 }}>When</th>
-                <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 12, color: "#888", fontWeight: 600 }}>Actor</th>
-                <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 12, color: "#888", fontWeight: 600 }}>Action</th>
-                <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 12, color: "#888", fontWeight: 600 }}>Resource</th>
-                <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 12, color: "#888", fontWeight: 600 }}>IP</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logs.map((log) => {
-                const tone = actionTone(log.action);
-                const isExpanded = expanded === log.id;
-                return (
-                  <>
-                    <tr key={log.id}
-                      onClick={() => setExpanded(isExpanded ? null : log.id)}
-                      style={{ borderBottom: "1px solid #f9fafb", cursor: "pointer", background: isExpanded ? "#f9fafb" : "transparent" }}>
-                      <td style={{ padding: "10px 16px", fontSize: 12, color: "#555", whiteSpace: "nowrap" as const }}>
-                        {new Date(log.createdAt).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "medium" })}
-                      </td>
-                      <td style={{ padding: "10px 16px", fontSize: 12, color: "#333" }}>
-                        {log.actor?.name || log.actorEmail || "system"}
-                        {log.actorRole && (
-                          <span style={{ fontSize: 10, color: "#888", marginLeft: 6 }}>· {log.actorRole}</span>
-                        )}
-                      </td>
-                      <td style={{ padding: "10px 16px" }}>
-                        <span style={{
-                          fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 4,
-                          background: tone + "22", color: tone, fontFamily: "monospace",
-                        }}>
-                          {log.action}
-                        </span>
-                      </td>
-                      <td style={{ padding: "10px 16px", fontSize: 12, color: "#555" }}>
-                        {log.resource}
-                        {log.resourceId && <span style={{ fontSize: 11, color: "#888", marginLeft: 4, fontFamily: "monospace" }}>{log.resourceId.slice(-8)}</span>}
-                      </td>
-                      <td style={{ padding: "10px 16px", fontSize: 11, color: "#888", fontFamily: "monospace" }}>
-                        {log.ipAddress || "-"}
-                      </td>
-                    </tr>
-                    {isExpanded && (
-                      <tr key={log.id + "-detail"}>
-                        <td colSpan={5} style={{ padding: "12px 16px 16px 16px", background: "#f9fafb", borderBottom: "1px solid #eee" }}>
-                          <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>METADATA</div>
-                          <pre style={{ fontSize: 11, fontFamily: "monospace", color: "#333", whiteSpace: "pre-wrap" as const, margin: 0, background: "#fff", padding: 10, borderRadius: 6, border: "1px solid #eee" }}>
-                            {JSON.stringify(log.meta, null, 2)}
-                          </pre>
-                          {log.userAgent && (
-                            <p style={{ fontSize: 10, color: "#888", marginTop: 6, fontFamily: "monospace" }}>UA: {log.userAgent}</p>
-                          )}
-                        </td>
-                      </tr>
-                    )}
-                  </>
-                );
-              })}
-              {logs.length === 0 && !loading && (
-                <tr><td colSpan={5} style={{ padding: 40, textAlign: "center", color: "#aaa" }}>No audit entries</td></tr>
+        {/* Table */}
+        <div
+          className="overflow-hidden rounded-md border bg-background"
+          style={{ opacity: loading ? 0.6 : 1 }}
+        >
+          <Table className="table-fixed">
+            <TableHeader>
+              {table.getHeaderGroups().map((hg) => (
+                <TableRow key={hg.id}>
+                  {hg.headers.map((header) => (
+                    <TableHead key={header.id} className="h-11">
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(header.column.columnDef.header, header.getContext())}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows.length > 0 ? (
+                table.getRowModel().rows.map((row) => {
+                  const isExpanded = expanded === row.original.id;
+                  return (
+                    <Fragment key={row.id}>
+                      <TableRow
+                        onClick={() => setExpanded(isExpanded ? null : row.original.id)}
+                        className={`cursor-pointer ${isExpanded ? "bg-muted/40" : ""}`}
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id} className="last:py-0">
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                      {isExpanded && (
+                        <TableRow className="bg-muted/30 hover:bg-muted/30">
+                          <TableCell colSpan={columns.length} className="py-3">
+                            <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                              Metadata
+                            </p>
+                            <pre className="m-0 whitespace-pre-wrap rounded border bg-background p-2.5 font-mono text-[11px] text-foreground">
+                              {JSON.stringify(row.original.meta, null, 2)}
+                            </pre>
+                            {row.original.userAgent && (
+                              <p className="mt-2 font-mono text-[10px] text-muted-foreground">
+                                UA: {row.original.userAgent}
+                              </p>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </Fragment>
+                  );
+                })
+              ) : (
+                <TableRow>
+                  <TableCell className="h-24 text-center" colSpan={columns.length}>
+                    {loading ? "Loading audit log…" : "No audit entries"}
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
-          </div>
+            </TableBody>
+          </Table>
         </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", flexWrap: "wrap", gap: 8, marginTop: 16 }}>
-            <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}
-              style={{ padding: "6px 14px", background: page === 1 ? "#f3f4f6" : "#fff", border: "1px solid #ddd", borderRadius: 6, fontSize: 13, cursor: page === 1 ? "not-allowed" : "pointer" }}>
-              Previous
-            </button>
-            <span style={{ fontSize: 12, color: "#888" }}>Page {page} of {totalPages}</span>
-            <button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page === totalPages}
-              style={{ padding: "6px 14px", background: page === totalPages ? "#f3f4f6" : "#fff", border: "1px solid #ddd", borderRadius: 6, fontSize: 13, cursor: page === totalPages ? "not-allowed" : "pointer" }}>
-              Next
-            </button>
+        {/* Pagination - same layout as /content + /users. Page size left,
+            range counter + nav buttons right. */}
+        <div className="mt-3 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Label className="max-sm:sr-only" htmlFor={`${id}-pagesize`}>
+              Rows per page
+            </Label>
+            <Select
+              value={pagination.pageSize.toString()}
+              onValueChange={(v) => setPagination((p) => ({ ...p, pageSize: Number(v), pageIndex: 0 }))}
+            >
+              <SelectTrigger className="w-fit whitespace-nowrap" id={`${id}-pagesize`}>
+                <SelectValue placeholder="Rows" />
+              </SelectTrigger>
+              <SelectContent>
+                {[10, 15, 25, 50, 100].map((size) => (
+                  <SelectItem key={size} value={size.toString()}>{size}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        )}
+          <div className="flex items-center gap-3">
+            <p aria-live="polite" className="whitespace-nowrap text-sm text-muted-foreground">
+              <span className="text-foreground">
+                {total === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1}
+                -
+                {Math.min((pagination.pageIndex + 1) * pagination.pageSize, total)}
+              </span>{" "}
+              of <span className="text-foreground">{total}</span>
+            </p>
+            <Pagination className="mx-0 w-auto">
+              <PaginationContent>
+                <PaginationItem>
+                  <Button
+                    aria-label="Go to first page"
+                    disabled={!table.getCanPreviousPage()}
+                    onClick={() => table.firstPage()}
+                    size="icon"
+                    variant="outline"
+                  >
+                    <ChevronFirstIcon aria-hidden="true" size={16} />
+                  </Button>
+                </PaginationItem>
+                <PaginationItem>
+                  <Button
+                    aria-label="Go to previous page"
+                    disabled={!table.getCanPreviousPage()}
+                    onClick={() => table.previousPage()}
+                    size="icon"
+                    variant="outline"
+                  >
+                    <ChevronLeftIcon aria-hidden="true" size={16} />
+                  </Button>
+                </PaginationItem>
+                <PaginationItem>
+                  <Button
+                    aria-label="Go to next page"
+                    disabled={!table.getCanNextPage()}
+                    onClick={() => table.nextPage()}
+                    size="icon"
+                    variant="outline"
+                  >
+                    <ChevronRightIcon aria-hidden="true" size={16} />
+                  </Button>
+                </PaginationItem>
+                <PaginationItem>
+                  <Button
+                    aria-label="Go to last page"
+                    disabled={!table.getCanNextPage()}
+                    onClick={() => table.lastPage()}
+                    size="icon"
+                    variant="outline"
+                  >
+                    <ChevronLastIcon aria-hidden="true" size={16} />
+                  </Button>
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        </div>
       </main>
     </div>
   );
 }
+

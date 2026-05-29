@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { Sidebar } from "@/components/sidebar";
 import { RecentArticlesTable } from "@/components/dashboard/recent-articles-table";
+import { KycGatedLink } from "@/components/kyc-gated-link";
 import { getDashboardStats } from "@/lib/admin-queries";
 import { auth } from "@/lib/auth";
 import { landingFor } from "@/lib/roles";
+import { prisma } from "@rayalaseema/db";
 
 export default async function DashboardPage() {
   // Reporters get bounced to their own portal (since middleware no longer
@@ -12,7 +14,38 @@ export default async function DashboardPage() {
   // hides items they can't use.
   const session = await auth();
   const role = (session?.user as any)?.role as string | undefined;
+  const userId = (session?.user as any)?.id as string | undefined;
+
+  // Forced password change is enforced in proxy.ts via the JWT flag, so by
+  // the time we get here the user has either cleared it or is already on
+  // /change-password. No DB hit needed in the dashboard render path.
+
   if (role === "REPORTER") redirect(landingFor("REPORTER"));
+
+  // First-time KYC nudge: if the staff member hasn't started their KYC
+  // (status === PENDING) AND they haven't already been redirected once
+  // this session, push them to the onboarding form. Cookie expires in
+  // 30 days so a long-idle PENDING user gets the prompt again on next
+  // visit.
+  //
+  // Why we redirect via /api/onboarding/kyc-nudge rather than
+  // /onboarding/kyc directly: Next.js 15+ forbids cookie WRITES from
+  // Server Components. The route handler at /api/onboarding/kyc-nudge
+  // sets the suppression cookie + 302s onward. Pages can still READ
+  // cookies, which is all we do here.
+  if (userId && role && role !== "USER") {
+    const cookieStore = await cookies();
+    const alreadyNudged = cookieStore.get("kyc_nudge_seen")?.value === "1";
+    if (!alreadyNudged) {
+      const profile = await prisma.reporterProfile.findUnique({
+        where: { userId },
+        select: { kycStatus: true },
+      });
+      if (profile?.kycStatus === "PENDING") {
+        redirect("/api/onboarding/kyc-nudge");
+      }
+    }
+  }
 
   const stats = await getDashboardStats();
 
@@ -29,9 +62,14 @@ export default async function DashboardPage() {
     { label: "Active Ads", value: stats.totalAds, color: "#64748b", href: "/ads", icon: "M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" },
   ];
 
+  // KYC banner state lives entirely in <AdminKycBanner /> (rendered by the
+  // (dashboard) layout). That one handles all three states - PENDING (amber),
+  // SUBMITTED (blue), REJECTED (red) - and disappears on VERIFIED. The
+  // duplicate inline banner that used to live here always rendered red and
+  // never reflected the SUBMITTED state, so it's been removed.
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-      <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
         {/* Header */}
         <div className="dashboard-header">
@@ -39,12 +77,13 @@ export default async function DashboardPage() {
             <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111" }}>Dashboard</h1>
             <p style={{ fontSize: 13, color: "#888", marginTop: 4 }}>Welcome to Rayalaseema Express CMS</p>
           </div>
-          <Link
+          <KycGatedLink
             href="/content/new"
             style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "10px 20px", background: "#FF2C2C", color: "#fff", borderRadius: 8, fontSize: 14, fontWeight: 700, textDecoration: "none" }}
+            action="create articles"
           >
             + New Article
-          </Link>
+          </KycGatedLink>
         </div>
 
         {/* Stats Grid */}
@@ -64,23 +103,35 @@ export default async function DashboardPage() {
           ))}
         </div>
 
-        {/* Quick Actions */}
+        {/* Quick Actions.
+            "New Content" and "Breaking News" route into the create flow,
+            so they need the KYC gate (unverified editors get a toast
+            instead of a navigation). "Upload ePaper" and "Add Category"
+            are read/manage entry points that don't need it. */}
         <div className="quick-grid">
           {[
-            // "New Content" and "Breaking News" both land on the /content/new
-            // type picker right now - until the picker supports a `?type=` query
-            // to skip straight to BREAKING_NEWS, both shortcuts share the same
-            // href. Key off label (unique) instead of href so React doesn't warn.
-            { label: "New Content", href: "/content/new", icon: "+" },
-            { label: "Breaking News", href: "/content/new", icon: "!" },
-            { label: "Upload ePaper", href: "/epaper", icon: "^" },
-            { label: "Add Category", href: "/categories", icon: "#" },
-          ].map((a) => (
-            <Link key={a.label} href={a.href} style={{ background: "#fff", borderRadius: 10, padding: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", textDecoration: "none", textAlign: "center" }}>
-              <span style={{ fontSize: 28, display: "block", marginBottom: 8 }}>{a.icon}</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: "#555" }}>{a.label}</span>
-            </Link>
-          ))}
+            { label: "New Content", href: "/content/new", icon: "+", gated: true, action: "create articles" },
+            { label: "Breaking News", href: "/content/new", icon: "!", gated: true, action: "create breaking news" },
+            { label: "Upload ePaper", href: "/epaper", icon: "^", gated: false },
+            { label: "Add Category", href: "/categories", icon: "#", gated: false },
+          ].map((a) => {
+            const cardStyle = { background: "#fff", borderRadius: 10, padding: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", textDecoration: "none", textAlign: "center" as const };
+            const inner = (
+              <>
+                <span style={{ fontSize: 28, display: "block", marginBottom: 8 }}>{a.icon}</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: "#555" }}>{a.label}</span>
+              </>
+            );
+            return a.gated ? (
+              <KycGatedLink key={a.label} href={a.href} style={cardStyle} action={a.action}>
+                {inner}
+              </KycGatedLink>
+            ) : (
+              <Link key={a.label} href={a.href} style={cardStyle}>
+                {inner}
+              </Link>
+            );
+          })}
         </div>
 
         {/* Recent Articles - TanStack table extracted into a client

@@ -5,7 +5,6 @@
 // location enum value, then hands off to the client tree editor.
 import { redirect, notFound } from "next/navigation";
 import { prisma, MenuLocation } from "@rayalaseema/db";
-import { Sidebar } from "@/components/sidebar";
 import { auth } from "@/lib/auth";
 import { MenuTreeEditor } from "@/components/menu-tree-editor";
 
@@ -110,7 +109,6 @@ export default async function MenuBuilderPage({ params }: { params: Promise<{ lo
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-      <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
         <MenuTreeEditor
           menuId={menu.id}

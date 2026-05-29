@@ -42,7 +42,9 @@ export async function POST(req: NextRequest) {
 
     await prisma.user.update({
       where: { id: user.id },
-      data: { passwordHash: await hash(newPassword, 12) },
+      // Clear mustChangePassword so the app's auth-gate stops bouncing
+      // the reporter back to the forced-change screen on next launch.
+      data: { passwordHash: await hash(newPassword, 12), mustChangePassword: false },
     });
 
     return NextResponse.json({ success: true, message: "Password updated" });

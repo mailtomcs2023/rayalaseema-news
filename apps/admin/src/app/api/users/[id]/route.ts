@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, userUpdateSchema } from "@rayalaseema/db";
 import { hash } from "bcryptjs";
-import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
+import { requireAuth, isAuthError, apiError, zodErrorResponse } from "@/lib/api-utils";
 import { redistributeReviewerArticles } from "@/lib/reviewer-assignment";
 import { normalizeEmail } from "@/lib/email";
 import { isProtectedUser } from "@/lib/protected-users";
@@ -13,24 +13,28 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const { id } = await params;
     const rawBody = await req.json();
     const parsed = userUpdateSchema.safeParse(rawBody);
-    if (!parsed.success) {
-      return NextResponse.json(
-        {
-          error: "Invalid request body",
-          fieldErrors: parsed.error.flatten().fieldErrors,
-        },
-        { status: 400 },
-      );
-    }
+    if (!parsed.success) return zodErrorResponse(parsed.error);
     const b = parsed.data;
     const data: any = {};
     for (const key of ["name", "role", "active", "bio", "phone"] as const) {
       if (b[key] !== undefined) data[key] = b[key];
     }
-    // Canonicalise email on edit too - admins occasionally fix typos in
-    // existing rows, and we don't want a stray uppercase letter to slip a
-    // duplicate past the unique constraint.
+    // Email = identity. Rules:
+    //   - Only an ADMIN role can change another user's email (this PUT is
+    //     already ADMIN-gated above).
+    //   - An admin cannot change THEIR OWN email - another admin must do
+    //     it. Guards against typos that lock the admin out + a compromised
+    //     admin session re-keying their own account.
+    //   - Editor / Sub-Editor / Reporter editing themselves through OTHER
+    //     routes never reach this allow-list.
     if (b.email !== undefined) {
+      const sessionUserId = (session.user as any)?.id as string | undefined;
+      if (sessionUserId === id) {
+        return NextResponse.json(
+          { error: "An admin cannot change their own email. Ask another admin to do it." },
+          { status: 403 },
+        );
+      }
       const cleanEmail = normalizeEmail(b.email);
       if (!cleanEmail) return NextResponse.json({ error: "Email cannot be empty" }, { status: 400 });
       data.email = cleanEmail;

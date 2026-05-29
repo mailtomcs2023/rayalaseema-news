@@ -14,7 +14,6 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { buildSlugFromTitle, isPlaceholderSlug, sanitizeSlug } from "@/lib/slug";
-import { Sidebar } from "@/components/sidebar";
 import { RichEditor, type RichEditorRef } from "@/components/rich-editor";
 import { ImageUpload } from "@/components/image-upload";
 import { ContentPayloadEditor } from "@/components/content-payload-editor";
@@ -409,6 +408,19 @@ export default function ContentEditorPage() {
       });
       const data = await res.json();
       if (!res.ok) {
+        // Special-case the KYC gate so the error has a useful CTA. The
+        // server attaches `kycRequired: true` on 403 from lib/kyc-guard.ts.
+        // This now fires on any edit/save (not just publish) for unverified
+        // non-ADMIN users - data.error carries the action-specific message.
+        if (data.kycRequired) {
+          toast.error(data.error || "Your KYC must be verified to edit articles.", {
+            action: { label: "Complete KYC", onClick: () => router.push("/onboarding/kyc") },
+            duration: 8000,
+          });
+          setError("");
+          setSaving(false);
+          return;
+        }
         const fieldErrs = data.fieldErrors
           ? Object.entries(data.fieldErrors).map(([k, v]) => `${k}: ${(v as string[]).join(", ")}`).join(" · ")
           : "";
@@ -451,7 +463,6 @@ export default function ContentEditorPage() {
   if (loading) {
     return (
       <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-        <Sidebar />
         <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>Loading…</main>
       </div>
     );
@@ -463,7 +474,6 @@ export default function ContentEditorPage() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-      <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
         {/* Header */}
         <div className="shadcn-scope mb-4 flex flex-wrap items-center gap-3">

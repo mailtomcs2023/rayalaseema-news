@@ -46,5 +46,5 @@ function hyphenateToken(token: string): string {
 export function hyphenateTelugu(text: string | null | undefined): string {
   if (!text) return "";
   // Split on whitespace + punctuation; hyphenate each token, reassemble.
-  return text.split(/(\s+|[,.;:!?()\[\]"'…-–]+)/u).map(hyphenateToken).join("");
+  return text.split(/(\s+|[,.;:!?()\[\]"'…–\-]+)/u).map(hyphenateToken).join("");
 }

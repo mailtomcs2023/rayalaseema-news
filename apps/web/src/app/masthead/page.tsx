@@ -41,7 +41,7 @@ export default async function MastheadPage() {
   const team = await prisma.user.findMany({
     where: {
       active: true,
-      role: { in: ["ADMIN", "EDITOR", "CHIEF_SUB_EDITOR", "SUB_EDITOR"] },
+      role: { in: ["ADMIN", "EDITOR", "SUB_EDITOR"] },
     },
     select: {
       id: true, name: true, bio: true, avatar: true, role: true,

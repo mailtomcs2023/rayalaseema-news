@@ -41,7 +41,7 @@ const COMMON_TYPOS: Record<string, string> = {
 // Tokenizer: splits on whitespace + punctuation while keeping Telugu
 // conjuncts (Unicode block U+0C00..U+0C7F) intact.
 function tokenize(s: string): string[] {
-  return s.split(/[\s,.;:!?()\[\]"'…-–]+/u).filter(Boolean);
+  return s.split(/[\s,.;:!?()\[\]"'…–\-]+/u).filter(Boolean);
 }
 
 export interface TeluguTypoHit {

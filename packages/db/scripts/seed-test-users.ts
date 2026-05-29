@@ -33,15 +33,20 @@ async function main() {
     // Don't overwrite the display name on existing rows - those addresses
     // may already point at named accounts (e.g. "Rajesh Kumar"). The seed
     // is about role + password, not identity.
+    // Seeded accounts always sign in with the documented password - never
+    // ship them with the forced-change flag flipped on, or the test reporter
+    // would be bounced to /profile-password on every login and the admin
+    // wouldn't be able to bootstrap anything.
     const user = await prisma.user.upsert({
       where: { email: s.email },
-      update: { passwordHash, role: s.role, active: true },
+      update: { passwordHash, role: s.role, active: true, mustChangePassword: false },
       create: {
         email: s.email,
         passwordHash,
         name: s.name,
         role: s.role,
         active: true,
+        mustChangePassword: false,
       },
       select: { id: true, email: true, role: true, name: true },
     });

@@ -6,8 +6,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Sidebar } from "@/components/sidebar";
 import { WithTooltip } from "@/components/ui/tooltip";
+import { useKycGate } from "@/components/kyc-gated-link";
 
 interface NewsItem {
   externalId: string;
@@ -39,6 +39,7 @@ export default function NewsFeedPage() {
   const [importing, setImporting] = useState<string | null>(null);
   const [imported, setImported] = useState<Record<string, string>>({}); // externalId → new content id
   const [error, setError] = useState("");
+  const { guard: kycGuard } = useKycGate();
 
   const fetchNews = useCallback(async (searchQuery?: string, providerOverride?: Provider) => {
     const q = (typeof searchQuery === "string" ? searchQuery : "") || query;
@@ -94,7 +95,6 @@ export default function NewsFeedPage() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-      <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
         <div style={{ marginBottom: 20 }}>
           <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111" }}>News Feed</h1>
@@ -184,7 +184,7 @@ export default function NewsFeedPage() {
                       ✓ Open draft
                     </button>
                   ) : (
-                    <button onClick={() => importArticle(a)} disabled={importing === a.externalId}
+                    <button onClick={kycGuard("import news", () => importArticle(a))} disabled={importing === a.externalId}
                       style={{ padding: "8px 14px", background: "#dc2626", color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: importing === a.externalId ? "not-allowed" : "pointer", whiteSpace: "nowrap", opacity: importing === a.externalId ? 0.5 : 1 }}>
                       {importing === a.externalId ? "Importing…" : "Import as draft"}
                     </button>

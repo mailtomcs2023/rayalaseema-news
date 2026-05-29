@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Sidebar } from "@/components/sidebar";
 
 type SettingField = {
   key: string;
@@ -127,7 +126,6 @@ export default function SettingsPage() {
 
   if (loading) return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-      <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <p style={{ color: "#888" }}>Loading settings...</p>
       </main>
@@ -136,7 +134,6 @@ export default function SettingsPage() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-      <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 24, position: "sticky", top: 0, background: "#f3f4f6", zIndex: 10, padding: "8px 0" }}>

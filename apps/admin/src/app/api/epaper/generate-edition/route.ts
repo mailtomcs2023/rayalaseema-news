@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
+import { requireKyc } from "@/lib/kyc-guard";
 import { autofillTemplate, type BlockSlot } from "@/lib/epaper/autofill";
 import { buildContinuations } from "@/lib/epaper/continuation";
 import { createSnapshot } from "@/lib/epaper/snapshots";
@@ -23,6 +24,16 @@ import { createSnapshot } from "@/lib/epaper/snapshots";
 export async function POST(req: NextRequest) {
   const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR"]);
   if (isAuthError(session)) return session;
+  // KYC gate - generating an edition is an editorial-publishing action.
+  // ADMIN bypasses; everyone else must be VERIFIED. Returns 403 with
+  // { kycRequired: true } which the client surfaces as a red toast.
+  {
+    const block = await requireKyc(
+      { id: session.user.id, role: session.user.role },
+      "generate the edition",
+    );
+    if (block) return block;
+  }
   try {
     const body = await req.json();
     const dateStr = (body?.date as string) || new Date().toISOString().slice(0, 10);

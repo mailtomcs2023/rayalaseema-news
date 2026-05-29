@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { z } from "zod";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -13,9 +14,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { Eye, EyeOff, AlertCircle, ShieldCheck, Pencil, ClipboardCheck, Newspaper } from "lucide-react";
+import { Eye, EyeOff, ShieldCheck, Pencil, ClipboardCheck, Newspaper } from "lucide-react";
 
 // Demo-only quick-login cards. Each tap auto-fills + submits the credentials
 // for a seeded test account so reviewers can flip between roles without
@@ -28,13 +28,25 @@ const DEMO_ROLES = [
   { key: "reporter",  label: "Reporter",   email: "reporter@rayalaseemaexpress.com",  password: "reporter123",  accent: "#16a34a", Icon: Newspaper      },
 ] as const;
 
-// Mirrors the rules a NextAuth credentials provider can actually enforce. We
-// don't validate password complexity at the client (admin passwords are set
-// by other admins; the user typing here just needs to match an existing
-// hash), but a non-empty value is required.
+// Client-side validation rules for the sign-in form. We deliberately don't
+// enforce password complexity here - admins set passwords for other users
+// directly, and the user signing in just needs to match what's already
+// hashed in the DB. We do require:
+//   email     - non-empty, normalized lowercase, valid RFC-style address
+//   password  - non-empty, sane length cap so we don't ship megabytes to the
+//               server on a paste accident
 const loginSchema = z.object({
-  email: z.string().trim().min(1, "Email is required").email("Enter a valid email address"),
-  password: z.string().min(1, "Password is required"),
+  email: z
+    .string()
+    .trim()
+    .min(1, "Email is required")
+    .max(254, "Email is too long")
+    .toLowerCase()
+    .email("Enter a valid email address"),
+  password: z
+    .string()
+    .min(1, "Password is required")
+    .max(200, "Password is too long"),
 });
 
 type FieldErrors = Partial<Record<keyof z.infer<typeof loginSchema>, string>>;
@@ -43,7 +55,6 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [loading, setLoading] = useState(false);
 
@@ -58,7 +69,6 @@ export default function LoginPage() {
   // are hardcoded + known-good) but still hit the same NextAuth + redirect
   // logic as a normal login.
   const signInWith = async (emailVal: string, passwordVal: string) => {
-    setError("");
     setLoading(true);
     try {
       const result = await signIn("credentials", {
@@ -69,28 +79,34 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        setError("Invalid email or password");
+        // Auth failed (wrong password, inactive account, etc.). Surface
+        // as a red toast - short and dismissable, doesn't push the form
+        // down or persist between attempts.
+        toast.error("Invalid email or password", {
+          description: "Double-check your credentials and try again.",
+        });
         setLoading(false);
       } else if (result?.ok) {
         // Middleware redirects to role-appropriate landing on the next page
-        // load - REPORTER → /reporter-home, SUB_EDITOR → /review, etc.
+        // load - REPORTER → /reporter, SUB_EDITOR → /review, etc.
         window.location.href = "/";
       } else {
-        setError("Login failed. Try again.");
+        toast.error("Login failed", { description: "Please try again." });
         setLoading(false);
       }
-    } catch {
-      // If signIn throws, fall back to the redirect-based flow.
-      await signIn("credentials", { email: emailVal, password: passwordVal, callbackUrl: "/" });
+    } catch (e: any) {
+      toast.error("Sign-in error", { description: e?.message || "Network error" });
+      setLoading(false);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
 
     // Client-side validation. Field errors render under each input; the form
-    // never reaches the network call when invalid.
+    // never reaches the network call when invalid. Auth failures surface
+    // as toasts (handled in signInWith) so the inline error space stays
+    // dedicated to field-specific feedback.
     const parsed = loginSchema.safeParse({ email, password });
     if (!parsed.success) {
       const flat = parsed.error.flatten().fieldErrors;
@@ -124,16 +140,10 @@ export default function LoginPage() {
         </CardHeader>
 
         <CardContent>
-          {error ? (
-            <Alert variant="destructive" className="mb-4">
-              <AlertCircle />
-              <AlertTitle>Login failed</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          ) : null}
-
           {/* noValidate so the browser's native HTML5 popups don't fire
-              before our Zod validation runs - keeps error UX consistent. */}
+              before our Zod validation runs - keeps error UX consistent.
+              Field-level errors render under each input via fieldErrors;
+              auth failures (wrong password, etc.) surface as sonner toasts. */}
           <form onSubmit={handleSubmit} noValidate className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="email">Email</Label>

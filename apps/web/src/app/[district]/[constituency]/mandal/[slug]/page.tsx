@@ -49,7 +49,7 @@ async function resolveMandal(params: { district: string; constituency: string; s
     where: { slug: params.slug },
     select: {
       id: true, name: true, nameEn: true, slug: true, lat: true, lng: true,
-      population: true, isMandalHq: true,
+      population: true,
       constituency: {
         select: {
           slug: true, name: true, nameEn: true,
@@ -156,7 +156,6 @@ export default async function MandalPage({ params }: { params: Params }) {
           <h1 style={{ fontSize: 30, fontWeight: 900, color: "var(--color-brand)" }}>{mandal.name}</h1>
           <p style={{ fontSize: 14, color: "#666", marginTop: 4 }}>
             {mandal.nameEn}
-            {mandal.isMandalHq && <span style={{ marginLeft: 8, fontSize: 11, padding: "2px 8px", borderRadius: 4, background: "#fef3c7", color: "#92400e" }}>Mandal HQ</span>}
             {" "}· {mandal.constituency.nameEn} constituency · {mandal.constituency.district.nameEn} district
             {mandal.population ? ` · Population ${mandal.population.toLocaleString()}` : ""}
           </p>

@@ -25,7 +25,10 @@ export default async function ReporterHome() {
   if (!userId) redirect("/login");
 
   // Spec #1 A1C (#189) - read Content where type=ARTICLE + ContentPayment.
-  const [articles, payments] = await Promise.all([
+  // kycStatus is fetched alongside so the shell can branch the FAB tap
+  // behaviour (PENDING / SUBMITTED / REJECTED each show a different toast;
+  // only VERIFIED actually navigates to /reporter/articles/new).
+  const [articles, payments, profile] = await Promise.all([
     prisma.content.findMany({
       where: { type: "ARTICLE", authorId: userId },
       orderBy: { createdAt: "desc" },
@@ -44,7 +47,12 @@ export default async function ReporterHome() {
       where: { journalistId: userId },
       select: { totalAmount: true, status: true },
     }),
+    prisma.reporterProfile.findUnique({
+      where: { userId },
+      select: { kycStatus: true },
+    }),
   ]);
+  const kycStatus = (profile?.kycStatus ?? "PENDING") as "PENDING" | "SUBMITTED" | "VERIFIED" | "REJECTED";
 
   const total = articles.length;
   const approved = articles.filter((a) => a.status === "APPROVED" || a.status === "PUBLISHED").length;
@@ -54,7 +62,7 @@ export default async function ReporterHome() {
   const name = session.user.name || "Reporter";
 
   return (
-    <ReporterShell>
+    <ReporterShell kycStatus={kycStatus}>
       {/* Same horizontal padding as the Expo Dashboard (paddingHorizontal: 14
           for cards, paddingHorizontal: 16 for headings). */}
       <KycBanner userId={userId} />

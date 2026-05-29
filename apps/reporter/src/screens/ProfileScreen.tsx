@@ -50,6 +50,10 @@ export function ProfileScreen() {
   const handleLogout = async () => {
     await Promise.all([
       AsyncStorage.removeItem("user"),
+      // Reset the one-shot KYC-nudge flag so the next account that signs
+      // in on this device (or this same reporter, if they re-sign-in
+      // while still PENDING) gets the first-landing prompt again.
+      AsyncStorage.removeItem("kyc_nudge_seen"),
       clearAuthToken(),
     ]);
     router.replace("/login");

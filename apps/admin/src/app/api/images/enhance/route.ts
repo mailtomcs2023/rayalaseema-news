@@ -33,7 +33,7 @@ const OP_PROMPTS: Record<string, string> = {
 const ALLOWED_OPS = Object.keys(OP_PROMPTS);
 
 export async function POST(req: NextRequest) {
-  const session = await requireAuth(["ADMIN", "EDITOR", "CHIEF_SUB_EDITOR", "SUB_EDITOR", "REPORTER"]);
+  const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR", "REPORTER"]);
   if (isAuthError(session)) return session;
   if (!ENDPOINT || !KEY) {
     return NextResponse.json({ error: "AZURE_IMAGES_ENDPOINT / AZURE_IMAGES_KEY not configured" }, { status: 503 });

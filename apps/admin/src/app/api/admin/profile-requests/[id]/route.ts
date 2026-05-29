@@ -62,7 +62,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         // Encrypt PII fields just before persistence. Non-PII fields and
         // User fields pass through unchanged.
         const newValue =
-          def.model === "reporterProfile" && ENCRYPTED_PROFILE_FIELDS.has(def.column)
+          def.model === "journalist" && ENCRYPTED_PROFILE_FIELDS.has(def.column)
             ? encrypt(rawValue as string | null)
             : rawValue;
 

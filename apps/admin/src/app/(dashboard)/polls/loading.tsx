@@ -1,5 +1,5 @@
 import { TableSkeleton } from "@/components/table-skeleton";
 
 export default function Loading() {
-  return <TableSkeleton title="Reporters & KYC" subtitle="Loading reporters…" rows={8} />;
+  return <TableSkeleton title="Polls" subtitle="Loading…" rows={8} />;
 }

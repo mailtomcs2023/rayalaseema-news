@@ -40,7 +40,7 @@ const securityHeaders = [
 
 const nextConfig = {
   typescript: { ignoreBuildErrors: true },
-  // (Next.js 16+ removed the inline `eslint` config key — `next lint`
+  // (Next.js 16+ removed the inline `eslint` config key - `next lint`
   // is no longer the supported way to run ESLint. Configure via
   // .eslintrc.json + `bun run lint` instead.)
   transpilePackages: ["@rayalaseema/ui", "@rayalaseema/db", "@rayalaseema/seo-schema", "@rayalaseema/nlp"],

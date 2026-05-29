@@ -32,6 +32,13 @@ export function landingFor(role: Role | string | undefined): string {
 // the root-page redirect. Doesn't replace API-level requireAuth - that
 // stays the source of truth for what mutations a role can perform.
 export function canVisit(role: Role | string | undefined, pathname: string): boolean {
+  // Every role can hit the forced-password-change page - it's the one
+  // route the middleware bounces stale-password users to regardless of
+  // role, so the role gate must not redirect them back out. Same goes
+  // for /logout: a force-logged-out reporter (deleted account, deactivated)
+  // must be able to reach the cookie-clearing handler before they're
+  // redirected anywhere.
+  if (pathname === "/change-password" || pathname === "/logout") return true;
   if (role === "ADMIN") return true;
   if (role === "REPORTER") {
     // Reporter web portal mirrors the Expo app - everything lives under
@@ -43,7 +50,6 @@ export function canVisit(role: Role | string | undefined, pathname: string): boo
   // SUB_EDITOR + EDITOR: blocked from the HR/finance/settings cluster.
   const adminOnly = [
     "/users",
-    "/reporters",
     "/payments",
     "/settings",
     "/categories",

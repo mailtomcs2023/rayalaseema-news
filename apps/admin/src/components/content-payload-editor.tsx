@@ -10,6 +10,8 @@
 
 import { useState } from "react";
 import { ImageUpload } from "@/components/image-upload";
+import { DatePicker } from "@/components/ui/date-picker";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 
 type Payload = Record<string, unknown>;
 
@@ -155,9 +157,10 @@ export function ContentPayloadEditor({ type, payload, setPayload }: ContentPaylo
             placeholder="రాజకీయ వ్యంగ్యం…" style={{ ...inpStyle, resize: "vertical" }} />
         </Field>
         <Field label="Publish date">
-          <input type="date" value={dateOnly((payload.date as string) || "")}
-            onChange={(e) => upd({ date: new Date(e.target.value).toISOString() })}
-            style={inpStyle} />
+          <DatePicker
+            value={dateOnly((payload.date as string) || "")}
+            onChange={(v) => upd({ date: v ? new Date(v).toISOString() : undefined })}
+          />
         </Field>
         <p style={{ fontSize: 11, color: "#6b7280", marginTop: 6 }}>
           Cartoon image lives in the featured-image slot (parent sidebar). No body / no separate gallery.
@@ -181,10 +184,10 @@ export function ContentPayloadEditor({ type, payload, setPayload }: ContentPaylo
           </select>
         </Field>
         <Field label="Expires at (auto-hides after)">
-          <input type="datetime-local"
+          <DateTimePicker
             value={dateTimeLocal((payload.expiresAt as string) || "")}
-            onChange={(e) => upd({ expiresAt: e.target.value ? new Date(e.target.value).toISOString() : undefined })}
-            style={inpStyle} />
+            onChange={(v) => upd({ expiresAt: v ? new Date(v).toISOString() : undefined })}
+          />
         </Field>
         <p style={{ fontSize: 11, color: "#6b7280", marginTop: 6 }}>
           Breaking news has no body, no slug, no public detail page. The title shows in the ticker only.

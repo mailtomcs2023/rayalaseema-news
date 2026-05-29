@@ -50,7 +50,8 @@ import {
   useRef,
   useState,
 } from "react";
-import { Sidebar } from "@/components/sidebar";
+import { KycReviewDialog } from "@/components/users/kyc-review-dialog";
+import { PasswordResetDialog } from "@/components/users/password-reset-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -277,10 +278,23 @@ export default function UsersPage() {
   const openEdit = useCallback((u: User) => setFormFor({ mode: "edit", user: u }), []);
   const openDelete = useCallback((row: UserRow) => setConfirmDelete([row]), []);
 
-  // Quick-action: verify a reporter's KYC straight from the row menu.
-  // Reject + full profile edit live on /reporters where the existing
-  // modals already handle the rejection-note input + KYC document review.
-  // We just need fast-path "yes, this looks good" without leaving /users.
+  // KYC review + password reset - replaces the standalone /reporters page.
+  // Both dialogs work for any role (the review dialog renders an empty-state
+  // when there's no profile row, and the reset dialog disables submit in
+  // that case). The dialog components fetch their own data.
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const [resettingUser, setResettingUser] = useState<{ id: string; name: string; email: string; reporterProfileId: string | null } | null>(null);
+  const openReview = useCallback((row: UserRow) => setReviewingId(row.id), []);
+  const openResetPassword = useCallback((row: UserRow) => setResettingUser({
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    reporterProfileId: row.reporterProfileId,
+  }), []);
+
+  // Quick-action: one-click verify a reporter's KYC from the row menu.
+  // For a deeper review (document viewer, rejection with mandatory note)
+  // use the "Review & documents" menu item which opens KycReviewDialog.
   const verifyReporterKyc = useCallback(async (row: UserRow) => {
     if (!row.reporterProfileId) return;
     try {
@@ -398,6 +412,12 @@ export default function UsersPage() {
         header: "KYC",
         size: 95,
         cell: ({ row }) => {
+          // Protected seed accounts don't go through KYC - they're built-in
+          // test logins, not real reporters. Render a dash to keep the row
+          // chrome consistent without implying a KYC review is pending.
+          if (isProtectedUser(row.original.email)) {
+            return <span className="text-muted-foreground" title="Seed account - no KYC required">-</span>;
+          }
           const s = row.original.kycStatus;
           if (!s) return <span className="text-muted-foreground">-</span>;
           return (
@@ -412,6 +432,11 @@ export default function UsersPage() {
         header: "Updates",
         size: 95,
         cell: ({ row }) => {
+          // Same logic as KYC - seed accounts have no profile-update review
+          // surface, so skip the View / Review button on those rows.
+          if (isProtectedUser(row.original.email)) {
+            return <span className="text-muted-foreground" title="Seed account - no profile updates">-</span>;
+          }
           const count = row.original.pendingUpdates;
           const reporterId = row.original.reporterProfileId;
           if (!reporterId) return <span className="text-muted-foreground">-</span>;
@@ -456,11 +481,13 @@ export default function UsersPage() {
             onDelete={openDelete}
             onToggleActive={handleToggleActive}
             onVerifyKyc={verifyReporterKyc}
+            onReview={openReview}
+            onResetPassword={openResetPassword}
           />
         ),
       },
     ],
-    [openEdit, openDelete, verifyReporterKyc],
+    [openEdit, openDelete, verifyReporterKyc, openReview, openResetPassword],
   );
 
   const table = useReactTable({
@@ -559,7 +586,6 @@ export default function UsersPage() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-      <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
         <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111", marginBottom: 4 }}>Users</h1>
         <p style={{ fontSize: 13, color: "#888", marginBottom: 20 }}>
@@ -882,6 +908,19 @@ export default function UsersPage() {
         />
       )}
 
+      {/* KYC review (replaces the /reporters page) */}
+      <KycReviewDialog
+        userId={reviewingId}
+        onClose={() => setReviewingId(null)}
+        onChanged={load}
+      />
+
+      {/* Admin-set password reset */}
+      <PasswordResetDialog
+        user={resettingUser}
+        onClose={() => setResettingUser(null)}
+      />
+
       {/* Delete confirm */}
       <AlertDialog open={!!confirmDelete} onOpenChange={(v) => !v && setConfirmDelete(null)}>
         <AlertDialogContent>
@@ -917,16 +956,25 @@ function RowActions({
   onDelete,
   onToggleActive,
   onVerifyKyc,
+  onReview,
+  onResetPassword,
 }: {
   row: UserRow;
   onEdit: (u: User) => void;
   onDelete: (row: UserRow) => void;
   onToggleActive: (row: UserRow) => void;
   onVerifyKyc: (row: UserRow) => void;
+  onReview: (row: UserRow) => void;
+  onResetPassword: (row: UserRow) => void;
 }) {
   const isReporter = row.role === "REPORTER";
-  const kycSubmitted = isReporter && row.kycStatus === "SUBMITTED";
-  const hasUpdates = isReporter && row.pendingUpdates > 0;
+  // Seed accounts skip the KYC workflow entirely - they're built-in
+  // logins, not real reporters. Hide the "Verify KYC" action and the
+  // "Review N profile updates" deep-link for them, even when the seed
+  // happens to be a Reporter.
+  const isSeed = isProtectedUser(row.email);
+  const kycSubmitted = isReporter && !isSeed && row.kycStatus === "SUBMITTED";
+  const hasUpdates = isReporter && !isSeed && row.pendingUpdates > 0;
   const reporterPid = row.reporterProfileId;
 
   return (
@@ -938,13 +986,17 @@ function RowActions({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onSelect={() => onEdit(row.raw)}>Edit</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => onEdit(row.raw)}>Edit details</DropdownMenuItem>
+        {/* KYC review + password reset are role-agnostic - every editorial
+            user needs to complete KYC, so the same dialogs apply across
+            ADMIN / EDITOR / SUB_EDITOR / REPORTER. The Review dialog
+            renders an empty-state when there's no profile row yet
+            (older accounts). */}
+        <DropdownMenuItem onSelect={() => onReview(row)}>Review &amp; documents</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => onResetPassword(row)}>Reset password</DropdownMenuItem>
 
-        {/* Reporter-specific quick actions. Shown only on REPORTER rows so
-            the menu stays lean for everyone else. The full KYC review
-            workflow (reject with mandatory note, document viewer, banking
-            inspection) lives on /reporters - the link below routes there. */}
-        {isReporter && (
+        {/* Reporter-only quick actions stay reporter-only. */}
+        {isReporter && (kycSubmitted || (hasUpdates && reporterPid)) && (
           <>
             <DropdownMenuSeparator />
             {kycSubmitted && (
@@ -952,7 +1004,7 @@ function RowActions({
                 onSelect={() => onVerifyKyc(row)}
                 className="text-emerald-700 focus:text-emerald-700"
               >
-                Verify KYC
+                Verify KYC (quick)
               </DropdownMenuItem>
             )}
             {hasUpdates && reporterPid && (
@@ -962,9 +1014,6 @@ function RowActions({
                 </Link>
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem asChild>
-              <Link href="/reporters">Open reporter portal →</Link>
-            </DropdownMenuItem>
           </>
         )}
 
@@ -1156,10 +1205,32 @@ function UserFormDialog({
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        setServerError(j.error || `Failed (${res.status})`);
+        // Server returns per-field details on Zod failures - map them onto
+        // the same field-error slots the client validation uses so the
+        // admin sees exactly which input is wrong (not just "Invalid
+        // request body"). Also surface a toast so the message is
+        // unmissable even when the error sits below the fold.
+        if (j.fieldErrors && typeof j.fieldErrors === "object") {
+          const fe = j.fieldErrors as Record<string, string[] | undefined>;
+          setErrors({
+            name: fe.name?.[0],
+            email: fe.email?.[0],
+            password: fe.password?.[0],
+            role: fe.role?.[0],
+            categoryIds: fe.categoryIds?.[0],
+          });
+        }
+        const msg = j.error || `Failed (${res.status})`;
+        setServerError(msg);
+        toast.error(msg, {
+          description: j.fieldErrors
+            ? "Check the highlighted fields and try again."
+            : undefined,
+        });
         setBusy(false);
         return;
       }
+      toast.success(mode === "create" ? "User created." : "User updated.");
       onSaved();
     } catch (e: any) {
       setServerError(e?.message || "Network error");

@@ -37,9 +37,45 @@ async function getMandiPrices() {
   } catch { return []; }
 }
 
-// ====== BULLION: Gold & Silver from GoldAPI.io (free 500 req/month) or fallback to forex conversion ======
+// ====== BULLION: Gold & Silver - live free source first, then fallbacks ======
+// Source cascade:
+//   1. goldprice.org public JSON - no key, no signup, updates ~every 60s.
+//      Same endpoint that powers goldprice.org's homepage widget. Returns
+//      gold + silver per troy ounce in INR; we convert oz → gram.
+//   2. GoldAPI.io demo key - kept as fallback in case goldprice.org changes
+//      shape. Capped at 500 req/month but we only hit it when path 1 fails.
+//   3. Forex-derived approximation (USD/INR × international spot estimate).
+//   4. Hardcoded defaults so the ticker bar never shows zero.
 async function getBullionPrices() {
-  // Method 1: Try Gold API (free tier)
+  const OZ_TO_GRAM = 31.1035;
+
+  // Method 1: goldprice.org - free, live, no key. Updates ~every 60s.
+  // Returns { items: [{ xauPrice, xagPrice, pcXau, pcXag, ... }] } where
+  // xauPrice / xagPrice are INR per troy ounce.
+  try {
+    const res = await fetch("https://data-asg.goldprice.org/dbXRates/INR", {
+      signal: AbortSignal.timeout(5000),
+      // 5-min cache matches the outer ticker cache; goldprice.org gets at
+      // most one hit per cache window regardless of homepage traffic.
+      next: { revalidate: 300 },
+      headers: { "User-Agent": "RayalaseemaExpress/1.0 (+admin)" },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const item = data?.items?.[0];
+      if (item?.xauPrice && item?.xagPrice) {
+        const gold24kPerGram = Math.round(item.xauPrice / OZ_TO_GRAM);
+        const silverPerGram = Math.round(item.xagPrice / OZ_TO_GRAM);
+        return [
+          { name: "బంగారం 24K", nameEn: "Gold 24K", price: gold24kPerGram, unit: "గ్రాము", change: parseFloat((item.pcXau ?? 0).toFixed(2)) },
+          { name: "బంగారం 22K", nameEn: "Gold 22K", price: Math.round(gold24kPerGram * 0.916), unit: "గ్రాము", change: parseFloat((item.pcXau ?? 0).toFixed(2)) },
+          { name: "వెండి", nameEn: "Silver", price: silverPerGram, unit: "గ్రాము", change: parseFloat((item.pcXag ?? 0).toFixed(2)) },
+        ];
+      }
+    }
+  } catch {}
+
+  // Method 2: GoldAPI.io demo key (fallback)
   try {
     const [goldRes, silverRes] = await Promise.all([
       fetch("https://www.goldapi.io/api/XAU/INR", {
@@ -117,11 +153,61 @@ async function getForexRates() {
   } catch { return []; }
 }
 
-// ====== CRICKET: from free CricAPI or Cricbuzz unofficial ======
+// ====== CRICKET: live scores - ESPN Cricinfo first (free, no key) ======
+// Source cascade:
+//   1. ESPN Cricinfo public JSON - same endpoint that powers
+//      cricinfo.com/live-cricket-scores. No key, updates within seconds of
+//      ball-by-ball.
+//   2. cricapi.com demo (100 req/day) - fallback.
+//   3. cricbuzz-cricket on RapidAPI demo - final fallback.
 async function getCricketScores() {
-  // Try multiple free cricket APIs
+  // Method 1: ESPN Cricinfo unofficial JSON - free, live, no auth.
+  try {
+    const res = await fetch(
+      "https://hs-consumer-api.espncricinfo.com/v1/pages/matches/current?lang=en&latest=true",
+      {
+        signal: AbortSignal.timeout(6000),
+        // 60s revalidate - cricket score changes faster than gold price,
+        // but more than once a minute is rude to a free endpoint.
+        next: { revalidate: 60 },
+        headers: { "User-Agent": "RayalaseemaExpress/1.0 (+admin)" },
+      },
+    );
+    if (res.ok) {
+      const data = await res.json();
+      const matches: any[] = Array.isArray(data?.matches) ? data.matches : [];
+      // Filter to live matches first; if none, fall back to the most recent
+      // / upcoming entries the page itself surfaces.
+      const live = matches.filter((m) => m?.state === "LIVE" || m?.statusType === "LIVE");
+      const pool = live.length > 0 ? live : matches;
+      if (pool.length > 0) {
+        return pool.slice(0, 3).map((m: any) => {
+          const teams = Array.isArray(m?.teams) ? m.teams : [];
+          const t1 = teams[0]?.team?.abbreviation || teams[0]?.team?.shortName || teams[0]?.team?.name || "T1";
+          const t2 = teams[1]?.team?.abbreviation || teams[1]?.team?.shortName || teams[1]?.team?.name || "T2";
+          const score = teams
+            .filter((t: any) => t?.score)
+            .map((t: any) => ({
+              team: t?.team?.abbreviation || t?.team?.shortName || "",
+              runs: Number(t?.score?.runs ?? 0),
+              wickets: Number(t?.score?.wickets ?? 0),
+              overs: Number(t?.score?.overs ?? 0),
+            }));
+          return {
+            id: String(m?.objectId || m?.id || `${t1}-${t2}`),
+            name: m?.title || `${t1} vs ${t2}`,
+            status: m?.statusText || m?.status || "Live",
+            venue: m?.ground?.longName || m?.ground?.name || "",
+            matchType: m?.format || "",
+            teams: [t1, t2],
+            score,
+          };
+        });
+      }
+    }
+  } catch {}
 
-  // Method 1: cricapi.com (free 100 req/day)
+  // Method 2: cricapi.com (free 100 req/day)
   try {
     const res = await fetch("https://api.cricapi.com/v1/currentMatches?apikey=demo&offset=0", {
       signal: AbortSignal.timeout(5000),

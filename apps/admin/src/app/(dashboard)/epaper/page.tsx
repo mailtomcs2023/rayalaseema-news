@@ -13,7 +13,6 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Sidebar } from "@/components/sidebar";
 import { ToastViewport, useToasts } from "@/components/toast";
 import GridLayout, { type Layout as RGLLayout } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
@@ -22,6 +21,9 @@ import { migrateLegacyLayout } from "@/lib/epaper/migrate-layout";
 import { PreflightPanel, PreflightChip } from "@/components/epaper/preflight-panel";
 import { InlineTextEditor } from "@/components/epaper/inline-text-editor";
 import { WithTooltip } from "@/components/ui/tooltip";
+import { DatePicker } from "@/components/ui/date-picker";
+import { toast } from "sonner";
+import { useKycGate } from "@/components/kyc-gated-link";
 
 interface Block {
   id: string;
@@ -134,6 +136,7 @@ function EpaperEditorPage() {
   const [pickerTotal, setPickerTotal] = useState(0);  // total in window before chip filters - for empty-state hints
 
   const { toasts, push: toast, dismiss: dismissToast } = useToasts();
+  const { guard: kycGuard } = useKycGate();
 
   type ArticleMeta = { title: string; summary?: string | null; featuredImage?: string | null };
   const [titles, setTitles] = useState<Record<string, ArticleMeta>>({});
@@ -161,9 +164,12 @@ function EpaperEditorPage() {
         .catch(() => setVariants([]));
 
       const res = await fetch(`/api/epaper/edition?date=${d}&variant=${v}`);
-      if (res.status === 404) { setEdition(null); return; }
       if (!res.ok) throw new Error("Failed to load edition");
       const data = await res.json();
+      // The endpoint returns 200 with `{ exists: false }` when no edition
+      // row exists for this date (vs the legacy 404 which polluted the
+      // console on every page mount). Treat that as the empty state.
+      if (data.exists === false || !data.id) { setEdition(null); return; }
       setEdition(data);
       const allIds = new Set<string>();
       for (const p of data.pages as PageRow[]) {
@@ -207,7 +213,7 @@ function EpaperEditorPage() {
   // Note: comments badge reload moved below `loadComments` definition to dodge
   // a temporal-dead-zone error in the Next.js prerender.
 
-  const generate = async () => {
+  const generate = kycGuard("generate the edition", async () => {
     setBusy("generating"); setError("");
     try {
       const res = await fetch("/api/epaper/generate-edition", {
@@ -216,13 +222,29 @@ function EpaperEditorPage() {
         body: JSON.stringify({ date }),
       });
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Generate failed");
+        const data = await res.json().catch(() => ({}));
+        // Server also enforces requireKyc; surface the contextual toast
+        // (matches the in-app gate) instead of the generic error inline.
+        if (data.kycRequired) {
+          toast("error", data.error || "Your KYC must be verified to generate editions.");
+          return;
+        }
+        // Show the server's actual message ("No active templates",
+        // "Invalid date", etc.) as a toast so it's not just a 400 in the
+        // console with no UI feedback.
+        const msg = data.error || `Generate failed (${res.status})`;
+        toast("error", msg);
+        setError(msg);
+        return;
       }
       await loadEdition(date);
-    } catch (e: any) { setError(e.message); }
+      toast("success", "Edition generated.");
+    } catch (e: any) {
+      toast("error", e.message || "Generate failed");
+      setError(e.message);
+    }
     finally { setBusy(null); }
-  };
+  });
 
   const renderEdition = async () => {
     if (!edition) return;
@@ -1153,7 +1175,6 @@ function EpaperEditorPage() {
 
   return (
     <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "#f3f4f6" }}>
-      <Sidebar />
       <ToastViewport toasts={toasts} onDismiss={dismissToast} />
       <PreflightPanel
         editionId={edition?.id ?? null}
@@ -1586,8 +1607,13 @@ function EpaperEditorPage() {
         {/* Top bar */}
         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
           <h1 style={{ fontSize: 22, fontWeight: 800, color: "#111" }}>ePaper Editor (v2)</h1>
-          <input type="date" value={date} onChange={(e) => { setDate(e.target.value); setVariant("main"); }}
-            style={{ padding: "6px 10px", border: "1px solid #ddd", borderRadius: 8, fontSize: 13 }} />
+          <div className="shadcn-scope" style={{ minWidth: 170 }}>
+            <DatePicker
+              value={date}
+              onChange={(v) => { setDate(v); setVariant("main"); }}
+              placeholder="Pick edition date"
+            />
+          </div>
           {variants.length > 0 && (
             <WithTooltip text="Edition variant - main + per-district splits">
               <select value={variant} onChange={(e) => setVariant(e.target.value)}
@@ -2343,7 +2369,14 @@ function DraggableBlockGrid({
     // continuation on the next page).
     const overflowing = newRGL.find((it) => it.y + it.h > MAX_ROWS);
     if (overflowing) {
-      alert(`Block "${overflowing.i}" would land past row ${MAX_ROWS} (the print page boundary). Page is full - pick one:\n\n• Make the block smaller\n• Move another block off this page\n• Add a new page and split the story to a continuation block`);
+      toast.error(
+        `Block "${overflowing.i}" would land past row ${MAX_ROWS} (the print page boundary).`,
+        {
+          description:
+            "Page is full - make the block smaller, move another block off this page, or add a new page and split the story to a continuation block.",
+          duration: 8000,
+        },
+      );
       return;
     }
     // Merge RGL coords back into our block model. Skip purely visual updates

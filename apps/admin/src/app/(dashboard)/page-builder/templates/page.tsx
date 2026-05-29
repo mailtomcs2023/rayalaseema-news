@@ -2,7 +2,6 @@
 // /api/page-builder/templates data and embeds a client component that
 // owns the create + clone + delete dialogs.
 
-import { Sidebar } from "@/components/sidebar";
 import { prisma } from "@rayalaseema/db";
 import { TemplatesTable } from "./templates-table";
 
@@ -36,7 +35,6 @@ export default async function TemplatesPage() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-      <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: "24px 28px" }}>
         <TemplatesTable initialRows={data} />
       </main>

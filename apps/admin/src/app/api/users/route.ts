@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, userCreateSchema } from "@rayalaseema/db";
 import { hash } from "bcryptjs";
-import { requireCan, isAuthError, apiError } from "@/lib/api-utils";
+import { requireCan, isAuthError, apiError, zodErrorResponse } from "@/lib/api-utils";
 import { normalizeEmail } from "@/lib/email";
 
 // GET /api/users[?role=…&cursor=…&limit=…&page=…&includeTotal=1]
@@ -112,15 +112,7 @@ export async function POST(req: NextRequest) {
     const rawBody = await req.json();
     // Boundary validation - shape, length, enum membership all checked here.
     const parsed = userCreateSchema.safeParse(rawBody);
-    if (!parsed.success) {
-      return NextResponse.json(
-        {
-          error: "Invalid request body",
-          fieldErrors: parsed.error.flatten().fieldErrors,
-        },
-        { status: 400 },
-      );
-    }
+    if (!parsed.success) return zodErrorResponse(parsed.error);
     const b = parsed.data;
     const role = (b.role || "REPORTER") as string;
 
@@ -159,11 +151,15 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      // Auto-create a stub ReporterProfile for new REPORTER accounts so
-      // downstream KYC actions (verify, reject, profile-update-requests)
-      // have a row to operate on. The full KYC fields get filled in via
-      // the reporter editor or by the reporter on the mobile portal.
-      if (role === "REPORTER") {
+      // Auto-create a stub staff profile for every editorial role
+      // (REPORTER, SUB_EDITOR, EDITOR, ADMIN). The schema model is still
+      // ReporterProfile - renamed conceptually but the table is shared
+      // by all paid staff because every salaried account needs KYC,
+      // banking and Aadhaar for compliance + payouts. ADMIN gets one too
+      // so admins can self-test the flow without special-casing the seed.
+      // USER role is the only one without a profile - public commenters
+      // aren't on the payroll.
+      if (["REPORTER", "SUB_EDITOR", "EDITOR", "ADMIN"].includes(role)) {
         await tx.reporterProfile.create({
           data: { userId: created.id, fullName: b.name as string },
         });

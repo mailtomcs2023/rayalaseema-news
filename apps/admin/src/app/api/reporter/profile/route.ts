@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { getReporterId } from "@/lib/reporter-auth";
 import { decryptProfileFields } from "@/lib/crypto/kyc";
+import { isRegistrationComplete } from "@/lib/reporter-registration";
 
 // Returns the reporter's full profile (User + ReporterProfile) plus the
 // list of their in-flight change requests so the app can render "Pending
@@ -60,6 +61,10 @@ export async function GET(req: NextRequest) {
       // Decrypt PII before handing back to the mobile app - the reporter
       // sees their own data in plaintext on their device.
       profile: decryptProfileFields(user.reporterProfile),
+      // Mirrors the flag returned by /api/reporter/login so the KycBanner
+      // can flip from "Upload documents" to "Complete registration" without
+      // having to inspect individual profile fields.
+      registrationComplete: isRegistrationComplete(user.reporterProfile),
       requests,
     });
   } catch (e: any) {

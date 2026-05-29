@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@rayalaseema/db";
@@ -186,6 +187,7 @@ export default async function ReporterProfilePage() {
             a subtitle summary and a chevron, but don't link anywhere. */}
         <MenuGroup>
           <MenuRow
+            href="/reporter/profile/personal"
             iconBg="#3b82f614"
             iconColor="#3b82f6"
             iconPath="M16 14c-1.5 0-3.5 1-4 2-.5 1 1 2 4 2s4.5-1 4-2c-.5-1-2.5-2-4-2zM12 12a4 4 0 100-8 4 4 0 000 8z"
@@ -197,6 +199,7 @@ export default async function ReporterProfilePage() {
           />
           <Divider />
           <MenuRow
+            href="/reporter/profile/address"
             iconBg="#16a34a14"
             iconColor="#16a34a"
             iconPath="M12 21s-7-7.5-7-12a7 7 0 1114 0c0 4.5-7 12-7 12zm0-10a2 2 0 100-4 2 2 0 000 4z"
@@ -205,6 +208,8 @@ export default async function ReporterProfilePage() {
           />
           <Divider />
           <MenuRow
+            href="/reporter/profile/kyc"
+            id="kyc"
             iconBg="#FF2C2C14"
             iconColor="#FF2C2C"
             iconPath="M12 2l8 4v5c0 5-3.5 9.5-8 11-4.5-1.5-8-6-8-11V6l8-4z"
@@ -216,6 +221,7 @@ export default async function ReporterProfilePage() {
 
         <MenuGroup>
           <MenuRow
+            href="/reporter/profile/bank"
             iconBg="#a855f714"
             iconColor="#a855f7"
             iconPath="M2 7h20v10H2zm0 4h20M6 15h2"
@@ -254,6 +260,7 @@ export default async function ReporterProfilePage() {
 
         <MenuGroup>
           <MenuRow
+            href="/reporter/profile/phone"
             iconBg="#FF2C2C14"
             iconColor="#FF2C2C"
             iconPath="M12 11a4 4 0 100-8 4 4 0 000 8zM6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"
@@ -296,6 +303,8 @@ function Divider() {
 }
 
 function MenuRow({
+  href,
+  id,
   iconBg,
   iconColor,
   iconPath,
@@ -305,6 +314,8 @@ function MenuRow({
   locked,
   last,
 }: {
+  href?: string;
+  id?: string;
   iconBg: string;
   iconColor: string;
   iconPath: string;
@@ -314,16 +325,32 @@ function MenuRow({
   locked?: boolean;
   last?: boolean;
 }) {
+  const rowStyle: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    gap: 14,
+    padding: "12px 16px",
+    minHeight: 56,
+    // Pad the scroll target so deep-link anchor jumps don't hide the
+    // row under the sticky red header.
+    scrollMarginTop: 80,
+    color: "inherit",
+    textDecoration: "none",
+  };
+
+  const Wrapper = ({ children }: { children: React.ReactNode }) =>
+    href ? (
+      <Link href={href} id={id} style={rowStyle}>
+        {children}
+      </Link>
+    ) : (
+      <div id={id} style={rowStyle}>
+        {children}
+      </div>
+    );
+
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 14,
-        padding: "12px 16px",
-        minHeight: 56,
-      }}
-    >
+    <Wrapper>
       <span
         style={{
           width: 24,
@@ -389,6 +416,6 @@ function MenuRow({
       {/* `last` prop kept for API symmetry with the Expo MenuRow but unused
           here - dividers are sibling elements instead of an inset border. */}
       {void last}
-    </div>
+    </Wrapper>
   );
 }

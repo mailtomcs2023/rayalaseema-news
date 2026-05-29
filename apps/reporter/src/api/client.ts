@@ -13,6 +13,11 @@ async function forceLogout(reason: string) {
   try {
     await clearAuthToken();
     await AsyncStorage.removeItem("user");
+    // Clear the one-shot KYC-nudge flag too - next sign-in (potentially a
+    // different reporter on the same device) should get the same first-
+    // landing prompt. Without this, the second account silently skips
+    // /kyc on the first launch.
+    await AsyncStorage.removeItem("kyc_nudge_seen");
     // Best-effort navigation. If the router isn't mounted yet (e.g. cold
     // start before the root layout renders), the index gate sees the empty
     // auth-token on its next pass and redirects there anyway.

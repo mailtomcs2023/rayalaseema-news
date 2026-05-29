@@ -39,12 +39,16 @@ export async function pickLeastLoadedReviewer(
   if (!categoryId) return null;
   const db = (opts.tx ?? prisma) as PrismaClient;
 
-  // Step 1 - active sub-editors in this category.
+  // Step 1 - active sub-editors in this category whose KYC is verified.
+  // Unverified SEs are intentionally excluded - they can't see the review
+  // queue (proxy.ts gate), so handing them an article would orphan it.
+  // Once admin verifies them, they immediately become eligible.
   const reviewers = await db.user.findMany({
     where: {
       role: "SUB_EDITOR",
       active: true,
       assignedCategories: { some: { categoryId } },
+      reporterProfile: { kycStatus: "VERIFIED" },
     },
     select: { id: true },
   });

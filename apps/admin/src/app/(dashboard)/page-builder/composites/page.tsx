@@ -3,7 +3,6 @@
 // editor's "Group into composite" action (F1 #168); this page handles
 // name/slug/description maintenance + delete.
 
-import { Sidebar } from "@/components/sidebar";
 import { prisma } from "@rayalaseema/db";
 import { CompositesClient } from "./composites-client";
 
@@ -27,7 +26,6 @@ export default async function CompositesPage() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-      <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: "24px 28px" }}>
         <CompositesClient initialRows={data} />
       </main>

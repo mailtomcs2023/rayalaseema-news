@@ -32,7 +32,12 @@ export async function GET(req: NextRequest) {
       where: { date_edition: { date, edition: variant } },
       include: { pages: { orderBy: { pageNumber: "asc" } } },
     });
-    if (!edition) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    // "No edition for this date yet" is a normal state, not an error -
+    // the editor mounts and fires this GET for whatever date is selected.
+    // Returning 404 made every page load spit a red error into the
+    // browser console even though the client already handles the empty
+    // state via `if (!data.id) setEdition(null)`. Return 200 with a flag.
+    if (!edition) return NextResponse.json({ exists: false, date: dateStr });
 
     return NextResponse.json({
       id: edition.id,

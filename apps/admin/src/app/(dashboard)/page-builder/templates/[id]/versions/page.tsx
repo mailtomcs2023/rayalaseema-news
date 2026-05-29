@@ -5,7 +5,6 @@
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Sidebar } from "@/components/sidebar";
 import { prisma } from "@rayalaseema/db";
 import { VersionsClient } from "./versions-client";
 
@@ -35,7 +34,6 @@ export default async function VersionsPage({ params }: { params: Promise<{ id: s
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-      <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: "24px 28px" }}>
         <div style={{ marginBottom: 14 }}>
           <Link

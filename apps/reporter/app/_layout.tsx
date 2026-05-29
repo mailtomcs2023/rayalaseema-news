@@ -25,6 +25,10 @@ export default function RootLayout() {
         <Stack.Screen name="login" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="register" options={{ headerShown: true, title: "Register", headerTintColor: "#FF2C2C" }} />
+        {/* Reached from the KycBanner when an admin-created reporter signs
+            in for the first time - the screen reuses RegisterScreen with
+            mode="complete" to lock email + hide the password fields. */}
+        <Stack.Screen name="complete-registration" options={{ headerShown: true, title: "Complete Registration", headerTintColor: "#FF2C2C" }} />
         <Stack.Screen name="new-article" options={{ headerShown: true, title: "New Article", headerTintColor: "#FF2C2C", headerTitleAlign: "center" }} />
         {/* In-app KYC upload - opened from the KycBanner CTA when the reporter
             has PENDING or REJECTED status. */}
