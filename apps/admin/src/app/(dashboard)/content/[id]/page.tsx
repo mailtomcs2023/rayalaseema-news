@@ -9,7 +9,7 @@
 // the type-specific subform panel surfaces a "coming soon" callout.
 "use client";
 
-import { ArrowLeft, ChevronDown as ChevronDownIcon } from "lucide-react";
+import { ArrowLeft, ChevronDown as ChevronDownIcon, Sparkles } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -28,6 +28,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -131,6 +132,11 @@ export default function ContentEditorPage() {
   // /api/fetch-news endpoints, now wired into the unified content editor.
   const [aiLoading, setAiLoading] = useState<string | null>(null);
   const [pasteUrl, setPasteUrl] = useState("");
+  // Headline picker - filled when the user clicks "Headline ideas" and the
+  // AI returns its numbered list. Popover anchors to the button and each
+  // row sets the Title field on click. Avoids the old dead-end toast.
+  const [headlineIdeas, setHeadlineIdeas] = useState<string[]>([]);
+  const [headlineOpen, setHeadlineOpen] = useState(false);
 
   const editorRef = useRef<RichEditorRef>(null);
 
@@ -215,7 +221,22 @@ export default function ContentEditorPage() {
           setSummary(String(data.result).replace(/<[^>]+>/g, "").trim());
           setSuccess("Summary generated.");
         } else if (action === "headline") {
-          setSuccess(String(data.result));
+          // The AI returns a numbered list like "1. ...\n2. ...". Strip
+          // any stray tags + leading "1." / "1)" / "1:" prefixes and split
+          // into discrete headlines. If parsing comes up short (model
+          // returned a paragraph instead of a list), fall back to the old
+          // toast so the editor still sees the raw suggestion.
+          const lines = String(data.result)
+            .replace(/<[^>]+>/g, "")
+            .split(/\r?\n/)
+            .map((s) => s.replace(/^\s*\d+\s*[.):\-]\s*/, "").trim())
+            .filter(Boolean);
+          if (lines.length >= 2) {
+            setHeadlineIdeas(lines.slice(0, 5));
+            setHeadlineOpen(true);
+          } else {
+            setSuccess(String(data.result));
+          }
         } else {
           // Translate / editorial - full body rewrite.
           const h2 = data.result.match(/<h2[^>]*>(.*?)<\/h2>/);
@@ -579,7 +600,47 @@ export default function ContentEditorPage() {
 
               {/* Common */}
               <div className="space-y-1.5">
-                <Label htmlFor="title-input">Title *</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="title-input">Title *</Label>
+                  {type === "ARTICLE" && (
+                    <Popover open={headlineOpen} onOpenChange={setHeadlineOpen}>
+                      <PopoverAnchor asChild>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => runAI("headline")}
+                          disabled={aiLoading !== null}
+                          className="h-7 gap-1 px-2 text-xs text-slate-600 hover:text-slate-900"
+                        >
+                          <Sparkles className="h-3.5 w-3.5" />
+                          {aiLoading === "headline" ? "Generating…" : "Headline ideas"}
+                        </Button>
+                      </PopoverAnchor>
+                      <PopoverContent align="end" className="w-96 p-2">
+                        <div className="mb-1 px-2 pt-1 text-xs font-medium text-slate-500">
+                          Pick one to set as title
+                        </div>
+                        <div className="flex flex-col gap-0.5">
+                          {headlineIdeas.map((h, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => {
+                                setTitle(h);
+                                setHeadlineOpen(false);
+                                setSuccess("Title updated.");
+                              }}
+                              className="rounded-md px-2 py-2 text-left text-sm leading-snug hover:bg-slate-100"
+                            >
+                              {h}
+                            </button>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                </div>
                 <Input
                   id="title-input"
                   value={title}
@@ -612,7 +673,22 @@ export default function ContentEditorPage() {
               )}
 
               <div className="space-y-1.5">
-                <Label htmlFor="summary-input">Summary</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="summary-input">Summary</Label>
+                  {type === "ARTICLE" && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => runAI("summarize")}
+                      disabled={aiLoading !== null}
+                      className="h-7 gap-1 px-2 text-xs text-slate-600 hover:text-slate-900"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      {aiLoading === "summarize" ? "Summarizing…" : "Auto summary"}
+                    </Button>
+                  )}
+                </div>
                 <Textarea
                   id="summary-input"
                   value={summary}
@@ -623,9 +699,11 @@ export default function ContentEditorPage() {
                 />
               </div>
 
-            {/* AI assist - ARTICLE only. Paste URL → fetch + translate, or
-                run translate / editorial / summarize / headline on the
-                current body. */}
+            {/* AI body rewriters - ARTICLE only. Paste URL -> fetch + translate
+                + fill the whole article, or run translate / editorial on the
+                current body. Summarize lives by the Summary field and Headline
+                ideas lives by the Title field - each AI button sits next to
+                the field it actually fills. */}
             {type === "ARTICLE" && (
               <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
                 <Input
@@ -653,22 +731,6 @@ export default function ContentEditorPage() {
                     className="bg-red-600 text-white hover:bg-red-700"
                   >
                     {aiLoading === "editorial" ? "Writing…" : "Editorial style"}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => runAI("summarize")}
-                    disabled={aiLoading !== null}
-                  >
-                    {aiLoading === "summarize" ? "Summarizing…" : "Summarize"}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => runAI("headline")}
-                    disabled={aiLoading !== null}
-                  >
-                    {aiLoading === "headline" ? "Generating…" : "Headline ideas"}
                   </Button>
                 </div>
               </div>

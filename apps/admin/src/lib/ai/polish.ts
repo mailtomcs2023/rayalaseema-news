@@ -13,7 +13,7 @@
 //   5. Inserts <h3> sub-heads on stories >300 words
 //
 // The model is INSTRUCTED to refuse to add anything not in the source.
-import { chat, parseJsonEnvelope } from "./client";
+import { chatJsonWithRetry } from "./client";
 
 export interface PolishedArticle {
   title_te: string;
@@ -67,29 +67,20 @@ export async function polishTelugu(sourceText: string): Promise<PolishedArticle>
   const endpoint = process.env.AZURE_OPENAI_COMPOSE_ENDPOINT || undefined;
   const key = process.env.AZURE_OPENAI_COMPOSE_KEY || undefined;
 
-  // Two-attempt retry on JSON truncation (same pattern as compose.ts).
-  for (const maxTokens of [4000, 6000]) {
-    const result = await chat({
+  // Polish preserves source content verbatim, so the output is roughly the
+  // same size as the input. Budgets match compose since both produce a
+  // full body_html_te.
+  return chatJsonWithRetry<PolishedArticle>(
+    {
       deployment, endpoint, key,
       messages: [
         { role: "system", content: POLISH_SYSTEM },
         { role: "user", content: `SOURCE (Telugu, already published):\n\n${sourceText}` },
       ],
       temperature: 0.2,
-      maxTokens,
-      responseFormatJson: true,
-    });
-    try {
-      return parseJsonEnvelope<PolishedArticle>(result.content);
-    } catch (e) {
-      if (maxTokens >= 6000) {
-        console.error("[ai/polish] JSON parse failed at maxTokens=6000:", (e as Error).message);
-        throw new Error(`Polish returned unparseable JSON: ${(e as Error).message}`);
-      }
-      console.warn("[ai/polish] truncated, retrying with maxTokens=6000");
-    }
-  }
-  throw new Error("Polish retries exhausted");
+    },
+    [4000, 8000, 12000],
+  );
 }
 
 // Telugu Unicode (U+0C00-0C7F). Returns true if >=30% of the input's

@@ -3,6 +3,7 @@ import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 import { getReporterId } from "@/lib/reporter-auth";
 import { isUrlSafeToFetch } from "@/lib/ssrf-guard";
 import { runPipeline } from "@/lib/ai/pipeline";
+import { AITruncationError, AIContentFilterError } from "@/lib/ai/client";
 import { uploadImageFromUrl } from "@/lib/blob";
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -238,6 +239,21 @@ export async function POST(req: NextRequest) {
         });
       } catch (e: any) {
         console.error("[ai/rewrite] pipeline failed:", e);
+        if (e instanceof AITruncationError) {
+          return NextResponse.json({
+            error: `This article is too long for the AI to process in one pass (output exceeded ${e.attemptedMaxTokens} tokens at every retry). Please trim the source to under ~2000 words and try again, or split it into two stories.`,
+            code: "ai_truncated",
+            attemptedMaxTokens: e.attemptedMaxTokens,
+          }, { status: 413 });
+        }
+        if (e instanceof AIContentFilterError) {
+          return NextResponse.json({
+            error: `Azure's content filter blocked the ${e.stage} (${e.categories.join(", ") || "unknown"}). The article likely contains material flagged by the safety policy - edit the source and retry, or use the dialect/translate modes which do not run the full pipeline.`,
+            code: "ai_content_filter",
+            stage: e.stage,
+            categories: e.categories,
+          }, { status: 422 });
+        }
         return NextResponse.json({ error: e?.message || "Pipeline failed" }, { status: 500 });
       }
     }

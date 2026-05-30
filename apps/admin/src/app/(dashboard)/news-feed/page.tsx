@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { Check } from "lucide-react";
 import { WithTooltip } from "@/components/ui/tooltip";
 import { useKycGate } from "@/components/kyc-gated-link";
 
@@ -180,8 +181,8 @@ export default function NewsFeedPage() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "stretch" }}>
                   {importedId ? (
                     <button onClick={() => router.push(`/content/${importedId}`)}
-                      style={{ padding: "8px 14px", background: "#10b981", color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
-                      ✓ Open draft
+                      style={{ padding: "8px 14px", background: "#10b981", color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <Check size={14} strokeWidth={3} /> Open draft
                     </button>
                   ) : (
                     <button onClick={kycGuard("import news", () => importArticle(a))} disabled={importing === a.externalId}

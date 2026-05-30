@@ -37,6 +37,9 @@ export interface ChatResult {
   content: string;
   tokens: { prompt?: number; completion?: number; total?: number };
   model?: string;
+  // Azure / OpenAI finish reason: "stop" | "length" | "content_filter" | "tool_calls".
+  // Callers use "length" to detect truncation and retry with a bigger budget.
+  finishReason?: string;
 }
 
 // Thrown when Azure's Responsible AI policy blocks either the prompt
@@ -53,6 +56,22 @@ export class AIContentFilterError extends Error {
     this.name = "AIContentFilterError";
     this.categories = categories;
     this.stage = stage;
+  }
+}
+
+// Thrown by chatJsonWithRetry when the model's JSON response was truncated
+// (finish_reason: "length") at every budget in the retry schedule.
+// Carries the final attempted budget so the API layer can produce a
+// user-visible "article too long" message instead of leaking a 500.
+export class AITruncationError extends Error {
+  readonly attemptedMaxTokens: number;
+  readonly budgets: number[];
+  constructor(budgets: number[]) {
+    const last = budgets[budgets.length - 1] ?? 0;
+    super(`AI output was truncated at every retry (max budget tried: ${last} tokens)`);
+    this.name = "AITruncationError";
+    this.attemptedMaxTokens = last;
+    this.budgets = budgets;
   }
 }
 
@@ -127,7 +146,42 @@ export async function chat(opts: ChatOpts): Promise<ChatResult> {
       total: data.usage?.total_tokens,
     },
     model: data.model,
+    finishReason: choice?.finish_reason,
   };
+}
+
+// Wraps chat() + parseJsonEnvelope() with truncation-aware retry. Detects
+// finish_reason === "length" (the model ran out of output tokens before
+// closing its JSON envelope) and re-runs with the next budget in the
+// schedule. Any other finish_reason returns immediately and the content is
+// parsed - if JSON.parse fails on a non-truncated response, that's a real
+// model error and we throw, no point retrying.
+//
+// Throws AITruncationError if every budget was truncated. Callers
+// (route handlers) catch this and surface a user-visible "article too long"
+// message instead of a 500.
+export async function chatJsonWithRetry<T = unknown>(
+  baseOpts: Omit<ChatOpts, "maxTokens" | "responseFormatJson">,
+  budgets: number[],
+): Promise<T> {
+  if (budgets.length === 0) throw new Error("chatJsonWithRetry requires at least one budget");
+  let lastContent = "";
+  for (let i = 0; i < budgets.length; i++) {
+    const maxTokens = budgets[i];
+    const result = await chat({ ...baseOpts, maxTokens, responseFormatJson: true });
+    lastContent = result.content;
+    if (result.finishReason === "length") {
+      const isLast = i === budgets.length - 1;
+      if (isLast) break;
+      console.warn(
+        `[ai] response truncated at maxTokens=${maxTokens}, retrying with ${budgets[i + 1]}`,
+      );
+      continue;
+    }
+    return parseJsonEnvelope<T>(result.content);
+  }
+  console.error("[ai] output truncated at every budget; tail:", lastContent.slice(-300));
+  throw new AITruncationError(budgets);
 }
 
 // Parse a JSON envelope tolerantly. response_format=json_object usually

@@ -6,7 +6,7 @@
 //
 // Model: GPT-4.1-mini (deployment "gpt41-mini"). Cheap + fast + accurate
 // enough for extraction (no Telugu output needed at this step).
-import { chat, parseJsonEnvelope } from "./client";
+import { chatJsonWithRetry } from "./client";
 
 export interface ExtractedQuote {
   speaker: string;
@@ -29,7 +29,6 @@ export interface ExtractedFacts {
   numbers: Array<{ value: string; unit: string; context: string }>;
   key_facts: string[];
   sub_headings: string[];     // suggested H3 boundaries; may be empty
-  source_paragraphs: string[]; // 1-2 sentence chunks from source, for fact-check reference
 }
 
 const EXTRACT_SYSTEM = `You are a news extraction engine. Given an English news article, return a STRICT JSON envelope capturing facts ONLY - no opinions, no rephrasing, no editorializing.
@@ -48,8 +47,7 @@ OUTPUT SHAPE (always exactly this - empty arrays / strings when source lacks the
   "quotes": [{ "speaker": "<full name>", "designation": "<title at time of quote>", "verb_of_saying": "<said|stated|announced|...>", "original_text": "<EXACT text inside quotation marks>" }],
   "numbers": [{ "value": "<digit string>", "unit": "<%|crore|degrees|km|...>", "context": "<what the number measures>" }],
   "key_facts": ["<concrete fact 1>", "<concrete fact 2>", "..."],
-  "sub_headings": ["<suggested h3 topic 1>", "..."],
-  "source_paragraphs": ["<source para verbatim>", "..."]
+  "sub_headings": ["<suggested h3 topic 1>", "..."]
 }
 
 RULES:
@@ -62,15 +60,22 @@ RULES:
 
 export async function extractFacts(sourceText: string): Promise<ExtractedFacts> {
   const deployment = process.env.AZURE_OPENAI_EXTRACT_DEPLOYMENT || "gpt41-mini";
-  const result = await chat({
-    deployment,
-    messages: [
-      { role: "system", content: EXTRACT_SYSTEM },
-      { role: "user", content: sourceText.slice(0, 8000) },
-    ],
-    temperature: 0.1,
-    maxTokens: 1500,
-    responseFormatJson: true,
-  });
-  return parseJsonEnvelope<ExtractedFacts>(result.content);
+  // Source slice cap: gpt-4.1-mini has a 128k context window, so 16000 chars
+  // (~4000 input tokens) leaves ample room for the system prompt + the
+  // extracted JSON envelope. Long PIB releases / court judgments fit.
+  // maxTokens schedule: 3000 covers a typical article; 6000 covers a long
+  // one with many quotes; 10000 is the safety net for extreme cases. Each
+  // retry is gated on Azure's finish_reason: "length" so we don't waste
+  // calls when the response is fine.
+  return chatJsonWithRetry<ExtractedFacts>(
+    {
+      deployment,
+      messages: [
+        { role: "system", content: EXTRACT_SYSTEM },
+        { role: "user", content: sourceText.slice(0, 16000) },
+      ],
+      temperature: 0.1,
+    },
+    [3000, 6000, 10000],
+  );
 }
