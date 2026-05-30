@@ -19,10 +19,27 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("=== Migrate CHIEF_SUB_EDITOR → EDITOR ===");
 
+  // Once a prior deploy ran `prisma db push` after the schema dropped
+  // CHIEF_SUB_EDITOR, the value is gone from the Postgres enum and even
+  // referencing it as a literal throws "invalid input value for enum Role".
+  // So first check pg_enum: if the value is already absent, this migration
+  // is complete and there is nothing safe (or necessary) to do.
+  const enumExists = (await prisma.$queryRawUnsafe<Array<{ exists: boolean }>>(
+    `SELECT EXISTS (
+       SELECT 1 FROM pg_enum e
+       JOIN pg_type t ON t.oid = e.enumtypid
+       WHERE t.typname = 'Role' AND e.enumlabel = 'CHIEF_SUB_EDITOR'
+     ) AS exists`,
+  ))[0]?.exists ?? false;
+
+  if (!enumExists) {
+    console.log("CHIEF_SUB_EDITOR enum value already removed from DB - nothing to migrate.");
+    return;
+  }
+
   // Raw SQL because the regenerated Prisma client may not know about
   // CHIEF_SUB_EDITOR once schema.prisma drops it. Going through executeRaw
-  // bypasses the typed enum and talks straight to the DB enum, which still
-  // has the legacy value until the next `prisma db push`.
+  // bypasses the typed enum and talks straight to the DB enum.
   const affected = await prisma.$executeRawUnsafe(
     `UPDATE users SET role = 'EDITOR' WHERE role = 'CHIEF_SUB_EDITOR'`,
   );
