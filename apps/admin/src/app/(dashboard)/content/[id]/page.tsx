@@ -36,6 +36,16 @@ import { toast } from "sonner";
 
 interface Category { id: string; name: string; nameEn: string; slug: string; parentId?: string | null }
 
+// ISO timestamp -> the local-time "YYYY-MM-DDTHH:mm" the <DateTimePicker>
+// expects. Empty string when the row has no scheduled time. Centralised so
+// the load useEffect and the dirty-check snapshot can't drift.
+function formatScheduledForInput(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const off = d.getTimezoneOffset() * 60000;
+  return new Date(d.getTime() - off).toISOString().slice(0, 16);
+}
+
 const TYPE_META: Record<string, { label: string; bg: string; fg: string }> = {
   ARTICLE: { label: "Article", bg: "#fee2e2", fg: "#991b1b" },
   VIDEO: { label: "Video", bg: "#dbeafe", fg: "#1e40af" },
@@ -139,6 +149,12 @@ export default function ContentEditorPage() {
   const [headlineOpen, setHeadlineOpen] = useState(false);
 
   const editorRef = useRef<RichEditorRef>(null);
+  // Snapshot of every editable field at load time. The Update button is
+  // disabled while the current form state JSON-stringifies to the same value -
+  // so a freshly-loaded row with no edits can't be re-saved by accident, and
+  // editors get visual feedback that "yes, I've actually changed something".
+  // Reset only on a fresh load (the post-save flow navigates away).
+  const initialSnapshotRef = useRef<string | null>(null);
 
   // Pipe error/success state through Sonner toasts - the inline banner was
   // removed in the visual refactor, but every existing setError/setSuccess
@@ -336,24 +352,48 @@ export default function ContentEditorPage() {
       setFeatured(!!row.featured);
       setLanguage(row.language || "TELUGU");
       setSourceUrl(row.sourceUrl || "");
-      if (row.scheduledAt) {
-        const d = new Date(row.scheduledAt);
-        const off = d.getTimezoneOffset() * 60000;
-        setScheduledAt(new Date(d.getTime() - off).toISOString().slice(0, 16));
-      }
-      if (Array.isArray(row.tags)) {
-        setTagsInput(row.tags.map((t: any) => t.tag?.name).filter(Boolean).join(", "));
-      }
+      const initialScheduledAt = formatScheduledForInput(row.scheduledAt);
+      setScheduledAt(initialScheduledAt);
+      const initialTags = Array.isArray(row.tags)
+        ? row.tags.map((t: any) => t.tag?.name).filter(Boolean).join(", ")
+        : "";
+      setTagsInput(initialTags);
       // Project payload into the right state shape per type. ARTICLE pulls
       // rating + reviewerName into dedicated inputs; everything else hands the
       // raw payload to ContentPayloadEditor which switches on type internally.
       const payload = row.payload || {};
-      if (row.type === "ARTICLE") {
-        setRating(typeof payload.rating === "number" ? String(payload.rating) : "");
-        setReviewerName(payload.reviewerName || "");
+      const isArticle = row.type === "ARTICLE";
+      const initialRating = isArticle && typeof payload.rating === "number" ? String(payload.rating) : "";
+      const initialReviewerName = isArticle ? (payload.reviewerName || "") : "";
+      const initialTypedPayload = !isArticle ? (payload as Record<string, unknown>) : {};
+      if (isArticle) {
+        setRating(initialRating);
+        setReviewerName(initialReviewerName);
       } else {
-        setTypedPayload(payload as Record<string, unknown>);
+        setTypedPayload(initialTypedPayload);
       }
+      // Snapshot must mirror buildFormSnapshot() shape exactly - any drift
+      // here means the dirty check fires (or fails to fire) incorrectly.
+      initialSnapshotRef.current = JSON.stringify({
+        title: row.title || "",
+        slug: row.slug || "",
+        summary: row.summary || "",
+        body: isArticle ? (row.body || "") : "",
+        featuredImage: row.featuredImage || "",
+        categoryId: row.categoryId || "",
+        additionalCategoryIds: [...(Array.isArray(row.additionalCategoryIds) ? row.additionalCategoryIds : [])].sort(),
+        deskId: row.deskId || "",
+        constituencyId: row.constituencyId || "",
+        status: row.status || "DRAFT",
+        featured: !!row.featured,
+        language: row.language || "TELUGU",
+        sourceUrl: row.sourceUrl || "",
+        scheduledAt: initialScheduledAt,
+        tagsInput: initialTags,
+        rating: initialRating,
+        reviewerName: initialReviewerName,
+        typedPayload: initialTypedPayload,
+      });
       setLoading(false);
     });
   }, [contentId]);
@@ -493,6 +533,30 @@ export default function ContentEditorPage() {
   const constituencies = districts.flatMap((d) =>
     (d.constituencies || []).map((c: any) => ({ ...c, districtName: d.nameEn })));
 
+  // Mirror of the load-time snapshot, computed from live state. Shape MUST
+  // match the JSON.stringify in the load useEffect or the dirty check lies.
+  const currentSnapshot = JSON.stringify({
+    title,
+    slug,
+    summary,
+    body: type === "ARTICLE" ? body : "",
+    featuredImage,
+    categoryId,
+    additionalCategoryIds: [...additionalCategoryIds].sort(),
+    deskId,
+    constituencyId,
+    status,
+    featured,
+    language,
+    sourceUrl,
+    scheduledAt,
+    tagsInput,
+    rating: type === "ARTICLE" ? rating : "",
+    reviewerName: type === "ARTICLE" ? reviewerName : "",
+    typedPayload: type !== "ARTICLE" ? typedPayload : {},
+  });
+  const isDirty = initialSnapshotRef.current !== null && currentSnapshot !== initialSnapshotRef.current;
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
@@ -513,38 +577,22 @@ export default function ContentEditorPage() {
             {status}
           </Badge>
           <div className="flex-1" />
-          {/* Button layout adapts to current status:
-              - PUBLISHED/SCHEDULED: single "Update" button that re-saves in the
-                same status (no "Save Draft" - that would silently demote a
-                live article to draft, which is a destructive surprise).
-                Editors can use the Status dropdown in the right rail to
-                explicitly unpublish if they need to.
-              - Anything else (DRAFT, SUBMITTED, etc.): "Save Draft" + "Publish"
-                (Publish gated to Editor/Admin via canPublish). */}
-          {(status === "PUBLISHED" || status === "SCHEDULED") ? (
-            <Button
-              onClick={() => handleSave()}
-              disabled={saving}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              {saving ? "Updating…" : "Update"}
-            </Button>
-          ) : (
-            <>
-              <Button variant="outline" onClick={() => handleSave()} disabled={saving}>
-                {saving ? "Saving…" : "Save Draft"}
-              </Button>
-              {canPublish && (
-                <Button
-                  onClick={() => handleSave("PUBLISHED")}
-                  disabled={saving}
-                  className="bg-red-600 hover:bg-red-700 text-white"
-                >
-                  Publish
-                </Button>
-              )}
-            </>
-          )}
+          {/* Cancel discards the in-progress edits and returns to /content.
+              Update persists every field as-is, including any status the
+              editor picked in the right-rail dropdown - so changing Status
+              from SUBMITTED to APPROVED and clicking Update commits the
+              transition. Workflow gating still lives on the server. */}
+          <Button variant="outline" onClick={() => router.push("/content")} disabled={saving}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => handleSave()}
+            disabled={saving || !isDirty}
+            className="bg-red-600 hover:bg-red-700 text-white"
+            title={!isDirty ? "No changes to save" : undefined}
+          >
+            {saving ? "Updating…" : "Update"}
+          </Button>
         </div>
 
         <div className="shadcn-scope grid gap-5" style={{ gridTemplateColumns: "minmax(0, 1fr) 320px" }}>
@@ -699,30 +747,33 @@ export default function ContentEditorPage() {
                 />
               </div>
 
-            {/* AI body rewriters - ARTICLE only. Paste URL -> fetch + translate
-                + fill the whole article, or run translate / editorial on the
-                current body. Summarize lives by the Summary field and Headline
-                ideas lives by the Title field - each AI button sits next to
-                the field it actually fills. */}
+            {/* AI Article Import - minimal section header makes it
+                identifiable; the తెలుగులో రాయండి button is dual-mode
+                (with URL = fetch + translate, without = rewrite body). */}
             {type === "ARTICLE" && (
               <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
-                <Input
-                  value={pasteUrl}
-                  onChange={(e) => setPasteUrl(e.target.value)}
-                  placeholder="Paste a source URL (optional) - తెలుగులో రాయండి will fetch + translate it"
-                  className="bg-white text-xs md:text-xs"
-                />
-                <div className="flex flex-wrap gap-2">
-                  {/* Unified Telugu button: if URL pasted -> scrape + translate
-                      (was the separate "Fetch + translate" button); else translate
-                      the existing title/summary/body in place. */}
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
+                  <Sparkles className="h-3.5 w-3.5 text-blue-600" />
+                  AI Article Import
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Input
+                    value={pasteUrl}
+                    onChange={(e) => setPasteUrl(e.target.value)}
+                    placeholder="Paste source URL (optional) - fetches + translates"
+                    className="min-w-[220px] flex-1 bg-white"
+                  />
                   <Button
                     size="sm"
                     onClick={() => (pasteUrl.trim() ? fetchFromUrl() : runAI("translate"))}
                     disabled={aiLoading !== null}
                     className="bg-blue-600 text-white hover:bg-blue-700"
                   >
-                    {aiLoading === "translate" || aiLoading === "fetch" ? "Translating…" : "తెలుగులో రాయండి"}
+                    {aiLoading === "translate" || aiLoading === "fetch"
+                      ? "Translating…"
+                      : pasteUrl.trim()
+                        ? "Fetch + తెలుగులో రాయండి"
+                        : "తెలుగులో రాయండి"}
                   </Button>
                   <Button
                     size="sm"

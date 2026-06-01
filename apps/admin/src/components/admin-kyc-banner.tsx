@@ -1,11 +1,12 @@
-// Card-style banner rendered above every (dashboard) page until the
-// signed-in staff member's KYC reaches VERIFIED. Server component - reads
-// fresh status from the DB on every nav so a freshly-verified admin sees
-// the banner disappear immediately.
+// Card-style banner rendered on every (dashboard) page until the signed-in
+// staff member's KYC reaches VERIFIED. Server component - reads fresh
+// status from the DB on every nav so a freshly-verified user sees the
+// banner disappear immediately.
 //
-// Sits INSIDE the page content gutter (offset by the 240px sidebar, padded
-// from the edges) so it reads as a contextual notification card rather
-// than a flush top-of-window strip.
+// Floats at the BOTTOM-RIGHT of the viewport (fixed positioning, z-50) so
+// it nudges without displacing the page heading or the first row of
+// content. Spans full width on mobile (with a 16px margin), caps at ~440px
+// on >= sm so it doesn't dominate the desk on a laptop.
 //
 // Status palette:
 //   PENDING    → amber, "Complete your KYC"
@@ -66,19 +67,15 @@ export async function AdminKycBanner({ userId }: { userId: string }) {
           cta: "Upload documents",
         };
 
-  // Card variant - sits inside the page gutter (sidebar offset + 24px
-  // padding mirror the per-page <main> values used across the dashboard
-  // so the card lines up with the page heading below). Rounded corners +
-  // shadow + 1px tinted border make it read as a notification card
-  // instead of a navbar strip.
+  // Floating variant - fixed bottom-right, capped at ~440px wide on
+  // desktop, full-bleed (with 16px gutters) on mobile. Strong shadow +
+  // tinted border so it reads as a persistent nudge floating above the
+  // page content rather than part of the page itself.
   return (
-    <div
-      className="shadcn-scope"
-      style={{ marginLeft: 240, padding: "16px 24px 0" }}
-    >
+    <div className="shadcn-scope fixed bottom-4 left-4 right-4 z-50 sm:left-auto sm:right-4 sm:max-w-md">
       <div
         role="status"
-        className={`flex items-center gap-3 rounded-xl border ${ui.bg} ${ui.border} px-4 py-3 shadow-sm`}
+        className={`flex items-center gap-3 rounded-xl border ${ui.bg} ${ui.border} px-4 py-3 shadow-lg`}
       >
         <span className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${ui.dot}`}>
           <ui.Icon size={18} className="text-white" />

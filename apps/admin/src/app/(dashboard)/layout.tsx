@@ -53,6 +53,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const suppressSidebar =
     pathname.startsWith("/reporter") || pathname === "/change-password";
 
+  // ADMINs are exempt from KYC server-side (see lib/kyc-guard.ts) - they
+  // can publish without verification, so nagging them with a banner that
+  // says "Complete your KYC to enable publishing" is factually wrong.
+  // Editors + sub-editors still see the banner because publish APIs gate
+  // them on VERIFIED.
+  const suppressKycForRole = initialRole === "ADMIN";
+
   return (
     <>
       {!suppressSidebar && <Sidebar initialRole={initialRole} />}
@@ -62,7 +69,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           page swap look like a flash. Wrapping it in <Suspense> lets the
           rest of the layout (sidebar + children) stream immediately;
           the banner pops in once the query resolves (~10–30ms). */}
-      {userId && !suppressBanner && (
+      {userId && !suppressBanner && !suppressKycForRole && (
         <Suspense fallback={null}>
           <AdminKycBanner userId={userId} />
         </Suspense>
