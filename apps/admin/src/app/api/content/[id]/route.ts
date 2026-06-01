@@ -39,7 +39,7 @@ async function pingArticlePublish(contentId: string, slug: string) {
         constituency: { select: { slug: true, district: { select: { slug: true } } } },
       },
     });
-    const siteUrl = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+    const siteUrl = process.env.SITE_URL || "https://rayalaseemanews.com";
     const districtSlug = row?.constituency?.district.slug ?? null;
     const constituencySlug = row?.constituency?.slug ?? null;
     const urls = [

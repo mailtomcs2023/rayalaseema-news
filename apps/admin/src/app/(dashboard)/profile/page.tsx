@@ -445,7 +445,7 @@ export default async function ProfilePage() {
             paddingTop: 8,
           }}
         >
-          Rayalaseema Express
+          Rayalaseema News
         </p>
         </div>
       </main>

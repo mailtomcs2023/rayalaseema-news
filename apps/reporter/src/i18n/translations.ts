@@ -47,7 +47,7 @@ export const translations = {
     },
     login: {
       appName: "RE Reporter",
-      subtitle: "Rayalaseema Express Journalist App",
+      subtitle: "Rayalaseema News Journalist App",
       email: "Email",
       password: "Password",
       loginBtn: "Login",
@@ -256,7 +256,7 @@ export const translations = {
       },
       published: {
         title: "Nothing published yet",
-        message: "When your articles go live on Rayalaseema Express, they'll appear here for you to track.",
+        message: "When your articles go live on Rayalaseema News, they'll appear here for you to track.",
       },
       draft: {
         title: "No drafts saved",
@@ -541,8 +541,8 @@ export const translations = {
       confirm: "మార్చు",
     },
     login: {
-      appName: "రాయలసీమ ఎక్స్‌ప్రెస్ రిపోర్టర్",
-      subtitle: "రాయలసీమ ఎక్స్‌ప్రెస్ జర్నలిస్ట్ యాప్",
+      appName: "రాయలసీమ న్యూస్ రిపోర్టర్",
+      subtitle: "రాయలసీమ న్యూస్ జర్నలిస్ట్ యాప్",
       email: "ఇమెయిల్",
       password: "పాస్‌వర్డ్",
       loginBtn: "లాగిన్",
@@ -746,7 +746,7 @@ export const translations = {
       },
       published: {
         title: "ఇంకా ఏదీ ప్రచురించబడలేదు",
-        message: "మీ వార్తలు రాయలసీమ ఎక్స్‌ప్రెస్‌లో ప్రత్యక్షమైనప్పుడు, ట్రాక్ చేయడానికి ఇక్కడ కనిపిస్తాయి.",
+        message: "మీ వార్తలు రాయలసీమ న్యూస్‌లో ప్రత్యక్షమైనప్పుడు, ట్రాక్ చేయడానికి ఇక్కడ కనిపిస్తాయి.",
       },
       draft: {
         title: "డ్రాఫ్ట్‌లు సేవ్ చేయబడలేదు",

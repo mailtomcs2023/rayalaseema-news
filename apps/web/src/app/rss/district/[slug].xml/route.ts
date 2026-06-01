@@ -32,7 +32,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ slug: string }
   });
   if (!district) return notFound();
 
-  const siteUrl = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+  const siteUrl = process.env.SITE_URL || "https://rayalaseemanews.com";
   const articles = await prisma.content.findMany({
     where: {
       type: "ARTICLE",
@@ -62,7 +62,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ slug: string }
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Rayalaseema Express - ${escXml(district.nameEn)} (${escXml(district.name)})</title>
+    <title>Rayalaseema News - ${escXml(district.nameEn)} (${escXml(district.name)})</title>
     <link>${siteUrl}/district/${district.slug}</link>
     <atom:link href="${siteUrl}/rss/district/${district.slug}.xml" rel="self" type="application/rss+xml" />
     <description>News from ${escXml(district.nameEn)} district.</description>

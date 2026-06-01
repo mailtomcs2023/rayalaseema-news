@@ -38,7 +38,7 @@ export async function pingIndexNow(urls: string[]): Promise<void> {
     console.warn("[indexnow] key not configured in SiteConfig - skipping ping");
     return;
   }
-  const host = (process.env.SITE_URL || "https://rayalaseemaexpress.com")
+  const host = (process.env.SITE_URL || "https://rayalaseemanews.com")
     .replace(/^https?:\/\//, "")
     .replace(/\/$/, "");
   const body = {

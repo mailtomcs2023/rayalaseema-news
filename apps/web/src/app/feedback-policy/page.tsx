@@ -6,12 +6,12 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 
-const SITE_URL = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
 
 export const metadata: Metadata = {
-  title: "Feedback Policy | రాయలసీమ ఎక్స్‌ప్రెస్",
+  title: "Feedback Policy | రాయలసీమ న్యూస్",
   description:
-    "How Rayalaseema Express handles reader feedback - channels, response timelines, and escalation paths.",
+    "How Rayalaseema News handles reader feedback - channels, response timelines, and escalation paths.",
   alternates: { canonical: `${SITE_URL}/feedback-policy` },
 };
 
@@ -29,18 +29,18 @@ export default function FeedbackPolicyPage() {
 
         <div className="article-body" style={{ fontSize: 16, lineHeight: 1.85, color: "#333" }}>
           <p>
-            Reader feedback shapes how Rayalaseema Express improves. We treat every message as a signal - even
+            Reader feedback shapes how Rayalaseema News improves. We treat every message as a signal - even
             short ones - and respond within published timelines.
           </p>
 
           <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 32, marginBottom: 10 }}>How to reach us</h2>
           <ul style={{ paddingLeft: 24, marginBottom: 16 }}>
-            <li><strong>Story tips, corrections, complaints:</strong> <a href="mailto:editor@rayalaseemaexpress.com" style={{ color: "var(--color-brand)" }}>editor@rayalaseemaexpress.com</a></li>
-            <li><strong>Factual corrections:</strong> <a href="mailto:corrections@rayalaseemaexpress.com" style={{ color: "var(--color-brand)" }}>corrections@rayalaseemaexpress.com</a> (see <Link href="/corrections-policy" style={{ color: "var(--color-brand)" }}>corrections policy</Link>)</li>
-            <li><strong>Ethics violations:</strong> <a href="mailto:ethics@rayalaseemaexpress.com" style={{ color: "var(--color-brand)" }}>ethics@rayalaseemaexpress.com</a> (see <Link href="/ethics-policy" style={{ color: "var(--color-brand)" }}>ethics policy</Link>)</li>
-            <li><strong>Reader letters / opinion submissions:</strong> <a href="mailto:letters@rayalaseemaexpress.com" style={{ color: "var(--color-brand)" }}>letters@rayalaseemaexpress.com</a></li>
+            <li><strong>Story tips, corrections, complaints:</strong> <a href="mailto:editor@rayalaseemanews.com" style={{ color: "var(--color-brand)" }}>editor@rayalaseemanews.com</a></li>
+            <li><strong>Factual corrections:</strong> <a href="mailto:corrections@rayalaseemanews.com" style={{ color: "var(--color-brand)" }}>corrections@rayalaseemanews.com</a> (see <Link href="/corrections-policy" style={{ color: "var(--color-brand)" }}>corrections policy</Link>)</li>
+            <li><strong>Ethics violations:</strong> <a href="mailto:ethics@rayalaseemanews.com" style={{ color: "var(--color-brand)" }}>ethics@rayalaseemanews.com</a> (see <Link href="/ethics-policy" style={{ color: "var(--color-brand)" }}>ethics policy</Link>)</li>
+            <li><strong>Reader letters / opinion submissions:</strong> <a href="mailto:letters@rayalaseemanews.com" style={{ color: "var(--color-brand)" }}>letters@rayalaseemanews.com</a></li>
             <li><strong>Privacy / data requests:</strong> see our <Link href="/privacy" style={{ color: "var(--color-brand)" }}>privacy policy</Link></li>
-            <li><strong>Technical issues with the site:</strong> <a href="mailto:support@rayalaseemaexpress.com" style={{ color: "var(--color-brand)" }}>support@rayalaseemaexpress.com</a></li>
+            <li><strong>Technical issues with the site:</strong> <a href="mailto:support@rayalaseemanews.com" style={{ color: "var(--color-brand)" }}>support@rayalaseemanews.com</a></li>
           </ul>
 
           <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 32, marginBottom: 10 }}>Response timelines</h2>
@@ -56,7 +56,7 @@ export default function FeedbackPolicyPage() {
           <p>
             We do not respond to anonymous abuse, bulk-template messages, or messages whose only content is
             "remove this article". We do reply to legitimate takedown requests that cite a specific legal basis -
-            send those to <a href="mailto:editor@rayalaseemaexpress.com" style={{ color: "var(--color-brand)" }}>editor@rayalaseemaexpress.com</a>.
+            send those to <a href="mailto:editor@rayalaseemanews.com" style={{ color: "var(--color-brand)" }}>editor@rayalaseemanews.com</a>.
           </p>
 
           <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 32, marginBottom: 10 }}>Escalation</h2>

@@ -11,15 +11,15 @@ import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-sch
 
 export const revalidate = 1800; // 30 min - mandi prices update once or twice a day
 
-const SITE_URL = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
 
 export const metadata: Metadata = {
-  title: "Today's mandi prices - Rayalaseema Express News",
+  title: "Today's mandi prices - Rayalaseema News News",
   description:
     "Latest commodity prices from Andhra Pradesh mandis. Chilli, cotton, turmeric, paddy, groundnut, maize, tomato, onion rates from major Rayalaseema markets. Updated daily.",
   alternates: { canonical: `${SITE_URL}/mandi-prices` },
   openGraph: {
-    title: "Today's mandi prices | Rayalaseema Express News",
+    title: "Today's mandi prices | Rayalaseema News News",
     description: "Daily commodity rates from AP mandis.",
     url: `${SITE_URL}/mandi-prices`,
     type: "website",
@@ -52,7 +52,7 @@ export default async function MandiPricesPage() {
     description: "Latest commodity prices - chilli, cotton, turmeric, paddy, groundnut, maize, tomato, onion - from major AP mandis.",
     datePublished: rows[0]?.date.toISOString() || new Date().toISOString(),
     dateModified: rows[0]?.date.toISOString() || new Date().toISOString(),
-    publisher: { "@type": "NewsMediaOrganization", name: "Rayalaseema Express News", url: SITE_URL },
+    publisher: { "@type": "NewsMediaOrganization", name: "Rayalaseema News News", url: SITE_URL },
     mainEntityOfPage: { "@type": "WebPage", "@id": `${SITE_URL}/mandi-prices` },
     inLanguage: "te",
   };

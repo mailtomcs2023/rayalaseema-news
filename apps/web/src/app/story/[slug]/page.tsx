@@ -7,7 +7,7 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { getWebStoryBySlug, getSiteConfig, incrementViewCount } from "@/lib/db-queries";
 
-const SITE_URL = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const firstSlideImage = story.slides[0] ? (story.slides[0] as { image: string }).image : null;
   const ogImage = story.imageUrl || firstSlideImage || story.featuredImage || `${SITE_URL}/api/og/${slug}`;
   return {
-    title: `${story.title} | రాయలసీమ ఎక్స్‌ప్రెస్`,
+    title: `${story.title} | రాయలసీమ న్యూస్`,
     description: story.summary || story.title,
     alternates: { canonical: url },
     openGraph: { title: story.title, url, type: "article", locale: "te_IN", images: ogImage ? [{ url: ogImage }] : undefined },

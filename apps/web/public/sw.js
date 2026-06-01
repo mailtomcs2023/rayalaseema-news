@@ -1,4 +1,4 @@
-// Rayalaseema Express service worker - #92 PWA + offline cache.
+// Rayalaseema News service worker - #92 PWA + offline cache.
 //
 // Strategy:
 //   - epaper-shell: HTML for /epaper, /epaper/search, /epaper/corrections -

@@ -39,7 +39,7 @@ const frontMaster: { slug: string; name: string; layout: { coordSystem: "mm-v2";
       {
         id: "front-folio", type: "folio",
         x: 0, y: 510, w: 330, h: 10, isMaster: true,
-        content: "{{pageNumber}} · {{dateLabel}} · www.rayalaseemaexpress.com",
+        content: "{{pageNumber}} · {{dateLabel}} · www.rayalaseemanews.com",
       },
     ],
   },

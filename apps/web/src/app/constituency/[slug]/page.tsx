@@ -29,7 +29,7 @@ export default async function ConstituencyPage({ params }: { params: Promise<{ s
     take: 20,
   });
 
-  const siteUrl = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+  const siteUrl = process.env.SITE_URL || "https://rayalaseemanews.com";
   const breadcrumbLd = buildBreadcrumbListSchema({
     items: [
       { name: "Home", url: siteUrl },

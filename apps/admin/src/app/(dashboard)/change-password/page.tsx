@@ -97,7 +97,7 @@ export default function ChangePasswordPage() {
           }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-inverse.svg" alt="Rayalaseema Express" style={{ height: 32, display: "block" }} />
+          <img src="/logo-inverse.svg" alt="Rayalaseema News" style={{ height: 32, display: "block" }} />
           <button
             type="button"
             onClick={() => signOut({ callbackUrl: "/login" })}
@@ -110,7 +110,7 @@ export default function ChangePasswordPage() {
         <header className="flex items-center justify-between border-b border-border bg-white px-6 py-3">
           <div className="flex items-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="Rayalaseema Express" style={{ height: 32, width: "auto" }} />
+            <img src="/logo.png" alt="Rayalaseema News" style={{ height: 32, width: "auto" }} />
           </div>
           <button
             type="button"

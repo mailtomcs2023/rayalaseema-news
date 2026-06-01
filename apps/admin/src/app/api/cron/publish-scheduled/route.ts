@@ -10,7 +10,7 @@ import { logAudit } from "@/lib/audit";
 //
 // Example cron (every minute):
 //   * * * * * curl -s -X POST -H "Authorization: Bearer $CRON_SECRET" \
-//     https://admin.rayalaseemaexpress.com/api/cron/publish-scheduled
+//     https://admin.rayalaseemanews.com/api/cron/publish-scheduled
 export async function POST(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret) {

@@ -14,15 +14,15 @@ import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-sch
 
 export const revalidate = 600;
 
-const SITE_URL = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
 
 export const metadata: Metadata = {
-  title: "Devotional news - Tirumala, Tirupati, AP temples | Rayalaseema Express News",
+  title: "Devotional news - Tirumala, Tirupati, AP temples | Rayalaseema News News",
   description:
     "TTD news, seva booking updates, festival schedules, and devotional stories from across Andhra Pradesh's temple towns. Tirumala, Tirupati, Srisailam, Kanipakam and more.",
   alternates: { canonical: `${SITE_URL}/devotional` },
   openGraph: {
-    title: "Devotional news | రాయలసీమ ఎక్స్‌ప్రెస్ - భక్తి",
+    title: "Devotional news | రాయలసీమ న్యూస్ - భక్తి",
     url: `${SITE_URL}/devotional`,
     type: "website",
     locale: "te_IN",

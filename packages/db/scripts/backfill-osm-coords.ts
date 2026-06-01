@@ -19,7 +19,7 @@ const prisma = new PrismaClient();
 const FORCE = process.argv.includes("--force");
 const LEVEL_ARG = process.argv.find((a) => a.startsWith("--level="))?.split("=")[1];
 const SLEEP_MS = 1500;
-const USER_AGENT = "RayalaseemaExpress/1.0 (admin SEO backfill; +https://rayalaseemaexpress.com)";
+const USER_AGENT = "RayalaseemaExpress/1.0 (admin SEO backfill; +https://rayalaseemanews.com)";
 
 async function geocode(query: string): Promise<{ lat: number; lng: number } | null> {
   const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&countrycodes=in`;

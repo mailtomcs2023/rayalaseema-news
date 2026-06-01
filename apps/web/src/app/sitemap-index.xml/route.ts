@@ -15,7 +15,7 @@ export const revalidate = 3600;
 // one URL in the webmaster tools.
 
 export async function GET() {
-  const siteUrl = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+  const siteUrl = process.env.SITE_URL || "https://rayalaseemanews.com";
   const now = new Date().toISOString();
 
   const sitemaps = [

@@ -53,7 +53,7 @@ export function SWRegister() {
         boxShadow: "0 6px 24px rgba(0,0,0,0.16)",
         fontFamily: "var(--font-telugu-body), sans-serif",
       }}
-      title="Install Rayalaseema Express ePaper to your home screen for offline access"
+      title="Install Rayalaseema News ePaper to your home screen for offline access"
     >
       📲 ఈ-పేపర్ యాప్‌గా జోడించండి
     </button>

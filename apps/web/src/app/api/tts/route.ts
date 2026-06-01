@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
           "Ocp-Apim-Subscription-Key": SPEECH_KEY,
           "Content-Type": "application/ssml+xml",
           "X-Microsoft-OutputFormat": "audio-24khz-96kbitrate-mono-mp3",
-          "User-Agent": "rayalaseema-express",
+          "User-Agent": "rayalaseema-news",
         },
         body: ssml,
       }

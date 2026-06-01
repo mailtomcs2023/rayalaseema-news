@@ -2,7 +2,7 @@
 // reverse proxy in front of the Next.js server.
 //
 // Why this exists: in production, nginx terminates TLS for
-// admin.rayalaseemaexpress.com and forwards to `http://localhost:3001`.
+// admin.rayalaseemanews.com and forwards to `http://localhost:3001`.
 // `req.url` inside a Next.js handler reflects what the upstream sees, so
 // `new URL("/foo", req.url)` produces `http://localhost:3001/foo` - which
 // then ships back to the browser as the Location header and breaks every
@@ -11,7 +11,7 @@
 // from their machine).
 //
 // Resolution order:
-//   1. NEXTAUTH_URL env (deploy.yml pins this to https://admin.rayalaseemaexpress.com)
+//   1. NEXTAUTH_URL env (deploy.yml pins this to https://admin.rayalaseemanews.com)
 //      — most reliable, doesn't depend on nginx forwarding any headers.
 //   2. x-forwarded-host + x-forwarded-proto headers (if nginx forwards them).
 //   3. The request's own Host header.

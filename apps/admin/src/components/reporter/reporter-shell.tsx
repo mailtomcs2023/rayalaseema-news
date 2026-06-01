@@ -86,7 +86,7 @@ export function ReporterShell({
           zIndex: 40,
         }}
       >
-        <img src="/logo-inverse.svg" alt="Rayalaseema Express" style={{ height: 32, display: "block" }} />
+        <img src="/logo-inverse.svg" alt="Rayalaseema News" style={{ height: 32, display: "block" }} />
       </header>
 
       {/* Page body - leaves room for the fixed bottom tab bar. Pages own

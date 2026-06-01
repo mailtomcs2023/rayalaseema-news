@@ -15,7 +15,7 @@ const sections: { title: string; icon: string; fields: SettingField[] }[] = [
     title: "Branding",
     icon: "🎨",
     fields: [
-      { key: "site_title", label: "Site Title", type: "text", placeholder: "రాయలసీమ ఎక్స్‌ప్రెస్" },
+      { key: "site_title", label: "Site Title", type: "text", placeholder: "రాయలసీమ న్యూస్" },
       { key: "site_description", label: "Site Description", type: "text", placeholder: "రాయలసీమ ప్రాంతం నుండి తాజా వార్తలు" },
       { key: "brand_color", label: "Brand Color", type: "color" },
       { key: "logo_url", label: "Logo URL", type: "text", placeholder: "https://..." },
@@ -34,7 +34,7 @@ const sections: { title: string; icon: string; fields: SettingField[] }[] = [
     title: "Contact Information",
     icon: "📞",
     fields: [
-      { key: "contact_email", label: "Contact Email", type: "text", placeholder: "info@rayalaseemaexpress.com" },
+      { key: "contact_email", label: "Contact Email", type: "text", placeholder: "info@rayalaseemanews.com" },
       { key: "contact_phone", label: "Contact Phone", type: "text", placeholder: "+91 ..." },
       { key: "contact_address", label: "Office Address", type: "text", placeholder: "Kurnool, Andhra Pradesh" },
     ],

@@ -1,7 +1,7 @@
 # Unified Content Model
 
 **Spec**: [docs/superpowers/specs/2026-05-25-unified-content-model-design.md](superpowers/specs/2026-05-25-unified-content-model-design.md)
-**Epic**: [#104](https://github.com/mailtomcs2023/rayalaseema-express/issues/104)
+**Epic**: [#104](https://github.com/mailtomcs2023/rayalaseema-news/issues/104)
 
 ## What it replaces
 
@@ -120,25 +120,25 @@ DRAFT → SUBMITTED → IN_REVIEW → APPROVED → PUBLISHED
 
 `BREAKING_NEWS` is the only type whose create endpoint defaults to `SUBMITTED` instead of `DRAFT` (one-line ticker content doesn't benefit from a Draft phase).
 
-The PIB approval gate ([#99](https://github.com/mailtomcs2023/rayalaseema-express/issues/99)) is preserved on `Content` - when `needsPibApproval=true`, publishing is blocked until an ADMIN POSTs `/api/content/[id]/pib-approve` with a `pibReferenceNumber`.
+The PIB approval gate ([#99](https://github.com/mailtomcs2023/rayalaseema-news/issues/99)) is preserved on `Content` - when `needsPibApproval=true`, publishing is blocked until an ADMIN POSTs `/api/content/[id]/pib-approve` with a `pibReferenceNumber`.
 
 ## Migration strategy
 
 Spec #1 used a non-destructive additive rollout:
 
-- **Phase A1 ([#105](https://github.com/mailtomcs2023/rayalaseema-express/issues/105))** - added `Content` + `ContentTag` + `ContentRevision` + `ContentPayment` tables. Legacy tables untouched.
-- **Phase B ([#109](https://github.com/mailtomcs2023/rayalaseema-express/issues/109))** - switched ingestion (auto-publish, auto-fetch, fetch-news, cron) to write `Content`.
-- **Phase C ([#110](https://github.com/mailtomcs2023/rayalaseema-express/issues/110))** - repointed `apps/web/src/lib/db-queries.ts` to read from `Content`.
-- **Phase D ([#111](https://github.com/mailtomcs2023/rayalaseema-express/issues/111), [#112](https://github.com/mailtomcs2023/rayalaseema-express/issues/112))** - new `/video`, `/reel`, `/story`, `/gallery`, `/cartoon` routes + repointed `/article/[slug]`.
-- **Phases E-G ([#113](https://github.com/mailtomcs2023/rayalaseema-express/issues/113)-[#129](https://github.com/mailtomcs2023/rayalaseema-express/issues/129))** - admin shell, morphing editor, RichEditor upgrades.
-- **Phase I ([#134](https://github.com/mailtomcs2023/rayalaseema-express/issues/134))** - `pg_dump` step landed in `deploy.yml` so any future destructive step has a backup.
+- **Phase A1 ([#105](https://github.com/mailtomcs2023/rayalaseema-news/issues/105))** - added `Content` + `ContentTag` + `ContentRevision` + `ContentPayment` tables. Legacy tables untouched.
+- **Phase B ([#109](https://github.com/mailtomcs2023/rayalaseema-news/issues/109))** - switched ingestion (auto-publish, auto-fetch, fetch-news, cron) to write `Content`.
+- **Phase C ([#110](https://github.com/mailtomcs2023/rayalaseema-news/issues/110))** - repointed `apps/web/src/lib/db-queries.ts` to read from `Content`.
+- **Phase D ([#111](https://github.com/mailtomcs2023/rayalaseema-news/issues/111), [#112](https://github.com/mailtomcs2023/rayalaseema-news/issues/112))** - new `/video`, `/reel`, `/story`, `/gallery`, `/cartoon` routes + repointed `/article/[slug]`.
+- **Phases E-G ([#113](https://github.com/mailtomcs2023/rayalaseema-news/issues/113)-[#129](https://github.com/mailtomcs2023/rayalaseema-news/issues/129))** - admin shell, morphing editor, RichEditor upgrades.
+- **Phase I ([#134](https://github.com/mailtomcs2023/rayalaseema-news/issues/134))** - `pg_dump` step landed in `deploy.yml` so any future destructive step has a backup.
 
-Remaining work (tracked in epic [#104](https://github.com/mailtomcs2023/rayalaseema-express/issues/104)):
-- [#188](https://github.com/mailtomcs2023/rayalaseema-express/issues/188) (A1B) - rename FK columns from `articleId` to `contentId` on `Comment`, `SocialPost`, `HeadlineTest`, `ArticleReview` (where appropriate)
-- [#189](https://github.com/mailtomcs2023/rayalaseema-express/issues/189) (A1C) - drop the legacy `Article` / `Video` / `Reel` / `WebStory` / `PhotoGallery` / `Photo` / `Cartoon` / `BreakingNews` tables. Pre-requisite: `pg_dump` (#134) running on prod
-- [#133](https://github.com/mailtomcs2023/rayalaseema-express/issues/133) (H2) - delete `/api/articles`, `/api/videos`, etc. once internal callers (ePaper editor, web header ticker) migrate to `/api/content`
-- [#129](https://github.com/mailtomcs2023/rayalaseema-express/issues/129) (G2) - image crop + resize modal (`react-image-crop`)
-- [#136](https://github.com/mailtomcs2023/rayalaseema-express/issues/136) (J1) - Zod schema unit tests + `/api/content` smoke tests
+Remaining work (tracked in epic [#104](https://github.com/mailtomcs2023/rayalaseema-news/issues/104)):
+- [#188](https://github.com/mailtomcs2023/rayalaseema-news/issues/188) (A1B) - rename FK columns from `articleId` to `contentId` on `Comment`, `SocialPost`, `HeadlineTest`, `ArticleReview` (where appropriate)
+- [#189](https://github.com/mailtomcs2023/rayalaseema-news/issues/189) (A1C) - drop the legacy `Article` / `Video` / `Reel` / `WebStory` / `PhotoGallery` / `Photo` / `Cartoon` / `BreakingNews` tables. Pre-requisite: `pg_dump` (#134) running on prod
+- [#133](https://github.com/mailtomcs2023/rayalaseema-news/issues/133) (H2) - delete `/api/articles`, `/api/videos`, etc. once internal callers (ePaper editor, web header ticker) migrate to `/api/content`
+- [#129](https://github.com/mailtomcs2023/rayalaseema-news/issues/129) (G2) - image crop + resize modal (`react-image-crop`)
+- [#136](https://github.com/mailtomcs2023/rayalaseema-news/issues/136) (J1) - Zod schema unit tests + `/api/content` smoke tests
 
 ## Operational notes
 
@@ -148,4 +148,4 @@ Remaining work (tracked in epic [#104](https://github.com/mailtomcs2023/rayalase
 
 ## Next specs
 
-Spec [#2](superpowers/specs/2026-05-25-page-builder-design.md) (Page Builder, epic [#150](https://github.com/mailtomcs2023/rayalaseema-express/issues/150)) and Spec [#3](superpowers/specs/2026-05-25-menu-builder-design.md) (Menu Builder, epic [#174](https://github.com/mailtomcs2023/rayalaseema-express/issues/174)) build on top of this. Both reference `Content` for their data targets.
+Spec [#2](superpowers/specs/2026-05-25-page-builder-design.md) (Page Builder, epic [#150](https://github.com/mailtomcs2023/rayalaseema-news/issues/150)) and Spec [#3](superpowers/specs/2026-05-25-menu-builder-design.md) (Menu Builder, epic [#174](https://github.com/mailtomcs2023/rayalaseema-news/issues/174)) build on top of this. Both reference `Content` for their data targets.

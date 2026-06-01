@@ -5,12 +5,12 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 
-const SITE_URL = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
 
 export const metadata: Metadata = {
-  title: "Our Mission | రాయలసీమ ఎక్స్‌ప్రెస్",
+  title: "Our Mission | రాయలసీమ న్యూస్",
   description:
-    "Why Rayalaseema Express exists - our mission to deliver hyper-local Telugu news for the eight districts of the Rayalaseema region.",
+    "Why Rayalaseema News exists - our mission to deliver hyper-local Telugu news for the eight districts of the Rayalaseema region.",
   alternates: { canonical: `${SITE_URL}/mission` },
 };
 
@@ -24,11 +24,11 @@ export default function MissionPage() {
       <Header />
       <main style={{ maxWidth: 800, margin: "0 auto", padding: "40px 16px" }}>
         <h1 style={{ fontSize: 32, fontWeight: 900, marginBottom: 6, color: "#111" }}>Our Mission</h1>
-        <p style={{ fontSize: 13, color: "#888", marginBottom: 24 }}>రాయలసీమ ఎక్స్‌ప్రెస్ - Why we exist</p>
+        <p style={{ fontSize: 13, color: "#888", marginBottom: 24 }}>రాయలసీమ న్యూస్ - Why we exist</p>
 
         <div className="article-body" style={{ fontSize: 16, lineHeight: 1.85, color: "#333" }}>
           <p>
-            Rayalaseema Express was founded to give the Rayalaseema region of Andhra Pradesh a Telugu-first news
+            Rayalaseema News was founded to give the Rayalaseema region of Andhra Pradesh a Telugu-first news
             outlet that takes hyper-local reporting as seriously as state and national coverage. We cover eight
             districts - Kurnool, Nandyal, Anantapuramu, Sri Sathya Sai, YSR-Kadapa, Annamayya, Tirupati, and
             Chittoor - down to the mandal level.
@@ -59,7 +59,7 @@ export default function MissionPage() {
 
           <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 32, marginBottom: 10 }}>How we sustain this</h2>
           <p>
-            Rayalaseema Express is funded through display advertising and, in time, an optional reader subscription
+            Rayalaseema News is funded through display advertising and, in time, an optional reader subscription
             for premium features. Editorial decisions are insulated from advertising; the news desk does not see
             advertiser lists or revenue figures. See our
             {" "}<a href="/ownership" style={{ color: "var(--color-brand)" }}>ownership disclosure</a> for the

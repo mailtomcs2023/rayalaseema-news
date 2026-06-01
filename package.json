@@ -1,5 +1,5 @@
 {
-  "name": "rayalaseema-express",
+  "name": "rayalaseema-news",
   "private": true,
   "workspaces": [
     "apps/*",

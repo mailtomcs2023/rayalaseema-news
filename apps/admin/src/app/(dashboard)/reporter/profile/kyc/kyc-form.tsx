@@ -121,7 +121,7 @@ export function KycForm({
       )}
 
       <p style={{ fontSize: 11, color: "#6b7280" }}>
-        To upload or replace Aadhaar / PAN photos, open the Rayalaseema Express
+        To upload or replace Aadhaar / PAN photos, open the Rayalaseema News
         mobile app and tap KYC documents.
       </p>
 

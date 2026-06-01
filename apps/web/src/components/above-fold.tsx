@@ -36,7 +36,7 @@ function timeAgo(iso?: string | null): string {
 }
 
 /**
- * Regional above-fold for Rayalaseema Express:
+ * Regional above-fold for Rayalaseema News:
  *  - LEAD: biggest hard-news story (headline + dek + hero image)
  *  - DISTRICT GRID: 2x4, one cell per Rayalaseema district - local-first identity
  *  - RAIL: breaking news pinned on top + latest news below

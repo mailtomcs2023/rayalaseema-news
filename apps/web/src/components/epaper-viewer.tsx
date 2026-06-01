@@ -114,7 +114,7 @@ export function EpaperViewer({
   };
 
   const shareWA = clipUrl
-    ? `https://wa.me/?text=${encodeURIComponent("రాయలసీమ ఎక్స్‌ప్రెస్ ఈ-పేపర్: " + clipUrl)}`
+    ? `https://wa.me/?text=${encodeURIComponent("రాయలసీమ న్యూస్ ఈ-పేపర్: " + clipUrl)}`
     : "#";
 
   return (

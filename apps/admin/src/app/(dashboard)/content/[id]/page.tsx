@@ -982,12 +982,12 @@ export default function ContentEditorPage() {
                   onValueChange={setDeskId}
                   emptyLabel="Auto"
                   searchPlaceholder="Search desks…"
-                  // Display strips the publication prefix ("Rayalaseema Express ")
+                  // Display strips the publication prefix ("Rayalaseema News ")
                   // so the dropdown reads "Movie Reviews Desk" / "Business Desk"
                   // - value (d.id) is unchanged.
                   options={desks.map((d) => ({
                     value: d.id,
-                    label: d.nameEn.replace(/^Rayalaseema Express\s+/i, ""),
+                    label: d.nameEn.replace(/^Rayalaseema News\s+/i, ""),
                   }))}
                 />
               </div>
