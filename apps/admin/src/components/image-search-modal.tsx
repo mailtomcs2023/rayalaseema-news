@@ -1,6 +1,6 @@
 // Image-search modal for the content editor. Two-tab UI: Pexels (default,
 // CC-licensed for commercial use) and Google (wider catalog but copyright
-// risk — surfaced with a warning banner). Hits a single /api/images/search
+// risk - surfaced with a warning banner). Hits a single /api/images/search
 // endpoint and returns the picked URL via onPick.
 "use client";
 
@@ -62,7 +62,7 @@ export function ImageSearchModal({ open, initialQuery = "", onClose, onPick }: P
     setProvider(p);
     setError("");
     if (p === "ai") {
-      // AI doesn't search — user types a prompt + clicks Generate. Clear
+      // AI doesn't search - user types a prompt + clicks Generate. Clear
       // any prior search hits so the UI doesn't show stale results.
       setHits([]);
       return;
@@ -72,7 +72,7 @@ export function ImageSearchModal({ open, initialQuery = "", onClose, onPick }: P
 
   // AI image generation. ~5-10s per call, ~$0.04 per 1024x1024 image on
   // gpt-image-2. Output is already EXIF-stripped + RE-stamped + Blob-hosted
-  // by the route — we just receive a clean URL.
+  // by the route - we just receive a clean URL.
   const generateAi = async () => {
     if (!query.trim() || generating) return;
     setGenerating(true);
@@ -148,13 +148,13 @@ export function ImageSearchModal({ open, initialQuery = "", onClose, onPick }: P
         {/* tabs */}
         <div style={{ display: "flex", gap: 4, padding: "8px 16px", borderBottom: "1px solid #e5e7eb" }}>
           <button onClick={() => switchProvider("pexels")} style={tab(provider === "pexels")}>
-            Pexels — free for commercial use
+            Pexels - free for commercial use
           </button>
           <button onClick={() => switchProvider("google")} style={tab(provider === "google")}>
-            Google — ⚠ copyright unknown
+            Google - ⚠ copyright unknown
           </button>
           <button onClick={() => switchProvider("ai")} style={tab(provider === "ai")}>
-            ✨ Generate (AI) — gpt-image-2
+            ✨ Generate (AI) - gpt-image-2
           </button>
         </div>
 
@@ -169,8 +169,8 @@ export function ImageSearchModal({ open, initialQuery = "", onClose, onPick }: P
               else run(query, provider as "pexels" | "google");
             }}
             placeholder={provider === "ai"
-              ? "Describe the image — e.g. 'pawan kalyan at a rally in vijayawada, photojournalism style'"
-              : "Search keyword (English) — e.g. hyderabad water supply"}
+              ? "Describe the image - e.g. 'pawan kalyan at a rally in vijayawada, photojournalism style'"
+              : "Search keyword (English) - e.g. hyderabad water supply"}
             style={{ flex: 1, minWidth: 200, padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 14 }}
             autoFocus
           />
@@ -220,7 +220,7 @@ export function ImageSearchModal({ open, initialQuery = "", onClose, onPick }: P
 
         {provider === "google" && (
           <div style={{ padding: "8px 16px", background: "#fef3c7", borderBottom: "1px solid #fde68a", color: "#92400e", fontSize: 12 }}>
-            ⚠ Google results are mostly copyrighted. Verify the source page's licence before publishing — using a copyrighted image without permission can trigger DMCA takedowns.
+            ⚠ Google results are mostly copyrighted. Verify the source page's licence before publishing - using a copyrighted image without permission can trigger DMCA takedowns.
           </div>
         )}
 
@@ -228,7 +228,7 @@ export function ImageSearchModal({ open, initialQuery = "", onClose, onPick }: P
           <div style={{ padding: "10px 16px", background: "#fef2f2", borderBottom: "1px solid #fecaca", color: "#dc2626", fontSize: 13 }}>
             {error}
             {error.toLowerCase().includes("not configured") && (
-              <span> — set <code>{provider === "google" ? "GOOGLE_CSE_KEY + GOOGLE_CSE_ID" : "PEXELS_API_KEY"}</code> in the admin app env.</span>
+              <span> - set <code>{provider === "google" ? "GOOGLE_CSE_KEY + GOOGLE_CSE_ID" : "PEXELS_API_KEY"}</code> in the admin app env.</span>
             )}
           </div>
         )}
@@ -240,7 +240,7 @@ export function ImageSearchModal({ open, initialQuery = "", onClose, onPick }: P
               {!generatedUrl && !generating && !error && (
                 <p style={{ textAlign: "center", color: "#888", padding: 40, fontSize: 13 }}>
                   Type a prompt above and press <b>Generate</b>. Be specific
-                  — include subject, setting, mood, and style.
+                  - include subject, setting, mood, and style.
                 </p>
               )}
               {generating && (

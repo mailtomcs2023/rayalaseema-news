@@ -1,6 +1,6 @@
 name: Schema Validation
 
-# Spec #4 B6 (#202) — block merge if any JSON-LD generator regresses.
+# Spec #4 B6 (#202) - block merge if any JSON-LD generator regresses.
 # Runs on every PR + on push-to-main. Cheap (single bun test invocation),
 # so it's safe in the hot path of deploy.
 

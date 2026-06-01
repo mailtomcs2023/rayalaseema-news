@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { getSiteConfig } from "@/lib/db-queries";
 import { buildNewsMediaOrganizationSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
@@ -12,11 +12,11 @@ import "./globals.css";
 import { Geist, Noto_Sans_Telugu, Noto_Serif_Telugu, Mandali } from "next/font/google";
 import { cn } from "@/lib/utils";
 
-// Spec #4 E5 (#224) — fonts via next/font/google. Self-hosts the woff2
+// Spec #4 E5 (#224) - fonts via next/font/google. Self-hosts the woff2
 // files at build time so:
 //   - No render-blocking external request to fonts.googleapis.com
 //   - Automatic subset to Telugu + Latin glyphs only (smaller payload)
-//   - display: swap by default — avoids FOIT on Telugu text
+//   - display: swap by default - avoids FOIT on Telugu text
 // Replaces the <link href="fonts.googleapis.com/..."> tag previously in
 // <head>.
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
@@ -39,15 +39,18 @@ const mandali = Mandali({
   display: "swap",
 });
 
+export const viewport: Viewport = {
+  themeColor: "#E01B1B",
+};
+
 export const metadata: Metadata = {
-  // Spec #4 brand disambiguation — title carries " News" suffix so Google
+  // Spec #4 brand disambiguation - title carries " News" suffix so Google
   // doesn't collapse our brand into the Indian Railways train of the same
   // name. See ~/.claude/.../memory/project_brand_disambiguation.md.
   title: "Rayalaseema News News | రాయలసీమ న్యూస్ వార్తలు",
   description:
     "Telugu news portal covering the Rayalaseema region of Andhra Pradesh. Hyper-local news from Kurnool, Nandyal, Anantapuramu, Sri Sathya Sai, YSR-Kadapa, Annamayya, Tirupati, and Chittoor.",
   manifest: "/manifest.json",
-  themeColor: "#E01B1B",
   keywords: [
     "Rayalaseema News News",
     "Rayalaseema news",
@@ -78,13 +81,13 @@ export default async function RootLayout({
   const gaId = config.google_analytics_id;
   const adsenseId = config.google_adsense_id;
   const gtmId = config.google_tag_manager_id;
-  // Spec #4 H3 (#236) — Bing Webmaster verification meta tag.
+  // Spec #4 H3 (#236) - Bing Webmaster verification meta tag.
   const bingVerify = config.bing_webmaster_id;
-  // Spec #4 H5 (#238) — Microsoft Clarity heatmap + session replay.
+  // Spec #4 H5 (#238) - Microsoft Clarity heatmap + session replay.
   const clarityId = config.clarity_project_id;
 
   // NewsMediaOrganization JSON-LD (Spec #4 B2 #198). Fields source from
-  // SiteConfig — empty values fall through to undefined and get stripped by
+  // SiteConfig - empty values fall through to undefined and get stripped by
   // stringifyJsonLd. Editorial-policy URLs point at C-phase trust pages;
   // they 404 until those land (#205 ethics, #206 corrections, #207 editorial-
   // standards, #208 diversity, #211 ownership).
@@ -97,7 +100,7 @@ export default async function RootLayout({
   const orgLd = buildNewsMediaOrganizationSchema({
     publisher: {
       siteUrl,
-      // Spec #4 brand disambiguation (2026-05-27) — "Rayalaseema News" is
+      // Spec #4 brand disambiguation (2026-05-27) - "Rayalaseema News" is
       // also Indian Railways train 12793/12794. We brand the publication as
       // "Rayalaseema News News" so search engines + AI engines see a
       // distinct entity from the train. alternateName preserves the legacy
@@ -113,7 +116,7 @@ export default async function RootLayout({
       ? { email: config.contact_email, phone: config.contact_phone, contactType: "editorial" }
       : undefined,
     address: config.contact_address
-      ? { streetAddress: config.contact_address, addressCountry: "IN", region: "Andhra Pradesh" }
+      ? { streetAddress: config.contact_address, country: "IN", region: "Andhra Pradesh" }
       : undefined,
     foundingDate: config.founding_date || undefined,
     policies: {
@@ -126,10 +129,10 @@ export default async function RootLayout({
     },
   });
   return (
-    <html lang="te" className={cn("font-sans", geist.variable, notoTelugu.variable, notoSerifTelugu.variable, mandali.variable)}>
+    <html lang="te" className={cn("font-sans", geist.variable, notoTelugu.variable, notoSerifTelugu.variable, mandali.variable)} suppressHydrationWarning>
       <head>
         {bingVerify && <meta name="msvalidate.01" content={bingVerify} />}
-        {/* JSON-LD structured data — search-engine metadata. Uses
+        {/* JSON-LD structured data - search-engine metadata. Uses
             next/script so React 19 doesn't warn about raw <script>
             tags inside components, but renders as an inline script in
             <head> at hydration time (which is what crawlers read). */}
@@ -141,7 +144,7 @@ export default async function RootLayout({
         />
       </head>
       <body className="font-telugu antialiased" suppressHydrationWarning>
-        {/* Google Tag Manager (noscript) — must be immediately after <body> */}
+        {/* Google Tag Manager (noscript) - must be immediately after <body> */}
         {gtmId && (
           <noscript>
             <iframe

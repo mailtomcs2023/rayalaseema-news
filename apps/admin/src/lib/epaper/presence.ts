@@ -2,9 +2,9 @@
 //
 // Limitations to be honest about:
 //   - Single-process only. Multi-instance deploys (Azure scale-out) will
-//     see split brain — operator A on instance 1 doesn't see operator B on
+//     see split brain - operator A on instance 1 doesn't see operator B on
 //     instance 2. For our current 1-instance Azure VM this is acceptable.
-//   - State lives in memory; restart wipes it (acceptable — clients refresh
+//   - State lives in memory; restart wipes it (acceptable - clients refresh
 //     within 10 s heartbeat anyway).
 //   - Swapping to Pusher/Ably/Redis pub-sub is a one-file change to this
 //     module; the rest of the codebase consumes the same Map.

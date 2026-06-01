@@ -17,7 +17,7 @@ type ArticleMeta = {
   author: { name: string };
   desk?: { name: string } | null;
   constituency?: { slug: string; district: { slug: string } } | null;
-  // editor-set SEO overrides — may not exist on every projected row, so we use
+  // editor-set SEO overrides - may not exist on every projected row, so we use
   // a permissive index access.
 } & { [k: string]: unknown };
 

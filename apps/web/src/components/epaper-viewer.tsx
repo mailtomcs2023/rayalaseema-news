@@ -37,7 +37,7 @@ export function EpaperViewer({
   const imgRef = useRef<HTMLImageElement>(null);
   const dragStart = useRef<{ x: number; y: number } | null>(null);
 
-  // Analytics ping — fire when the current page changes. Fire-and-forget;
+  // Analytics ping - fire when the current page changes. Fire-and-forget;
   // never blocks UI.
   useEffect(() => {
     if (!editionId || !pages[idx]) return;
@@ -143,10 +143,10 @@ export function EpaperViewer({
       </div>
 
       {clipMode && (
-        <div className="ev-hint">✂ వార్తపై మౌస్‌తో గీసి ఎంచుకోండి — ఆ భాగం షేర్ చేయడానికి సిద్ధం</div>
+        <div className="ev-hint">✂ వార్తపై మౌస్‌తో గీసి ఎంచుకోండి - ఆ భాగం షేర్ చేయడానికి సిద్ధం</div>
       )}
 
-      {/* HORIZONTAL THUMBNAIL STRIP — Eenadu-style, with page number + label */}
+      {/* HORIZONTAL THUMBNAIL STRIP - Eenadu-style, with page number + label */}
       <div className="ev-thumbs-h">
         {pages.map((p, i) => (
           <button key={p.pageNumber} className={`ev-thumb${i === idx ? " active" : ""}`} onClick={() => go(i)}>
@@ -157,7 +157,7 @@ export function EpaperViewer({
         ))}
       </div>
 
-      {/* STAGE — big page with side arrow buttons */}
+      {/* STAGE - big page with side arrow buttons */}
       <div className="ev-stage-wrap">
         <button className="ev-stage-arrow left" onClick={() => go(idx - 1)} disabled={idx === 0} aria-label="Previous">‹</button>
 
@@ -169,7 +169,7 @@ export function EpaperViewer({
             onMouseMove={onMove}
             onMouseUp={onUp}
           >
-            <img ref={imgRef} className="ev-page" src={cur.imageUrl} alt={`${cur.label} — page ${cur.pageNumber}`} draggable={false} />
+            <img ref={imgRef} className="ev-page" src={cur.imageUrl} alt={`${cur.label} - page ${cur.pageNumber}`} draggable={false} />
 
             {!clipMode &&
               cur.hotspots.map((h, i) => (

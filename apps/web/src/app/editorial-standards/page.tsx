@@ -1,4 +1,4 @@
-// Spec #4 C4 (#207) — /editorial-standards.
+// Spec #4 C4 (#207) - /editorial-standards.
 //
 // Linked from NewsMediaOrganization.verificationFactCheckingPolicy + publishingPrinciples.
 
@@ -13,7 +13,7 @@ const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
 export const metadata: Metadata = {
   title: "Editorial Standards | రాయలసీమ న్యూస్",
   description:
-    "Editorial standards at Rayalaseema News — fact-checking, attribution, embargoes, off-the-record handling, and bilingual translation rules.",
+    "Editorial standards at Rayalaseema News - fact-checking, attribution, embargoes, off-the-record handling, and bilingual translation rules.",
   alternates: { canonical: `${SITE_URL}/editorial-standards` },
 };
 
@@ -45,7 +45,7 @@ export default function EditorialStandardsPage() {
 
           <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 32, marginBottom: 10 }}>Attribution</h2>
           <p>
-            Every claim that is not common knowledge carries an attribution — a person, document, agency, or
+            Every claim that is not common knowledge carries an attribution - a person, document, agency, or
             publication. We avoid the passive constructions ("it has been reported", "sources say") that hide the
             origin of information. When using wire service or syndicated content, the source is named in the byline
             or article footer.
@@ -61,7 +61,7 @@ export default function EditorialStandardsPage() {
 
           <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 32, marginBottom: 10 }}>Embargoes</h2>
           <p>
-            We respect embargoes negotiated in good faith with sources — typically press releases that ask us not
+            We respect embargoes negotiated in good faith with sources - typically press releases that ask us not
             to publish until a stated time. We do not honour embargoes used to manipulate the news cycle (e.g.
             embargoes set for late Friday night to bury bad news). Embargo decisions sit with the editor on duty.
           </p>
@@ -92,7 +92,7 @@ export default function EditorialStandardsPage() {
 
           <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 32, marginBottom: 10 }}>Reader interaction</h2>
           <p>
-            Comments on our articles are moderated for harassment, hate speech, doxxing, and spam — not for
+            Comments on our articles are moderated for harassment, hate speech, doxxing, and spam - not for
             disagreement with our reporting. We engage with serious factual challenges in our
             {" "}<Link href="/corrections-policy" style={{ color: "var(--color-brand)" }}>corrections policy</Link>{" "}
             and treat all other feedback per our

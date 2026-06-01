@@ -4,7 +4,7 @@ import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 import { imposePdf, impositionInfo, type FoldType } from "@/lib/epaper/imposition";
 import { uploadBuffer } from "@/lib/blob";
 
-// POST /api/epaper/imposed-pdf — body { editionId, foldType: "2up" | "4up" }
+// POST /api/epaper/imposed-pdf - body { editionId, foldType: "2up" | "4up" }
 //
 // Builds a press-ready imposed PDF from the edition's rendered pdfUrl.
 // Press operator prints double-sided, folds in signatures, trims pages off

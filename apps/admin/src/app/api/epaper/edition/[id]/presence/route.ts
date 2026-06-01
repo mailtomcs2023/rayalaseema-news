@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 import { heartbeat, getPresence, subscribe } from "@/lib/epaper/presence";
 
-// POST /api/epaper/edition/[id]/presence — body { pageId? }
+// POST /api/epaper/edition/[id]/presence - body { pageId? }
 // Sent as a periodic heartbeat from the editor (every 10 s) + on page change.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAuth();
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   } catch (e) { return apiError(e); }
 }
 
-// GET /api/epaper/edition/[id]/presence — Server-Sent Events stream that
+// GET /api/epaper/edition/[id]/presence - Server-Sent Events stream that
 // pushes a fresh presence snapshot every time a peer heartbeats.
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAuth();

@@ -12,11 +12,9 @@ datasource db {
 enum Role {
   ADMIN           // Full access - everything
   EDITOR          // Edit all categories, publish, breaking news
-  CHIEF_SUB_EDITOR // Legacy alias for EDITOR. Prod has rows with this value;
-                   // removing it from the enum breaks prisma db push on
-                   // deploy. Keep until prod rows migrate to EDITOR.
   SUB_EDITOR      // Edit assigned categories, review articles, can't publish
   REPORTER        // Write articles, upload photos, submit for review only
+  USER            // Non-staff account - public read access only, no admin app
 }
 
 model User {
@@ -25,7 +23,7 @@ model User {
   name          String
   passwordHash  String
   // When true, the user MUST set a new password the next time they sign
-  // in — the login flow blocks normal access until they pick one. Set by
+  // in - the login flow blocks normal access until they pick one. Set by
   // admin "Reset password → require change on next sign-in".
   mustChangePassword Boolean @default(false)
   role          Role      @default(REPORTER)
@@ -36,8 +34,8 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  // Spec #4 A2 (#193) — Author profile / E-E-A-T fields. Populated for active
-  // editorial users; REPORTER role typically lives in JournalistProfile and
+  // Spec #4 A2 (#193) - Author profile / E-E-A-T fields. Populated for active
+  // editorial users; REPORTER role typically lives in ReporterProfile and
   // these can stay null until they're publishing under a real byline.
   //
   // publicProfileSlug is the URL segment for /author/<slug>; backfilled from
@@ -65,27 +63,39 @@ model User {
   // Audit log entries (actions performed by this user)
   auditLogs        AuditLog[]
 
-  // Journalist profile (for REPORTER role)
-  journalistProfile JournalistProfile?
+  // Reporter profile (for REPORTER role). DB table name retained as
+  // `journalist_profiles` via @@map on the model so this is a TS-only
+  // rename - no migration required.
+  reporterProfile ReporterProfile?
 
-  // Unified Content (Spec #1) — Article-side back-relations dropped in A1C.
+  // Unified Content (Spec #1) - Article-side back-relations dropped in A1C.
   contents          Content[]         @relation("ContentAuthor")
   contentRevisions  ContentRevision[]
   contentPayments   ContentPayment[]  @relation("ContentJournalist")
-  // Stage 2 — articles auto-assigned to this sub-editor's review queue.
+  // Stage 2 - articles auto-assigned to this sub-editor's review queue.
   assignedReviews   Content[]         @relation("ContentAssignedReviewer")
 
-  // Page Builder (Spec #2) — back-relations
+  // Page Builder (Spec #2) - back-relations
   templates         Template[]         @relation("TemplateCreator")
   templateVersions  TemplateVersion[]
   composites        CompositeBlock[]   @relation("CompositeCreator")
 
-  // Menu Builder (Spec #3) — back-relation
+  // Menu Builder (Spec #3) - back-relation
   menuVersions      MenuVersion[]      @relation("MenuVersionEditor")
 
   // Profile-change requests this user has reviewed (admin role)
   reviewedProfileUpdateRequests ProfileUpdateRequest[] @relation("ProfileUpdateRequestReviewer")
 
+  // Indexes on hot WHERE columns. Without these, /users paging + the
+  // role chip filter do sequential scans on every request.
+  //   - [role, active] composite - most common filter combo (e.g. "active
+  //     reporters", "active editors"). Postgres can also use it for
+  //     role-only lookups thanks to leading-column rule.
+  //   - [active] alone - for global "everyone signed in" counts.
+  //   - [createdAt] - for the default sort order in lists.
+  @@index([role, active])
+  @@index([active])
+  @@index([createdAt])
   @@map("users")
 }
 
@@ -103,15 +113,15 @@ model UserCategory {
   @@map("user_categories")
 }
 
-// Spec #1 A1C (#189) — ArticleReview dropped. Review actions now logged
+// Spec #1 A1C (#189) - ArticleReview dropped. Review actions now logged
 // to AuditLog with action="content.review.<verb>".
 
-// ============ AUDIT LOG (immutable, append-only — compliance + accountability) ============
+// ============ AUDIT LOG (immutable, append-only - compliance + accountability) ============
 
 model AuditLog {
   id          String   @id @default(cuid())
 
-  // Actor — null if system / cron / unauthenticated action
+  // Actor - null if system / cron / unauthenticated action
   actorId     String?
   actor       User?    @relation(fields: [actorId], references: [id])
   actorEmail  String?  // denormalized (kept even if user deleted)
@@ -124,7 +134,7 @@ model AuditLog {
   resource    String?  // "article" | "user" | "category" | "comment" | "settings" | ...
   resourceId  String?  // ID of affected resource (nullable for global actions)
 
-  // Optional structured payload — changes summary, IP, etc.
+  // Optional structured payload - changes summary, IP, etc.
   meta        Json?
   ipAddress   String?
   userAgent   String?
@@ -138,7 +148,7 @@ model AuditLog {
   @@map("audit_logs")
 }
 
-// Spec #1 A1C (#189) — ArticleRevision dropped. Content edits snapshot
+// Spec #1 A1C (#189) - ArticleRevision dropped. Content edits snapshot
 // into ContentRevision instead.
 
 // ============ CONTENT ============
@@ -159,7 +169,7 @@ enum Language {
   ENGLISH
 }
 
-// Spec #1 A1C (#189) — model Article dropped. See Content table for the unified replacement.
+// Spec #1 A1C (#189) - model Article dropped. See Content table for the unified replacement.
 model Category {
   id          String     @id @default(cuid())
   name        String
@@ -180,6 +190,7 @@ model Category {
   crossListedContents ContentCategory[]
   assignedUsers UserCategory[]
   desk        Desk?      // back-relation: TOPICAL desk auto-derived from category
+  tagSuggestions CategoryTagSuggestion[]
 
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
@@ -187,8 +198,33 @@ model Category {
   @@map("categories")
 }
 
+// Tag-suggestion seed for the editor. Populated by a static seed script
+// (packages/db/scripts/seed-category-tags.ts) and shown as clickable chips
+// under the Tags input when an editor picks a category. Top-N most-used
+// tags from past ContentTag history get merged in at query time, so this
+// table only stores the cold-start seed, not usage stats.
+enum TagSuggestionSource {
+  CURATED      // Editorial seed - written by the seed script or admin UI
+  MANUAL       // Editor pinned this tag manually via admin UI
+}
+
+model CategoryTagSuggestion {
+  id         String              @id @default(cuid())
+  categoryId String
+  category   Category            @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  tagId      String
+  tag        Tag                 @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  source     TagSuggestionSource @default(CURATED)
+  createdAt  DateTime            @default(now())
+
+  @@unique([categoryId, tagId])
+  @@index([categoryId])
+  @@index([tagId])
+  @@map("category_tag_suggestions")
+}
+
 // Many-to-many join for cross-listing a Content row under additional
-// categories. Primary placement still lives in Content.categoryId — this
+// categories. Primary placement still lives in Content.categoryId - this
 // table is purely for secondary discovery (e.g. a movie-review article
 // also showing up under /category/entertainment).
 model ContentCategory {
@@ -204,15 +240,16 @@ model ContentCategory {
 }
 
 model Tag {
-  id          String       @id @default(cuid())
-  name        String       @unique
-  slug        String       @unique
-  contentTags ContentTag[]
+  id              String                  @id @default(cuid())
+  name            String                  @unique
+  slug            String                  @unique
+  contentTags     ContentTag[]
+  categorySeeds   CategoryTagSuggestion[]
 
   @@map("tags")
 }
 
-// Spec #1 A1C (#189) — model ArticleTag dropped. See Content table for the unified replacement.
+// Spec #1 A1C (#189) - model ArticleTag dropped. See Content table for the unified replacement.
 // ============ MEDIA ============
 
 enum MediaType {
@@ -257,13 +294,13 @@ model EpaperSpellIgnore {
 
 /// Rayalaseema dialect glossary (#96). Maps regional dialect words to
 /// standard Telugu so non-region readers see a tooltip explanation on
-/// article pages. Curated by editorial team — small enough to ship the
+/// article pages. Curated by editorial team - small enough to ship the
 /// whole list to the client on article render.
 model DialectGloss {
   id              String   @id @default(cuid())
   token           String   @unique
   standardTelugu  String
-  region          String?  // "rayalaseema" | "ananthapuramu" | "chittoor" — narrowing optional
+  region          String?  // "rayalaseema" | "ananthapuramu" | "chittoor" - narrowing optional
   note            String?
   addedById       String?
   createdAt       DateTime @default(now())
@@ -275,7 +312,7 @@ model DialectGloss {
 /// A/B headline test (#94). Two headline variants for the same article;
 /// push notifications split 50/50, clicks counted via the redirect endpoint.
 /// After a settle window the winner is auto-promoted to Article.title.
-// Spec #1 A1B (#188) — column renamed articleId -> contentId.
+// Spec #1 A1B (#188) - column renamed articleId -> contentId.
 model HeadlineTest {
   id           String   @id @default(cuid())
   contentId    String
@@ -295,7 +332,7 @@ model HeadlineTest {
 }
 
 /// Paywall metering (#93). One row per unique-article read by an anonymous
-/// (non-logged-in) reader. Fingerprint = SHA-256(UA + IP hash + lang) — no
+/// (non-logged-in) reader. Fingerprint = SHA-256(UA + IP hash + lang) - no
 /// PII. Rolling 30-day window decides when the paywall modal triggers.
 /// Logged-in readers don't get tracked here (subscription bypass).
 model ArticleReadEvent {
@@ -309,7 +346,7 @@ model ArticleReadEvent {
   @@map("article_read_events")
 }
 
-/// Render-job log (#90) — one row per render-v2 invocation. Powers the SLA
+/// Render-job log (#90) - one row per render-v2 invocation. Powers the SLA
 /// dashboard (P50/P95/P99 + success rate) and lets us see retries + errors
 /// without scraping app logs.
 model EpaperRenderJob {
@@ -339,29 +376,29 @@ enum EpaperWorkflowState {
   APPROVED          // ready to publish; render + push runs
   PUBLISHED         // out to readers
   REJECTED          // sent back with a note
-  KILLED            // retracted after publish — hidden from /epaper, logged on /epaper/corrections
+  KILLED            // retracted after publish - hidden from /epaper, logged on /epaper/corrections
 }
 
 model EpaperEdition {
   id          String   @id @default(cuid())
   date        DateTime @db.Date
-  edition     String   @default("main") // "main" or a district slug — one paper per district
+  edition     String   @default("main") // "main" or a district slug - one paper per district
   title       String?
-  pdfUrl      String?  // combined PDF — set once generation finishes
+  pdfUrl      String?  // combined PDF - set once generation finishes
   thumbnailUrl String?
   pageCount   Int      @default(0)
-  layout      Json?    // editable plan — [{label,isFront,slots:{lead,majors[],secondary[],briefs[]}}]
+  layout      Json?    // editable plan - [{label,isFront,slots:{lead,majors[],secondary[],briefs[]}}]
   status      String   @default("pending") // RENDER lifecycle: pending | draft | generating | ready | failed
   workflowState EpaperWorkflowState @default(DRAFT) // EDITORIAL approval workflow
   workflowNote  String? // last transition's note (rejection reason etc.)
   active      Boolean  @default(true)
-  // Retraction / kill switch (#88) — when set, edition is hidden from readers
+  // Retraction / kill switch (#88) - when set, edition is hidden from readers
   // but persists in DB + appears on /epaper/corrections with the kill reason.
   killedAt    DateTime?
   killedReason String?
   killedById  String?
   // Masthead bibliographic fields (Eenadu-style): సంపుటి / సంచిక / price.
-  // Optional — defaults applied at render time if null. Set per-edition by
+  // Optional - defaults applied at render time if null. Set per-edition by
   // operator or autoincremented from a known epoch.
   volumeNumber Int?
   issueNumber  Int?
@@ -410,19 +447,19 @@ enum EpaperImageAssetCategory {
   OTHER
 }
 
-/// Generic image library for the e-paper editor — cartoons, classifieds,
+/// Generic image library for the e-paper editor - cartoons, classifieds,
 /// masthead variants, stock photos etc. `image` blocks reference these
 /// by `assetId`. Separate from EpaperAdAsset because ads carry pricing /
 /// advertiser metadata that doesn't apply to a cartoon.
 model EpaperImageAsset {
   id          String                       @id @default(cuid())
   category    EpaperImageAssetCategory     @default(OTHER)
-  title       String                       // operator label, e.g. "Saturday cartoon — markets"
+  title       String                       // operator label, e.g. "Saturday cartoon - markets"
   imageUrl    String                       // Azure Blob URL
   caption     String?                      // optional caption rendered under the image in some templates
   tags        String?                      // comma-separated for quick text search
   active      Boolean                      @default(true)
-  // Image rights tracking (#98) — required before render-time use so we
+  // Image rights tracking (#98) - required before render-time use so we
   // never publish an unlicensed photo.
   licenseType String?                      // "STAFF" | "AGENCY" | "WIRE" | "UGC" | "CC0" | "CC-BY" | "PURCHASED"
   licenseSource String?                    // "PTI" | "Reuters" | reporter name | URL
@@ -463,7 +500,7 @@ model EpaperPage {
   edition     EpaperEdition  @relation(fields: [editionId], references: [id], onDelete: Cascade)
   pageNumber  Int
   label       String         // "ముఖ్యాంశాలు", "రాజకీయం", ...
-  templateSlug String?       // → EpaperTemplate.slug — which template this page was built from
+  templateSlug String?       // → EpaperTemplate.slug - which template this page was built from
   // Per-page WYSIWYG layout. v2 editor (#108) shape:
   //   { coordSystem: "grid-v1" | "mm-v2",
   //     masterSlug?: string,         // master to inherit (overrides template.masterSlug per-page)
@@ -481,7 +518,7 @@ model EpaperPage {
   layout      Json?
   imageUrl    String         // rendered broadsheet page PNG on Azure Blob (legacy raster path)
   pdfUrl      String?        // per-page vector PDF (new v2 render path)
-  hotspots    Json?          // [{slug,x,y,w,h}] — legacy raster overlay click regions
+  hotspots    Json?          // [{slug,x,y,w,h}] - legacy raster overlay click regions
   comments    EpaperComment[]
   // Optimistic concurrency token. Bumps on every successful PATCH; client must
   // send the version it last fetched so two editors can't silently overwrite
@@ -510,7 +547,7 @@ model EpaperPageView {
   pageNumber  Int
   articleSlug String?  // when set, this row records a hotspot click on that article
   referrer    String?
-  ipHash      String?  // sha256(ip + UA) — for unique-visitor approximations w/o storing PII
+  ipHash      String?  // sha256(ip + UA) - for unique-visitor approximations w/o storing PII
   createdAt   DateTime @default(now())
 
   @@index([editionId, createdAt])
@@ -545,12 +582,12 @@ model EpaperComment {
 /// automatically before each Render and on demand from the "History" panel
 /// in the /epaper editor. Restoring an edition writes a fresh snapshot of
 /// the current state first, then overwrites all pages from the chosen
-/// snapshot — so rollback is itself undoable.
+/// snapshot - so rollback is itself undoable.
 model EpaperEditionSnapshot {
   id          String         @id @default(cuid())
   editionId   String
   edition     EpaperEdition  @relation(fields: [editionId], references: [id], onDelete: Cascade)
-  // [{ pageNumber, label, templateSlug, layout, version }] — one entry per
+  // [{ pageNumber, label, templateSlug, layout, version }] - one entry per
   // EpaperPage at the moment of capture.
   pages       Json
   reason      String         // "pre-render" | "manual" | "pre-regenerate" | "pre-restore"
@@ -564,7 +601,7 @@ model EpaperEditionSnapshot {
 }
 
 enum EpaperTemplateType {
-  FRONT       // front page — lead + majors + briefs + ad band
+  FRONT       // front page - lead + majors + briefs + ad band
   DISTRICT    // per-district edition page
   SECTION     // sports / cinema / editorial / classifieds / etc.
   BACK        // back page
@@ -584,7 +621,7 @@ model EpaperTemplate {
   // slots inside this template (e.g. `{ "categorySlug": "sports" }` or
   // `{ "districtSlug": "kurnool" }`).
   fillRules     Json?
-  // Block layout — same shape as EpaperPage.layout but with empty articleIds.
+  // Block layout - same shape as EpaperPage.layout but with empty articleIds.
   layout        Json
   // v2 editor (#108): which EpaperMaster the produced pages inherit from.
   // null = no master (legacy templates / unstyled section pages).
@@ -615,7 +652,7 @@ model EpaperMaster {
   slug            String   @unique
   name            String
   geometryOverride Json?    // optional PageGeometry override (defaults apply if null)
-  layout          Json     // { blocks: Block[] } — every block has isMaster:true
+  layout          Json     // { blocks: Block[] } - every block has isMaster:true
   version         Int      @default(1)  // bumps on update for optimistic concurrency
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -625,7 +662,7 @@ model EpaperMaster {
 
 // ============ BREAKING NEWS ============
 
-// Spec #1 A1C (#189) — model BreakingNews dropped. See Content table for the unified replacement.
+// Spec #1 A1C (#189) - model BreakingNews dropped. See Content table for the unified replacement.
 // ============ SOCIAL MEDIA ============
 
 enum SocialPlatform {
@@ -643,7 +680,7 @@ enum SocialPostStatus {
   FAILED
 }
 
-// Spec #1 A1B (#188) — articleId renamed to contentId. Relation now Content.
+// Spec #1 A1B (#188) - articleId renamed to contentId. Relation now Content.
 model SocialPost {
   id          String           @id @default(cuid())
   contentId   String
@@ -681,7 +718,7 @@ model District {
   loksabhaSeats   String?         // Comma-separated Lok Sabha constituency names
   sortOrder       Int             @default(0)
   active          Boolean         @default(true)
-  // Spec #4 A3 (#194) — feeds spatialCoverage on NewsArticle JSON-LD.
+  // Spec #4 A3 (#194) - feeds spatialCoverage on NewsArticle JSON-LD.
   lat             Float?
   lng             Float?
   population      Int?
@@ -707,7 +744,7 @@ model Constituency {
   mandals     Mandal[]
   contents    Content[] @relation("ContentConstituency")
   desk        Desk?     // back-relation: GEOGRAPHIC desk for this AC (e.g. "ప్రొద్దుటూరు")
-  // Spec #4 A3 (#194) — feeds spatialCoverage on NewsArticle JSON-LD.
+  // Spec #4 A3 (#194) - feeds spatialCoverage on NewsArticle JSON-LD.
   lat             Float?
   lng             Float?
   population      Int?
@@ -742,7 +779,7 @@ model Desk {
   children        Desk[]        @relation("DeskHierarchy")
 
   // Optional links so we can auto-derive the desk from article metadata.
-  // All three are @unique — one desk per category / district / constituency at most.
+  // All three are @unique - one desk per category / district / constituency at most.
   categoryId      String?       @unique
   category        Category?     @relation(fields: [categoryId], references: [id])
   districtId      String?       @unique
@@ -769,7 +806,7 @@ model Mandal {
   code            Int?         @unique  // Official AP mandal code (e.g. 5259 = Kurnool)
   constituencyId  String
   constituency    Constituency @relation(fields: [constituencyId], references: [id])
-  // Spec #4 A3 (#194) — feeds spatialCoverage on NewsArticle JSON-LD.
+  // Spec #4 A3 (#194) - feeds spatialCoverage on NewsArticle JSON-LD.
   lat             Float?
   lng             Float?
   population      Int?
@@ -784,20 +821,20 @@ model Mandal {
 
 // ============ VIDEOS ============
 
-// Spec #1 A1C (#189) — model Video dropped. See Content table for the unified replacement.
+// Spec #1 A1C (#189) - model Video dropped. See Content table for the unified replacement.
 // ============ PHOTO GALLERY ============
 
-// Spec #1 A1C (#189) — model PhotoGallery dropped. See Content table for the unified replacement.
-// Spec #1 A1C (#189) — model GalleryPhoto dropped. See Content table for the unified replacement.
+// Spec #1 A1C (#189) - model PhotoGallery dropped. See Content table for the unified replacement.
+// Spec #1 A1C (#189) - model GalleryPhoto dropped. See Content table for the unified replacement.
 // ============ WEB STORIES ============
 
-// Spec #1 A1C (#189) — model WebStory dropped. See Content table for the unified replacement.
+// Spec #1 A1C (#189) - model WebStory dropped. See Content table for the unified replacement.
 // ============ REELS ============
 
-// Spec #1 A1C (#189) — model Reel dropped. See Content table for the unified replacement.
+// Spec #1 A1C (#189) - model Reel dropped. See Content table for the unified replacement.
 // ============ CARTOON (YETTETA) ============
 
-// Spec #1 A1C (#189) — model Cartoon dropped. See Content table for the unified replacement.
+// Spec #1 A1C (#189) - model Cartoon dropped. See Content table for the unified replacement.
 // ============ ADS ============
 
 enum AdPosition {
@@ -834,7 +871,7 @@ model Ad {
 
 // ============ COMMENTS ============
 
-// Spec #1 A1B (#188) — articleId -> contentId. Relation field named `parent`
+// Spec #1 A1B (#188) - articleId -> contentId. Relation field named `parent`
 // to avoid clashing with the existing `content` text column.
 model Comment {
   id        String   @id @default(cuid())
@@ -902,7 +939,7 @@ enum KycStatus {
   REJECTED
 }
 
-model JournalistProfile {
+model ReporterProfile {
   id              String    @id @default(cuid())
   userId          String    @unique
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -954,6 +991,14 @@ model JournalistProfile {
   // Reporter-initiated edits awaiting (or completed by) admin review
   profileUpdateRequests ProfileUpdateRequest[]
 
+  // Indexes on the KYC review hot path. Admin opens the merged Users
+  // page filtered to Reporter + KYC=SUBMITTED - without this index the
+  // DB scans every reporter row.
+  //   - [kycStatus] - KYC queue filter ("show all SUBMITTED").
+  //   - [primaryDistrict] - district-scoped reporter assignment lookups
+  //     used by content auto-assignment + payment computation.
+  @@index([kycStatus])
+  @@index([primaryDistrict])
   @@map("journalist_profiles")
 }
 
@@ -966,7 +1011,7 @@ enum ProfileUpdateRequestStatus {
 }
 
 // A single field-level change the reporter wants applied to their profile.
-// One PENDING request per (journalistProfileId, field) at a time; re-requesting
+// One PENDING request per (reporterProfileId, field) at a time; re-requesting
 // the same field replaces the prior PENDING request.
 //
 // `oldValue` / `newValue` are stored as text (arrays/dates are JSON-stringified).
@@ -974,9 +1019,11 @@ enum ProfileUpdateRequestStatus {
 // so we can restore it if admin rejects (we flip the journalist's kycStatus to
 // SUBMITTED on submission to pause earnings until re-verification).
 model ProfileUpdateRequest {
-  id                  String                     @id @default(cuid())
-  journalistProfileId String
-  journalistProfile   JournalistProfile          @relation(fields: [journalistProfileId], references: [id], onDelete: Cascade)
+  id                String                     @id @default(cuid())
+  // DB column name stays `journalistProfileId` via @map - TS API is now
+  // `reporterProfileId` to match the renamed ReporterProfile model.
+  reporterProfileId String                     @map("journalistProfileId")
+  reporterProfile   ReporterProfile            @relation(fields: [reporterProfileId], references: [id], onDelete: Cascade)
 
   field               String                     // e.g. "name", "phone", "aadhaarNumber", "bankIfsc"
   oldValue            String?                    @db.Text
@@ -993,7 +1040,7 @@ model ProfileUpdateRequest {
   createdAt           DateTime                   @default(now())
   updatedAt           DateTime                   @updatedAt
 
-  @@index([journalistProfileId, status])
+  @@index([reporterProfileId, status])
   @@index([status, createdAt])
   @@map("profile_update_requests")
 }
@@ -1033,7 +1080,7 @@ enum PaymentStatus {
   DISPUTED    // Journalist raised dispute. (Unused in v1.)
 }
 
-// Spec #1 A1C (#189) — model ArticlePayment dropped. See Content table for the unified replacement.
+// Spec #1 A1C (#189) - model ArticlePayment dropped. See Content table for the unified replacement.
 // ============ PAYOUT BATCH ============
 
 model PayoutBatch {
@@ -1054,7 +1101,7 @@ model PayoutBatch {
   @@map("payout_batches")
 }
 
-// ============ UNIFIED CONTENT (Spec #1 — additive, parallel to Article during transition) ============
+// ============ UNIFIED CONTENT (Spec #1 - additive, parallel to Article during transition) ============
 // See docs/superpowers/specs/2026-05-25-unified-content-model-design.md
 //
 // One table replaces seven (Article, Video, Reel, WebStory, PhotoGallery,
@@ -1081,7 +1128,7 @@ model Content {
   // Null for BREAKING_NEWS (ticker headline, no public URL). All other types require slug.
   slug            String?       @unique
   summary         String?       @db.Text
-  // HTML body — ARTICLE only. Other types render from `payload`.
+  // HTML body - ARTICLE only. Other types render from `payload`.
   body            String?       @db.Text
   featuredImage   String?
   // Type-specific blob. Shape validated by Zod schemas in packages/db/src/payload-schemas.ts.
@@ -1106,12 +1153,12 @@ model Content {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
-  // PIB approval workflow (preserved from Article — #99)
+  // PIB approval workflow (preserved from Article - #99)
   needsPibApproval    Boolean       @default(false)
   pibApprovedAt       DateTime?
   pibReferenceNumber  String?
 
-  // Ingestion dedup — source news URL, unique so the same item can't be imported twice
+  // Ingestion dedup - source news URL, unique so the same item can't be imported twice
   sourceUrl       String?       @unique
 
   // Soft-delete (Spec #1 follow-up). Non-null = hidden from list/public.
@@ -1121,7 +1168,7 @@ model Content {
   deletedAt       DateTime?
   deletedById     String?
 
-  // Editorial review trail (Spec #1 A1C #189 — promoted from Article columns
+  // Editorial review trail (Spec #1 A1C #189 - promoted from Article columns
   // so existing UI keeps showing rejection notes + reviewer stamps).
   rejectionNote   String?       @db.Text
   // Editor → Sub-editor return-with-feedback note. Distinct from rejectionNote
@@ -1152,16 +1199,16 @@ model Content {
   additionalCategories ContentCategory[]
   revisions       ContentRevision[]
   payments        ContentPayment[]
-  // Spec #1 A1B (#188) — back-relations from tables whose FK moved to Content.
+  // Spec #1 A1B (#188) - back-relations from tables whose FK moved to Content.
   comments        Comment[]
   socialPosts     SocialPost[]
-  // Spec #4 A1 (#192) — many-to-many to District/Constituency/Mandal via the
+  // Spec #4 A1 (#192) - many-to-many to District/Constituency/Mandal via the
   // polymorphic ContentLocation join. `Content.constituencyId` above remains
   // as a denormalized fast-path for the primary constituency tag; the join
   // table is the source of truth for ALL tagged locations (incl. mandal-level
   // tags + multi-location articles).
   locations       ContentLocation[]
-  // Spec #4 K5 (#250) — optional LiveBlogPosting state.
+  // Spec #4 K5 (#250) - optional LiveBlogPosting state.
   liveBlog        ContentLiveBlog?
 
   @@index([type, status, publishedAt])
@@ -1171,6 +1218,15 @@ model Content {
   @@index([constituencyId])
   @@index([deskId])
   @@index([deletedAt])
+  // Perf - the /content list + admin dashboards order by createdAt DESC and
+  // filter by deletedAt (almost always `IS NULL`). This composite turns the
+  // homepage query from a deletedAt-then-sort scan into an index-only walk.
+  // Sort key explicit so Postgres can read backwards without re-sorting.
+  @@index([deletedAt, createdAt(sort: Desc)])
+  // Perf - when a status filter is applied (PUBLISHED, DRAFT, etc.) plus
+  // the soft-delete filter + createdAt order. Covers the /content table's
+  // status-chip filter UI.
+  @@index([status, deletedAt, createdAt(sort: Desc)])
   @@map("contents")
 }
 
@@ -1181,6 +1237,11 @@ model ContentTag {
   tag        Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([contentId, tagId])
+  // The composite PK above gives us a fast `[contentId, tagId]` lookup
+  // (used when rendering an article's tag list). The OTHER direction -
+  // "find all content for this tag" - drives /tag/[slug] pages and needs
+  // its own index, because the PK is leftmost-prefix on contentId.
+  @@index([tagId])
   @@map("content_tags")
 }
 
@@ -1241,7 +1302,7 @@ model ContentPayment {
   @@map("content_payments")
 }
 
-// ============ PAGE BUILDER (Spec #2 — admin-editable templates for / and /category/[slug]) ============
+// ============ PAGE BUILDER (Spec #2 - admin-editable templates for / and /category/[slug]) ============
 // See docs/superpowers/specs/2026-05-25-page-builder-design.md
 //
 // Template       = named layout (block tree) with draft/published states.
@@ -1315,7 +1376,7 @@ model CompositeBlock {
   @@map("composite_blocks")
 }
 
-// ============ MENU BUILDER (Spec #3 — Epic #174) ============
+// ============ MENU BUILDER (Spec #3 - Epic #174) ============
 // Three named menus (HEADER, FOOTER, MOBILE) drive the public navigation.
 // Items are stored as a 2-level recursive JSON tree; Zod validation in
 // packages/db/src/menu-schemas.ts enforces shape + max depth.
@@ -1330,7 +1391,7 @@ enum MenuLocation {
   MOBILE
 }
 
-// Stored on each MenuItem.target.type — kept here so callers in the
+// Stored on each MenuItem.target.type - kept here so callers in the
 // admin editor can import the enum directly instead of redeclaring it.
 enum MenuItemTargetType {
   CATEGORY
@@ -1341,7 +1402,7 @@ enum MenuItemTargetType {
 
 model Menu {
   id              String        @id @default(cuid())
-  // One menu per location — UI never needs more than one of each, and the
+  // One menu per location - UI never needs more than one of each, and the
   // unique constraint keeps the seed script idempotent.
   location        MenuLocation  @unique
   name            String
@@ -1375,7 +1436,7 @@ model MenuVersion {
 // Polymorphic many-to-many join between Content and the three location levels
 // (District, Constituency, Mandal). Prisma can't natively express a FK that
 // targets one of N tables, so `locationId` is a bare String + `locationType`
-// discriminator — referential integrity is enforced at the application layer
+// discriminator - referential integrity is enforced at the application layer
 // (admin publish hook + NER auto-tagger validate the referenced row exists).
 //
 // `primary=true` marks the single location used to build the article's
@@ -1419,7 +1480,7 @@ model ContentLocation {
 
 // ============ K-PHASE VERTICALS (Spec #4 K1 / K5) ============
 
-// K1 (#246) — daily-updated gold + silver rates per city. Single canonical
+// K1 (#246) - daily-updated gold + silver rates per city. Single canonical
 // /gold-rate page reads the latest row per (city, metal, purity) and
 // renders a table. Editor (or a cron in a future iteration) populates
 // rows daily.
@@ -1445,7 +1506,7 @@ model PreciousMetalRate {
   @@map("precious_metal_rates")
 }
 
-// K5 (#250) — flag a Content row as a live blog. Editor toggles in admin;
+// K5 (#250) - flag a Content row as a live blog. Editor toggles in admin;
 // LiveBlogPosting JSON-LD variant fires from the schema generator when
 // `isLive` is true. dateModified bumps via cron while live.
 model ContentLiveBlog {

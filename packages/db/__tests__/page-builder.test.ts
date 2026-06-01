@@ -1,4 +1,4 @@
-// I1 (#172) — Page Builder unit tests. Runs under bun test:
+// I1 (#172) - Page Builder unit tests. Runs under bun test:
 //   bun test packages/db
 //
 // Covers:

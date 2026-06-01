@@ -63,7 +63,7 @@ interface EarningsPayload {
 type TabKey = "pending" | "approved" | "settled" | "cancelled";
 type DatePreset = "all" | "today" | "yesterday" | "last7" | "thisMonth" | "lastMonth" | "custom";
 
-// Tab + preset configs hold ONLY the constants — the displayed label is
+// Tab + preset configs hold ONLY the constants - the displayed label is
 // looked up via t() at render time so a language switch re-translates
 // the chips and totals immediately, without remounting the screen.
 const TABS: { key: TabKey; tint: string; icon: keyof typeof Ionicons.glyphMap }[] = [
@@ -146,7 +146,7 @@ function rangeFor(preset: DatePreset, customFrom: string, customTo: string): { f
     }
     case "custom": {
       const from = customFrom ? startOfDay(new Date(customFrom)) : null;
-      // Custom "to" is INCLUSIVE — user picks "to: May 26" and means "through May 26 end-of-day".
+      // Custom "to" is INCLUSIVE - user picks "to: May 26" and means "through May 26 end-of-day".
       const to = customTo ? new Date(startOfDay(new Date(customTo)).getTime() + 86_400_000) : null;
       return { from, to };
     }
@@ -173,7 +173,7 @@ export function EarningsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>("pending");
 
-  // Date filter state — all client-side. The API returns the raw list and
+  // Date filter state - all client-side. The API returns the raw list and
   // we re-bucket / re-total based on the chosen window.
   const [preset, setPreset] = useState<DatePreset>("all");
   const [customFrom, setCustomFrom] = useState<string>("");
@@ -194,7 +194,7 @@ export function EarningsScreen() {
         kycStatus: payload.kycStatus,
       });
     } catch {
-      // Fallback to empty payload on error — reporter sees zeros, no crash.
+      // Fallback to empty payload on error - reporter sees zeros, no crash.
       setData(EMPTY);
     }
   }, []);
@@ -293,7 +293,7 @@ export function EarningsScreen() {
         }
         ListHeaderComponent={
           <View>
-            {/* Hero — settled within the selected window */}
+            {/* Hero - settled within the selected window */}
             <View style={styles.hero}>
               <View style={styles.heroIcon}>
                 <Ionicons name="wallet" size={22} color="#fff" />
@@ -314,7 +314,7 @@ export function EarningsScreen() {
               ) : null}
             </View>
 
-            {/* Date filter — preset chips (wrap) + optional custom range */}
+            {/* Date filter - preset chips (wrap) + optional custom range */}
             {!locked ? (
               <View style={styles.filterWrap}>
                 <View style={styles.filterHeader}>
@@ -381,7 +381,7 @@ export function EarningsScreen() {
               </View>
             ) : null}
 
-            {/* Tab strip — each chip shows its own running total for the window */}
+            {/* Tab strip - each chip shows its own running total for the window */}
             <View style={styles.tabRow}>
               {TABS.map((tab) => {
                 const isActive = activeTab === tab.key;
@@ -391,7 +391,7 @@ export function EarningsScreen() {
                     key={tab.key}
                     style={[
                       styles.tab,
-                      // No background tint on active — amber at any low alpha
+                      // No background tint on active - amber at any low alpha
                       // composites to beige against white. Lean on a thicker
                       // tint border + tint label for the selected state.
                       isActive && { borderColor: tab.tint, borderWidth: 2, padding: 11.5 },
@@ -411,7 +411,7 @@ export function EarningsScreen() {
               })}
             </View>
 
-            {/* By Category breakdown — only when there's something to compare */}
+            {/* By Category breakdown - only when there's something to compare */}
             {!locked && byCategory.length > 0 ? (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>{t("earnings.byCategory")}</Text>
@@ -519,7 +519,7 @@ export function EarningsScreen() {
   );
 }
 
-// Status pill labels — mirror the web (Pending / Approved / Paid / Cancelled).
+// Status pill labels - mirror the web (Pending / Approved / Paid / Cancelled).
 const STATUS_LABEL: Record<string, string> = {
   CALCULATED: "Pending",
   APPROVED: "Approved",
@@ -527,7 +527,7 @@ const STATUS_LABEL: Record<string, string> = {
   CANCELLED: "Cancelled",
 };
 
-// Payment row card — mirror of the reporter web card design.
+// Payment row card - mirror of the reporter web card design.
 //
 // Layout (no left-border accent, status carried by an LED dot + pill):
 //   ┌─────────────────────────────────────────────┐
@@ -541,7 +541,7 @@ const STATUS_LABEL: Record<string, string> = {
 //   │ "Optional note from sub-editor"             │
 //   └─────────────────────────────────────────────┘
 function PaymentRowCard({ row, t }: { row: PaymentRow; t: (key: string, params?: Record<string, string | number>) => string }) {
-  // Status palette — same hues as the web so the two surfaces look identical.
+  // Status palette - same hues as the web so the two surfaces look identical.
   const tint =
     row.status === "PAID"      ? "#16a34a" :
     row.status === "APPROVED"  ? "#3b82f6" :
@@ -572,12 +572,12 @@ function PaymentRowCard({ row, t }: { row: PaymentRow; t: (key: string, params?:
     <View
       style={[
         styles.paymentCard,
-        // Subtle status-tinted shadow at the bottom — ambient awareness
+        // Subtle status-tinted shadow at the bottom - ambient awareness
         // without a hard left-border accent. The pill carries the signal.
         { shadowColor: tint, shadowOpacity: 0.08 },
       ]}
     >
-      {/* Header — LED-dot pill on the left, amount on the right */}
+      {/* Header - LED-dot pill on the left, amount on the right */}
       <View style={styles.paymentHeaderRow}>
         <View style={[styles.statusPill, { backgroundColor: tintBg }]}>
           <View
@@ -609,7 +609,7 @@ function PaymentRowCard({ row, t }: { row: PaymentRow; t: (key: string, params?:
       {/* Title */}
       <Text style={styles.paymentTitle} numberOfLines={2}>{row.article.title}</Text>
 
-      {/* Meta row — category chip + dated context label */}
+      {/* Meta row - category chip + dated context label */}
       <View style={styles.paymentMetaRow}>
         {row.article.category ? (
           <View
@@ -631,7 +631,7 @@ function PaymentRowCard({ row, t }: { row: PaymentRow; t: (key: string, params?:
         <Text style={styles.paymentDate}>{dateContext} {dateLabel}</Text>
       </View>
 
-      {/* PAID-only — divider + transaction info */}
+      {/* PAID-only - divider + transaction info */}
       {row.status === "PAID" && (row.paymentMethod || row.transactionId) ? (
         <>
           <View style={styles.cardDivider} />
@@ -643,7 +643,7 @@ function PaymentRowCard({ row, t }: { row: PaymentRow; t: (key: string, params?:
         </>
       ) : null}
 
-      {/* CANCELLED-only — divider + rejection note */}
+      {/* CANCELLED-only - divider + rejection note */}
       {row.status === "CANCELLED" && row.rejectionNote ? (
         <>
           <View style={styles.cardDivider} />
@@ -748,7 +748,7 @@ const styles = StyleSheet.create({
   },
   listHeadCount: { fontSize: 12, color: "#6b7280" },
 
-  // Payment cards — matches the reporter web card design. No left-border
+  // Payment cards - matches the reporter web card design. No left-border
   // accent; status is read through the LED-dot pill + amount header.
   paymentCard: {
     backgroundColor: "#fff",
@@ -808,7 +808,7 @@ const styles = StyleSheet.create({
     gap: 10,
     flexWrap: "wrap",
   },
-  // Solid (tinted-bg) category chip — replaces the old outlined one to
+  // Solid (tinted-bg) category chip - replaces the old outlined one to
   // match the web reporter portal's category chip exactly.
   catChipSolid: {
     paddingHorizontal: 10,

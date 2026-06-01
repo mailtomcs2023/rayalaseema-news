@@ -1,4 +1,4 @@
-// Phase 2 — remap mandals & articles from old 78 wrong constituencies to the new 55 correct ACs,
+// Phase 2 - remap mandals & articles from old 78 wrong constituencies to the new 55 correct ACs,
 // then delete the old rows and rename slugs to `<english-slug>-<acNumber>`.
 //
 // Idempotent: safe to re-run. Wraps everything in a transaction.
@@ -76,13 +76,13 @@ async function main() {
   }
 
   if (unresolved.length > 0) {
-    console.error("Cannot remap — unresolved old ACs:");
+    console.error("Cannot remap - unresolved old ACs:");
     for (const u of unresolved) console.error("  " + u);
     process.exit(1);
   }
 
   if (remap.size === 0) {
-    console.log("Nothing to remap — DB already in clean state (no acNumber=null rows). Done.");
+    console.log("Nothing to remap - DB already in clean state (no acNumber=null rows). Done.");
     return;
   }
 
@@ -128,7 +128,7 @@ async function main() {
     console.log(`Renamed ${newACs.length} slugs to clean form`);
 
     // 5. Safety sweep: any constituency still without acNumber (orphans from any earlier
-    //    aborted run or manual inserts) is illegal in our model — delete it.
+    //    aborted run or manual inserts) is illegal in our model - delete it.
     const orphans = await tx.constituency.findMany({
       where: { acNumber: null },
       select: { id: true, nameEn: true, slug: true, _count: { select: { mandals: true, articles: true } } },
@@ -138,7 +138,7 @@ async function main() {
       console.log(`Safety sweep: ${orphans.length} orphan acNumber=null rows found, ${reattachable.length} are empty (deleting)`);
       for (const o of orphans) {
         if (o._count.mandals > 0 || o._count.articles > 0) {
-          console.error(`  WARN: cannot delete ${o.nameEn} (${o.slug}) — has ${o._count.mandals} mandals, ${o._count.articles} articles. Re-add to NAME_OVERRIDES.`);
+          console.error(`  WARN: cannot delete ${o.nameEn} (${o.slug}) - has ${o._count.mandals} mandals, ${o._count.articles} articles. Re-add to NAME_OVERRIDES.`);
         }
       }
       await tx.constituency.deleteMany({

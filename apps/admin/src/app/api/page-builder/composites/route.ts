@@ -1,6 +1,6 @@
-// Page Builder (Spec #2) — composite blocks collection endpoint.
+// Page Builder (Spec #2) - composite blocks collection endpoint.
 //   GET  → list (any session)
-//   POST → create (ADMIN, EDITOR) — body: { name, slug?, description?, blocks? }
+//   POST → create (ADMIN, EDITOR) - body: { name, slug?, description?, blocks? }
 //          blocks defaults to [] if omitted; the visual editor (F1) populates it.
 
 import { NextRequest, NextResponse } from "next/server";
@@ -32,7 +32,7 @@ export async function GET() {
         slug: r.slug,
         description: r.description,
         blockCount: Array.isArray(r.blocks) ? (r.blocks as unknown[]).length : 0,
-        createdBy: r.createdBy?.name || "—",
+        createdBy: r.createdBy?.name || "-",
         createdAt: r.createdAt,
         updatedAt: r.updatedAt,
       })),

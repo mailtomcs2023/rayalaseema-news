@@ -1,4 +1,4 @@
-// /video/[slug] — VIDEO Content type detail page (Spec #1 #111).
+// /video/[slug] - VIDEO Content type detail page (Spec #1 #111).
 // Embeds the videoUrl (typically YouTube) above a short metadata block.
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";

@@ -60,7 +60,7 @@ export function migrateLegacyBlock(b: AnyBlock, g: PageGeometry = DEFAULT_GEOMET
   };
 }
 
-/** Migrate a whole page layout. Idempotent — already-mm-v2 layouts pass through. */
+/** Migrate a whole page layout. Idempotent - already-mm-v2 layouts pass through. */
 export function migrateLegacyLayout(
   layout: unknown,
   g: PageGeometry = DEFAULT_GEOMETRY,

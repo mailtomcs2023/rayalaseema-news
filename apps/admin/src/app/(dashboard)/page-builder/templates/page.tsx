@@ -1,8 +1,7 @@
-// Page Builder (Spec #2) — templates list. Server-renders the table from
+// Page Builder (Spec #2) - templates list. Server-renders the table from
 // /api/page-builder/templates data and embeds a client component that
 // owns the create + clone + delete dialogs.
 
-import { Sidebar } from "@/components/sidebar";
 import { prisma } from "@rayalaseema/db";
 import { TemplatesTable } from "./templates-table";
 
@@ -30,13 +29,12 @@ export default async function TemplatesPage() {
     patterns: t.assignments
       .sort((a, b) => b.priority - a.priority)
       .map((a) => a.pattern),
-    createdBy: t.createdBy?.name || "—",
+    createdBy: t.createdBy?.name || "-",
     updatedAt: t.updatedAt.toISOString(),
   }));
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-      <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: "24px 28px" }}>
         <TemplatesTable initialRows={data} />
       </main>

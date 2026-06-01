@@ -8,7 +8,7 @@ const BRAND = "© Rayalaseema News";
 const ARTIST = "Rayalaseema News";
 
 export interface ProcessOpts {
-  // Output max width — keeps featured images sane (Azure egress costs).
+  // Output max width - keeps featured images sane (Azure egress costs).
   maxWidth?: number;
   // Force JPEG output (smaller than PNG for photos). PNG kept only if source
   // had transparency.
@@ -56,16 +56,16 @@ export async function processImageBuffer(
     : { buffer, contentType: "image/jpeg", ext: "jpg" };
 }
 
-// Spec #4 E1 (#220) — multi-aspect image pipeline.
+// Spec #4 E1 (#220) - multi-aspect image pipeline.
 //
 // Google News carousels + Top Stories prefer images at 16:9 / 4:3 / 1:1
 // aspect ratios ≥ 1200×675 px. NewsArticle JSON-LD ships all three so
 // crawlers + AI engines pick whichever fits the surface they render.
 //
 // Output variants per upload (in addition to the existing original):
-//   <id>-16x9.webp / .jpg     — 1200×675 horizontal hero
-//   <id>-4x3.webp  / .jpg     — 1200×900 standard news
-//   <id>-1x1.webp  / .jpg     — 1200×1200 square (Instagram + Discover card)
+//   <id>-16x9.webp / .jpg     - 1200×675 horizontal hero
+//   <id>-4x3.webp  / .jpg     - 1200×900 standard news
+//   <id>-1x1.webp  / .jpg     - 1200×1200 square (Instagram + Discover card)
 //
 // Sharp's smart-crop (.resize with position: 'attention') uses saliency
 // detection so faces don't get lopped off. AVIF skipped for V1 to keep

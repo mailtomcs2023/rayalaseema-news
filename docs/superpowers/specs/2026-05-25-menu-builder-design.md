@@ -1,10 +1,10 @@
-# Spec #3 — Menu Builder
+# Spec #3 - Menu Builder
 
 **Date:** 2026-05-25
 **Status:** Approved by user
 **Decomposition:** Part 3 of 3 (Unified Content → Page Builder → **Menu Builder**)
-**Depends on:** Spec #1 (Unified Content Model) — menu items can target Content rows.
-**Also benefits from:** Spec #2 (Page Builder) — menu items often point at URLs whose layouts are template-driven, but Menu Builder doesn't require Spec #2 to ship first.
+**Depends on:** Spec #1 (Unified Content Model) - menu items can target Content rows.
+**Also benefits from:** Spec #2 (Page Builder) - menu items often point at URLs whose layouts are template-driven, but Menu Builder doesn't require Spec #2 to ship first.
 
 ## Goal
 
@@ -175,7 +175,7 @@ Each child opens the same editor component scoped to that menu's location.
 
 ### Header overflow warning
 
-If HEADER menu has > 10 top-level items, editor surfaces a yellow banner: "More than 10 top-level items may overflow on narrow desktops — consider moving items under a dropdown."
+If HEADER menu has > 10 top-level items, editor surfaces a yellow banner: "More than 10 top-level items may overflow on narrow desktops - consider moving items under a dropdown."
 
 ### Broken-link banner
 
@@ -234,12 +234,12 @@ For CONTENT type, `contentTypeCache` and `contentSlugCache` are denormalised ont
 
 `packages/db/scripts/seed-menus.ts` (idempotent):
 
-1. **HEADER** menu — items copied from current `header.tsx` CATEGORIES array:
+1. **HEADER** menu - items copied from current `header.tsx` CATEGORIES array:
    - Districts: కర్నూలు, నంద్యాల, అనంతపురం, శ్రీ సత్యసాయి, వై.యస్.ఆర్, తిరుపతి, అన్నమయ్య, చిత్తూరు
    - Sections: క్రీడలు, సినిమా, రాశి ఫలాలు
    - "మరిన్ని" with children: ఆంధ్రప్రదేశ్, తెలంగాణ, జాతీయం, అంతర్జాతీయం, బిజినెస్, టెక్నాలజీ, సినిమా రివ్యూలు, పరీక్షా ఫలితాలు, ఉద్యోగాలు, వ్యవసాయం, విద్య, ఆరోగ్యం, భక్తి, నేరాలు, నవ్యసీమ, NRI వార్తలు, వాతావరణం, రియల్ ఎస్టేట్, ఫీచర్ పేజీలు, సంపాదకీయం, పాఠకుల లేఖలు, రాయలసీమ రుచులు, ఎట్టెట, పజిల్స్
-2. **FOOTER** menu — items copied from current footer link groups
-3. **MOBILE** menu — items copied from current mobile bottom-sheet content
+2. **FOOTER** menu - items copied from current footer link groups
+3. **MOBILE** menu - items copied from current mobile bottom-sheet content
 
 Each menu set to `isPublished=true`. After seed, public site renders identically; menus now editable.
 
@@ -325,6 +325,6 @@ Each menu set to `isPublished=true`. After seed, public site renders identically
 | D | D2 | Version history page + restore endpoint |
 | E | E1 | Repoint header.tsx + footer.tsx + mobile-menu.tsx to getMenu |
 | E | E2 | seed-menus.ts script (3 initial menus matching current site) |
-| F | F1 | Polish — broken-link banner + presence + overflow warning |
-| G | G1 | Test suite — Zod + resolver + Playwright E2E |
+| F | F1 | Polish - broken-link banner + presence + overflow warning |
+| G | G1 | Test suite - Zod + resolver + Playwright E2E |
 | H | H1 | docs/menu-builder.md + README update |

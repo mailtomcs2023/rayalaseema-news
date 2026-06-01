@@ -1,6 +1,6 @@
 // Backfill `Article.deskId` for every article that doesn't have one set.
 // Uses the same fallback chain as the create/update APIs.
-// Idempotent — re-running is a no-op once everything is backfilled.
+// Idempotent - re-running is a no-op once everything is backfilled.
 //
 // Run from packages/db:  bunx tsx scripts/backfill-desks.ts
 

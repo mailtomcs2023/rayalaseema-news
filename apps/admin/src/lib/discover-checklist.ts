@@ -1,4 +1,4 @@
-// Spec #4 K9 (#254) — Discover-readiness checklist.
+// Spec #4 K9 (#254) - Discover-readiness checklist.
 //
 // Blocks publish if the article would tank Discover ranking per Feb 2026
 // Discover core update analysis. Soft-warn for non-blockers; hard-block
@@ -23,7 +23,7 @@ export interface ChecklistFinding {
 }
 
 /**
- * Return findings — empty array means publish is clear.
+ * Return findings - empty array means publish is clear.
  * Caller treats `block`-level findings as hard refusal; `warn` is editor-visible
  * but proceeds on confirmation.
  */
@@ -52,7 +52,7 @@ export function discoverReadinessCheck(input: ChecklistInput): ChecklistFinding[
     f.push({ level: "warn", code: "SUMMARY_THIN", message: "Article summary is missing or thin (<40 chars). Hurts meta description + OG snippet quality." });
   }
 
-  // Clickbait heuristic — "you won't believe", "shocking", "this one trick" etc.
+  // Clickbait heuristic - "you won't believe", "shocking", "this one trick" etc.
   // Feb 2026 Discover update demoted clickbait hard; flag for editor review.
   const clickbaitRe = /\b(you won['’]t believe|shocking|this one (trick|secret)|doctors hate|don['’]t want you to know)\b/i;
   if (input.title && clickbaitRe.test(input.title)) {

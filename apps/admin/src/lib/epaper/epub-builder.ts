@@ -4,7 +4,7 @@
 // emitting one XHTML chapter per page (using the article text already in DB),
 // plus the required OPF + nav + container files.
 //
-// No external dep — writes a store-only (no deflate) ZIP by hand. ePub3
+// No external dep - writes a store-only (no deflate) ZIP by hand. ePub3
 // validators allow store-only for mimetype + arbitrary deflate for the rest;
 // we use store-only throughout for simplicity. Trade: ~30% larger file. Fine
 // for a daily edition (text + no embedded images), and reader compatibility
@@ -117,7 +117,7 @@ export async function buildEpubForEdition(editionId: string): Promise<{ buffer: 
   const isoDate = edition.date.toISOString();
   const dateStr = isoDate.slice(0, 10);
   const uid = `urn:re-epaper:${editionId}:${createHash("sha1").update(editionId).digest("hex").slice(0, 16)}`;
-  const title = edition.title || `రాయలసీమ న్యూస్ — ${dateStr}`;
+  const title = edition.title || `రాయలసీమ న్యూస్ - ${dateStr}`;
 
   // Per-page chapters.
   const chapters: Array<{ id: string; href: string; title: string; xhtml: string }> = [];

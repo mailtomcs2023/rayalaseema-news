@@ -5,11 +5,11 @@ import { sanitizeSlug } from "@/lib/slug";
 import { resolveDeskId } from "@/lib/desk-resolver";
 import { pickLeastLoadedReviewer } from "@/lib/reviewer-assignment";
 
-// Articles for the reporter (Expo) app — scoped to ONE reporter.
+// Articles for the reporter (Expo) app - scoped to ONE reporter.
 //
-// GET  — only the signed-in reporter's own articles (every status; the app
+// GET  - only the signed-in reporter's own articles (every status; the app
 //        filters by tab).
-// POST — create an article authored by the reporter. Token-protected; the
+// POST - create an article authored by the reporter. Token-protected; the
 //        author is the token's user, and the reporter can only save a draft
 //        or submit for review (never publish directly).
 export async function GET(req: NextRequest) {
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     const [rows, total] = await Promise.all([
       prisma.content.findMany({
         where: { type: "ARTICLE", authorId: reporterId },
-        // Explicit select — keeps the payload small and avoids any optional
+        // Explicit select - keeps the payload small and avoids any optional
         // columns (e.g. PIB workflow) that may not be present in every env.
         select: {
           id: true,
@@ -88,15 +88,15 @@ export async function POST(req: NextRequest) {
       cleanSlug = `${cleanSlug}-${Date.now()}`;
     }
 
-    // A reporter may only save a draft or submit for review — not publish.
+    // A reporter may only save a draft or submit for review - not publish.
     const finalStatus = status === "SUBMITTED" ? "SUBMITTED" : "DRAFT";
 
-    // KYC gate: only VERIFIED reporters can create ANY article — including
+    // KYC gate: only VERIFIED reporters can create ANY article - including
     // drafts. Existing articles can still be edited/submitted via PATCH; this
     // only blocks fresh creation. The reporter app's FAB and empty-state CTAs
     // surface a friendly Alert before getting here, so this 403 is the
     // server-side safety net.
-    const jp = await prisma.journalistProfile.findUnique({
+    const jp = await prisma.reporterProfile.findUnique({
       where: { userId: reporterId },
       select: { kycStatus: true },
     });
@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
 
     // Auto-assign a sub-editor at submit time so the article lands directly
     // in the right reviewer's queue. For drafts (status=DRAFT) we skip
-    // assignment — no point reserving a reviewer for an article that may
+    // assignment - no point reserving a reviewer for an article that may
     // never be submitted.
     const assignedReviewerId =
       finalStatus === "SUBMITTED"

@@ -1,13 +1,13 @@
-// Rayalaseema News service worker — #92 PWA + offline cache.
+// Rayalaseema News service worker - #92 PWA + offline cache.
 //
 // Strategy:
-//   - epaper-shell: HTML for /epaper, /epaper/search, /epaper/corrections —
+//   - epaper-shell: HTML for /epaper, /epaper/search, /epaper/corrections -
 //     network-first, fall back to cache when offline.
-//   - epaper-media: edition PDFs + per-page PNGs from Azure Blob — cache-first
+//   - epaper-media: edition PDFs + per-page PNGs from Azure Blob - cache-first
 //     so previously-opened editions work fully offline. LRU-capped to ~30
 //     entries (~7 editions of pages + a few PDFs) to stay under storage quotas.
-//   - static: app icons, manifest — stale-while-revalidate.
-//   - everything else: network-only (don't cache article HTML — readers want
+//   - static: app icons, manifest - stale-while-revalidate.
+//   - everything else: network-only (don't cache article HTML - readers want
 //     fresh news on reconnect).
 
 const VERSION = "v1";
@@ -21,7 +21,7 @@ const SHELL_URLS = ["/epaper", "/epaper/corrections", "/epaper/search"];
 self.addEventListener("install", (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(SHELL_CACHE);
-    // Best-effort precache — failures don't block install (offline-first dev mode).
+    // Best-effort precache - failures don't block install (offline-first dev mode).
     await Promise.all(SHELL_URLS.map((u) => fetch(u, { credentials: "same-origin" }).then((r) => r.ok && cache.put(u, r)).catch(() => {})));
     self.skipWaiting();
   })());
@@ -39,7 +39,7 @@ async function trimCache(cacheName, max) {
   const cache = await caches.open(cacheName);
   const reqs = await cache.keys();
   if (reqs.length <= max) return;
-  // FIFO eviction — simple, good enough; perfect LRU needs metadata side-table.
+  // FIFO eviction - simple, good enough; perfect LRU needs metadata side-table.
   for (const req of reqs.slice(0, reqs.length - max)) await cache.delete(req);
 }
 
@@ -66,7 +66,7 @@ self.addEventListener("fetch", (event) => {
       } catch {
         const cached = await caches.match(req);
         if (cached) return cached;
-        return new Response("Offline — no cached copy of this page.", { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } });
+        return new Response("Offline - no cached copy of this page.", { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } });
       }
     })());
     return;
@@ -81,12 +81,12 @@ self.addEventListener("fetch", (event) => {
         const fresh = await fetch(req);
         if (fresh.ok) {
           cache.put(req, fresh.clone());
-          // Trim asynchronously — don't delay the response.
+          // Trim asynchronously - don't delay the response.
           trimCache(MEDIA_CACHE, MEDIA_LIMIT);
         }
         return fresh;
       } catch {
-        return new Response("Offline — this PDF/image is not cached.", { status: 503 });
+        return new Response("Offline - this PDF/image is not cached.", { status: 503 });
       }
     })());
     return;

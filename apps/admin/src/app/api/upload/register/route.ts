@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { uploadBuffer, blobConfigured } from "@/lib/blob";
 
 // Public upload endpoint used ONLY by the reporter app's self-registration
-// flow — at that point the reporter doesn't have an account or a token yet,
+// flow - at that point the reporter doesn't have an account or a token yet,
 // so the admin-auth-gated `/api/upload` and the token-gated
 // `/api/reporter/upload` both reject the request.
 //
 // Without this endpoint, self-register uploads silently 401'd and returned
 // empty URLs, so `kycStatus` for self-registered reporters was always
-// landing on "PENDING" — they showed the "Upload documents" card even
+// landing on "PENDING" - they showed the "Upload documents" card even
 // though they'd just uploaded their docs in the wizard.
 //
 // Security: capped at one image, ≤5MB, restricted MIME types. Filenames

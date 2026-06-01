@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 
-// GET /api/epaper/masters — list all masters (lightweight; no layout payload).
-// POST /api/epaper/masters — create new master { slug, name, layout, geometryOverride? }.
+// GET /api/epaper/masters - list all masters (lightweight; no layout payload).
+// POST /api/epaper/masters - create new master { slug, name, layout, geometryOverride? }.
 
 export async function GET() {
   const session = await requireAuth();

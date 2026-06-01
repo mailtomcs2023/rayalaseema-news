@@ -35,7 +35,7 @@
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    /* Mid-gray (~70% lightness) to match the current shadcn light theme — the
+    /* Mid-gray (~70% lightness) to match the current shadcn light theme - the
      * old default was 222.2 84% 4.9% (basically black), which made every input
      * focus border look near-black instead of the expected soft gray. The
      * Input now uses focus-visible:border-ring + focus-visible:ring-ring/50,
@@ -98,7 +98,7 @@
 
 /* ===== Responsive admin shell ===== */
 
-/* Mobile top bar + drawer chrome — hidden on desktop */
+/* Mobile top bar + drawer chrome - hidden on desktop */
 .admin-topbar {
   display: none;
   position: fixed;
@@ -213,7 +213,7 @@
 
 /* ===== Shared responsive helpers (used across all admin pages) ===== */
 
-/* Two-column editor / detail layouts — stack on tablet & mobile.
+/* Two-column editor / detail layouts - stack on tablet & mobile.
    The element keeps its inline `display:flex; gap`; this only flips direction. */
 @media (max-width: 1024px) {
   .admin-split {
@@ -224,21 +224,21 @@
   }
 }
 
-/* Settings-style two-column form grid — single column on small screens. */
+/* Settings-style two-column form grid - single column on small screens. */
 @media (max-width: 768px) {
   .admin-form-grid {
     grid-template-columns: 1fr !important;
   }
 }
 
-/* Card grids (news feed, etc.) — single column on small screens. */
+/* Card grids (news feed, etc.) - single column on small screens. */
 @media (max-width: 768px) {
   .admin-card-grid {
     grid-template-columns: 1fr !important;
   }
 }
 
-/* Multi-field filter grid — collapses in steps as width shrinks. */
+/* Multi-field filter grid - collapses in steps as width shrinks. */
 @media (max-width: 1024px) {
   .admin-filter-grid {
     grid-template-columns: 1fr 1fr !important;
@@ -250,7 +250,7 @@
   }
 }
 
-/* Revisions side-drawer — stack the version list above the preview. */
+/* Revisions side-drawer - stack the version list above the preview. */
 @media (max-width: 760px) {
   .admin-rev-drawer {
     flex-direction: column;
@@ -285,19 +285,27 @@
   from { opacity: 1; }
   to   { opacity: 0; }
 }
+/* Selectors cover both regular Dialog (data-slot="dialog-*") and
+   AlertDialog (data-slot="alert-dialog-*") so confirm modals get the
+   same scale+fade as edit modals. .rep-dialog-* class fallback stays for
+   any one-off component that wants to opt in by class. */
 [data-slot="dialog-content"][data-state="open"],
+[data-slot="alert-dialog-content"][data-state="open"],
 .rep-dialog-content[data-state="open"] {
   animation: rep-dialog-content-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 [data-slot="dialog-content"][data-state="closed"],
+[data-slot="alert-dialog-content"][data-state="closed"],
 .rep-dialog-content[data-state="closed"] {
   animation: rep-dialog-content-out 160ms cubic-bezier(0.7, 0, 0.84, 0);
 }
 [data-slot="dialog-overlay"][data-state="open"],
+[data-slot="alert-dialog-overlay"][data-state="open"],
 .rep-dialog-overlay[data-state="open"] {
   animation: rep-dialog-overlay-in 220ms ease-out;
 }
 [data-slot="dialog-overlay"][data-state="closed"],
+[data-slot="alert-dialog-overlay"][data-state="closed"],
 .rep-dialog-overlay[data-state="closed"] {
   animation: rep-dialog-overlay-out 160ms ease-in;
 }

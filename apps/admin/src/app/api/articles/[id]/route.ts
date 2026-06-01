@@ -1,4 +1,4 @@
-// /api/articles/[id] — Spec #1 #133 compat shim over Content where type=ARTICLE.
+// /api/articles/[id] - Spec #1 #133 compat shim over Content where type=ARTICLE.
 // Legacy callers (ePaper editor, reporter app) keep working.
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
@@ -24,7 +24,7 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await requireAuth(["ADMIN", "CHIEF_SUB_EDITOR", "SUB_EDITOR", "REPORTER"]);
+  const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR", "REPORTER"]);
   if (isAuthError(session)) return session;
   try {
     const { id } = await params;

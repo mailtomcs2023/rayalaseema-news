@@ -1,4 +1,4 @@
-// Page Builder (Spec #2) — block type registry.
+// Page Builder (Spec #2) - block type registry.
 // Maps each block.type → { component, fetcher }. Composite (synthetic type)
 // has no entry here; the BlockRenderer handles it directly because cycle
 // detection (F2 #169) needs cross-block context.
@@ -27,7 +27,7 @@ type Fetcher = (
   ctx: PageContext,
 ) => Promise<Record<string, unknown> | null>;
 
-// CategoryPair is special — it accepts children. Wrap so the registry sees a
+// CategoryPair is special - it accepts children. Wrap so the registry sees a
 // component with `{ columns: [...] }` props that internally maps to children.
 function CategoryPairBlock({
   columns,

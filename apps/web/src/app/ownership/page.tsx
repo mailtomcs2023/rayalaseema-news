@@ -1,4 +1,4 @@
-// Spec #4 C8 (#211) — /ownership.
+// Spec #4 C8 (#211) - /ownership.
 //
 // Linked from NewsMediaOrganization.ownershipFundingInfo. Required for
 // Google News Publisher Center transparency review.

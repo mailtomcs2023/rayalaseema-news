@@ -14,7 +14,7 @@
 //     in once Phase E1 (#220) ships the sharp upload pipeline (generator
 //     already accepts an array so swapping in the trio is one line later)
 //
-// LiveBlogPosting sibling variant is deferred to K5 (#250) — needs the
+// LiveBlogPosting sibling variant is deferred to K5 (#250) - needs the
 // Content.isLive flag + cron dateModified bump.
 
 import type { JsonLd, LocationChain, AuthorRef, PublisherConfig, LocationRef } from "./types";
@@ -121,7 +121,7 @@ function normalizeImages(images?: string | string[] | null, fallback?: string | 
  * `stringifyJsonLd(...)` and inject into `<script type="application/ld+json">`.
  *
  * Speakable selectors target the H1 and the first <p> inside .article-body
- * — pages must keep those stable for voice-assistant pickup.
+ * - pages must keep those stable for voice-assistant pickup.
  */
 export function buildNewsArticleSchema(args: BuildArgs): JsonLd {
   const { article, author, publisher, locationChain, canonicalUrl } = args;

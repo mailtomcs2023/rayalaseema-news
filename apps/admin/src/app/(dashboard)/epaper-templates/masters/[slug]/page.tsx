@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Sidebar } from "@/components/sidebar";
 import { ToastViewport, useToasts } from "@/components/toast";
 import { EditorV2 } from "@/components/epaper/editor-v2";
 import type { Block as CanvasBlock } from "@/components/epaper/canvas";
@@ -14,10 +13,10 @@ interface Master {
   geometryOverride: unknown;
 }
 
-// /epaper-templates/masters/[slug] — master editor route (#143).
+// /epaper-templates/masters/[slug] - master editor route (#143).
 //
 // Reuses the same Canvas + Rulers + ZoomBar composition as the page editor.
-// Save is explicit (no auto-save) — masters affect many editions, so the
+// Save is explicit (no auto-save) - masters affect many editions, so the
 // operator confirms before propagation.
 export default function MasterEditorPage() {
   const params = useParams();
@@ -68,14 +67,12 @@ export default function MasterEditorPage() {
 
   if (!master) return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
-      <Sidebar />
       <main style={{ marginLeft: 240, padding: 24 }}>Loading…</main>
     </div>
   );
 
   return (
     <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "#0f172a" }}>
-      <Sidebar />
       <ToastViewport toasts={toasts} onDismiss={dismiss} />
       <main style={{ marginLeft: 240, flex: 1, display: "flex", flexDirection: "column", padding: 16, gap: 12, height: "100vh", minHeight: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, color: "#e5e7eb" }}>

@@ -4,7 +4,7 @@ import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 
 // GET /api/epaper/edition?date=YYYY-MM-DD&variant=main
 // Returns the v2 e-paper edition for that date. `variant` defaults to "main";
-// district variants use slugs like "district-kurnool" — created via the
+// district variants use slugs like "district-kurnool" - created via the
 // /clone-variant endpoint and listed via ?listVariants=1.
 export async function GET(req: NextRequest) {
   const session = await requireAuth();
@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     const date = new Date(`${dateStr}T00:00:00.000Z`);
     if (isNaN(date.getTime())) return NextResponse.json({ error: "Invalid date" }, { status: 400 });
 
-    // ?listVariants=1 — returns the set of edition variants that exist for
+    // ?listVariants=1 - returns the set of edition variants that exist for
     // this date so the editor can populate a variant picker.
     if (searchParams.get("listVariants") === "1") {
       const variants = await prisma.epaperEdition.findMany({
@@ -32,7 +32,12 @@ export async function GET(req: NextRequest) {
       where: { date_edition: { date, edition: variant } },
       include: { pages: { orderBy: { pageNumber: "asc" } } },
     });
-    if (!edition) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    // "No edition for this date yet" is a normal state, not an error -
+    // the editor mounts and fires this GET for whatever date is selected.
+    // Returning 404 made every page load spit a red error into the
+    // browser console even though the client already handles the empty
+    // state via `if (!data.id) setEdition(null)`. Return 200 with a flag.
+    if (!edition) return NextResponse.json({ exists: false, date: dateStr });
 
     return NextResponse.json({
       id: edition.id,

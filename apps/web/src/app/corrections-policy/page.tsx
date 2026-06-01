@@ -1,4 +1,4 @@
-// Spec #4 C3 (#206) — /corrections-policy.
+// Spec #4 C3 (#206) - /corrections-policy.
 //
 // Linked from NewsMediaOrganization.correctionsPolicy. Lists how to request
 // a correction and the timelines we commit to. Required by Google News
@@ -15,7 +15,7 @@ const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
 export const metadata: Metadata = {
   title: "Corrections Policy | రాయలసీమ న్యూస్",
   description:
-    "How Rayalaseema News handles factual errors — corrections process, timelines, and how to request a correction.",
+    "How Rayalaseema News handles factual errors - corrections process, timelines, and how to request a correction.",
   alternates: { canonical: `${SITE_URL}/corrections-policy` },
 };
 
@@ -39,7 +39,7 @@ export default function CorrectionsPolicyPage() {
 
           <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 32, marginBottom: 10 }}>What counts as a correction</h2>
           <p>
-            Anything factually wrong — a misspelled name, an incorrect date, a wrong figure, a misattributed quote.
+            Anything factually wrong - a misspelled name, an incorrect date, a wrong figure, a misattributed quote.
             Opinions are not corrected; we publish responses to opinion pieces through letters to the editor.
             Clarifications are issued when an article is technically accurate but creates a misleading impression.
           </p>
@@ -58,7 +58,7 @@ export default function CorrectionsPolicyPage() {
           <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 32, marginBottom: 10 }}>Our timeline</h2>
           <ul style={{ paddingLeft: 24, marginBottom: 16 }}>
             <li><strong>Within 24 hours:</strong> the editorial desk acknowledges receipt of your correction request.</li>
-            <li><strong>Within 72 hours:</strong> we issue a decision — correction approved, clarification issued, or
+            <li><strong>Within 72 hours:</strong> we issue a decision - correction approved, clarification issued, or
               correction declined with a reason. If we need more time to verify (e.g. waiting on official records),
               we tell you why and give an expected resolution date.</li>
             <li><strong>Within seven days:</strong> if approved, the correction appears on the affected article + in
@@ -69,7 +69,7 @@ export default function CorrectionsPolicyPage() {
           <p>
             When an article is corrected, the article's body is updated with the correct information, the
             "Corrections" note at the bottom of the article describes what was wrong and what changed, and the
-            <code>dateModified</code> timestamp is updated. We never silently rewrite history — every correction is
+            <code>dateModified</code> timestamp is updated. We never silently rewrite history - every correction is
             disclosed on the article.
           </p>
 

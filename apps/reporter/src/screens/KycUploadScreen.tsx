@@ -35,7 +35,7 @@ interface FormErrors {
   panCard?: string;
 }
 
-// 12-digit Aadhaar formatter — "1234 5678 9012" — for readability while typing.
+// 12-digit Aadhaar formatter - "1234 5678 9012" - for readability while typing.
 const formatAadhaar = (s: string) => s.replace(/(\d{4})(?=\d)/g, "$1 ").trim();
 const PAN_RE = /^[A-Z]{3}[CHFATBLJGP][A-Z]\d{4}[A-Z]$/;
 
@@ -43,9 +43,9 @@ const PAN_RE = /^[A-Z]{3}[CHFATBLJGP][A-Z]\d{4}[A-Z]$/;
 //
 // Used by reporters whose accounts exist but who haven't uploaded identity
 // docs yet:
-//   - PENDING   — admin-created accounts. They land here from the home
+//   - PENDING   - admin-created accounts. They land here from the home
 //                 banner's "Upload documents" CTA.
-//   - REJECTED  — verified-then-bounced reporters re-submitting after
+//   - REJECTED  - verified-then-bounced reporters re-submitting after
 //                 fixing whatever the admin called out.
 // On success, status flips to SUBMITTED and the cached `user.kycStatus`
 // in AsyncStorage is updated so the banner re-renders correctly.
@@ -99,7 +99,7 @@ export function KycUploadScreen() {
   }, []);
 
   // A doc URI is "local" (needs uploading) when it's a phone-side file URI
-  // from ImagePicker — file:// or content:// (Android). Anything else is
+  // from ImagePicker - file:// or content:// (Android). Anything else is
   // a remote URL we can hand straight to the server.
   const isLocalUri = (uri: string) => /^(file|content):/i.test(uri);
 
@@ -136,7 +136,7 @@ export function KycUploadScreen() {
     setErrors({});
     setSubmitting(true);
     try {
-      // Upload each image in parallel — but skip the ones that are already
+      // Upload each image in parallel - but skip the ones that are already
       // remote URLs (i.e. preserved from a prior submission). uploadImage
       // only handles local file/content URIs from ImagePicker.
       const uploaded: Record<string, string> = {};

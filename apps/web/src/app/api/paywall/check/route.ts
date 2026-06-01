@@ -10,9 +10,9 @@ import crypto from "node:crypto";
 // the client renders the subscribe modal.
 //
 // Re-reading the same article doesn't tick the counter. Logged-in users
-// short-circuit (subscription bypass) — left as TODO until auth lands on web.
+// short-circuit (subscription bypass) - left as TODO until auth lands on web.
 //
-// No PII stored — fingerprint is a one-way hash, IP itself never written.
+// No PII stored - fingerprint is a one-way hash, IP itself never written.
 
 const PAYWALL_LIMIT = parseInt(process.env.PAYWALL_FREE_ARTICLES_PER_MONTH || "5", 10);
 
@@ -47,18 +47,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ allowed: true, count: distinctSlugs.size, limit: PAYWALL_LIMIT, reason: "already-read" });
     }
 
-    // Net-new article — would they go over the limit?
+    // Net-new article - would they go over the limit?
     if (distinctSlugs.size >= PAYWALL_LIMIT) {
       return NextResponse.json({ allowed: false, count: distinctSlugs.size, limit: PAYWALL_LIMIT, reason: "limit-reached" });
     }
 
-    // Allowed — record the read so future requests count it.
+    // Allowed - record the read so future requests count it.
     await prisma.articleReadEvent.create({
       data: { fingerprint: fp, articleSlug: slug },
     });
     return NextResponse.json({ allowed: true, count: distinctSlugs.size + 1, limit: PAYWALL_LIMIT });
   } catch (e) {
-    // Soft-fail open — never let a metering bug block reading.
+    // Soft-fail open - never let a metering bug block reading.
     return NextResponse.json({ allowed: true, count: 0, limit: PAYWALL_LIMIT, error: "metering-failed" });
   }
 }

@@ -48,7 +48,7 @@ export function formatRelativeTelugu(d: Date | string | null | undefined): strin
  * Cleans the article body for inline byline injection:
  *  1. Strips any leading <h1>/<h2>/<h3> whose text matches the article title
  *     (AI translation often emits "<h2>{title}</h2>" at the top of the body,
- *     duplicating the page h1 — the duplicate breaks the Sakshi-style inline
+ *     duplicating the page h1 - the duplicate breaks the Sakshi-style inline
  *     flow and just reads as a repeat to the user).
  *  2. Injects "<b class="re-byline">{prefix}:</b> " at the start of the first
  *     remaining <p>. If the body still doesn't open with a <p>, prepends a

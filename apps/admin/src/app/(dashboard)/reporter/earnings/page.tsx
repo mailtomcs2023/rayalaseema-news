@@ -1,4 +1,4 @@
-// /reporter/earnings — web mirror of the mobile EarningsScreen.
+// /reporter/earnings - web mirror of the mobile EarningsScreen.
 // Three lifecycle tabs (Pending / Approved / Settled) + per-category
 // breakdown. Same shape as /api/reporter/earnings but server-rendered
 // using session auth (the API is bearer-token based for the Expo app).
@@ -18,7 +18,7 @@ export default async function ReporterEarningsPage() {
   if (role && role !== "REPORTER") redirect("/");
   if (!userId) redirect("/login");
 
-  const profile = await prisma.journalistProfile.findUnique({
+  const profile = await prisma.reporterProfile.findUnique({
     where: { userId },
     select: { kycStatus: true },
   });

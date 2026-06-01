@@ -1,4 +1,3 @@
-import { Sidebar } from "@/components/sidebar";
 import { prisma } from "@rayalaseema/db";
 
 /** Editor-facing analytics for e-paper editions. Reads EpaperPageView
@@ -71,11 +70,10 @@ export default async function EpaperAnalyticsPage() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-      <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, color: "#111", marginBottom: 16 }}>ePaper Analytics</h1>
 
-        {/* Render SLA panel — last 30 days of EpaperRenderJob */}
+        {/* Render SLA panel - last 30 days of EpaperRenderJob */}
         <section style={{ background: "#fff", padding: 16, borderRadius: 8, marginBottom: 16 }}>
           <h2 style={{ fontSize: 15, fontWeight: 800, color: "#111", marginBottom: 8 }}>Render SLA (last 30 days)</h2>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
@@ -94,7 +92,7 @@ export default async function EpaperAnalyticsPage() {
                 {recentFailures.map((f, i) => (
                   <li key={i} style={{ marginBottom: 4 }}>
                     <span style={{ color: "#6b7280" }}>{f.createdAt.toISOString().slice(0, 16).replace("T", " ")}</span>
-                    {" — "}
+                    {" - "}
                     <code style={{ color: "#dc2626" }}>{(f.lastError || "unknown error").slice(0, 120)}</code>
                   </li>
                 ))}

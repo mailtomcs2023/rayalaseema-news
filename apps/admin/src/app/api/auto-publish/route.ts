@@ -190,7 +190,7 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
-    // Batch dedup by source URL — the stable, reliable key. Read from Content
+    // Batch dedup by source URL - the stable, reliable key. Read from Content
     // table (Spec #1 #109) so the same wire story can't get ingested twice.
     const sourceUrls = newsArticles.slice(0, needed).map((n: any) => n.link).filter(Boolean);
     const existingBySource = sourceUrls.length > 0 ? await prisma.content.findMany({
@@ -226,11 +226,11 @@ export async function POST(req: NextRequest) {
         // Re-host source image on Azure Blob (publishers block hotlinking)
         const hostedImage = await uploadImageFromUrl(news.image_url);
 
-        // Create slug — sanitized + timestamp for uniqueness
+        // Create slug - sanitized + timestamp for uniqueness
         const slug = sanitizeSlug(`${buildSlugFromTitle(news.title)}-${Date.now()}`);
 
         // Create Content row (Spec #1 #109). type=ARTICLE preserves prior
-        // behaviour — auto-fetched wire stories are always articles, never
+        // behaviour - auto-fetched wire stories are always articles, never
         // videos/reels/etc.
         await prisma.content.create({
           data: {

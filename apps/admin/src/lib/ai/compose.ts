@@ -4,7 +4,7 @@
 // Default model: GPT-5.1 (deployment "gpt51"). Swap to Claude Sonnet 4.6
 // later by setting AZURE_OPENAI_COMPOSE_ENDPOINT + AZURE_OPENAI_COMPOSE_KEY
 // + AZURE_OPENAI_COMPOSE_DEPLOYMENT envs.
-import { chat, parseJsonEnvelope } from "./client";
+import { chatJsonWithRetry } from "./client";
 import { composeSystemPrompt, repairConstraintsPrompt } from "./style-guide";
 import type { ExtractedFacts } from "./extract";
 import type { FactCheckIssue } from "./fact-check";
@@ -31,11 +31,11 @@ export async function composeArticle(
     `EXTRACTED FACTS (JSON):\n${JSON.stringify(facts, null, 2)}` +
     repairConstraintsPrompt(repairIssues);
 
-  // First attempt at the default cap. If the JSON envelope is truncated
-  // mid-string (model hit max_tokens before closing the body_html_te
-  // string), retry once with a higher cap.
-  for (const maxTokens of [4000, 6000]) {
-    const result = await chat({
+  // Budgets cover most Telugu newspaper articles at 4000, long features
+  // with embedded blockquotes at 8000, and extreme cases at 12000.
+  // chatJsonWithRetry only escalates on Azure's finish_reason: "length".
+  return chatJsonWithRetry<ComposedArticle>(
+    {
       deployment,
       endpoint,
       key,
@@ -44,19 +44,7 @@ export async function composeArticle(
         { role: "user", content: userPayload },
       ],
       temperature: 0.4,
-      maxTokens,
-      responseFormatJson: true,
-    });
-    try {
-      return parseJsonEnvelope<ComposedArticle>(result.content);
-    } catch (e) {
-      if (maxTokens >= 6000) {
-        console.error("[ai/compose] JSON parse failed even at maxTokens=6000:", (e as Error).message);
-        console.error("[ai/compose] raw output tail:", result.content.slice(-500));
-        throw new Error(`Compose returned unparseable JSON: ${(e as Error).message}`);
-      }
-      console.warn("[ai/compose] truncated JSON, retrying with maxTokens=6000");
-    }
-  }
-  throw new Error("Compose retries exhausted");
+    },
+    [4000, 8000, 12000],
+  );
 }

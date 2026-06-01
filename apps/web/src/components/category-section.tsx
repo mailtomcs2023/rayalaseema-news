@@ -31,7 +31,7 @@ function formatTimeAgo(dateString: string) {
   return days === 1 ? "1 day ago" : `${days} days ago`;
 }
 
-/** Newest of publishedAt vs updatedAt — newspaper convention: card shows
+/** Newest of publishedAt vs updatedAt - newspaper convention: card shows
  *  whichever was most recent so readers can spot freshly-edited stories. */
 function effectiveTime(a: Article): string {
   if (a.updatedAt && a.publishedAt) {

@@ -4,15 +4,15 @@
 //     │ submit (operator role: any editorial)
 //     ▼
 //   SUB_REVIEW
-//     │ approve (SUB_EDITOR / CHIEF_SUB_EDITOR / ADMIN)        │ reject (note required)
+//     │ approve (SUB_EDITOR / EDITOR / ADMIN)                  │ reject (note required)
 //     ▼                                                         ▼
 //   CHIEF_REVIEW                                              REJECTED → operator reopens to DRAFT
-//     │ approve (CHIEF_SUB_EDITOR / ADMIN)                     │ reject (note required)
+//     │ approve (EDITOR / ADMIN)                               │ reject (note required)
 //     ▼                                                         ▼
 //   APPROVED                                                  REJECTED → operator reopens to DRAFT
-//     │ publish (CHIEF_SUB_EDITOR / ADMIN)
+//     │ publish (EDITOR / ADMIN)
 //     ▼
-//   PUBLISHED  (terminal — unpublish goes back to DRAFT)
+//   PUBLISHED  (terminal - unpublish goes back to DRAFT)
 //
 // Every transition checks the user's role against an allow-list and writes
 // a row to the audit log so we have a complete who-did-what trail.
@@ -40,7 +40,7 @@ export const TRANSITIONS: Transition[] = [
   { from: "APPROVED",     to: "PUBLISHED",     allowedRoles: ["ADMIN", "EDITOR"], label: "Publish" },
   { from: "REJECTED",     to: "DRAFT",         allowedRoles: ["ADMIN", "EDITOR", "SUB_EDITOR", "REPORTER"], label: "Reopen as draft" },
   { from: "PUBLISHED",    to: "DRAFT",         allowedRoles: ["ADMIN", "EDITOR"], label: "Unpublish" },
-  // Retraction — terminal kill from PUBLISHED. Note required (carries the
+  // Retraction - terminal kill from PUBLISHED. Note required (carries the
   // reason that surfaces on /epaper/corrections).
   { from: "PUBLISHED",    to: "KILLED",        allowedRoles: ["ADMIN", "EDITOR"], label: "🗑 Kill / retract", noteRequired: true },
 ];

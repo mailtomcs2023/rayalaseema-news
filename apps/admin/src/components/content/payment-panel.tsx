@@ -86,25 +86,10 @@ export function PaymentPanel({ contentId }: { contentId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contentId]);
 
-  if (loading) {
-    return (
-      <section className="rounded-lg border bg-card p-4">
-        <h3 className="text-sm font-semibold mb-2">Payment</h3>
-        <p className="text-xs text-muted-foreground">Loading...</p>
-      </section>
-    );
-  }
-
-  if (!payment) {
-    return (
-      <section className="rounded-lg border bg-card p-4">
-        <h3 className="text-sm font-semibold mb-2">Payment</h3>
-        <p className="text-xs text-muted-foreground">
-          A sub-editor sets the payment when they mark this article for review.
-        </p>
-      </section>
-    );
-  }
+  // No panel until there's an actual payment row to show. While loading and
+  // before the sub-editor sets a payment, the sidebar stays clean - the panel
+  // appears the moment real data exists.
+  if (loading || !payment) return null;
 
   const ui = STATUS_UI[payment.status];
   const editable = canEdit && payment.status !== "PAID";

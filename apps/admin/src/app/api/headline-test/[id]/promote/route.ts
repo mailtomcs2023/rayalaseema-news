@@ -8,7 +8,7 @@ import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 // the winning variant to Article.title. Stamps winnerVariant + winnerAt so
 // the test row is closed. Ties: variant A wins (incumbent).
 //
-// Operator-triggered for now — cron loop is a follow-up.
+// Operator-triggered for now - cron loop is a follow-up.
 export async function POST(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(session)) return session;
@@ -21,7 +21,7 @@ export async function POST(_: NextRequest, { params }: { params: Promise<{ id: s
     const winner = test.clicksB > test.clicksA ? "B" : "A";
     const newTitle = winner === "A" ? test.variantA : test.variantB;
 
-    // Spec #1 A1B (#188) — column renamed articleId -> contentId. Promotes
+    // Spec #1 A1B (#188) - column renamed articleId -> contentId. Promotes
     // the winning headline onto the Content row (type=ARTICLE).
     await prisma.$transaction([
       prisma.content.update({ where: { id: test.contentId }, data: { title: newTitle } }),

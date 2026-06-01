@@ -11,7 +11,7 @@ import { autofillTemplate, type BlockSlot } from "@/lib/epaper/autofill";
 // editions of the day). District pages get re-autofilled with the variant's
 // district slug so each city/district edition surfaces its own news.
 //
-// Variant slug convention: "district-<slug>" — matches the template
+// Variant slug convention: "district-<slug>" - matches the template
 // fillRules.districtSlug for the district pages so the engine pulls correct
 // articles for the variant.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: "variantSlug required (lowercase, alphanumeric, dashes)" }, { status: 400 });
     }
     if (variantSlug === "main") {
-      return NextResponse.json({ error: "'main' is reserved — pick a district slug" }, { status: 400 });
+      return NextResponse.json({ error: "'main' is reserved - pick a district slug" }, { status: 400 });
     }
 
     const source = await prisma.epaperEdition.findUnique({
@@ -34,13 +34,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     });
     if (!source) return NextResponse.json({ error: "Source edition not found" }, { status: 404 });
 
-    // Refuse if variant already exists — clone is not a destructive op.
+    // Refuse if variant already exists - clone is not a destructive op.
     const existing = await prisma.epaperEdition.findUnique({
       where: { date_edition: { date: source.date, edition: variantSlug } },
     });
     if (existing) return NextResponse.json({ error: `Variant '${variantSlug}' already exists for this date` }, { status: 409 });
 
-    // Resolve which district this variant promotes — only relevant when
+    // Resolve which district this variant promotes - only relevant when
     // variantSlug starts with "district-". For city/zone variants the front
     // page stays as main's; only the district-template pages get re-filled.
     const districtFilterSlug = variantSlug.startsWith("district-")
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       data: {
         date: source.date,
         edition: variantSlug,
-        title: `${source.title || "Edition"} — ${variantSlug}`,
+        title: `${source.title || "Edition"} - ${variantSlug}`,
         status: "draft",
         pageCount: source.pages.length,
       },

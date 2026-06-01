@@ -1,15 +1,13 @@
-import { Sidebar } from "@/components/sidebar";
 import { CrudTable } from "@/components/crud-table";
 import { prisma } from "@rayalaseema/db";
 
-// Generic image library — cartoons, classifieds, masthead variants, photos.
+// Generic image library - cartoons, classifieds, masthead variants, photos.
 // `image` blocks in EpaperPage layouts can reference these via assetId.
 export default async function EpaperImagesPage() {
   const data = await prisma.epaperImageAsset.findMany({ orderBy: { createdAt: "desc" } });
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-      <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
         <div style={{ marginBottom: 16, padding: 14, background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, fontSize: 13, color: "#166534" }}>
           <strong>Image library.</strong> Upload cartoons, classifieds, masthead variants,

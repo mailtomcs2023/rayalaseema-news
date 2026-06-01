@@ -1,4 +1,4 @@
-// Spec #4 G2 (#232) — admin publish-time hook that runs the location NER
+// Spec #4 G2 (#232) - admin publish-time hook that runs the location NER
 // and writes ContentLocation rows.
 //
 // Called from /api/content/[id] PUT on the PUBLISH transition (alongside
@@ -8,7 +8,7 @@
 //
 // The gazetteer is small (~315 rows = 8 districts + ~55 constituencies +
 // ~250 mandals) so we load it whole on each call rather than incremental.
-// Cached for 10 minutes — locations rarely change.
+// Cached for 10 minutes - locations rarely change.
 
 import { prisma } from "@rayalaseema/db";
 import { detectLocations, type LocationEntry, type Confidence as NerConfidence } from "@rayalaseema/nlp";
@@ -48,7 +48,7 @@ async function loadGazetteer(): Promise<LocationEntry[]> {
       id: c.id,
       kind: "CONSTITUENCY" as const,
       name: c.name,
-      // Strip reservation suffix Eenadu-style ("(SC)" etc) — matches the same
+      // Strip reservation suffix Eenadu-style ("(SC)" etc) - matches the same
       // cleaning the OSM backfill script does.
       nameEn: c.nameEn.replace(/\s*\(.+\)\s*$/, "").trim(),
       parentDistrictSlug: c.district.slug,

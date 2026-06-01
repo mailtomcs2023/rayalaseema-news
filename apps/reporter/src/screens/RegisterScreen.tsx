@@ -1,22 +1,23 @@
 import React, { useState, useLayoutEffect, useRef, useEffect } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Image, Platform, Modal, KeyboardAvoidingView, Keyboard } from "react-native";
 import { TextInput } from "../components/Input";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
 import { useT } from "../i18n";
 import { LanguageToggle } from "../components/LanguageToggle";
 import { FieldError } from "../components/FieldError";
-import { step1Schema, step2Schema, step3Schema, fieldErrors, PAN_RE, PAN_HOLDER_TYPES } from "../lib/validation";
-import { API_URL } from "../api/client";
+import { step1Schema, step1CompleteSchema, step2Schema, step3Schema, fieldErrors, PAN_RE, PAN_HOLDER_TYPES } from "../lib/validation";
+import { API_URL, api } from "../api/client";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useRouter, useNavigation } from "expo-router";
 import { constituenciesByDistrict } from "../data/locations";
 import { pincodeToDistrict, pincodeToConstituency } from "../data/pincodes";
 
-// API_URL is the single source of truth in api/client.ts — imported above.
+// API_URL is the single source of truth in api/client.ts - imported above.
 
-// fetch() that rejects after `ms` instead of hanging forever — keeps the
+// fetch() that rejects after `ms` instead of hanging forever - keeps the
 // Submit button from getting stuck on "Submitting..." if the API is unreachable.
 const fetchWithTimeout = (url: string, options: RequestInit = {}, ms = 25000) => {
   const controller = new AbortController();
@@ -25,7 +26,7 @@ const fetchWithTimeout = (url: string, options: RequestInit = {}, ms = 25000) =>
 };
 
 // Aadhaar is stored as raw 12 digits; shown grouped "1234 5678 9012" per the
-// UIDAI convention. The spaces are presentation-only — stripped on every edit.
+// UIDAI convention. The spaces are presentation-only - stripped on every edit.
 const formatAadhaar = (digits: string) => digits.replace(/(\d{4})(?=\d)/g, "$1 ");
 
 // DOB stored as ISO "YYYY-MM-DD"; shown as "Jun-15-2000" in the UI so the
@@ -65,7 +66,20 @@ const districts = [
   { label: "చిత్తూరు (Chittoor)", value: "chittoor" },
 ];
 
-export function RegisterScreen() {
+export type RegisterMode = "register" | "complete";
+
+interface RegisterScreenProps {
+  // "register" - default, full self-serve registration (creates a new
+  //              user via POST /api/reporter/register).
+  // "complete" - reporter was created by admin, only name + email exist;
+  //              this screen finishes the profile, locking email and
+  //              hiding password fields. Hits the authenticated endpoint
+  //              POST /api/reporter/complete-registration.
+  mode?: RegisterMode;
+}
+
+export function RegisterScreen({ mode = "register" }: RegisterScreenProps = {}) {
+  const isComplete = mode === "complete";
   const { t } = useT();
   const router = useRouter();
   const navigation = useNavigation();
@@ -88,7 +102,7 @@ export function RegisterScreen() {
     primaryDistrict: "kurnool",
     aadhaarNumber: "", panNumber: "",
     aadhaarFrontUri: "", aadhaarBackUri: "", panCardUri: "", photoUri: "",
-    upiId: "", bankName: "", bankAccount: "", bankIfsc: "",
+    upiId: "", bankName: "", bankAccount: "", bankIfsc: "", bankBranch: "",
     experience: "",
   });
   const [loading, setLoading] = useState(false);
@@ -104,7 +118,31 @@ export function RegisterScreen() {
   const scrollY = useRef(0);
   const addressY = useRef(0);
 
-  // Live keyboard height — used as dynamic bottom padding on the ScrollView
+  // "Complete registration" mode: prefill the name + email the admin
+  // seeded so the reporter doesn't have to retype them. Email is locked
+  // (input below sets editable={false} when isComplete), but name is
+  // editable in case admin typed it wrong or the reporter wants their
+  // byline name to differ from what admin recorded.
+  useEffect(() => {
+    if (!isComplete) return;
+    AsyncStorage.getItem("user").then((raw) => {
+      if (!raw) return;
+      try {
+        const u = JSON.parse(raw);
+        setForm((f) => ({
+          ...f,
+          fullName: f.fullName || u.name || "",
+          email: u.email || "",
+          // Mirror into emailConfirm so the (hidden) refine() in any
+          // accidentally-run step1Schema sees a match.
+          emailConfirm: u.email || "",
+          phone: f.phone || u.phone || "",
+        }));
+      } catch {}
+    });
+  }, [isComplete]);
+
+  // Live keyboard height - used as dynamic bottom padding on the ScrollView
   // so fields near the end of the form can scroll up *into* the visible area
   // when the keyboard is open, without leaving dead space when it's closed.
   const [keyboardSpace, setKeyboardSpace] = useState(0);
@@ -122,7 +160,7 @@ export function RegisterScreen() {
   }, []);
 
   // Smoothly scroll any focused TextInput so its top sits ~100 px from the top
-  // of the ScrollView — well clear of the keyboard. Uses measureLayout, which
+  // of the ScrollView - well clear of the keyboard. Uses measureLayout, which
   // is reliable on the New Architecture (Fabric) where the legacy
   // scrollResponderScrollNativeHandleToKeyboard helper is a no-op for many
   // input types. The 80 ms delay lets the keyboard begin animating in first
@@ -134,7 +172,7 @@ export function RegisterScreen() {
     // Combined with the live scroll offset we track via onScroll, we can
     // compute exactly how far to scroll so the field sits at a comfortable
     // height above the keyboard. Works the same on Fabric/Paper and
-    // iOS/Android — no node-handle gymnastics.
+    // iOS/Android - no node-handle gymnastics.
     setTimeout(() => {
       target.measure(
         (_x: number, _y: number, _w: number, _h: number, _pageX: number, pageY: number) => {
@@ -157,10 +195,10 @@ export function RegisterScreen() {
   // A translate-style EN/తె toggle in the header lets the reporter pick a language.
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: t("nav.register"),
+      title: isComplete ? t("register.completeTitle") : t("nav.register"),
       headerRight: () => <LanguageToggle />,
     });
-  }, [navigation, t]);
+  }, [navigation, t, isComplete]);
 
   const update = (key: string, value: string) => {
     setForm({ ...form, [key]: value });
@@ -185,7 +223,7 @@ export function RegisterScreen() {
   };
 
   // Pincode → district auto-detect. Looked up against an offline map of all
-  // Rayalaseema pincodes (apps/reporter/src/data/pincodes.ts) — no network.
+  // Rayalaseema pincodes (apps/reporter/src/data/pincodes.ts) - no network.
   const onPincodeChange = (v: string) => {
     const digits = v.replace(/[^0-9]/g, "").slice(0, 6);
     if (digits.length < 6) {
@@ -196,7 +234,7 @@ export function RegisterScreen() {
     const slug = pincodeToDistrict[digits];
     if (slug) {
       // Auto-fill district always; auto-fill the constituency (city) when the
-      // pincode maps to one — otherwise clear it so the reporter picks.
+      // pincode maps to one - otherwise clear it so the reporter picks.
       const constituency = pincodeToConstituency[digits] || "";
       setForm((f) => ({ ...f, pincode: digits, primaryDistrict: slug, city: constituency }));
       setPincodeInfo({ status: "ok", district: slug });
@@ -207,7 +245,7 @@ export function RegisterScreen() {
     }
   };
 
-  // PAN is a fixed 10-char format — 5 letters, 4 digits, 1 letter (ABCPD1234E).
+  // PAN is a fixed 10-char format - 5 letters, 4 digits, 1 letter (ABCPD1234E).
   // Each keystroke is routed into its slot's character class, so a malformed
   // PAN can't be entered. Slot 4 (0-indexed 3) must be a valid holder-type code.
   const onPanChange = (v: string) => {
@@ -262,7 +300,7 @@ export function RegisterScreen() {
     const formData = new FormData();
     const filename = uri.split("/").pop() || "doc.jpg";
     formData.append("file", { uri, name: filename, type: "image/jpeg" } as any);
-    // Public upload endpoint — the reporter doesn't have a token yet during
+    // Public upload endpoint - the reporter doesn't have a token yet during
     // registration, so the admin-auth `/api/upload` and the token-auth
     // `/api/reporter/upload` would both 401 silently here.
     const res = await fetchWithTimeout(`${API_URL}/api/upload/register`, { method: "POST", body: formData });
@@ -278,7 +316,9 @@ export function RegisterScreen() {
     setLoading(true);
 
     try {
-      // Upload documents
+      // Upload documents (same public endpoint as self-registration - the
+      // upload route doesn't need auth and we don't want to special-case
+      // it on a per-mode basis).
       const [aadhaarFront, aadhaarBack, panCard, photo] = await Promise.all([
         uploadFile(form.aadhaarFrontUri),
         uploadFile(form.aadhaarBackUri),
@@ -286,27 +326,72 @@ export function RegisterScreen() {
         uploadFile(form.photoUri),
       ]);
 
-      // Create user + profile
-      const res = await fetchWithTimeout(`${API_URL}/api/reporter/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...form,
-          aadhaarFrontUrl: aadhaarFront,
-          aadhaarBackUrl: aadhaarBack,
-          panCardUrl: panCard,
-          photoUrl: photo,
-        }),
-      });
+      if (isComplete) {
+        // Authenticated finish-profile call. Uses the api() helper so the
+        // bearer token from login is attached automatically and 401s
+        // bounce us back to /login.
+        const data = await api("/api/reporter/complete-registration", {
+          method: "POST",
+          body: {
+            ...form,
+            aadhaarFrontUrl: aadhaarFront,
+            aadhaarBackUrl: aadhaarBack,
+            panCardUrl: panCard,
+            photoUrl: photo,
+          },
+          timeoutMs: 30000,
+        });
 
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
+        // Mirror the new state back into the cached user object so the
+        // KycBanner switches off "Complete registration" the moment we
+        // land back on Home.
+        try {
+          const raw = await AsyncStorage.getItem("user");
+          if (raw) {
+            const u = JSON.parse(raw);
+            await AsyncStorage.setItem(
+              "user",
+              JSON.stringify({
+                ...u,
+                name: form.fullName,
+                phone: form.phone,
+                kycStatus: data?.kycStatus || "SUBMITTED",
+                registrationComplete: data?.registrationComplete ?? true,
+              }),
+            );
+          }
+        } catch {}
 
-      Alert.alert(
-        t("register.submittedTitle"),
-        t("register.submittedMsg"),
-        [{ text: t("common.ok"), onPress: () => router.replace("/login") }]
-      );
+        Alert.alert(
+          t("register.submittedTitle"),
+          t("register.submittedMsg"),
+          [{ text: t("common.ok"), onPress: () => router.replace("/home") }],
+        );
+      } else {
+        // Self-serve registration: creates a fresh user, then routes the
+        // reporter to /login so they sign in with the credentials they
+        // just chose.
+        const res = await fetchWithTimeout(`${API_URL}/api/reporter/register`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...form,
+            aadhaarFrontUrl: aadhaarFront,
+            aadhaarBackUrl: aadhaarBack,
+            panCardUrl: panCard,
+            photoUrl: photo,
+          }),
+        });
+
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+
+        Alert.alert(
+          t("register.submittedTitle"),
+          t("register.submittedMsg"),
+          [{ text: t("common.ok"), onPress: () => router.replace("/login") }],
+        );
+      }
     } catch (e: any) {
       Alert.alert(t("common.error"), e.message);
     }
@@ -323,16 +408,20 @@ export function RegisterScreen() {
   const cityLabel =
     (constituenciesByDistrict[form.primaryDistrict] || []).find((c) => c.value === form.city)?.label || "";
 
-  // Step 2 (KYC) — "Require everything" before continuing to step 3.
+  // Step 2 (KYC) - "Require everything" before continuing to step 3.
   const passportDone = !!form.photoUri;
   const aadhaarDone = form.aadhaarNumber.length === 12 && !!form.aadhaarFrontUri && !!form.aadhaarBackUri;
   const panDone = PAN_RE.test(form.panNumber) && !!form.panCardUri;
   const step2Complete = passportDone && aadhaarDone && panDone;
 
   // Each step validates with Zod before advancing; failures become per-field
-  // red borders + messages via the `errors` map.
+  // red borders + messages via the `errors` map. The complete-registration
+  // variant drops the email-confirm / password rules - those fields aren't
+  // even rendered when the admin set them up front.
   const goToStep2 = () => {
-    const parsed = step1Schema(t).safeParse(form);
+    const parsed = isComplete
+      ? step1CompleteSchema(t).safeParse(form)
+      : step1Schema(t).safeParse(form);
     if (!parsed.success) return setErrors(fieldErrors(parsed.error));
     setErrors({});
     setStep(2);
@@ -384,7 +473,7 @@ export function RegisterScreen() {
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       // iOS uses `padding` so the bottom inputs get pushed above the keyboard.
-      // Android relies on the activity's adjustResize (Expo default) — setting
+      // Android relies on the activity's adjustResize (Expo default) - setting
       // a behavior here on Android often fights the native resize and ends up
       // with double-padding.
       behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -395,7 +484,7 @@ export function RegisterScreen() {
       style={styles.container}
       // Bottom padding grows by the keyboard height while it's open so the
       // last fields can scroll up into the visible area. When the keyboard
-      // closes, padding collapses back to its base value — no dead space.
+      // closes, padding collapses back to its base value - no dead space.
       contentContainerStyle={{ paddingHorizontal: 14, paddingVertical: 20, paddingBottom: 60 + keyboardSpace }}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
@@ -405,7 +494,7 @@ export function RegisterScreen() {
       onScroll={(e) => { scrollY.current = e.nativeEvent.contentOffset.y; }}
       scrollEventThrottle={16}
     >
-      <Text style={styles.title}>{t("register.title")}</Text>
+      <Text style={styles.title}>{isComplete ? t("register.completeTitle") : t("register.title")}</Text>
 
       {/* Progress */}
       <View style={styles.progress}>
@@ -414,7 +503,7 @@ export function RegisterScreen() {
         ))}
       </View>
 
-      {/* Step heading — counter + the current step's name */}
+      {/* Step heading - counter + the current step's name */}
       <Text style={styles.stepCounter}>{t("register.step", { step })}</Text>
       <Text style={styles.stepName}>{t(stepHeadingKey)}</Text>
       <View style={styles.stepDivider} />
@@ -425,66 +514,89 @@ export function RegisterScreen() {
           <TextInput style={[styles.input, errors.fullName ? styles.inputError : null]} placeholder={t("register.fullNamePlaceholder")} value={form.fullName} onChangeText={(v) => update("fullName", v)} onFocus={handleInputFocus} />
           <FieldError message={errors.fullName} />
           <FieldLabel style={styles.label}>{t("register.email")}</FieldLabel>
-          <TextInput style={[styles.input, errors.email ? styles.inputError : null]} placeholder={t("register.emailPlaceholder")} value={form.email} onChangeText={(v) => update("email", v)} keyboardType="email-address" autoCapitalize="none" onFocus={handleInputFocus} />
-          <FieldError message={errors.email} />
-          <FieldLabel style={styles.label}>{t("register.emailConfirm")}</FieldLabel>
-          <TextInput
-            style={[styles.input, errors.emailConfirm ? styles.inputError : null]}
-            placeholder={t("register.emailConfirmPlaceholder")}
-            value={form.emailConfirm}
-            onChangeText={(v) => update("emailConfirm", v)}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            onFocus={handleInputFocus}
-            // Disable copy/paste so a reporter can't paste the same typo'd
-            // email into both fields — the confirmation step has to mean
-            // something. Long-press menu is still available on iOS but the
-            // friction is enough to make a deliberate match the norm.
-            contextMenuHidden
-          />
-          <FieldError message={errors.emailConfirm} />
+          {isComplete ? (
+            // Locked: admin set this when they created the account. Show
+            // a lock icon and a short hint underneath so the reporter
+            // understands why they can't tap into it.
+            <View style={[styles.input, styles.lockedField]}>
+              <Text style={styles.lockedText} numberOfLines={1}>{form.email}</Text>
+              <Ionicons name="lock-closed-outline" size={18} color="#9ca3af" />
+            </View>
+          ) : (
+            <TextInput style={[styles.input, errors.email ? styles.inputError : null]} placeholder={t("register.emailPlaceholder")} value={form.email} onChangeText={(v) => update("email", v)} keyboardType="email-address" autoCapitalize="none" onFocus={handleInputFocus} />
+          )}
+          {isComplete ? (
+            <Text style={styles.lockedHint}>{t("register.emailLockedHint")}</Text>
+          ) : (
+            <FieldError message={errors.email} />
+          )}
+          {!isComplete && (
+            <>
+              <FieldLabel style={styles.label}>{t("register.emailConfirm")}</FieldLabel>
+              <TextInput
+                style={[styles.input, errors.emailConfirm ? styles.inputError : null]}
+                placeholder={t("register.emailConfirmPlaceholder")}
+                value={form.emailConfirm}
+                onChangeText={(v) => update("emailConfirm", v)}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                onFocus={handleInputFocus}
+                // Disable copy/paste so a reporter can't paste the same typo'd
+                // email into both fields - the confirmation step has to mean
+                // something. Long-press menu is still available on iOS but the
+                // friction is enough to make a deliberate match the norm.
+                contextMenuHidden
+              />
+              <FieldError message={errors.emailConfirm} />
+            </>
+          )}
           <FieldLabel style={styles.label}>{t("register.phone")}</FieldLabel>
           <TextInput style={[styles.input, errors.phone ? styles.inputError : null]} placeholder={t("register.phonePlaceholder")} value={form.phone} onChangeText={(v) => update("phone", v.replace(/[^0-9]/g, "").slice(0, 10))} keyboardType="phone-pad" maxLength={10} onFocus={handleInputFocus} />
           <FieldError message={errors.phone} />
-          <FieldLabel style={styles.label}>{t("register.password")}</FieldLabel>
-          <View style={styles.passwordRow}>
-            <View style={[styles.passwordField, errors.password ? styles.inputError : null]}>
-              <TextInput
-                style={styles.passwordInput}
-                placeholder={t("register.passwordPlaceholder")}
-                value={form.password}
-                onChangeText={(v) => update("password", v)}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                onFocus={handleInputFocus}
-              />
-              <TouchableOpacity
-                onPress={() => {
-                  Haptics.selectionAsync();
-                  setShowPassword(!showPassword);
-                }}
-                style={styles.iconButton}
-                accessibilityLabel={showPassword ? t("register.hidePassword") : t("register.showPassword")}
-              >
-                <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={22} color="#888" />
-              </TouchableOpacity>
-            </View>
-            <TouchableOpacity
-              onPress={generatePassword}
-              style={styles.generateIconButton}
-              accessibilityLabel={t("register.generatePassword")}
-            >
-              <Ionicons name="sparkles-outline" size={22} color="#FF2C2C" />
-            </TouchableOpacity>
-          </View>
-          <FieldError message={errors.password} />
+          {!isComplete && (
+            <>
+              <FieldLabel style={styles.label}>{t("register.password")}</FieldLabel>
+              <View style={styles.passwordRow}>
+                <View style={[styles.passwordField, errors.password ? styles.inputError : null]}>
+                  <TextInput
+                    style={styles.passwordInput}
+                    placeholder={t("register.passwordPlaceholder")}
+                    value={form.password}
+                    onChangeText={(v) => update("password", v)}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    onFocus={handleInputFocus}
+                  />
+                  <TouchableOpacity
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      setShowPassword(!showPassword);
+                    }}
+                    style={styles.iconButton}
+                    accessibilityLabel={showPassword ? t("register.hidePassword") : t("register.showPassword")}
+                  >
+                    <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={22} color="#888" />
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity
+                  onPress={generatePassword}
+                  style={styles.generateIconButton}
+                  accessibilityLabel={t("register.generatePassword")}
+                >
+                  <Ionicons name="sparkles-outline" size={22} color="#FF2C2C" />
+                </TouchableOpacity>
+              </View>
+              <FieldError message={errors.password} />
+            </>
+          )}
           <FieldLabel style={styles.label}>{t("register.dob")}</FieldLabel>
-          <TouchableOpacity style={[styles.input, styles.dateField]} onPress={() => setShowDatePicker(true)} activeOpacity={0.7}>
+          <TouchableOpacity style={[styles.input, styles.dateField, errors.dateOfBirth ? styles.inputError : null]} onPress={() => setShowDatePicker(true)} activeOpacity={0.7}>
             <Text numberOfLines={1} style={form.dateOfBirth ? styles.dateValue : styles.datePlaceholder}>
               {form.dateOfBirth ? formatDOBDisplay(form.dateOfBirth) : t("register.dob")}
             </Text>
             <Ionicons name="calendar-outline" size={20} color="#888" />
           </TouchableOpacity>
+          <FieldError message={errors.dateOfBirth} />
 
           {/* Android shows the native dialog on demand; iOS shows a spinner in a bottom sheet. */}
           {Platform.OS === "android" && showDatePicker && (
@@ -511,7 +623,7 @@ export function RegisterScreen() {
               </TouchableOpacity>
             </Modal>
           )}
-          {/* Pincode — typing 6 digits auto-detects the district */}
+          {/* Pincode - typing 6 digits auto-detects the district */}
           <FieldLabel style={styles.label}>{t("register.pincode")}</FieldLabel>
           <TextInput
             style={[styles.input, errors.pincode ? styles.inputError : null]}
@@ -544,14 +656,15 @@ export function RegisterScreen() {
             ))}
           </View>
 
-          {/* City = assembly constituency within the selected district — tap to choose */}
+          {/* City = assembly constituency within the selected district - tap to choose */}
           <FieldLabel style={styles.label}>{t("register.city")}</FieldLabel>
-          <TouchableOpacity style={[styles.input, styles.dateField]} onPress={() => setShowCityPicker(true)} activeOpacity={0.7}>
+          <TouchableOpacity style={[styles.input, styles.dateField, errors.city ? styles.inputError : null]} onPress={() => setShowCityPicker(true)} activeOpacity={0.7}>
             <Text numberOfLines={1} style={form.city ? styles.dateValue : styles.datePlaceholder}>
               {cityLabel || t("register.city")}
             </Text>
             <Ionicons name="chevron-down" size={20} color="#888" />
           </TouchableOpacity>
+          <FieldError message={errors.city} />
           <Modal visible={showCityPicker} transparent animationType="slide" onRequestClose={() => setShowCityPicker(false)}>
             <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setShowCityPicker(false)}>
               <View style={styles.modalSheet} onStartShouldSetResponder={() => true}>
@@ -584,15 +697,16 @@ export function RegisterScreen() {
 
           <FieldLabel style={styles.label}>{t("register.address")}</FieldLabel>
           <TextInput
-            style={styles.input}
+            style={[styles.input, errors.address ? styles.inputError : null]}
             placeholder={t("register.addressPlaceholder")}
             value={form.address}
             onChangeText={(v) => update("address", v)}
             multiline
             onFocus={handleInputFocus}
           />
+          <FieldError message={errors.address} />
 
-          {/* Previous media experience — select from a fixed set of ranges
+          {/* Previous media experience - select from a fixed set of ranges
               instead of free text. The stored value is the localized label,
               so the admin Journalist page sees the same string. */}
           <FieldLabel style={styles.label}>{t("register.experienceLabel")}</FieldLabel>
@@ -729,6 +843,9 @@ export function RegisterScreen() {
           <FieldLabel style={styles.label}>{t("register.ifsc")}</FieldLabel>
           <TextInput style={[styles.input, errors.bankIfsc ? styles.inputError : null]} placeholder={t("register.ifscPlaceholder")} value={form.bankIfsc} onChangeText={(v) => update("bankIfsc", v.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 11))} autoCapitalize="characters" />
           <FieldError message={errors.bankIfsc} />
+          <FieldLabel style={styles.label}>{t("register.branch") + " *"}</FieldLabel>
+          <TextInput style={[styles.input, errors.bankBranch ? styles.inputError : null]} placeholder={t("register.branchPlaceholder")} value={form.bankBranch} onChangeText={(v) => update("bankBranch", v)} />
+          <FieldError message={errors.bankBranch} />
 
           <View style={styles.navRow}>
             <TouchableOpacity style={styles.backButton} onPress={() => setStep(2)}>
@@ -758,6 +875,11 @@ const styles = StyleSheet.create({
   label: { fontSize: 12, fontWeight: "600", color: "#555", marginBottom: 4, marginTop: 8 },
   input: { borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 10, padding: 14, fontSize: 14, marginBottom: 10, backgroundColor: "#fff" },
   inputError: { borderColor: "#dc2626" },
+  // Locked email field used in "Complete registration" mode - looks like
+  // an input but is non-interactive and shows a lock icon on the right.
+  lockedField: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#f3f4f6" },
+  lockedText: { flex: 1, marginRight: 8, fontSize: 14, color: "#6b7280" },
+  lockedHint: { fontSize: 11, lineHeight: 16, color: "#6b7280", marginTop: -4, marginBottom: 10, paddingHorizontal: 4 },
   pincodeHint: { fontSize: 12, lineHeight: 18, marginTop: -4, marginBottom: 10, paddingHorizontal: 4, color: "#888" },
   pincodeOk: { color: "#16a34a" },
   pincodeWarn: { color: "#dc2626" },

@@ -62,7 +62,7 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
   const [config, setConfig] = useState(initialConfig);
   const [breakingNews, setBreakingNews] = useState(initialBreaking);
   const [tickerPaused, setTickerPaused] = useState(false);
-  // Spec #3 E1 (#183) — admin-published HEADER menu, fetched on mount.
+  // Spec #3 E1 (#183) - admin-published HEADER menu, fetched on mount.
   // While loading or when unpublished, we fall back to the hardcoded
   // `mainNavItems` + `dropdownItems` above so the nav is never empty.
   const [adminTop, setAdminTop] = useState<typeof mainNavItems | null>(null);
@@ -89,7 +89,7 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
     if (Object.keys(config).length === 0) {
       fetch("/api/config").then((r) => r.json()).then(setConfig).catch(() => {});
     }
-    // Spec #3 E1 — admin-published HEADER menu replaces hardcoded items
+    // Spec #3 E1 - admin-published HEADER menu replaces hardcoded items
     // when present. Items at depth 0 with children become the dropdown;
     // items without children become inline nav.
     fetch("/api/menu/header").then((r) => r.json()).then((data) => {
@@ -133,11 +133,11 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
     }).catch(() => {});
   }, []);
 
-  // Active nav items — admin menu wins when published; otherwise hardcoded.
+  // Active nav items - admin menu wins when published; otherwise hardcoded.
   const activeMain = adminTop || mainNavItems;
   const activeDrop = adminDrop || dropdownItems;
 
-  // ⌘K / Ctrl+K opens the search palette — canonical shadcn behaviour.
+  // ⌘K / Ctrl+K opens the search palette - canonical shadcn behaviour.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
@@ -152,14 +152,18 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
   return (
     <>
       <header className="bg-white">
-      {/* Breaking News Ticker */}
-      <div style={{ background: "#000", overflow: "hidden", whiteSpace: "nowrap" as const }}>
-        <div style={{ display: "flex", alignItems: "center" }}>
-          <span style={{ background: "var(--color-brand)", color: "#fff", padding: "6px 14px", fontSize: 13, fontWeight: 900, flexShrink: 0, display: "flex", alignItems: "center", gap: 6 }}>
-            <span className="animate-pulse" style={{ width: 6, height: 6, borderRadius: "50%", background: "#fff", display: "inline-block" }} aria-hidden="true" />
+      {/* Breaking News Ticker - 40px-tall row. Inner children share the
+          parent's height via items-center + height: 100%, so the BREAKING
+          badge and the ticker line up perfectly with no extra padding gap
+          above or below the bar. Text bumped to 14px to match the taller
+          row - 13px looked stranded in a 40px container. */}
+      <div style={{ background: "#000", overflow: "hidden", whiteSpace: "nowrap" as const, height: 40 }}>
+        <div style={{ display: "flex", alignItems: "center", height: "100%" }}>
+          <span style={{ background: "var(--color-brand)", color: "#fff", padding: "0 16px", height: "100%", fontSize: 14, fontWeight: 900, lineHeight: 1, flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
+            <span className="animate-pulse" style={{ width: 7, height: 7, borderRadius: "50%", background: "#fff", display: "inline-block" }} aria-hidden="true" />
             BREAKING
           </span>
-          <div style={{ overflow: "hidden", flex: 1, padding: "6px 0" }}>
+          <div style={{ overflow: "hidden", flex: 1, height: "100%", display: "flex", alignItems: "center" }}>
             <div
               className="animate-marquee"
               style={{
@@ -171,7 +175,7 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
             >
               {breakingNews.map((item, i) => (
                 <span key={item.id || i}>
-                  <a href="#" style={{ color: "#fff", fontSize: 13, fontWeight: 700, textDecoration: "none", marginLeft: 24, marginRight: 24 }}>
+                  <a href="#" style={{ color: "#fff", fontSize: 14, fontWeight: 700, lineHeight: 1, textDecoration: "none", marginLeft: 24, marginRight: 24 }}>
                     {item.text}
                   </a>
                   {i < breakingNews.length - 1 && <span style={{ color: "var(--color-brand)" }}>●</span>}
@@ -202,7 +206,7 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
         </div>
       </div>
 
-      {/* Search panel — slow reveal via framer-motion, shadcn Input inside */}
+      {/* Search panel - slow reveal via framer-motion, shadcn Input inside */}
       <SearchBar open={searchOpen} onClose={() => setSearchOpen(false)} />
 
       {/* Masthead - Eenadu style: Logo left, ad center, links right */}
@@ -239,9 +243,9 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
           {/* Center: spacer (desktop only) */}
           <div className="hidden lg:block flex-1" />
 
-          {/* Right: Tabs + E-Paper (desktop) — monochrome icons, brand-tinted */}
+          {/* Right: Tabs + E-Paper (desktop) - monochrome icons, brand-tinted */}
           <div className="hidden lg:flex flex-col items-end gap-1.5 shrink-0">
-            {/* Top row: Latest & Search tabs — fixed h-8 + inline-flex centering
+            {/* Top row: Latest & Search tabs - fixed h-8 + inline-flex centering
                 so the differently-sized SVG icons and the Telugu text all sit
                 on the same visual midline. */}
             <div className="flex h-8 overflow-hidden" style={{ border: "1px solid var(--paper-edge)", borderRadius: "var(--r-md)" }}>
@@ -291,34 +295,76 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
       </div>
       </header>
 
-      {/* Navigation Bar — sticky across the page scroll. Lives OUTSIDE <header>
+      {/* Navigation Bar - sticky across the page scroll. Lives OUTSIDE <header>
           so its containing block is <body>, otherwise position:sticky would
           stop the moment the (short) header ends. */}
       <nav className="nav-gradient shadow-md relative sticky top-0 z-40">
         <div className="container-news">
-          <ul className="hidden lg:flex items-center">
+          {/* h-10 on the <ul> + items-stretch on flex makes every <li>
+              (and its child link/button) fill the full nav-bar height -
+              so the active-state bg-white/20 paints the entire row top-
+              to-bottom, not just the inline content area. */}
+          <ul className="hidden lg:flex items-stretch h-10">
             {activeMain.map((item, i) => (
-              <li key={item.slug} className="relative">
+              <li key={item.slug} className="relative flex">
                 {item.isDropdown ? (
-                  /* "మరిన్ని" dropdown trigger */
-                  <button
-                    onClick={() => setDropdownOpen(!dropdownOpen)}
-                    onBlur={() => setTimeout(() => setDropdownOpen(false), 200)}
-                    className="block px-4 py-2.5 text-[13px] hover:bg-white/20 transition-colors whitespace-nowrap font-telugu fw-bold"
-                    style={{ color: "#fff" }}
-                  >
-                    {item.name}
-                  </button>
+                  /* "మరిన్ని" dropdown trigger + panel anchored to this <li> */
+                  <>
+                    <button
+                      onClick={() => setDropdownOpen(!dropdownOpen)}
+                      onBlur={() => setTimeout(() => setDropdownOpen(false), 200)}
+                      className="flex items-center justify-center px-4 text-[13px] leading-none hover:bg-white/20 transition-colors whitespace-nowrap font-telugu fw-bold"
+                      style={{ color: "#fff" }}
+                    >
+                      {item.name}
+                    </button>
+                    {dropdownOpen && (
+                      <div style={{
+                        position: "absolute", right: 0, top: "100%",
+                        background: "#fff", border: "1px solid #e5e7eb",
+                        borderRadius: "0 0 10px 10px",
+                        boxShadow: "0 12px 32px rgba(0,0,0,0.18)",
+                        zIndex: 50,
+                        width: "min(420px, calc(100vw - 24px))",
+                        maxWidth: 420,
+                        padding: "8px 0",
+                      }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
+                          {activeDrop.map((dItem) => (
+                            <Link
+                              key={dItem.slug}
+                              href={dItem.slug}
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => setDropdownOpen(false)}
+                              style={{
+                                display: "block", padding: "8px 16px",
+                                fontSize: 14, fontWeight: 700, color: "#333",
+                                textDecoration: "none", borderBottom: "1px solid #f5f5f5",
+                                transition: "all 0.15s",
+                              }}
+                              className="hover:bg-red-50 hover:text-[var(--color-brand)]"
+                            >
+                              {dItem.name}
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <Link
                     href={item.slug}
-                    className={`block px-3 py-2.5 text-[13px] hover:bg-white/20 transition-colors whitespace-nowrap font-telugu border-r border-white/15 ${
+                    className={`flex items-center justify-center px-3 text-[13px] leading-none hover:bg-white/20 transition-colors whitespace-nowrap font-telugu border-r border-white/15 ${
                       isActive(item.slug) ? "bg-white/20" : ""
                     }`}
                     style={{ color: "#fff" }}
                   >
                     {(item as any).isHome ? (
-                      <svg className="w-5 h-5" fill="#fff" viewBox="0 0 24 24">
+                      // Sized to match the Telugu text x-height in sibling
+                      // links - 22px reads as ~the same visual weight as
+                      // "కర్నూలు" / "నంద్యాల" at 13px Noto Sans Telugu, so
+                      // the icon no longer looks short next to the words.
+                      <svg className="block" width="22" height="22" fill="#fff" viewBox="0 0 24 24" aria-label="Home">
                         <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
                       </svg>
                     ) : (
@@ -330,39 +376,6 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
             ))}
           </ul>
         </div>
-
-        {/* Dropdown Menu - 2 column grid (responsive width to avoid viewport overflow) */}
-        {dropdownOpen && (
-          <div style={{
-            position: "absolute", right: 8, top: "100%",
-            background: "#fff", border: "1px solid #e5e7eb",
-            borderRadius: "0 0 10px 10px",
-            boxShadow: "0 12px 32px rgba(0,0,0,0.18)",
-            zIndex: 50,
-            width: "min(420px, calc(100vw - 24px))",
-            maxWidth: 420,
-            padding: "8px 0",
-          }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
-              {activeDrop.map((item) => (
-                <Link
-                  key={item.slug}
-                  href={item.slug}
-                  onClick={() => setDropdownOpen(false)}
-                  style={{
-                    display: "block", padding: "8px 16px",
-                    fontSize: 14, fontWeight: 700, color: "#333",
-                    textDecoration: "none", borderBottom: "1px solid #f5f5f5",
-                    transition: "all 0.15s",
-                  }}
-                  className="hover:bg-red-50 hover:text-[var(--color-brand)]"
-                >
-                  {item.name}
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
       </nav>
 
       {/* Mobile Menu - Slides up from bottom like Eenadu */}
@@ -388,7 +401,7 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
               </button>
             </div>
 
-            {/* Quick Actions — uniform brand-red tints */}
+            {/* Quick Actions - uniform brand-red tints */}
             <div className="grid grid-cols-4 gap-2 p-3 border-b border-gray-100">
               <Link href="/" onClick={() => setMobileMenuOpen(false)} className="flex flex-col items-center gap-1 p-2 rounded-lg" style={{ background: "var(--color-brand-bg)" }}>
                 <svg className="w-5 h-5" style={{ color: "var(--color-brand)" }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>

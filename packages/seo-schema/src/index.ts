@@ -1,4 +1,4 @@
-// @rayalaseema/seo-schema — Spec #4 B0 (#196).
+// @rayalaseema/seo-schema - Spec #4 B0 (#196).
 //
 // JSON-LD generators consumed by apps/web (render) and apps/admin (preview).
 // Shipping the package skeleton + shared types in B0; the actual generators

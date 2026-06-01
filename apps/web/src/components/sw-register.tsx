@@ -33,7 +33,7 @@ export function SWRegister() {
   }, []);
 
   // Expose install via a small button only on /epaper; surfaces only when the
-  // browser has actually fired beforeinstallprompt (Chrome/Edge — Safari uses
+  // browser has actually fired beforeinstallprompt (Chrome/Edge - Safari uses
   // its own Add-to-Home-Screen affordance).
   if (installed || !deferredPrompt) return null;
   if (typeof window !== "undefined" && !/^\/epaper(\/|$)/.test(window.location.pathname)) return null;

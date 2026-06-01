@@ -1,5 +1,5 @@
-// /gallery/[slug] — PHOTO_GALLERY Content type detail page (Spec #1 #111).
-// Masonry-ish grid using CSS columns (no JS lightbox lib — clicking opens the
+// /gallery/[slug] - PHOTO_GALLERY Content type detail page (Spec #1 #111).
+// Masonry-ish grid using CSS columns (no JS lightbox lib - clicking opens the
 // full image in a new tab for now; richer lightbox can land in a polish PR).
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";

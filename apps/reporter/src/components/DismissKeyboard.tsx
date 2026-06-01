@@ -3,7 +3,7 @@ import { Keyboard, TouchableWithoutFeedback } from "react-native";
 
 // Tap-anywhere-to-dismiss-keyboard wrapper. Use on screens whose outer
 // container is a plain <View> (e.g. Login). For screens whose outer
-// container is a <ScrollView> or <FlatList>, do NOT wrap with this —
+// container is a <ScrollView> or <FlatList>, do NOT wrap with this -
 // instead set `keyboardShouldPersistTaps="handled"` and optionally
 // `keyboardDismissMode="on-drag"` on the scrollable itself. Wrapping a
 // scroll view with TouchableWithoutFeedback breaks the scroll because the

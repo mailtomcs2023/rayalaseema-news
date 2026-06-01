@@ -1,4 +1,4 @@
-// J1 (#136) — Zod payload schema unit tests. Runs under bun test:
+// J1 (#136) - Zod payload schema unit tests. Runs under bun test:
 //   bun test packages/db
 //
 // Covers each ContentType: valid + invalid cases, boundary conditions,

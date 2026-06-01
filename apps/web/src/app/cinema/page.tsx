@@ -9,7 +9,7 @@ import { articleHref } from "@/lib/article-href";
 export const metadata: Metadata = {
   title: "సినిమా | రాయలసీమ న్యూస్",
   description:
-    "టాలీవుడ్, బాలీవుడ్, హాలీవుడ్ సినిమా వార్తలు, మూవీ రివ్యూలు, రేటింగ్‌లు — రాయలసీమ న్యూస్.",
+    "టాలీవుడ్, బాలీవుడ్, హాలీవుడ్ సినిమా వార్తలు, మూవీ రివ్యూలు, రేటింగ్‌లు - రాయలసీమ న్యూస్.",
 };
 
 const TABS = [
@@ -76,7 +76,7 @@ export default async function CinemaPage({
     tv: ["టీవీ", "TV", "సీరియల్", "OTT"],
   };
 
-  // Spec #1 A1C (#189) — reads Content where type=ARTICLE. rating + reviewerName
+  // Spec #1 A1C (#189) - reads Content where type=ARTICLE. rating + reviewerName
   // come from payload now, projected after fetch.
   const where: any = { type: "ARTICLE", status: "PUBLISHED", categoryId: { in: catIds } };
   if (tab === "reviews" && revId) {
@@ -112,7 +112,7 @@ export default async function CinemaPage({
           take: 10,
           select: { id: true, title: true, slug: true, payload: true },
         })
-      : // Typed empty fallback — without this annotation the union collapses
+      : // Typed empty fallback - without this annotation the union collapses
         // to `never[]` and reviewsRaw loses the {id, title, slug} fields,
         // breaking the projectRating spread downstream.
         Promise.resolve([] as Array<{ id: string; title: string; slug: string | null; payload: unknown }>),

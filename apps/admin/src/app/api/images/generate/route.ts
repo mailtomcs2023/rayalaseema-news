@@ -1,4 +1,4 @@
-// POST /api/images/generate { prompt } — generate a news-photo image via
+// POST /api/images/generate { prompt } - generate a news-photo image via
 // Azure OpenAI gpt-image-2 (sweden central). Decodes the b64 response,
 // runs it through the same EXIF-strip + RE-copyright pipeline as every
 // other image surface, uploads to Azure Blob, returns the hosted URL.
@@ -20,7 +20,7 @@ const DEPLOYMENT = process.env.AZURE_IMAGES_DEPLOYMENT || "gpt-image";
 const API_VERSION = process.env.AZURE_IMAGES_API_VERSION || "2025-04-01-preview";
 
 export async function POST(req: NextRequest) {
-  const session = await requireAuth(["ADMIN", "EDITOR", "CHIEF_SUB_EDITOR", "SUB_EDITOR", "REPORTER"]);
+  const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR", "REPORTER"]);
   if (isAuthError(session)) return session;
   if (!ENDPOINT || !KEY) {
     return NextResponse.json({
@@ -44,11 +44,11 @@ export async function POST(req: NextRequest) {
     const allowedSizes = ["1024x1024", "1792x1024", "1024x1792"];
     const reqSize = typeof size === "string" && allowedSizes.includes(size) ? size : "1792x1024";
 
-    // Encourage news-photo / photojournalism register — avoids the cartoon
+    // Encourage news-photo / photojournalism register - avoids the cartoon
     // / sketchy default style most image models drift toward. The model
     // honours these adjectives reliably enough that we don't need a
     // dedicated system prompt.
-    const enhancedPrompt = `${prompt.trim()} — photojournalism style, news photography, realistic, no text overlay, no watermark, no logos`;
+    const enhancedPrompt = `${prompt.trim()} - photojournalism style, news photography, realistic, no text overlay, no watermark, no logos`;
 
     const res = await fetch(
       `${ENDPOINT}openai/deployments/${DEPLOYMENT}/images/generations?api-version=${API_VERSION}`,

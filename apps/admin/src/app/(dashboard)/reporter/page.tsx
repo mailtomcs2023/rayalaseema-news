@@ -13,7 +13,7 @@ import type { LucideIcon } from "lucide-react";
 // is a read-only summary; writing new articles still happens in the Expo
 // mobile app (today's primary reporter workflow).
 //
-// Server-rendered so the data is fresh on every visit — no client-side
+// Server-rendered so the data is fresh on every visit - no client-side
 // loading flicker, no extra round-trip.
 export default async function ReporterHome() {
   const session = await auth();
@@ -24,8 +24,11 @@ export default async function ReporterHome() {
   if (role && role !== "REPORTER") redirect("/");
   if (!userId) redirect("/login");
 
-  // Spec #1 A1C (#189) — read Content where type=ARTICLE + ContentPayment.
-  const [articles, payments] = await Promise.all([
+  // Spec #1 A1C (#189) - read Content where type=ARTICLE + ContentPayment.
+  // kycStatus is fetched alongside so the shell can branch the FAB tap
+  // behaviour (PENDING / SUBMITTED / REJECTED each show a different toast;
+  // only VERIFIED actually navigates to /reporter/articles/new).
+  const [articles, payments, profile] = await Promise.all([
     prisma.content.findMany({
       where: { type: "ARTICLE", authorId: userId },
       orderBy: { createdAt: "desc" },
@@ -44,7 +47,12 @@ export default async function ReporterHome() {
       where: { journalistId: userId },
       select: { totalAmount: true, status: true },
     }),
+    prisma.reporterProfile.findUnique({
+      where: { userId },
+      select: { kycStatus: true },
+    }),
   ]);
+  const kycStatus = (profile?.kycStatus ?? "PENDING") as "PENDING" | "SUBMITTED" | "VERIFIED" | "REJECTED";
 
   const total = articles.length;
   const approved = articles.filter((a) => a.status === "APPROVED" || a.status === "PUBLISHED").length;
@@ -54,7 +62,7 @@ export default async function ReporterHome() {
   const name = session.user.name || "Reporter";
 
   return (
-    <ReporterShell>
+    <ReporterShell kycStatus={kycStatus}>
       {/* Same horizontal padding as the Expo Dashboard (paddingHorizontal: 14
           for cards, paddingHorizontal: 16 for headings). */}
       <KycBanner userId={userId} />
@@ -63,7 +71,7 @@ export default async function ReporterHome() {
         Welcome, {name}
       </h1>
 
-      {/* KPI grid — 3 cards in one row, matching the Expo Dashboard. */}
+      {/* KPI grid - 3 cards in one row, matching the Expo Dashboard. */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, paddingTop: 10, paddingBottom: 6 }}>
         <Kpi Icon={FileText}     tint="#3b82f6" value={total}    label="Total"    href="/reporter/articles" />
         <Kpi Icon={CheckCircle2} tint="#16a34a" value={approved} label="Approved" href="/reporter/articles?status=APPROVED" />
@@ -154,7 +162,7 @@ const STATUS_TINT: Record<string, { bg: string; text: string }> = {
   REJECTED: { bg: "#fef2f2", text: "#dc2626" },
 };
 
-// Single article tile — mirrors the Expo Dashboard articleCard:
+// Single article tile - mirrors the Expo Dashboard articleCard:
 // rounded-14, padding 14, shadow, status badge on the right.
 function ArticleCard({ article }: { article: any }) {
   const sc = STATUS_TINT[article.status] || STATUS_TINT.DRAFT;

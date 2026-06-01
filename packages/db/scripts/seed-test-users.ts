@@ -4,7 +4,7 @@
  *
  * - Upserts users by email
  * - Resets the password to the documented value every run
- * - For the reporter, creates a VERIFIED JournalistProfile so all gated
+ * - For the reporter, creates a VERIFIED ReporterProfile so all gated
  *   features (submit article, view earnings) are unlocked
  *
  * Run with:  bun run packages/db/scripts/seed-test-users.ts
@@ -30,26 +30,31 @@ async function main() {
   for (const s of SEEDS) {
     const passwordHash = await hash(s.password, 10);
 
-    // Don't overwrite the display name on existing rows — those addresses
+    // Don't overwrite the display name on existing rows - those addresses
     // may already point at named accounts (e.g. "Rajesh Kumar"). The seed
     // is about role + password, not identity.
+    // Seeded accounts always sign in with the documented password - never
+    // ship them with the forced-change flag flipped on, or the test reporter
+    // would be bounced to /profile-password on every login and the admin
+    // wouldn't be able to bootstrap anything.
     const user = await prisma.user.upsert({
       where: { email: s.email },
-      update: { passwordHash, role: s.role, active: true },
+      update: { passwordHash, role: s.role, active: true, mustChangePassword: false },
       create: {
         email: s.email,
         passwordHash,
         name: s.name,
         role: s.role,
         active: true,
+        mustChangePassword: false,
       },
       select: { id: true, email: true, role: true, name: true },
     });
 
-    // The reporter needs a VERIFIED JournalistProfile to bypass the KYC gate
+    // The reporter needs a VERIFIED ReporterProfile to bypass the KYC gate
     // on /reporter/articles/new and the locked-earnings state.
     if (user.role === "REPORTER") {
-      await prisma.journalistProfile.upsert({
+      await prisma.reporterProfile.upsert({
         where: { userId: user.id },
         update: { kycStatus: "VERIFIED", kycRejectionNote: null },
         create: {
@@ -61,7 +66,7 @@ async function main() {
     }
 
     // Sub editors are scoped to a list of categories via UserCategory. With
-    // no assignments, their review queue is empty even when articles exist —
+    // no assignments, their review queue is empty even when articles exist -
     // counts and list both filter by `categoryId IN <empty set>`. Seed every
     // active category so the test sub editor can review across the board.
     if (user.role === "SUB_EDITOR") {

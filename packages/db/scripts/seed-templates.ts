@@ -1,4 +1,4 @@
-// Page Builder (Spec #2) — seed initial templates + assignments so that
+// Page Builder (Spec #2) - seed initial templates + assignments so that
 // after Phase C lands the public site renders identically to the
 // pre-Spec-#2 hardcoded layout. Idempotent: skips templates whose slug
 // already exists.
@@ -175,7 +175,7 @@ const DEFAULT_HOMEPAGE: Layout = {
   ],
 };
 
-// Standard category — categorySlug omitted ⇒ resolved from PageContext.
+// Standard category - categorySlug omitted ⇒ resolved from PageContext.
 const STANDARD_CATEGORY: Layout = {
   version: 1,
   blocks: [
@@ -245,7 +245,7 @@ async function upsertTemplate(args: {
 }): Promise<{ id: string; created: boolean }> {
   const existing = await prisma.template.findUnique({ where: { slug: args.slug } });
   if (existing) {
-    console.log(`  template "${args.slug}" already present — skip`);
+    console.log(`  template "${args.slug}" already present - skip`);
     return { id: existing.id, created: false };
   }
   const t = await prisma.template.create({
@@ -272,7 +272,7 @@ async function upsertAssignment(args: {
     where: { pattern_templateId: { pattern: args.pattern, templateId: args.templateId } },
   });
   if (existing) {
-    console.log(`  assignment ${args.pattern} → ${args.templateId} already present — skip`);
+    console.log(`  assignment ${args.pattern} → ${args.templateId} already present - skip`);
     return;
   }
   await prisma.templateAssignment.create({
@@ -291,7 +291,7 @@ async function upsertAssignment(args: {
 async function main() {
   const creator = await pickCreatorEmail();
   if (!creator) {
-    console.error("No ADMIN user found — cannot seed templates without a createdBy.");
+    console.error("No ADMIN user found - cannot seed templates without a createdBy.");
     process.exit(1);
   }
   console.log(`Seeding page-builder templates as ${creator.email}`);

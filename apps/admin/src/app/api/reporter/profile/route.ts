@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { getReporterId } from "@/lib/reporter-auth";
+import { decryptProfileFields } from "@/lib/crypto/kyc";
+import { isRegistrationComplete } from "@/lib/reporter-registration";
 
-// Returns the reporter's full profile (User + JournalistProfile) plus the
+// Returns the reporter's full profile (User + ReporterProfile) plus the
 // list of their in-flight change requests so the app can render "Pending
 // review" badges and any admin rejection notes inline.
 //
 // Per-field collapse: for each field we surface only the LATEST request,
 // and only if it's still actionable (PENDING) or unresolved in the
 // reporter's eyes (REJECTED). An older REJECTED that has since been
-// superseded by an APPROVED request for the same field is dropped — the
+// superseded by an APPROVED request for the same field is dropped - the
 // reporter has already moved on, and the new value is reflected on the
 // profile object above.
 export async function GET(req: NextRequest) {
@@ -23,10 +25,10 @@ export async function GET(req: NextRequest) {
       where: { id: reporterId },
       select: {
         id: true, name: true, email: true, phone: true, role: true, avatar: true,
-        journalistProfile: true,
+        reporterProfile: true,
       },
     });
-    if (!user || !user.journalistProfile) {
+    if (!user || !user.reporterProfile) {
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
 
@@ -34,13 +36,13 @@ export async function GET(req: NextRequest) {
     // supersedence (an APPROVED request shadows older REJECTEDs for the
     // same field). 200 rows is plenty for any single reporter's profile.
     const recent = await prisma.profileUpdateRequest.findMany({
-      where: { journalistProfileId: user.journalistProfile.id },
+      where: { reporterProfileId: user.reporterProfile.id },
       orderBy: { createdAt: "desc" },
       take: 200,
     });
 
     // Group by field. Because the rows are sorted newest-first, the first
-    // hit per field IS the latest one — no further sorting needed.
+    // hit per field IS the latest one - no further sorting needed.
     const latestByField = new Map<string, (typeof recent)[number]>();
     for (const r of recent) {
       if (!latestByField.has(r.field)) latestByField.set(r.field, r);
@@ -56,7 +58,13 @@ export async function GET(req: NextRequest) {
         id: user.id, name: user.name, email: user.email, phone: user.phone,
         role: user.role, avatar: user.avatar,
       },
-      profile: user.journalistProfile,
+      // Decrypt PII before handing back to the mobile app - the reporter
+      // sees their own data in plaintext on their device.
+      profile: decryptProfileFields(user.reporterProfile),
+      // Mirrors the flag returned by /api/reporter/login so the KycBanner
+      // can flip from "Upload documents" to "Complete registration" without
+      // having to inspect individual profile fields.
+      registrationComplete: isRegistrationComplete(user.reporterProfile),
       requests,
     });
   } catch (e: any) {

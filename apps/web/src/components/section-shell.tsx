@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 /**
- * Shared IE-style section wrapper — serif title + black underline header,
+ * Shared IE-style section wrapper - serif title + black underline header,
  * optional count, optional "more" footer link. Used by web-stories, photo-gallery, etc.
  * Guarantees every secondary section matches the bands' visual language.
  */

@@ -3,16 +3,16 @@ import sanitizeHtml from "sanitize-html";
 // Centralised HTML sanitiser for any user-authored content we render via
 // `dangerouslySetInnerHTML`. Two presets:
 //
-//   • articleHtml — TipTap output for the public article body. Keeps the
+//   • articleHtml - TipTap output for the public article body. Keeps the
 //     editor-supported elements (headings, paragraphs, lists, blockquote,
 //     images, links, basic inline formatting) and strips everything else.
 //
-//   • adHtml     — admin-supplied display ad markup. Slightly more permissive:
+//   • adHtml     - admin-supplied display ad markup. Slightly more permissive:
 //     allows tracking pixels and inline width/height styling, but still drops
 //     <script>, event handlers, <iframe>, and javascript: URLs.
 //
 // Both presets reject every `on*` event handler, every `javascript:` URL, and
-// every <script>/<iframe>/<object>/<embed>/<form> tag — the well-known XSS
+// every <script>/<iframe>/<object>/<embed>/<form> tag - the well-known XSS
 // vectors that our previous regex-based filter only partially handled.
 
 const COMMON_DROP_TAGS = ["script", "style", "iframe", "object", "embed", "form"];
@@ -78,7 +78,7 @@ const AD_OPTIONS: sanitizeHtml.IOptions = {
   },
   allowedSchemes: ["http", "https"],
   allowedSchemesAppliedToAttributes: ["href", "src", "srcset"],
-  // Allow inline `style` but constrain it — only width/height/display/etc.,
+  // Allow inline `style` but constrain it - only width/height/display/etc.,
   // never URL-bearing properties (background-image) or javascript expressions.
   allowedStyles: {
     "*": {
@@ -119,7 +119,7 @@ export function sanitizeAdHtml(html: string): string {
 const AMP_OPTIONS: sanitizeHtml.IOptions = {
   ...ARTICLE_OPTIONS,
   // AMP disallows generic <img>; allow it here so we can post-process to <amp-img>.
-  // Strip inline styles — AMP only accepts <style amp-custom>.
+  // Strip inline styles - AMP only accepts <style amp-custom>.
   allowedAttributes: {
     ...ARTICLE_OPTIONS.allowedAttributes,
     "*": ["class"],

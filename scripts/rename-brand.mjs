@@ -28,6 +28,7 @@ const SKIP_FILES = new Set([
   join(ROOT, ".claude", "settings.json"),     // perm allow-list — contains old creds, handle separately
   join(ROOT, ".claude", "settings.local.json"),
   join(ROOT, "docker-compose.yml"),           // DB name rename is a separate ops migration
+  join(ROOT, "infra", "README.md"),           // migration runbook — keeps both old + new names intentionally
 ]);
 // SVGs intentionally excluded: wordmarks contain binary-encoded font glyphs,
 // not editable text — replacing the literal string in metadata breaks nothing

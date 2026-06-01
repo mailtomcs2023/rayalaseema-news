@@ -16,7 +16,7 @@ export interface RulerProps {
   scale: number;
   /** Selected-block bounding box (mm) for the orange selection band. */
   selectionRange?: { start: number; end: number };
-  /** Live cursor position in mm — typically lifted from Canvas onMouseMove. */
+  /** Live cursor position in mm - typically lifted from Canvas onMouseMove. */
   cursorMm?: number;
 }
 

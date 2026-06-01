@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@rayalaseema/db";
+import { prisma, deskUpdateSchema } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -23,13 +23,21 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (isAuthError(session)) return session;
   try {
     const { id } = await params;
-    const body = await req.json();
+    const rawBody = await req.json();
+    const parsed = deskUpdateSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          error: "Invalid request body",
+          fieldErrors: parsed.error.flatten().fieldErrors,
+        },
+        { status: 400 },
+      );
+    }
+    const body = parsed.data as Record<string, any>;
     const data: any = {};
     for (const k of ["name", "nameEn", "slug", "branch", "parentId", "categoryId", "districtId", "constituencyId", "sortOrder", "active"] as const) {
       if (body[k] !== undefined) data[k] = body[k];
-    }
-    if (data.branch && !["TOPICAL", "GEOGRAPHIC", "EDITORIAL"].includes(data.branch)) {
-      return NextResponse.json({ error: "branch must be TOPICAL | GEOGRAPHIC | EDITORIAL" }, { status: 400 });
     }
     // Normalize empty FK strings to null so Prisma doesn't try to look them up.
     for (const fk of ["parentId", "categoryId", "districtId", "constituencyId"]) {

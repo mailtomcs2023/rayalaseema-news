@@ -1,4 +1,4 @@
-// News Feed — restored after H1 #131 cleanup. Browse free news sources
+// News Feed - restored after H1 #131 cleanup. Browse free news sources
 // (NewsData.io + Google News RSS) and import a result as a draft Content
 // row in one click. The new draft drops into /content list for further
 // AI translation / editing.
@@ -6,8 +6,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Sidebar } from "@/components/sidebar";
+import { Check } from "lucide-react";
 import { WithTooltip } from "@/components/ui/tooltip";
+import { useKycGate } from "@/components/kyc-gated-link";
 
 interface NewsItem {
   externalId: string;
@@ -25,8 +26,8 @@ interface NewsItem {
 type Provider = "newsdata" | "googlenews";
 
 const PROVIDERS: { value: Provider; label: string; note: string }[] = [
-  { value: "newsdata", label: "NewsData.io", note: "API key — Telugu + English, image URLs included" },
-  { value: "googlenews", label: "Google News RSS", note: "No key — wider sources, no image URLs (use image search after import)" },
+  { value: "newsdata", label: "NewsData.io", note: "API key - Telugu + English, image URLs included" },
+  { value: "googlenews", label: "Google News RSS", note: "No key - wider sources, no image URLs (use image search after import)" },
 ];
 
 export default function NewsFeedPage() {
@@ -39,6 +40,7 @@ export default function NewsFeedPage() {
   const [importing, setImporting] = useState<string | null>(null);
   const [imported, setImported] = useState<Record<string, string>>({}); // externalId → new content id
   const [error, setError] = useState("");
+  const { guard: kycGuard } = useKycGate();
 
   const fetchNews = useCallback(async (searchQuery?: string, providerOverride?: Provider) => {
     const q = (typeof searchQuery === "string" ? searchQuery : "") || query;
@@ -94,7 +96,6 @@ export default function NewsFeedPage() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-      <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
         <div style={{ marginBottom: 20 }}>
           <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111" }}>News Feed</h1>
@@ -145,14 +146,14 @@ export default function NewsFeedPage() {
         </div>
 
         <p style={{ fontSize: 11, color: "#6b7280", marginBottom: 14 }}>
-          Source: <b>{PROVIDERS.find((p) => p.value === provider)?.label}</b> — {PROVIDERS.find((p) => p.value === provider)?.note}
+          Source: <b>{PROVIDERS.find((p) => p.value === provider)?.label}</b> - {PROVIDERS.find((p) => p.value === provider)?.note}
         </p>
 
         {error && (
           <div style={{ background: "#fef2f2", border: "1px solid #fecaca", padding: "10px 14px", borderRadius: 8, fontSize: 13, color: "#dc2626", marginBottom: 14 }}>
             {error}
             {error.toLowerCase().includes("not configured") && (
-              <span> — set <code>NEWSDATA_API_KEY</code> in admin env, or switch to Google News (no key needed).</span>
+              <span> - set <code>NEWSDATA_API_KEY</code> in admin env, or switch to Google News (no key needed).</span>
             )}
           </div>
         )}
@@ -180,11 +181,11 @@ export default function NewsFeedPage() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "stretch" }}>
                   {importedId ? (
                     <button onClick={() => router.push(`/content/${importedId}`)}
-                      style={{ padding: "8px 14px", background: "#10b981", color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
-                      ✓ Open draft
+                      style={{ padding: "8px 14px", background: "#10b981", color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <Check size={14} strokeWidth={3} /> Open draft
                     </button>
                   ) : (
-                    <button onClick={() => importArticle(a)} disabled={importing === a.externalId}
+                    <button onClick={kycGuard("import news", () => importArticle(a))} disabled={importing === a.externalId}
                       style={{ padding: "8px 14px", background: "#dc2626", color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: importing === a.externalId ? "not-allowed" : "pointer", whiteSpace: "nowrap", opacity: importing === a.externalId ? 0.5 : 1 }}>
                       {importing === a.externalId ? "Importing…" : "Import as draft"}
                     </button>

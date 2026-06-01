@@ -25,11 +25,15 @@ export default function RootLayout() {
         <Stack.Screen name="login" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="register" options={{ headerShown: true, title: "Register", headerTintColor: "#FF2C2C" }} />
+        {/* Reached from the KycBanner when an admin-created reporter signs
+            in for the first time - the screen reuses RegisterScreen with
+            mode="complete" to lock email + hide the password fields. */}
+        <Stack.Screen name="complete-registration" options={{ headerShown: true, title: "Complete Registration", headerTintColor: "#FF2C2C" }} />
         <Stack.Screen name="new-article" options={{ headerShown: true, title: "New Article", headerTintColor: "#FF2C2C", headerTitleAlign: "center" }} />
-        {/* In-app KYC upload — opened from the KycBanner CTA when the reporter
+        {/* In-app KYC upload - opened from the KycBanner CTA when the reporter
             has PENDING or REJECTED status. */}
         <Stack.Screen name="kyc" options={{ headerShown: true, title: "KYC Documents", headerTintColor: "#FF2C2C" }} />
-        {/* Profile detail screens — pushed from the Profile tab landing. The
+        {/* Profile detail screens - pushed from the Profile tab landing. The
             section page sets its own dynamic title in useLayoutEffect. */}
         <Stack.Screen name="profile-section/[section]" options={{ headerShown: true, title: "", headerTintColor: "#FF2C2C" }} />
         <Stack.Screen name="profile-pending" options={{ headerShown: true, title: "Pending Changes", headerTintColor: "#FF2C2C" }} />

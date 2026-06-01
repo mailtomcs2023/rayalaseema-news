@@ -52,7 +52,7 @@ export function DialectGlosser() {
       for (const text of targets) {
         const raw = text.nodeValue || "";
         if (!raw.trim()) continue;
-        // Quick reject — only process nodes that actually contain a known token.
+        // Quick reject - only process nodes that actually contain a known token.
         let touched = false;
         for (const t of map.keys()) {
           if (raw.includes(t)) { touched = true; break; }
@@ -61,12 +61,12 @@ export function DialectGlosser() {
 
         const frag = document.createDocumentFragment();
         // Split keeping separators so we can reassemble accurately.
-        const parts = raw.split(/(\s+|[,.;:!?()\[\]"'…—–]+)/u);
+        const parts = raw.split(/(\s+|[,.;:!?()\[\]"'…–\-]+)/u);
         for (const p of parts) {
           const g = map.get(p);
           if (g) {
             const a = document.createElement("abbr");
-            a.title = `${g.standardTelugu}${g.note ? " — " + g.note : ""}`;
+            a.title = `${g.standardTelugu}${g.note ? " - " + g.note : ""}`;
             a.style.borderBottom = "1px dotted #E01B1B";
             a.style.cursor = "help";
             a.style.textDecoration = "none";

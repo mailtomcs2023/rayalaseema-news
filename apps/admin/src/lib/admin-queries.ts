@@ -1,6 +1,6 @@
 import { prisma } from "@rayalaseema/db";
 
-// Dashboard stats — Spec #1 A1C (#189): every count reads Content with a type
+// Dashboard stats - Spec #1 A1C (#189): every count reads Content with a type
 // filter. Replaces the per-table counts (prisma.article.count, prisma.video.count, ...).
 export async function getDashboardStats() {
   const [
@@ -34,7 +34,10 @@ export async function getDashboardStats() {
   const recentArticles = await prisma.content.findMany({
     where: { type: "ARTICLE" },
     include: {
-      category: { select: { name: true, nameEn: true, slug: true } },
+      // Include category.color so the dashboard table can render each
+      // category badge in its own admin-configured colour instead of
+      // every chip looking identical.
+      category: { select: { name: true, nameEn: true, slug: true, color: true } },
       author: { select: { name: true } },
     },
     orderBy: { createdAt: "desc" },
@@ -83,7 +86,7 @@ export async function getAllArticles(page = 1, limit = 20) {
   return { articles, total, page, limit };
 }
 
-// Breaking ticker list for admin dashboard — reads Content where type=BREAKING_NEWS,
+// Breaking ticker list for admin dashboard - reads Content where type=BREAKING_NEWS,
 // sorts by payload.priority ASC (matches old BreakingNews.priority).
 export async function getBreakingNewsList() {
   const rows = await prisma.content.findMany({

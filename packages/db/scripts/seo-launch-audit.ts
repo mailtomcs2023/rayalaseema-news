@@ -1,4 +1,4 @@
-// Spec #4 I1 (#241) — pre-launch SEO crawler audit.
+// Spec #4 I1 (#241) - pre-launch SEO crawler audit.
 //
 // Walks the public sitemap.xml, fetches every URL, and reports:
 //   - non-200 responses (broken pages)
@@ -52,7 +52,7 @@ async function auditUrl(url: string): Promise<void> {
     findings.push({ url, level: "critical", issue: `fetch failed: ${(err as Error).message}` });
     return;
   }
-  // Redirect chain check — manual mode returns 3xx without following.
+  // Redirect chain check - manual mode returns 3xx without following.
   if (res.status >= 300 && res.status < 400) {
     const target = res.headers.get("location");
     if (target) {
@@ -96,7 +96,7 @@ async function main() {
   const urls = await fetchSitemapUrls();
   console.log(`Sampled ${urls.length} URLs from sitemap.\n`);
 
-  // Modest concurrency — don't hammer prod.
+  // Modest concurrency - don't hammer prod.
   const concurrency = 6;
   let cursor = 0;
   async function worker() {

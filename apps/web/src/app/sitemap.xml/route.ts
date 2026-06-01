@@ -1,19 +1,19 @@
-// Spec #4 D3 (#216) — main sitemap polish.
-// E4 (#223) — `revalidate` export so Next ISR keeps a fresh copy at the
+// Spec #4 D3 (#216) - main sitemap polish.
+// E4 (#223) - `revalidate` export so Next ISR keeps a fresh copy at the
 // edge for 5 min; per-request DB hit drops to 1-per-5-min per region.
 
 export const revalidate = 300;
 
 //
 // Emits every indexable URL on the site grouped by priority + changefreq:
-//   1.0  /                             — home
-//   0.9  /<district> hubs              — TIER-0 ranking targets (8 URLs)
-//   0.85 /<district>/<constituency>    — TIER-0 ranking targets (~55 URLs)
-//   0.8  /tag/<slug>                   — topic hubs
-//   0.7  /category/<slug>              — category hubs
-//   0.6  /author/<slug>                — author profiles
-//   0.6  article URLs                  — last-modified driven
-//   0.5  trust pages                   — about/masthead/policies/etc
+//   1.0  /                             - home
+//   0.9  /<district> hubs              - TIER-0 ranking targets (8 URLs)
+//   0.85 /<district>/<constituency>    - TIER-0 ranking targets (~55 URLs)
+//   0.8  /tag/<slug>                   - topic hubs
+//   0.7  /category/<slug>              - category hubs
+//   0.6  /author/<slug>                - author profiles
+//   0.6  article URLs                  - last-modified driven
+//   0.5  trust pages                   - about/masthead/policies/etc
 //
 // Sub-sitemaps: news-sitemap.xml + rss/all.xml are listed in
 // /sitemap-index.xml (D1 #214). This sitemap is referenced from there

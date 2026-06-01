@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { getReporterId } from "@/lib/reporter-auth";
+import { encrypt } from "@/lib/crypto/kyc";
 
 // In-app KYC submission for the reporter (Expo) app.
 //
@@ -15,7 +16,7 @@ import { getReporterId } from "@/lib/reporter-auth";
 //      but the existing rejectionNote is cleared so admin sees a fresh
 //      submission rather than the stale rejection state.
 //
-// VERIFIED reporters cannot resubmit through here — their KYC is locked.
+// VERIFIED reporters cannot resubmit through here - their KYC is locked.
 // Profile-field requests (e.g. updating Aadhaar after verification) go
 // through the separate `/api/reporter/profile/request-change` flow which
 // preserves the audit trail.
@@ -50,7 +51,7 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    const profile = await prisma.journalistProfile.findUnique({
+    const profile = await prisma.reporterProfile.findUnique({
       where: { userId: reporterId },
       select: { id: true, kycStatus: true },
     });
@@ -64,17 +65,20 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    await prisma.journalistProfile.update({
+    await prisma.reporterProfile.update({
       where: { id: profile.id },
       data: {
-        aadhaarNumber: aadhaarNumber!.replace(/\D/g, ""),
+        // Aadhaar + PAN encrypted at rest. Normalisation (strip dashes
+        // from Aadhaar, uppercase PAN) happens BEFORE encrypt so the
+        // ciphertext is canonical for the value the admin will see.
+        aadhaarNumber: encrypt(aadhaarNumber!.replace(/\D/g, "")),
         aadhaarFrontUrl,
         aadhaarBackUrl,
-        panNumber: panNumber!.toUpperCase(),
+        panNumber: encrypt(panNumber!.toUpperCase()),
         panCardUrl,
         photoUrl,
         kycStatus: "SUBMITTED",
-        // Wipe any prior rejection note — the reporter has answered the feedback.
+        // Wipe any prior rejection note - the reporter has answered the feedback.
         kycRejectionNote: null,
       },
     });

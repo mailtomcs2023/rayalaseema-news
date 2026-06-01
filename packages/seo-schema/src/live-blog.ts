@@ -1,4 +1,4 @@
-// Spec #4 K5 (#250) — LiveBlogPosting JSON-LD.
+// Spec #4 K5 (#250) - LiveBlogPosting JSON-LD.
 //
 // Earns the red "LIVE" badge in Google Top Stories. Articles flagged
 // `Content.liveBlog != null` emit this in place of NewsArticle. Each

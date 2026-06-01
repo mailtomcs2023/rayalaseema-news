@@ -3,6 +3,7 @@ import { prisma } from "@rayalaseema/db";
 import { hash } from "bcryptjs";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { normalizeEmail } from "@/lib/email";
+import { encrypt } from "@/lib/crypto/kyc";
 
 export async function POST(req: NextRequest) {
   // 5 registrations per IP per hour is plenty for a real user and tight
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
 
     // Canonicalise email before the uniqueness check + write. Without this
     // `Foo@Gmail.com` and `foo@gmail.com` would slip past the unique
-    // constraint as two separate users — same human, two accounts, two
+    // constraint as two separate users - same human, two accounts, two
     // sets of articles, no way to recover.
     const cleanEmail = normalizeEmail(email);
     if (!cleanEmail) {
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
     // Create journalist profile with KYC
     const hasDocuments = aadhaarFrontUrl || panCardUrl || photoUrl;
 
-    await prisma.journalistProfile.create({
+    await prisma.reporterProfile.create({
       data: {
         userId: user.id,
         fullName,
@@ -57,8 +58,13 @@ export async function POST(req: NextRequest) {
         gender, address, city, pincode,
         primaryDistrict: primaryDistrict || null,
         kycStatus: hasDocuments ? "SUBMITTED" : "PENDING",
-        aadhaarNumber, aadhaarFrontUrl, aadhaarBackUrl,
-        panNumber, panCardUrl, photoUrl,
+        // PII at rest: encrypted via lib/crypto/kyc. encrypt() returns
+        // null for nullish input so PENDING accounts (no docs yet) stay
+        // null in the DB rather than getting a ciphertext-of-empty-string.
+        aadhaarNumber: encrypt(aadhaarNumber),
+        aadhaarFrontUrl, aadhaarBackUrl,
+        panNumber: encrypt(panNumber),
+        panCardUrl, photoUrl,
         experience,
         languages: ["Telugu"],
       },

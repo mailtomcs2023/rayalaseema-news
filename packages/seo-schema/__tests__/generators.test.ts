@@ -1,4 +1,4 @@
-// Spec #4 B6 (#202) — schema validation gate.
+// Spec #4 B6 (#202) - schema validation gate.
 //
 // Asserts every generator in @rayalaseema/seo-schema produces a valid
 // JSON-LD payload with the required schema.org shape: @context + @type

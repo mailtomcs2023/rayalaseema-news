@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { Providers } from "./providers";
 import { auth } from "@/lib/auth";
+import { validateActiveSession } from "@/lib/session-guard";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Admin | Rayalaseema News CMS",
   description: "Content Management System for Rayalaseema News",
-  // Spec #4 C10 (#213) — never index the admin app. Locks every page in the
+  // Spec #4 C10 (#213) - never index the admin app. Locks every page in the
   // CMS out of Google / Bing / AI-crawler caches. Applied at the root layout
   // so child routes inherit; explicit per-page robots can opt back in if we
   // ever surface a public-facing page from the admin domain (none today).
@@ -20,11 +23,36 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // chrome) renders for ~200-500ms with no role info, then snaps to the
   // role-filtered view once NextAuth's client-side probe resolves.
   const session = await auth();
+
+  // Server-side enforcement of session state. NextAuth's JWT is stateless,
+  // so the cookie can lie (deleted user, mustChangePassword cleared but
+  // JWT still says true, etc.) - every page navigation re-reads from the
+  // DB. React `cache()` dedupes the lookup across this and any downstream
+  // auth()-based reads, so we pay at most one query per request.
+  //
+  // Two enforced transitions:
+  //   - status === "gone"           → /logout (account deleted/inactive)
+  //   - mustChangePassword === true → /change-password (forced rotation)
+  // Both skip when already on the appropriate exit path so we don't loop.
+  const userId = (session?.user as any)?.id as string | undefined;
+  if (userId) {
+    const h = await headers();
+    const pathname = h.get("x-pathname") || "";
+    const onExitPath = pathname === "/login" || pathname === "/logout";
+    if (!onExitPath) {
+      const state = await validateActiveSession(userId);
+      if (state.status === "gone") redirect("/logout?reason=revoked");
+      if (state.mustChangePassword && pathname !== "/change-password") {
+        redirect("/change-password");
+      }
+    }
+  }
+
   // suppressHydrationWarning on <html> + <body> silences the noisy hydration
   // error that fires when browser extensions (Scribe, ColorZilla, Grammarly,
   // password managers, ad blockers, etc.) inject attributes into the DOM
-  // BEFORE React hydrates. The mismatch is benign — extensions can't affect
-  // our rendered tree — and Next.js docs recommend this exact pattern for
+  // BEFORE React hydrates. The mismatch is benign - extensions can't affect
+  // our rendered tree - and Next.js docs recommend this exact pattern for
   // the root layout. It only suppresses warnings on those two elements; any
   // real hydration mismatch deeper in the tree still surfaces.
   return (

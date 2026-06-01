@@ -1,8 +1,8 @@
 // New canonical article route: /[district]/[constituency]/<slug>-<id8>
 // Phase A0 URL migration.
 //
-// Validates the entire URL chain — district slug, constituency slug, slug, and
-// id-suffix must all line up with what's in the DB — and 404s otherwise. The
+// Validates the entire URL chain - district slug, constituency slug, slug, and
+// id-suffix must all line up with what's in the DB - and 404s otherwise. The
 // id-suffix check is the collision guard: if someone hand-crafts a URL with a
 // slug that exists but a wrong suffix (pointing at a different article), we
 // refuse to render.
@@ -46,7 +46,7 @@ export default async function ArticlePage({ params }: { params: Params }) {
   const r = await resolveArticle(p);
   if (!r) return notFound();
   if (r.redirectTo) {
-    // Wrong district/constituency in URL — 301 to the article's true canonical.
+    // Wrong district/constituency in URL - 301 to the article's true canonical.
     permanentRedirect(r.redirectTo);
   }
   const article = r.article!;

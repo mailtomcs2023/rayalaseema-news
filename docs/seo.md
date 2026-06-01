@@ -41,9 +41,9 @@ JSON-LD generators consumed by both apps.
 | `buildNewsMediaOrganizationSchema` | root layout | NewsMediaOrganization w/ sameAs, contactPoint, address, foundingDate, editorial-policy URLs, `disambiguatingDescription` (brand-vs-train) |
 | `buildBreadcrumbListSchema` | article + 4 hub pages | BreadcrumbList w/ auto-numbered position |
 | `buildPersonSchema` | /author/[slug] | Person w/ url=/author/<slug>, sameAs, knowsAbout, worksFor |
-| `stringifyJsonLd` | every consumer | safe serializer — strips `undefined`, escapes `</script>` + U+2028/U+2029 |
+| `stringifyJsonLd` | every consumer | safe serializer - strips `undefined`, escapes `</script>` + U+2028/U+2029 |
 
-**Tests:** `bun --filter=@rayalaseema/seo-schema test` — gated by `.github/workflows/schema-validate.yml` on every PR + push.
+**Tests:** `bun --filter=@rayalaseema/seo-schema test` - gated by `.github/workflows/schema-validate.yml` on every PR + push.
 
 ### `@rayalaseema/nlp`
 
@@ -59,9 +59,9 @@ const result = detectLocations({
 ```
 
 Confidence rules:
-- **HIGH** — match in title or first 100 chars of body
-- **MEDIUM** — match in chars 100..600
-- **LOW** — anywhere else
+- **HIGH** - match in title or first 100 chars of body
+- **MEDIUM** - match in chars 100..600
+- **LOW** - anywhere else
 
 Primary picked by: highest confidence, then most-specific kind (Mandal > Constituency > District), then earliest offset.
 
@@ -79,15 +79,15 @@ Primary picked by: highest confidence, then most-specific kind (Mandal > Constit
 | `/category/[slug]` · `/tag/[slug]` | topic hubs | template-rendered |
 | `/masthead` etc | 12 trust pages | linked from footer |
 
-`articleHref(article)` in `apps/web/src/lib/article-href.ts` is the single source of truth — every internal `<Link href="/article/...">` should call this.
+`articleHref(article)` in `apps/web/src/lib/article-href.ts` is the single source of truth - every internal `<Link href="/article/...">` should call this.
 
 ## Sitemaps + indexing
 
-- `/sitemap-index.xml` (D1) — submit this single URL to GSC + Bing; it references the rest.
-- `/sitemap.xml` (D3) — every indexable URL (home, hubs, articles, trust pages); `revalidate=300`.
-- `/news-sitemap.xml` (D2) — Google News spec; only articles published in last 48h; `revalidate=60`.
-- `/rss/all.xml`, `/rss/district/<slug>.xml`, `/rss/category/<slug>.xml` (D6) — aggregator feeds.
-- `/.well-known/<key>.txt` (D5) — IndexNow ownership; reads `SiteConfig.indexnow_key`.
+- `/sitemap-index.xml` (D1) - submit this single URL to GSC + Bing; it references the rest.
+- `/sitemap.xml` (D3) - every indexable URL (home, hubs, articles, trust pages); `revalidate=300`.
+- `/news-sitemap.xml` (D2) - Google News spec; only articles published in last 48h; `revalidate=60`.
+- `/rss/all.xml`, `/rss/district/<slug>.xml`, `/rss/category/<slug>.xml` (D6) - aggregator feeds.
+- `/.well-known/<key>.txt` (D5) - IndexNow ownership; reads `SiteConfig.indexnow_key`.
 
 **robots.txt** (D4): allows Googlebot/Bingbot/DuckDuckBot/YandexBot families; explicitly disallows GPTBot, ClaudeBot, CCBot, PerplexityBot, Google-Extended, Bytespider, Applebot-Extended, Meta-ExternalAgent, FacebookBot, Diffbot, Cohere-ai, YouBot.
 
@@ -120,7 +120,7 @@ SiteConfig (key-value rows in `site_config`) drives every provider. Editor popul
 
 ### Pre-launch crawler audit
 
-`packages/db/scripts/seo-launch-audit.ts` — walks sitemap.xml, fetches each URL, reports non-200s + missing meta + dup titles + redirect chains. Exits non-zero on critical findings.
+`packages/db/scripts/seo-launch-audit.ts` - walks sitemap.xml, fetches each URL, reports non-200s + missing meta + dup titles + redirect chains. Exits non-zero on critical findings.
 
 ```bash
 BASE_URL=https://rayalaseemanews.com bun packages/db/scripts/seo-launch-audit.ts
@@ -138,17 +138,17 @@ BASE_URL=https://rayalaseemanews.com bun packages/db/scripts/seo-launch-audit.ts
 2. Check it's in `/news-sitemap.xml` if published < 48h ago: same grep against the news sitemap.
 3. Verify `articleHref` produces the same URL Googlebot sees: open the article and check `<link rel="canonical">`.
 4. GSC > URL inspection: paste the canonical URL; check coverage status. Common causes of non-index:
-   - "Crawled - currently not indexed" — Google's discretion; usually clears in 1-3 weeks as the page accrues internal links.
-   - "Discovered - currently not indexed" — Google hasn't crawled it. Check IndexNow ping was sent: search admin logs for `[indexnow]`.
-   - "Soft 404" — the page rendered but Google decided it's thin. Check that the article has a full body + featured image + non-empty NewsArticle JSON-LD.
-5. Check robots.txt: `curl https://rayalaseemanews.com/robots.txt` — the AI-bot disallows shouldn't apply, but verify Googlebot is in the allowlist.
+   - "Crawled - currently not indexed" - Google's discretion; usually clears in 1-3 weeks as the page accrues internal links.
+   - "Discovered - currently not indexed" - Google hasn't crawled it. Check IndexNow ping was sent: search admin logs for `[indexnow]`.
+   - "Soft 404" - the page rendered but Google decided it's thin. Check that the article has a full body + featured image + non-empty NewsArticle JSON-LD.
+5. Check robots.txt: `curl https://rayalaseemanews.com/robots.txt` - the AI-bot disallows shouldn't apply, but verify Googlebot is in the allowlist.
 
 ### "Schema is broken"
 
 1. Run the unit tests: `bun --filter=@rayalaseema/seo-schema test`.
 2. Open the article and run Google's Rich Results Test: `https://search.google.com/test/rich-results?url=<canonical>`.
-3. View source — copy the JSON inside `<script type="application/ld+json">`, paste into a JSON validator.
-4. If the generator output is malformed, the schema-validate workflow would have failed on the PR — check the workflow run.
+3. View source - copy the JSON inside `<script type="application/ld+json">`, paste into a JSON validator.
+4. If the generator output is malformed, the schema-validate workflow would have failed on the PR - check the workflow run.
 
 ### "IndexNow isn't pinging"
 
@@ -165,7 +165,7 @@ BASE_URL=https://rayalaseemanews.com bun packages/db/scripts/seo-launch-audit.ts
 
 ### "Brand search returns the train, not us"
 
-This is a known disambiguation problem — see `memory/project_brand_disambiguation.md`. Code-side mitigations are already shipped (NewsMediaOrganization.disambiguatingDescription + title pattern + alternateName). The long-game work is editorial: Wikipedia draft, Wikidata, PCI listing, news-directory backlinks with "news" anchor text.
+This is a known disambiguation problem - see `memory/project_brand_disambiguation.md`. Code-side mitigations are already shipped (NewsMediaOrganization.disambiguatingDescription + title pattern + alternateName). The long-game work is editorial: Wikipedia draft, Wikidata, PCI listing, news-directory backlinks with "news" anchor text.
 
 ## Where to look in the codebase
 
@@ -190,19 +190,19 @@ This is a known disambiguation problem — see `memory/project_brand_disambiguat
 
 ## Memory notes (persistent context across sessions)
 
-`~/.claude/projects/d--Rayalaseema-express/memory/` — Daisy's auto-memory store. Relevant files:
-- `project_seo_credentials.md` — `rsepress2026@gmail.com` owns new accounts
-- `project_seo_baseline.md` — GSC starting state
-- `feedback_seo_strategy.md` — foundation-over-per-article + AMP-is-dead
-- `project_brand_disambiguation.md` — train vs news brand
+`~/.claude/projects/d--Rayalaseema-express/memory/` - Daisy's auto-memory store. Relevant files:
+- `project_seo_credentials.md` - `rsepress2026@gmail.com` owns new accounts
+- `project_seo_baseline.md` - GSC starting state
+- `feedback_seo_strategy.md` - foundation-over-per-article + AMP-is-dead
+- `project_brand_disambiguation.md` - train vs news brand
 
 ## What's NOT in Spec #4
 
-- Sentry full Next.js wrap (instrumentation.ts + bundler config) — only the init shim ships
-- GA4 + GSC OAuth integrations for the daily check (CWV p75 + top queries) — placeholder
-- LiveBlogPosting admin UI for live-blog entry append — K5 ships schema only
-- AMP — deleted in A0, will not return
-- FAQPage schema — dead since May 2026 Google rich-results purge
-- llms.txt — research says zero consumer
+- Sentry full Next.js wrap (instrumentation.ts + bundler config) - only the init shim ships
+- GA4 + GSC OAuth integrations for the daily check (CWV p75 + top queries) - placeholder
+- LiveBlogPosting admin UI for live-blog entry append - K5 ships schema only
+- AMP - deleted in A0, will not return
+- FAQPage schema - dead since May 2026 Google rich-results purge
+- llms.txt - research says zero consumer
 
 Open issues + roadmap: `gh issue list --milestone "Phase 5: Analytics, SEO & Ads"` or read the epic body at #190.

@@ -1,4 +1,4 @@
-// POST .../versions/[versionId]/restore — copy a historical version's items
+// POST .../versions/[versionId]/restore - copy a historical version's items
 // back into the draft (Spec #3 D2 #182). The admin can then publish that
 // draft to promote it live; restore alone never changes the public state.
 import { NextRequest, NextResponse } from "next/server";

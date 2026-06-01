@@ -1,17 +1,17 @@
-// /api/content/[id]/payment — adjust the per-article payment amount after
+// /api/content/[id]/payment - adjust the per-article payment amount after
 // the sub-editor's initial set. Used by the payment panel on /content/[id]
 // and by inline edits on /payments.
 //
 // Editor + Admin only. Sub-editors can only set the amount via the
-// "Mark in review" action — not edit after the fact.
+// "Mark in review" action - not edit after the fact.
 //
-// Blocked once the payment has been settled (PAID) — at that point the bank
+// Blocked once the payment has been settled (PAID) - at that point the bank
 // transfer has already happened and the amount is historical fact.
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 
-// GET — the payment for one content row. Returns `null` if no payment row
+// GET - the payment for one content row. Returns `null` if no payment row
 // exists yet (the sub-editor hasn't picked up the article for review).
 // Used by the payment panel on /content/[id].
 export async function GET(
@@ -57,12 +57,12 @@ export async function PATCH(
         select: { id: true, baseAmount: true, status: true },
       });
       if (!payment) {
-        const err: any = new Error("No payment row — sub-editor hasn't set an amount yet");
+        const err: any = new Error("No payment row - sub-editor hasn't set an amount yet");
         err.status = 404;
         throw err;
       }
       if (payment.status === "PAID") {
-        const err: any = new Error("Payment already settled — amount cannot be changed");
+        const err: any = new Error("Payment already settled - amount cannot be changed");
         err.status = 409;
         throw err;
       }

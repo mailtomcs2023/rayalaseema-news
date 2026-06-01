@@ -53,7 +53,7 @@ export function verifyReporterToken(token?: string | null): string | null {
 // reporter's Expo app force-logs-out" work: the next API call returns 401,
 // and the app's `api()` clears the stored token and bounces to /login.
 export async function getReporterId(req: Request): Promise<string | null> {
-  // Path 1 — Bearer token (the Expo app sends this).
+  // Path 1 - Bearer token (the Expo app sends this).
   const header = req.headers.get("authorization") || "";
   const token = header.startsWith("Bearer ") ? header.slice(7).trim() : null;
   if (token) {
@@ -67,7 +67,7 @@ export async function getReporterId(req: Request): Promise<string | null> {
     return uid;
   }
 
-  // Path 2 — NextAuth session cookie (the reporter web portal). Same
+  // Path 2 - NextAuth session cookie (the reporter web portal). Same
   // active-check applies so a reporter the admin has deactivated can't keep
   // hitting the API just because their browser still has a session.
   const session = await auth();

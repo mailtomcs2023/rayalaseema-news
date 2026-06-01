@@ -1,13 +1,13 @@
 // Lightweight quality-check for the e-paper editor. Doesn't aim to be a real
-// Telugu spell-checker (that needs a maintained dictionary) — instead flags
+// Telugu spell-checker (that needs a maintained dictionary) - instead flags
 // the most common operator-time mistakes that would slip through and embarrass
 // the paper:
 //
-//   1. Long English-letter runs inside otherwise-Telugu titles/summaries —
+//   1. Long English-letter runs inside otherwise-Telugu titles/summaries -
 //      usually placeholder text the translator forgot to replace.
-//   2. Missing-glyph artifacts (□ ■ ?) — happens when a font can't render a
+//   2. Missing-glyph artifacts (□ ■ ?) - happens when a font can't render a
 //      character; surfaces here so DTP can switch fonts before print.
-//   3. Empty story blocks on rendered pages — render-time gate.
+//   3. Empty story blocks on rendered pages - render-time gate.
 //
 // Hooked into /api/epaper/render-v2 alongside the continuity check.
 
@@ -82,7 +82,7 @@ export async function findQualityWarnings(editionId: string): Promise<QualityWar
     : [];
   const articleById = new Map(articles.map((a) => [a.id, a]));
 
-  // Image asset license lookup (#98) — flag image blocks whose linked asset
+  // Image asset license lookup (#98) - flag image blocks whose linked asset
   // lacks licenseType so render-time use is blocked on legal-risk content.
   const imageAssetIds = Array.from(new Set(
     pages.flatMap((p) => ((p.layout as unknown as { blocks: Block[] }) ?? { blocks: [] }).blocks
@@ -115,13 +115,13 @@ export async function findQualityWarnings(editionId: string): Promise<QualityWar
           warnings.push({
             pageNumber: p.pageNumber, blockId: b.id, blockType: b.type,
             kind: "image-unlicensed",
-            detail: `Image "${asset?.title ?? b.adAssetId}" missing licenseType — set in image-asset library before publish.`,
+            detail: `Image "${asset?.title ?? b.adAssetId}" missing licenseType - set in image-asset library before publish.`,
           });
         } else if (asset.licenseExpiresAt && asset.licenseExpiresAt < new Date()) {
           warnings.push({
             pageNumber: p.pageNumber, blockId: b.id, blockType: b.type,
             kind: "image-unlicensed",
-            detail: `Image "${asset.title}" license expired on ${asset.licenseExpiresAt.toISOString().slice(0, 10)} — renew or replace.`,
+            detail: `Image "${asset.title}" license expired on ${asset.licenseExpiresAt.toISOString().slice(0, 10)} - renew or replace.`,
           });
         }
       }
@@ -136,7 +136,7 @@ export async function findQualityWarnings(editionId: string): Promise<QualityWar
       for (const w of checkText(title)) warnings.push({ pageNumber: p.pageNumber, blockId: b.id, blockType: b.type, ...w });
       for (const w of checkText(summary)) warnings.push({ pageNumber: p.pageNumber, blockId: b.id, blockType: b.type, ...w });
 
-      // Telugu typo scan — desk-scoped ignore list filters proper nouns.
+      // Telugu typo scan - desk-scoped ignore list filters proper nouns.
       const ignore = await getIgnore(a?.deskId ?? null);
       const titleTypos = await findTeluguTypos(title, ignore);
       const summaryTypos = await findTeluguTypos(summary, ignore);
@@ -162,7 +162,7 @@ export async function findQualityWarnings(editionId: string): Promise<QualityWar
           warnings.push({
             pageNumber: p.pageNumber, blockId: b.id, blockType: b.type,
             kind: "block-overflow",
-            detail: `Story body (${len} chars) exceeds block capacity (~${cap}) by ${overBy} chars — will be clipped. Resize block, split to continuation, or trim copy.`,
+            detail: `Story body (${len} chars) exceeds block capacity (~${cap}) by ${overBy} chars - will be clipped. Resize block, split to continuation, or trim copy.`,
           });
         }
       }

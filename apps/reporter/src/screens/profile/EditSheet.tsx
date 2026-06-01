@@ -277,13 +277,13 @@ export function EditSheet({ visible, field, currentValue, pending, onClose, onAf
 // a "you must upload" prompt the moment they tap a field that already has a
 // photo:
 //
-//   1. No current value — empty placeholder + Camera / Gallery side-by-side
+//   1. No current value - empty placeholder + Camera / Gallery side-by-side
 //      so they can pick the first time.
-//   2. Current value, no new pick — show the existing photo with a single
+//   2. Current value, no new pick - show the existing photo with a single
 //      "Replace photo" outline button. Tap it to get a Camera / Gallery /
 //      Cancel action sheet. The default position is "I'm happy with what I
 //      already uploaded".
-//   3. Current value + new pick — show the newly-picked image with a small
+//   3. Current value + new pick - show the newly-picked image with a small
 //      "Keep current photo" link so the reporter can back out without
 //      closing the sheet.
 function UrlField({
@@ -372,7 +372,7 @@ function ChipSelector({ options, value, onChange }: {
   );
 }
 
-// Multi-select chip row for "languages" — tap toggles each option in/out of
+// Multi-select chip row for "languages" - tap toggles each option in/out of
 // the selection set. Reporters can pick any combination.
 function MultiChipSelector({ options, value, onChange }: {
   options: string[]; value: string[]; onChange: (arr: string[]) => void;
@@ -403,7 +403,7 @@ function MultiChipSelector({ options, value, onChange }: {
   );
 }
 
-// Date picker — a tappable field that opens the native DateTimePicker.
+// Date picker - a tappable field that opens the native DateTimePicker.
 // On Android the picker is shown as a separate dialog; on iOS we wrap it in
 // a modal so it overlays cleanly on top of the bottom sheet.
 function DateField({ date, show, onShow, onChange, onDismiss }: {
@@ -414,7 +414,7 @@ function DateField({ date, show, onShow, onChange, onDismiss }: {
   onDismiss: () => void;
 }) {
   const { t } = useT();
-  const display = date ? date.toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" }) : "—";
+  const display = date ? date.toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" }) : "-";
   return (
     <View>
       <TouchableOpacity style={s.dateField} onPress={onShow} activeOpacity={0.7}>
@@ -512,7 +512,7 @@ const s = StyleSheet.create({
   chipText: { fontSize: 13, fontWeight: "600", color: "#374151" },
   chipTextActive: { color: "#fff", fontWeight: "700" },
 
-  // Date field — tappable row that opens the native picker
+  // Date field - tappable row that opens the native picker
   dateField: {
     flexDirection: "row", alignItems: "center", gap: 10,
     borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 10,

@@ -1,7 +1,7 @@
-// Spec #4 H7 (#240) — daily SEO health-check report.
+// Spec #4 H7 (#240) - daily SEO health-check report.
 //
 // Runs via .github/workflows/seo-daily-check.yml schedule (03:00 IST).
-// Outputs JSON + posts a digest to a webhook (Slack / Email / Discord —
+// Outputs JSON + posts a digest to a webhook (Slack / Email / Discord -
 // editor configures via SEO_HEALTH_WEBHOOK env var).
 //
 // Metrics captured:
@@ -14,7 +14,7 @@
 //   - count of pages returning non-200 from /sitemap.xml
 //   - total SiteConfig analytics IDs configured vs unset
 //
-// CWV p75 + top-10 GSC queries come from GA4 + GSC APIs separately — those
+// CWV p75 + top-10 GSC queries come from GA4 + GSC APIs separately - those
 // require OAuth that the daily script doesn't have set up yet. Tracked as
 // a follow-up.
 
@@ -95,7 +95,7 @@ async function main() {
   const webhook = process.env.SEO_HEALTH_WEBHOOK;
   if (webhook) {
     const text = [
-      "📊 *Rayalaseema News — daily SEO health*",
+      "📊 *Rayalaseema News - daily SEO health*",
       `\`${now.toISOString().slice(0, 10)}\``,
       "",
       `📝 24h: ${last24h} published · all-time: ${publishedTotal}`,

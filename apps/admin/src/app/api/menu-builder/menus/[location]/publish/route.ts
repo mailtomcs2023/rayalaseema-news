@@ -1,4 +1,4 @@
-// POST /api/menu-builder/menus/[location]/publish — promote draft → live
+// POST /api/menu-builder/menus/[location]/publish - promote draft → live
 // (Spec #3 D1). Snapshots a MenuVersion before promoting, invalidates the
 // web cache via revalidateTag('menu').
 import { NextRequest, NextResponse } from "next/server";
@@ -13,7 +13,7 @@ function parseLocation(slug: string): MenuLocation | null {
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ location: string }> }) {
-  const session = await requireAuth(["ADMIN", "EDITOR", "CHIEF_SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(session)) return session;
   try {
     const { location: slug } = await params;

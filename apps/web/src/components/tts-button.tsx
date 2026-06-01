@@ -52,7 +52,7 @@ export function TTSButton({ text }: { text: string }) {
       return;
     }
 
-    // Fresh play — strip HTML & limit length (browsers choke past ~30k chars).
+    // Fresh play - strip HTML & limit length (browsers choke past ~30k chars).
     const cleanText = text
       .replace(/<[^>]+>/g, " ")
       .replace(/&nbsp;/g, " ")

@@ -1,4 +1,4 @@
-// Page Builder (Spec #2) — single-composite endpoint.
+// Page Builder (Spec #2) - single-composite endpoint.
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, compositeBlocksSchema, Prisma } from "@rayalaseema/db";

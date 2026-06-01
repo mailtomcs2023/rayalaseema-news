@@ -1,4 +1,4 @@
-// Spec #4 C2 (#205) — /ethics-policy.
+// Spec #4 C2 (#205) - /ethics-policy.
 //
 // Linked from NewsMediaOrganization.ethicsPolicy in the root layout JSON-LD.
 // Required for Google News Publisher Center approval and a primary E-E-A-T
@@ -15,7 +15,7 @@ const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
 export const metadata: Metadata = {
   title: "Ethics Policy | రాయలసీమ న్యూస్",
   description:
-    "Rayalaseema News ethics policy — sourcing standards, conflict of interest, anonymous sources, gifts, and paid content disclosure.",
+    "Rayalaseema News ethics policy - sourcing standards, conflict of interest, anonymous sources, gifts, and paid content disclosure.",
   alternates: { canonical: `${SITE_URL}/ethics-policy` },
 };
 
@@ -40,8 +40,8 @@ export default function EthicsPolicyPage() {
 
           <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 32, marginBottom: 10 }}>Accuracy and verification</h2>
           <p>
-            Every factual claim is verified before publication. We prefer primary sources — official records,
-            on-the-record interviews, named sources — over secondary reporting. When we rely on another publication,
+            Every factual claim is verified before publication. We prefer primary sources - official records,
+            on-the-record interviews, named sources - over secondary reporting. When we rely on another publication,
             we attribute the original outlet and link to it where possible. We do not publish claims that cannot be
             verified, even if other outlets have.
           </p>
@@ -50,7 +50,7 @@ export default function EthicsPolicyPage() {
           <p>
             Rayalaseema News is independent of any political party, government office, or corporate interest.
             No reporter or editor may accept gifts, paid travel, or favours from sources, parties, or PR agencies
-            whose work they cover. Reporters disclose any personal connection — family, financial, or social — to
+            whose work they cover. Reporters disclose any personal connection - family, financial, or social - to
             the subject of a story before reporting it.
           </p>
 
@@ -65,7 +65,7 @@ export default function EthicsPolicyPage() {
 
           <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 32, marginBottom: 10 }}>Sponsored content</h2>
           <p>
-            Any article that is paid for by an external party — advertorial, sponsored content, branded campaign —
+            Any article that is paid for by an external party - advertorial, sponsored content, branded campaign -
             is clearly labelled "Sponsored" at the top of the article and excluded from the news desks. Sponsored
             content is never written by the news team and never carries an editorial byline. Editors retain the
             right to refuse sponsored content that conflicts with our editorial values.

@@ -1,6 +1,6 @@
 "use client";
 
-// Ad-slot picker (#145) — modal opened by clicking a masthead ad slot in
+// Ad-slot picker (#145) - modal opened by clicking a masthead ad slot in
 // the v2 editor. Lists active EpaperAdAsset rows; pick one → saves to
 // EpaperEdition.mastheadAds[slotName].
 

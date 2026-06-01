@@ -1,4 +1,4 @@
-// Spec #4 C5 (#208) — /diversity-policy.
+// Spec #4 C5 (#208) - /diversity-policy.
 
 import type { Metadata } from "next";
 import { Header } from "@/components/header";
@@ -10,7 +10,7 @@ const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
 export const metadata: Metadata = {
   title: "Diversity Policy | రాయలసీమ న్యూస్",
   description:
-    "Rayalaseema News diversity policy — coverage diversity, hiring practices, and our commitment to representation across the 8 districts.",
+    "Rayalaseema News diversity policy - coverage diversity, hiring practices, and our commitment to representation across the 8 districts.",
   alternates: { canonical: `${SITE_URL}/diversity-policy` },
 };
 
@@ -28,15 +28,15 @@ export default function DiversityPolicyPage() {
 
         <div className="article-body" style={{ fontSize: 16, lineHeight: 1.85, color: "#333" }}>
           <p>
-            Rayalaseema News is committed to representing the full breadth of the eight districts we cover —
-            Kurnool, Nandyal, Anantapuramu, Sri Sathya Sai, YSR-Kadapa, Annamayya, Tirupati, Chittoor — across
+            Rayalaseema News is committed to representing the full breadth of the eight districts we cover -
+            Kurnool, Nandyal, Anantapuramu, Sri Sathya Sai, YSR-Kadapa, Annamayya, Tirupati, Chittoor - across
             geography, gender, caste, religion, language, and economic background.
           </p>
 
           <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 32, marginBottom: 10 }}>Coverage diversity</h2>
           <p>
             We track our coverage across districts and constituencies to ensure no area is systematically
-            under-reported. Hyper-local stories — village panchayats, mandal-level disputes, single-school issues —
+            under-reported. Hyper-local stories - village panchayats, mandal-level disputes, single-school issues -
             sit alongside district and state coverage. We publish news in Telugu by default with English summaries
             so non-Telugu speakers can follow Rayalaseema stories.
           </p>
@@ -74,8 +74,8 @@ export default function DiversityPolicyPage() {
 
           <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 32, marginBottom: 10 }}>Annual review</h2>
           <p>
-            The editorial team reviews coverage and hiring patterns annually. Findings — including where we fell
-            short — are summarised in a public annual report.
+            The editorial team reviews coverage and hiring patterns annually. Findings - including where we fell
+            short - are summarised in a public annual report.
           </p>
         </div>
       </main>

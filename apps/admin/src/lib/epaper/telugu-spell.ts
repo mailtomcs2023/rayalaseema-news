@@ -3,7 +3,7 @@
 // MVP shipping plan:
 //   - Curated common-typo map: misspelling → correction. Editor sees a
 //     "telugu-typo" warning per occurrence. Starter list small + biased
-//     toward frequent journalistic mistakes — grows via DB updates.
+//     toward frequent journalistic mistakes - grows via DB updates.
 //   - Per-desk ignore list: proper nouns (place + person names) the typo
 //     scanner would otherwise false-positive on. Stored in EpaperSpellIgnore
 //     so chiefs can curate without code edits.
@@ -18,7 +18,7 @@ import { prisma } from "@rayalaseema/db";
 // Hand-curated from Telugu journalistic copy. Extend via DB import script.
 const COMMON_TYPOS: Record<string, string> = {
   // English-style spaces around punctuation that copy-paste from Word tends
-  // to produce — Telugu typography expects tight punctuation.
+  // to produce - Telugu typography expects tight punctuation.
   "ఎక్‌ప్రెస్": "ఎక్స్‌ప్రెస్",
   "నాయుడు ": "నాయుడు ",
   "శ్రీశైలం": "శ్రీశైలం",
@@ -41,7 +41,7 @@ const COMMON_TYPOS: Record<string, string> = {
 // Tokenizer: splits on whitespace + punctuation while keeping Telugu
 // conjuncts (Unicode block U+0C00..U+0C7F) intact.
 function tokenize(s: string): string[] {
-  return s.split(/[\s,.;:!?()\[\]"'…—–]+/u).filter(Boolean);
+  return s.split(/[\s,.;:!?()\[\]"'…–\-]+/u).filter(Boolean);
 }
 
 export interface TeluguTypoHit {
@@ -74,7 +74,7 @@ const IGNORE_TTL_MS = 5 * 60 * 1000;
 
 export async function loadIgnoreList(deskId?: string | null): Promise<Set<string>> {
   if (!ignoreCache || Date.now() - ignoreCache.at > IGNORE_TTL_MS) {
-    // EpaperSpellIgnore is created lazily — if the model doesn't exist yet
+    // EpaperSpellIgnore is created lazily - if the model doesn't exist yet
     // (rolling out gradually) return an empty set so render path doesn't fail.
     try {
       const rows = await (prisma as any).epaperSpellIgnore?.findMany?.({

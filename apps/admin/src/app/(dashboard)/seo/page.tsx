@@ -1,4 +1,4 @@
-// Spec #4 I2 (#242) — internal SEO dashboard.
+// Spec #4 I2 (#242) - internal SEO dashboard.
 //
 // One-glance view of the SEO health metrics the daily check (H7 #240)
 // computes. Editors land here from the dashboard sidebar; surfaces:
@@ -8,13 +8,12 @@
 //   - analytics-ID configuration state (GA4 / Bing / Clarity / Sentry / IndexNow)
 //   - SiteConfig links to /settings for editors who need to populate IDs
 //
-// CWV p75 + GSC query data require external OAuth (Google APIs) — they
+// CWV p75 + GSC query data require external OAuth (Google APIs) - they
 // land in a follow-up once the GSC + GA4 service accounts are wired. For
 // V1 this page is a first-party-data summary that doesn't depend on
 // external auth.
 
 import Link from "next/link";
-import { Sidebar } from "@/components/sidebar";
 import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError } from "@/lib/api-utils";
 import { redirect } from "next/navigation";
@@ -29,12 +28,12 @@ const ANALYTICS_KEYS = [
   ["clarity_project_id", "Microsoft Clarity"],
   ["indexnow_key", "IndexNow (Bing/Yandex)"],
   ["google_news_publisher_id", "Google News Publisher"],
-  ["sentry_dsn_web", "Sentry — apps/web"],
-  ["sentry_dsn_admin", "Sentry — apps/admin"],
+  ["sentry_dsn_web", "Sentry - apps/web"],
+  ["sentry_dsn_admin", "Sentry - apps/admin"],
 ];
 
 export default async function SeoDashboardPage() {
-  const session = await requireAuth(["ADMIN", "EDITOR", "CHIEF_SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR"]);
   if (isAuthError(session)) redirect("/login");
 
   const now = new Date();
@@ -71,7 +70,6 @@ export default async function SeoDashboardPage() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
-      <Sidebar />
       <main style={{ flex: 1, padding: "32px 24px", background: "#f9fafb" }}>
         <h1 style={{ fontSize: 28, fontWeight: 800, color: "#111", marginBottom: 6 }}>SEO Dashboard</h1>
         <p style={{ fontSize: 13, color: "#888", marginBottom: 28 }}>

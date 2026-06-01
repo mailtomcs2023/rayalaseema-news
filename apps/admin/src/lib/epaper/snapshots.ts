@@ -3,9 +3,9 @@
 // A snapshot captures every EpaperPage's `layout`/`templateSlug`/`label`/
 // `version` for an edition at a moment in time. Restoring writes a fresh
 // "pre-restore" snapshot of the current state first, then overwrites every
-// page from the chosen snapshot — so rollback is itself undoable.
+// page from the chosen snapshot - so rollback is itself undoable.
 //
-// We deliberately do NOT snapshot ads, rendered PDFs, or the edition status —
+// We deliberately do NOT snapshot ads, rendered PDFs, or the edition status -
 // those are regenerated artifacts that can be rebuilt from layout + assets.
 
 import { prisma } from "@rayalaseema/db";
@@ -61,7 +61,7 @@ export async function createSnapshot(
  *   - If a snapshot page references a pageNumber no longer in the edition,
  *     create a new EpaperPage row at that pageNumber.
  *   - Current pages whose pageNumber doesn't appear in the snapshot are
- *     deleted — restoring means "make it look like the snapshot".
+ *     deleted - restoring means "make it look like the snapshot".
  */
 export async function restoreSnapshot(snapshotId: string, restoredById?: string) {
   const snap = await prisma.epaperEditionSnapshot.findUnique({ where: { id: snapshotId } });

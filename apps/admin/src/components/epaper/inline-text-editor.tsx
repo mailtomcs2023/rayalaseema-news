@@ -12,7 +12,17 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import Link from "@tiptap/extension-link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export interface InlineTextEditorProps {
   value: string;
@@ -43,7 +53,7 @@ export function InlineTextEditor({
         blockquote: multiline ? undefined : false,
         codeBlock: multiline ? undefined : false,
         horizontalRule: false,
-        // TipTap v3 removed `history` from StarterKit options — the History
+        // TipTap v3 removed `history` from StarterKit options - the History
         // extension is bundled with default depth 100. Customize via
         // disabling here + .extend({ depth: 50 }) if we need shallower undo.
       }),
@@ -86,6 +96,26 @@ export function InlineTextEditor({
     }
   }, [value, editor, multiline]);
 
+  // Link dialog state - replaces window.prompt(). Opening it captures the
+  // current href so we can pre-fill the input; submitting an empty string
+  // unsets the link (matches the old prompt behaviour).
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
+
+  const openLinkDialog = () => {
+    if (!editor) return;
+    const prev = editor.getAttributes("link").href as string | undefined;
+    setLinkUrl(prev || "https://");
+    setLinkOpen(true);
+  };
+  const applyLink = () => {
+    if (!editor) return;
+    const url = linkUrl.trim();
+    if (url === "") editor.chain().focus().unsetLink().run();
+    else editor.chain().focus().setLink({ href: url }).run();
+    setLinkOpen(false);
+  };
+
   if (!editor) return null;
 
   return (
@@ -98,18 +128,33 @@ export function InlineTextEditor({
             style={btn(editor.isActive("italic"))} title="Italic (Ctrl+I)"><i>I</i></button>
           <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleStrike().run(); }}
             style={btn(editor.isActive("strike"))} title="Strike"><s>S</s></button>
-          <button onMouseDown={(e) => {
-              e.preventDefault();
-              const prev = editor.getAttributes("link").href as string | undefined;
-              const url = window.prompt("URL:", prev || "https://");
-              if (url === null) return;
-              if (url === "") editor.chain().focus().unsetLink().run();
-              else editor.chain().focus().setLink({ href: url }).run();
-            }}
+          <button onMouseDown={(e) => { e.preventDefault(); openLinkDialog(); }}
             style={btn(editor.isActive("link"))} title="Link">🔗</button>
         </div>
       )}
       <EditorContent editor={editor} />
+
+      <Dialog open={linkOpen} onOpenChange={setLinkOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add link</DialogTitle>
+            <DialogDescription>
+              Paste the URL the selected text should link to. Leave empty to remove the link.
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            value={linkUrl}
+            onChange={(e) => setLinkUrl(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyLink(); } }}
+            placeholder="https://example.com"
+            autoFocus
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLinkOpen(false)}>Cancel</Button>
+            <Button onClick={applyLink}>Apply</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

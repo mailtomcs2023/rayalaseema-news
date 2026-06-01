@@ -1,4 +1,4 @@
-// /content/[id] — morphing editor (Spec #1 #117 + F2-F6).
+// /content/[id] - morphing editor (Spec #1 #117 + F2-F6).
 //
 // F1 ships: common fields (Title, Slug, Summary, Category, Desk, Constituency,
 // Featured image, Tags, Featured?, Language, Status) + ARTICLE subform (body
@@ -9,19 +9,42 @@
 // the type-specific subform panel surfaces a "coming soon" callout.
 "use client";
 
+import { ArrowLeft, ChevronDown as ChevronDownIcon, Sparkles } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Sidebar } from "@/components/sidebar";
+import { buildSlugFromTitle, isPlaceholderSlug, sanitizeSlug } from "@/lib/slug";
 import { RichEditor, type RichEditorRef } from "@/components/rich-editor";
 import { ImageUpload } from "@/components/image-upload";
 import { ContentPayloadEditor } from "@/components/content-payload-editor";
 import { ImageSearchModal } from "@/components/image-search-modal";
 import { ImageCropModal } from "@/components/image-crop-modal";
 import { PaymentPanel } from "@/components/content/payment-panel";
-import { ReviewerPanel } from "@/components/content/reviewer-panel";
+import { TagSuggestions } from "@/components/content/tag-suggestions";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
-interface Category { id: string; name: string; nameEn: string; slug: string }
+interface Category { id: string; name: string; nameEn: string; slug: string; parentId?: string | null }
+
+// ISO timestamp -> the local-time "YYYY-MM-DDTHH:mm" the <DateTimePicker>
+// expects. Empty string when the row has no scheduled time. Centralised so
+// the load useEffect and the dirty-check snapshot can't drift.
+function formatScheduledForInput(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const off = d.getTimezoneOffset() * 60000;
+  return new Date(d.getTime() - off).toISOString().slice(0, 16);
+}
 
 const TYPE_META: Record<string, { label: string; bg: string; fg: string }> = {
   ARTICLE: { label: "Article", bg: "#fee2e2", fg: "#991b1b" },
@@ -38,7 +61,7 @@ export default function ContentEditorPage() {
   const params = useParams();
   const contentId = params.id as string;
 
-  // Role gate — only EDITOR/ADMIN can move content into PUBLISHED / SCHEDULED /
+  // Role gate - only EDITOR/ADMIN can move content into PUBLISHED / SCHEDULED /
   // APPROVED. Sub-editor + reporter see Save Draft only, and the Status
   // dropdown hides the gated values so they can't bypass via the select.
   const { data: session } = useSession();
@@ -61,7 +84,7 @@ export default function ContentEditorPage() {
   const [body, setBody] = useState("");
   const [featuredImage, setFeaturedImage] = useState("");
   const [categoryId, setCategoryId] = useState("");
-  // Multi-category cross-listing — IDs of categories this row should ALSO
+  // Multi-category cross-listing - IDs of categories this row should ALSO
   // appear under (primary stays in categoryId). Editor renders a chip list
   // below the primary dropdown.
   const [additionalCategoryIds, setAdditionalCategoryIds] = useState<string[]>([]);
@@ -115,16 +138,82 @@ export default function ContentEditorPage() {
   const [payloadError, setPayloadError] = useState("");
 
   // AI helpers (translate / editorial / summarize / headline) + URL fetch.
-  // Ported from the legacy /articles/[id] editor — same /api/ai/rewrite and
+  // Ported from the legacy /articles/[id] editor - same /api/ai/rewrite and
   // /api/fetch-news endpoints, now wired into the unified content editor.
   const [aiLoading, setAiLoading] = useState<string | null>(null);
   const [pasteUrl, setPasteUrl] = useState("");
+  // Headline picker - filled when the user clicks "Headline ideas" and the
+  // AI returns its numbered list. Popover anchors to the button and each
+  // row sets the Title field on click. Avoids the old dead-end toast.
+  const [headlineIdeas, setHeadlineIdeas] = useState<string[]>([]);
+  const [headlineOpen, setHeadlineOpen] = useState(false);
 
   const editorRef = useRef<RichEditorRef>(null);
+  // Snapshot of every editable field at load time. The Update button is
+  // disabled while the current form state JSON-stringifies to the same value -
+  // so a freshly-loaded row with no edits can't be re-saved by accident, and
+  // editors get visual feedback that "yes, I've actually changed something".
+  // Reset only on a fresh load (the post-save flow navigates away).
+  const initialSnapshotRef = useRef<string | null>(null);
+
+  // Pipe error/success state through Sonner toasts - the inline banner was
+  // removed in the visual refactor, but every existing setError/setSuccess
+  // call still surfaces visibly via these effects. Empty-string resets are
+  // skipped so a setError("") doesn't trigger a phantom toast.
+  useEffect(() => {
+    if (error) toast.error(error);
+  }, [error]);
+  useEffect(() => {
+    if (success) toast.success(success);
+  }, [success]);
+
+  // ─── Auto slug from title ────────────────────────────────────────────────
+  // Watches the title with a 1s debounce. If the slug is still a placeholder
+  // (`untitled-…` / `breaking-…` / `news-…` / empty) we fire the AI `slug`
+  // action and replace it with a short English SEO slug. Two safety nets:
+  //   - userTouchedSlug ref - once the editor types in the slug field, this
+  //     effect stops touching it. No surprise overwrites.
+  //   - Transliteration fallback if AI returns empty / garbage.
+  // Reporters never see the slug field but this effect still runs for them,
+  // so the placeholder slug gets replaced with a real one before save.
+  const userTouchedSlug = useRef(false);
+  useEffect(() => {
+    if (userTouchedSlug.current) return;
+    if (!title.trim()) return;
+    if (!isPlaceholderSlug(slug)) return;
+    // Skip the "Untitled <Type>" placeholder title that /content/new stamps.
+    if (/^untitled\b/i.test(title.trim())) return;
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/ai/rewrite", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: title, action: "slug" }),
+        });
+        const data = await res.json().catch(() => ({}));
+        const aiSlug = sanitizeSlug(String(data?.result ?? ""));
+        // Guard against AI returning empty, all-numeric, or suspiciously long
+        // output - fall back to client-side transliteration via the shared
+        // buildSlugFromTitle helper.
+        const next = aiSlug && aiSlug.length >= 3 && aiSlug.length <= 80
+          ? aiSlug
+          : buildSlugFromTitle(title);
+        if (!userTouchedSlug.current && next && next !== slug) {
+          setSlug(next);
+        }
+      } catch {
+        // Network/AI failure → use transliteration fallback so the slug
+        // still becomes meaningful instead of staying placeholder.
+        const fallback = buildSlugFromTitle(title);
+        if (!userTouchedSlug.current && fallback) setSlug(fallback);
+      }
+    }, 1000);
+    return () => clearTimeout(t);
+  }, [title, slug]);
 
   const runAI = async (action: "translate" | "editorial" | "summarize" | "headline") => {
     const text = body || summary || title;
-    if (!text) { setError("No content to process — type or paste something first."); return; }
+    if (!text) { setError("No content to process - type or paste something first."); return; }
     setAiLoading(action);
     setError("");
     setSuccess("");
@@ -148,9 +237,24 @@ export default function ContentEditorPage() {
           setSummary(String(data.result).replace(/<[^>]+>/g, "").trim());
           setSuccess("Summary generated.");
         } else if (action === "headline") {
-          setSuccess(String(data.result));
+          // The AI returns a numbered list like "1. ...\n2. ...". Strip
+          // any stray tags + leading "1." / "1)" / "1:" prefixes and split
+          // into discrete headlines. If parsing comes up short (model
+          // returned a paragraph instead of a list), fall back to the old
+          // toast so the editor still sees the raw suggestion.
+          const lines = String(data.result)
+            .replace(/<[^>]+>/g, "")
+            .split(/\r?\n/)
+            .map((s) => s.replace(/^\s*\d+\s*[.):\-]\s*/, "").trim())
+            .filter(Boolean);
+          if (lines.length >= 2) {
+            setHeadlineIdeas(lines.slice(0, 5));
+            setHeadlineOpen(true);
+          } else {
+            setSuccess(String(data.result));
+          }
         } else {
-          // Translate / editorial — full body rewrite.
+          // Translate / editorial - full body rewrite.
           const h2 = data.result.match(/<h2[^>]*>(.*?)<\/h2>/);
           if (h2) setTitle(h2[1].replace(/<[^>]+>/g, "").trim());
           const p = data.result.match(/<p[^>]*>(.*?)<\/p>/);
@@ -196,7 +300,7 @@ export default function ContentEditorPage() {
         setBody(data.body);
         editorRef.current?.setContent(data.body);
       }
-      // Always set when fetching fresh from URL — user paste-URL means they
+      // Always set when fetching fresh from URL - user paste-URL means they
       // want the source's image. If they don't want it, they can clear it
       // manually. (Was previously conditional on !featuredImage which
       // silently dropped the source's og:image when an old image lingered.)
@@ -231,6 +335,12 @@ export default function ContentEditorPage() {
       setType(row.type || "ARTICLE");
       setTitle(row.title || "");
       setSlug(row.slug || "");
+      // If the loaded slug is already non-placeholder, treat it as user-
+      // edited so the auto-slug effect won't try to "improve" it on next
+      // title keystroke.
+      if (row.slug && !isPlaceholderSlug(row.slug)) {
+        userTouchedSlug.current = true;
+      }
       setSummary(row.summary || "");
       setBody(row.body || "");
       setFeaturedImage(row.featuredImage || "");
@@ -242,24 +352,48 @@ export default function ContentEditorPage() {
       setFeatured(!!row.featured);
       setLanguage(row.language || "TELUGU");
       setSourceUrl(row.sourceUrl || "");
-      if (row.scheduledAt) {
-        const d = new Date(row.scheduledAt);
-        const off = d.getTimezoneOffset() * 60000;
-        setScheduledAt(new Date(d.getTime() - off).toISOString().slice(0, 16));
-      }
-      if (Array.isArray(row.tags)) {
-        setTagsInput(row.tags.map((t: any) => t.tag?.name).filter(Boolean).join(", "));
-      }
+      const initialScheduledAt = formatScheduledForInput(row.scheduledAt);
+      setScheduledAt(initialScheduledAt);
+      const initialTags = Array.isArray(row.tags)
+        ? row.tags.map((t: any) => t.tag?.name).filter(Boolean).join(", ")
+        : "";
+      setTagsInput(initialTags);
       // Project payload into the right state shape per type. ARTICLE pulls
       // rating + reviewerName into dedicated inputs; everything else hands the
       // raw payload to ContentPayloadEditor which switches on type internally.
       const payload = row.payload || {};
-      if (row.type === "ARTICLE") {
-        setRating(typeof payload.rating === "number" ? String(payload.rating) : "");
-        setReviewerName(payload.reviewerName || "");
+      const isArticle = row.type === "ARTICLE";
+      const initialRating = isArticle && typeof payload.rating === "number" ? String(payload.rating) : "";
+      const initialReviewerName = isArticle ? (payload.reviewerName || "") : "";
+      const initialTypedPayload = !isArticle ? (payload as Record<string, unknown>) : {};
+      if (isArticle) {
+        setRating(initialRating);
+        setReviewerName(initialReviewerName);
       } else {
-        setTypedPayload(payload as Record<string, unknown>);
+        setTypedPayload(initialTypedPayload);
       }
+      // Snapshot must mirror buildFormSnapshot() shape exactly - any drift
+      // here means the dirty check fires (or fails to fire) incorrectly.
+      initialSnapshotRef.current = JSON.stringify({
+        title: row.title || "",
+        slug: row.slug || "",
+        summary: row.summary || "",
+        body: isArticle ? (row.body || "") : "",
+        featuredImage: row.featuredImage || "",
+        categoryId: row.categoryId || "",
+        additionalCategoryIds: [...(Array.isArray(row.additionalCategoryIds) ? row.additionalCategoryIds : [])].sort(),
+        deskId: row.deskId || "",
+        constituencyId: row.constituencyId || "",
+        status: row.status || "DRAFT",
+        featured: !!row.featured,
+        language: row.language || "TELUGU",
+        sourceUrl: row.sourceUrl || "",
+        scheduledAt: initialScheduledAt,
+        tagsInput: initialTags,
+        rating: initialRating,
+        reviewerName: initialReviewerName,
+        typedPayload: initialTypedPayload,
+      });
       setLoading(false);
     });
   }, [contentId]);
@@ -289,6 +423,12 @@ export default function ContentEditorPage() {
     setError("");
     setSuccess("");
     setPayloadError("");
+    // Capture the status BEFORE save so the success toast can distinguish
+    // a state transition ("Article published") from a same-status re-save
+    // ("Article updated"). Without this, clicking Update on a PUBLISHED
+    // row toasts "Article published" - confusing since nothing was newly
+    // published, it was already live.
+    const prevStatus = status;
 
     const payload = buildPayload();
     if (payload === undefined) {
@@ -298,8 +438,11 @@ export default function ContentEditorPage() {
 
     const finalStatus = newStatus || status;
 
+    // `type` is intentionally omitted - content type isn't updatable after
+    // creation, and the PUT schema (.strict()) rejects unknown fields. The
+    // `type === "ARTICLE"` check below still uses the local state variable
+    // to decide whether to send the `body` payload.
     const body_ = {
-      type,
       title,
       slug,
       summary: summary || null,
@@ -326,14 +469,51 @@ export default function ContentEditorPage() {
       });
       const data = await res.json();
       if (!res.ok) {
+        // Special-case the KYC gate so the error has a useful CTA. The
+        // server attaches `kycRequired: true` on 403 from lib/kyc-guard.ts.
+        // This now fires on any edit/save (not just publish) for unverified
+        // non-ADMIN users - data.error carries the action-specific message.
+        if (data.kycRequired) {
+          toast.error(data.error || "Your KYC must be verified to edit articles.", {
+            action: { label: "Complete KYC", onClick: () => router.push("/onboarding/kyc") },
+            duration: 8000,
+          });
+          setError("");
+          setSaving(false);
+          return;
+        }
         const fieldErrs = data.fieldErrors
           ? Object.entries(data.fieldErrors).map(([k, v]) => `${k}: ${(v as string[]).join(", ")}`).join(" · ")
           : "";
         setError(data.error + (fieldErrs ? ` (${fieldErrs})` : "") || `Save failed (${res.status})`);
       } else {
         setStatus(data.status);
-        setSuccess("Saved");
-        setTimeout(() => setSuccess(""), 2000);
+        // Toast message reflects what *changed*, not just the final state:
+        //   - status unchanged → "Article updated" (re-saving the same row)
+        //   - status changed   → message for the new state
+        // Server-returned `data.status` is the source of truth (covers
+        // edge cases like SCHEDULED → DRAFT fallback when scheduledAt is
+        // in the past).
+        const transitionMsg: Record<string, string> = {
+          PUBLISHED: "Article published",
+          SCHEDULED: "Article scheduled",
+          DRAFT: "Draft saved",
+          SUBMITTED: "Submitted for review",
+          APPROVED: "Approved",
+          REJECTED: "Rejected",
+          ARCHIVED: "Archived",
+        };
+        const toastMsg = data.status === prevStatus
+          ? "Article updated"
+          : transitionMsg[data.status] || "Saved";
+        toast.success(toastMsg);
+        // After any successful save, send the user back to /content and
+        // invalidate the App Router cache so the list re-runs its server
+        // fetch and reflects the row's new state (status, slug, etc.).
+        setTimeout(() => {
+          router.push("/content");
+          router.refresh();
+        }, 500);
       }
     } catch (e: any) {
       setError(e.message || "Save failed");
@@ -344,7 +524,6 @@ export default function ContentEditorPage() {
   if (loading) {
     return (
       <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-        <Sidebar />
         <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>Loading…</main>
       </div>
     );
@@ -354,163 +533,256 @@ export default function ContentEditorPage() {
   const constituencies = districts.flatMap((d) =>
     (d.constituencies || []).map((c: any) => ({ ...c, districtName: d.nameEn })));
 
+  // Mirror of the load-time snapshot, computed from live state. Shape MUST
+  // match the JSON.stringify in the load useEffect or the dirty check lies.
+  const currentSnapshot = JSON.stringify({
+    title,
+    slug,
+    summary,
+    body: type === "ARTICLE" ? body : "",
+    featuredImage,
+    categoryId,
+    additionalCategoryIds: [...additionalCategoryIds].sort(),
+    deskId,
+    constituencyId,
+    status,
+    featured,
+    language,
+    sourceUrl,
+    scheduledAt,
+    tagsInput,
+    rating: type === "ARTICLE" ? rating : "",
+    reviewerName: type === "ARTICLE" ? reviewerName : "",
+    typedPayload: type !== "ARTICLE" ? typedPayload : {},
+  });
+  const isDirty = initialSnapshotRef.current !== null && currentSnapshot !== initialSnapshotRef.current;
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-      <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
-          <button onClick={() => router.push("/content")}
-            style={{ padding: "6px 12px", background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 13, cursor: "pointer" }}>
-            ← Back
-          </button>
-          <span style={{ fontSize: 12, fontWeight: 700, color: typeMeta.fg, background: typeMeta.bg, padding: "4px 10px", borderRadius: 4 }}>
+        <div className="shadcn-scope mb-4 flex flex-wrap items-center gap-3">
+          <Button variant="outline" size="sm" onClick={() => router.push("/content")}>
+            <ArrowLeft size={14} aria-hidden className="-ms-1" />
+            Back
+          </Button>
+          <Badge
+            variant="outline"
+            className="border text-xs font-bold"
+            style={{ background: typeMeta.bg, color: typeMeta.fg, borderColor: "transparent" }}
+          >
             {typeMeta.label}
-          </span>
-          <span style={{ fontSize: 12, color: "#6b7280" }}>·</span>
-          <span style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>Status: {status}</span>
-          {slug && <span style={{ fontSize: 12, color: "#6b7280", fontFamily: "monospace" }}>/{slug}</span>}
-          <div style={{ flex: 1 }} />
-          <button onClick={() => handleSave()} disabled={saving}
-            style={{ padding: "8px 16px", background: "#fff", color: "#374151", border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: saving ? "not-allowed" : "pointer" }}>
-            {saving ? "Saving…" : "Save Draft"}
-          </button>
-          {/* Publish is gated to Editor/Admin — sub-editors approve to APPROVED
-              (handled from /review), editors do the final publish from there
-              or from this button. Reporters and sub-editors don't see it. */}
-          {canPublish && (
-            <button onClick={() => handleSave("PUBLISHED")} disabled={saving}
-              style={{ padding: "8px 16px", background: "#dc2626", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>
-              Publish
-            </button>
-          )}
+          </Badge>
+          <Badge variant="outline" className="text-xs">
+            {status}
+          </Badge>
+          <div className="flex-1" />
+          {/* Cancel discards the in-progress edits and returns to /content.
+              Update persists every field as-is, including any status the
+              editor picked in the right-rail dropdown - so changing Status
+              from SUBMITTED to APPROVED and clicking Update commits the
+              transition. Workflow gating still lives on the server. */}
+          <Button variant="outline" onClick={() => router.push("/content")} disabled={saving}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => handleSave()}
+            disabled={saving || !isDirty}
+            className="bg-red-600 hover:bg-red-700 text-white"
+            title={!isDirty ? "No changes to save" : undefined}
+          >
+            {saving ? "Updating…" : "Update"}
+          </Button>
         </div>
 
-        {error && (
-          <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: 13, color: "#dc2626" }}>{error}</div>
-        )}
-        {success && (
-          <div style={{ background: "#dcfce7", border: "1px solid #bbf7d0", borderRadius: 8, padding: "8px 14px", marginBottom: 16, fontSize: 13, color: "#166534" }}>{success}</div>
-        )}
-
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 320px", gap: 20 }}>
+        <div className="shadcn-scope grid gap-5" style={{ gridTemplateColumns: "minmax(0, 1fr) 320px" }}>
           {/* Main column */}
-          <div style={{ background: "#fff", borderRadius: 10, padding: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
-            {/* Featured image — pinned at the top so the hero visual is the
-                first thing the editor sees and confirms before scrolling down
-                to title/body. */}
-            <label style={lblStyle}>Featured image</label>
-            <ImageUpload value={featuredImage} onChange={setFeaturedImage} />
-            <div style={{ display: "flex", gap: 6, marginTop: 8, marginBottom: 16 }}>
-              <button
-                type="button"
-                onClick={() => setImageSearchOpen(true)}
-                style={{
-                  flex: 1, padding: "6px 12px", background: "#fff", color: "#374151",
-                  border: "1px solid #d1d5db", borderRadius: 6, fontSize: 12, fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                🔍 Search free / web images
-              </button>
-              <button
-                type="button"
-                onClick={() => featuredImage && setCropSrc(featuredImage)}
-                disabled={!featuredImage}
-                title={featuredImage ? "Open the crop modal — adjust framing before publishing" : "No image to crop yet"}
-                style={{
-                  padding: "6px 14px", background: featuredImage ? "#fff" : "#f3f4f6",
-                  color: featuredImage ? "#374151" : "#9ca3af",
-                  border: "1px solid #d1d5db", borderRadius: 6, fontSize: 12, fontWeight: 600,
-                  cursor: featuredImage ? "pointer" : "not-allowed",
-                }}
-              >
-                ✂ Crop
-              </button>
-            </div>
-
-            {/* AI enhance row — only visible once an image is set. ~$0.06 per
-                operation. Result replaces featuredImage in place. */}
-            {featuredImage && (
-              <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 16 }}>
-                {[
-                  { op: "remove-watermark", label: "🚫 Remove watermark" },
-                  { op: "enhance", label: "✨ Enhance" },
-                  { op: "upscale", label: "🔍+ Upscale" },
-                  { op: "restore", label: "🛠 Restore" },
-                ].map((b) => (
-                  <button
-                    key={b.op}
-                    type="button"
-                    onClick={() => enhanceImage(b.op)}
-                    disabled={enhancing !== null}
-                    title={`AI '${b.op}' — gpt-image-2, ~15s, ~$0.06`}
-                    style={{
-                      padding: "4px 10px",
-                      background: enhancing === b.op ? "#7c3aed" : "#f5f3ff",
-                      color: enhancing === b.op ? "#fff" : "#5b21b6",
-                      border: "1px solid #c4b5fd", borderRadius: 999,
-                      fontSize: 11, fontWeight: 600,
-                      cursor: enhancing ? "not-allowed" : "pointer",
-                      opacity: enhancing && enhancing !== b.op ? 0.5 : 1,
-                    }}
-                  >
-                    {enhancing === b.op ? "Running…" : b.label}
-                  </button>
-                ))}
+          <Card className="gap-4 py-5">
+            <CardContent className="space-y-4">
+              {/* Featured image - pinned at the top so the hero visual is the
+                  first thing the editor sees and confirms before scrolling down
+                  to title/body. */}
+              <div className="space-y-2">
+                <Label>Featured image</Label>
+                <ImageUpload
+                  value={featuredImage}
+                  onChange={setFeaturedImage}
+                  onSearchClick={() => setImageSearchOpen(true)}
+                />
+                {/* Crop opens the crop modal so the editor can reframe before
+                    publishing. Disabled until an image is set. */}
+                {featuredImage && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setCropSrc(featuredImage)}
+                    >
+                      Crop
+                    </Button>
+                    {/* AI enhance row - only visible once an image is set.
+                        ~$0.06 per operation. Result replaces featuredImage. */}
+                    {[
+                      { op: "remove-watermark", label: "Remove watermark" },
+                      { op: "enhance", label: "Enhance" },
+                      { op: "upscale", label: "Upscale" },
+                      { op: "restore", label: "Restore" },
+                    ].map((b) => (
+                      <Button
+                        key={b.op}
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => enhanceImage(b.op)}
+                        disabled={enhancing !== null}
+                        title={`AI '${b.op}' - gpt-image-2, ~15s, ~$0.06`}
+                        className={enhancing && enhancing !== b.op ? "opacity-50" : ""}
+                      >
+                        {enhancing === b.op ? "Running…" : b.label}
+                      </Button>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
 
-            {/* Common */}
-            <label style={lblStyle}>Title *</label>
-            <input value={title} onChange={(e) => setTitle(e.target.value)}
-              style={{ ...inpStyle, fontSize: 20, fontWeight: 700 }} />
+              {/* Common */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="title-input">Title *</Label>
+                  {type === "ARTICLE" && (
+                    <Popover open={headlineOpen} onOpenChange={setHeadlineOpen}>
+                      <PopoverAnchor asChild>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => runAI("headline")}
+                          disabled={aiLoading !== null}
+                          className="h-7 gap-1 px-2 text-xs text-slate-600 hover:text-slate-900"
+                        >
+                          <Sparkles className="h-3.5 w-3.5" />
+                          {aiLoading === "headline" ? "Generating…" : "Headline ideas"}
+                        </Button>
+                      </PopoverAnchor>
+                      <PopoverContent align="end" className="w-96 p-2">
+                        <div className="mb-1 px-2 pt-1 text-xs font-medium text-slate-500">
+                          Pick one to set as title
+                        </div>
+                        <div className="flex flex-col gap-0.5">
+                          {headlineIdeas.map((h, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => {
+                                setTitle(h);
+                                setHeadlineOpen(false);
+                                setSuccess("Title updated.");
+                              }}
+                              className="rounded-md px-2 py-2 text-left text-sm leading-snug hover:bg-slate-100"
+                            >
+                              {h}
+                            </button>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                </div>
+                <Input
+                  id="title-input"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="h-12 bg-white text-lg font-bold md:text-lg"
+                />
+              </div>
 
-            <label style={lblStyle}>Slug</label>
-            <input value={slug} onChange={(e) => setSlug(e.target.value)}
-              placeholder={type === "BREAKING_NEWS" ? "(optional for breaking)" : "url-segment"}
-              style={{ ...inpStyle, fontFamily: "monospace", fontSize: 13 }} />
-
-            <label style={lblStyle}>Summary</label>
-            <textarea value={summary} onChange={(e) => setSummary(e.target.value)} rows={2}
-              placeholder="Short 60-word summary..." style={{ ...inpStyle, resize: "vertical" }} />
-
-            {/* AI assist — ARTICLE only. Paste URL → fetch + translate, or
-                run translate / editorial / summarize / headline on the
-                current body. */}
-            {type === "ARTICLE" && (
-              <div style={{ marginTop: 12, padding: 12, background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8 }}>
-                <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-                  <input
-                    value={pasteUrl}
-                    onChange={(e) => setPasteUrl(e.target.value)}
-                    placeholder="Paste a source URL (optional) — తెలుగులో రాయండి will fetch + translate it"
-                    style={{ ...inpStyle, fontSize: 12 }}
+              {/* Slug is hidden for REPORTER role - the auto-generation
+                  effect above (or the backend safety net at save time)
+                  ensures a real slug lands in the DB without the reporter
+                  having to think about URLs. Editors/admin keep the field
+                  so they can override for SEO. */}
+              {role !== "REPORTER" && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="slug-input">Slug</Label>
+                  <Input
+                    id="slug-input"
+                    value={slug}
+                    onChange={(e) => {
+                      // Mark as manually edited so the auto-slug effect
+                      // doesn't overwrite the editor's chosen value.
+                      userTouchedSlug.current = true;
+                      setSlug(e.target.value);
+                    }}
+                    placeholder={type === "BREAKING_NEWS" ? "(optional for breaking)" : "url-segment"}
+                    className="bg-white font-mono text-xs md:text-xs"
                   />
                 </div>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  {/* Unified Telugu button: if URL pasted -> scrape + translate
-                      (was the separate "Fetch + translate" button); else translate
-                      the existing title/summary/body in place. */}
-                  <button
+              )}
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="summary-input">Summary</Label>
+                  {type === "ARTICLE" && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => runAI("summarize")}
+                      disabled={aiLoading !== null}
+                      className="h-7 gap-1 px-2 text-xs text-slate-600 hover:text-slate-900"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      {aiLoading === "summarize" ? "Summarizing…" : "Auto summary"}
+                    </Button>
+                  )}
+                </div>
+                <Textarea
+                  id="summary-input"
+                  value={summary}
+                  onChange={(e) => setSummary(e.target.value)}
+                  rows={2}
+                  placeholder="Short 60-word summary..."
+                  className="bg-white"
+                />
+              </div>
+
+            {/* AI Article Import - minimal section header makes it
+                identifiable; the తెలుగులో రాయండి button is dual-mode
+                (with URL = fetch + translate, without = rewrite body). */}
+            {type === "ARTICLE" && (
+              <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
+                  <Sparkles className="h-3.5 w-3.5 text-blue-600" />
+                  AI Article Import
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Input
+                    value={pasteUrl}
+                    onChange={(e) => setPasteUrl(e.target.value)}
+                    placeholder="Paste source URL (optional) - fetches + translates"
+                    className="min-w-[220px] flex-1 bg-white"
+                  />
+                  <Button
+                    size="sm"
                     onClick={() => (pasteUrl.trim() ? fetchFromUrl() : runAI("translate"))}
                     disabled={aiLoading !== null}
-                    style={{ padding: "6px 12px", background: aiLoading === "translate" || aiLoading === "fetch" ? "#4b5563" : "#3b82f6", color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: aiLoading ? "not-allowed" : "pointer" }}
+                    className="bg-blue-600 text-white hover:bg-blue-700"
                   >
-                    {aiLoading === "translate" || aiLoading === "fetch" ? "Translating…" : "తెలుగులో రాయండి"}
-                  </button>
-                  <button onClick={() => runAI("editorial")} disabled={aiLoading !== null}
-                    style={{ padding: "6px 12px", background: aiLoading === "editorial" ? "#4b5563" : "#dc2626", color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: aiLoading ? "not-allowed" : "pointer" }}>
+                    {aiLoading === "translate" || aiLoading === "fetch"
+                      ? "Translating…"
+                      : pasteUrl.trim()
+                        ? "Fetch + తెలుగులో రాయండి"
+                        : "తెలుగులో రాయండి"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => runAI("editorial")}
+                    disabled={aiLoading !== null}
+                    className="bg-red-600 text-white hover:bg-red-700"
+                  >
                     {aiLoading === "editorial" ? "Writing…" : "Editorial style"}
-                  </button>
-                  <button onClick={() => runAI("summarize")} disabled={aiLoading !== null}
-                    style={{ padding: "6px 12px", background: "#fff", color: "#374151", border: "1px solid #e5e7eb", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: aiLoading ? "not-allowed" : "pointer" }}>
-                    {aiLoading === "summarize" ? "Summarizing…" : "Summarize"}
-                  </button>
-                  <button onClick={() => runAI("headline")} disabled={aiLoading !== null}
-                    style={{ padding: "6px 12px", background: "#fff", color: "#374151", border: "1px solid #e5e7eb", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: aiLoading ? "not-allowed" : "pointer" }}>
-                    {aiLoading === "headline" ? "Generating…" : "Headline ideas"}
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
@@ -518,10 +790,12 @@ export default function ContentEditorPage() {
             {/* Type-specific body / payload */}
             {type === "ARTICLE" && (
               <>
-                <label style={lblStyle}>Body</label>
-                <RichEditor ref={editorRef} content={body} onChange={setBody} />
+                <div className="space-y-1.5">
+                  <Label>Body</Label>
+                  <RichEditor ref={editorRef} content={body} onChange={setBody} />
+                </div>
                 {/* Rating + reviewer-byline are movie-review-only inputs. The
-                    Source URL is also gated to that category — most ARTICLEs
+                    Source URL is also gated to that category - most ARTICLEs
                     are original reporting, not wire imports. The "Fetch +
                     translate" URL bar above already feeds sourceUrl when
                     importing from a foreign site. */}
@@ -530,22 +804,41 @@ export default function ContentEditorPage() {
                   const isMovieReview = cat?.slug === "movie-reviews";
                   if (!isMovieReview) return null;
                   return (
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 2fr", gap: 10, marginTop: 12, padding: 10, background: "#fef9c3", border: "1px solid #fde68a", borderRadius: 8 }}>
-                      <div>
-                        <label style={lblStyle}>Rating</label>
-                        <input type="number" min="0" max="5" step="0.1" value={rating}
-                          onChange={(e) => setRating(e.target.value)} placeholder="0.0 - 5.0"
-                          style={inpStyle} />
+                    <div className="grid gap-3 rounded-md border border-amber-200 bg-amber-50 p-3 sm:grid-cols-[1fr_1fr_2fr]">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="rating-input">Rating</Label>
+                        <Input
+                          id="rating-input"
+                          type="number"
+                          min="0"
+                          max="5"
+                          step="0.1"
+                          value={rating}
+                          onChange={(e) => setRating(e.target.value)}
+                          placeholder="0.0 - 5.0"
+                          className="bg-white"
+                        />
                       </div>
-                      <div>
-                        <label style={lblStyle}>Reviewer name</label>
-                        <input value={reviewerName} onChange={(e) => setReviewerName(e.target.value)}
-                          placeholder="Critic byline" style={inpStyle} />
+                      <div className="space-y-1.5">
+                        <Label htmlFor="reviewer-input">Reviewer name</Label>
+                        <Input
+                          id="reviewer-input"
+                          value={reviewerName}
+                          onChange={(e) => setReviewerName(e.target.value)}
+                          placeholder="Critic byline"
+                          className="bg-white"
+                        />
                       </div>
-                      <div>
-                        <label style={lblStyle}>Source URL</label>
-                        <input type="url" value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)}
-                          placeholder="https://..." style={inpStyle} />
+                      <div className="space-y-1.5">
+                        <Label htmlFor="source-url-input">Source URL</Label>
+                        <Input
+                          id="source-url-input"
+                          type="url"
+                          value={sourceUrl}
+                          onChange={(e) => setSourceUrl(e.target.value)}
+                          placeholder="https://..."
+                          className="bg-white"
+                        />
                       </div>
                     </div>
                   );
@@ -556,103 +849,221 @@ export default function ContentEditorPage() {
             {type !== "ARTICLE" && (
               <ContentPayloadEditor type={type} payload={typedPayload} setPayload={setTypedPayload} />
             )}
-          </div>
+            </CardContent>
+          </Card>
 
-          {/* Sidebar */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Sidebar - all controls are shadcn (no native <select> / <input>
+              chrome). The "_none" / "_auto" sentinels exist because shadcn
+              <Select> refuses an empty-string value; we translate at the
+              boundary so the rest of the file still stores "" for "unset". */}
+          <div className="flex flex-col gap-4">
             <Section title="Publishing">
-              <label style={lblStyle}>Status</label>
-              <select value={status} onChange={(e) => setStatus(e.target.value)} style={inpStyle}>
+              <div className="space-y-1.5">
+                <Label htmlFor="status-select">Status</Label>
                 {/* APPROVED / SCHEDULED / PUBLISHED hidden for non-publishers so
                     a sub-editor can't bypass the editorial workflow by picking
                     them from the dropdown + clicking Save. The server-side PUT
                     is the authoritative gate; this just keeps the UI honest. */}
-                {(["DRAFT", "SUBMITTED", "IN_REVIEW", "APPROVED", "SCHEDULED", "PUBLISHED", "REJECTED", "ARCHIVED"] as const)
-                  .filter((s) => canPublish || !["APPROVED", "SCHEDULED", "PUBLISHED"].includes(s))
-                  .map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-              </select>
-              <label style={lblStyle}>Schedule for</label>
-              <input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} style={inpStyle} />
-              <label style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8, fontSize: 13, cursor: "pointer" }}>
-                <input type="checkbox" checked={featured} onChange={(e) => setFeatured(e.target.checked)} />
-                Featured
-              </label>
+                <SearchableSelect
+                  id="status-select"
+                  value={status}
+                  onValueChange={setStatus}
+                  searchPlaceholder="Filter status…"
+                  options={(["DRAFT", "SUBMITTED", "IN_REVIEW", "APPROVED", "SCHEDULED", "PUBLISHED", "REJECTED", "ARCHIVED"] as const)
+                    .filter((s) => canPublish || !["APPROVED", "SCHEDULED", "PUBLISHED"].includes(s))
+                    .map((s) => ({ value: s, label: s }))}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="schedule-for">Schedule for</Label>
+                <DateTimePicker value={scheduledAt} onChange={setScheduledAt} placeholder="Pick date & time" />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="featured-flag"
+                  checked={featured}
+                  onCheckedChange={(v) => setFeatured(v === true)}
+                />
+                <Label htmlFor="featured-flag" className="cursor-pointer text-sm font-medium">
+                  Featured
+                </Label>
+              </div>
             </Section>
 
-            {/* Payment panel — only meaningful for ARTICLE type. Shows the
+            {/* Payment panel - only meaningful for ARTICLE type. Shows the
                 per-article amount + status, with edit pencil for Editors. */}
-            {type === "ARTICLE" && <div className="shadcn-scope"><PaymentPanel contentId={contentId} /></div>}
-
-            {/* Assigned reviewer (Stage 2) — Editor/Admin can override the
-                auto-assigned sub-editor. Hidden for non-editors via the
-                component's own role gate. */}
-            {type === "ARTICLE" && <div className="shadcn-scope"><ReviewerPanel contentId={contentId} /></div>}
+            {type === "ARTICLE" && <PaymentPanel contentId={contentId} />}
 
             <Section title="Classification">
-              <label style={lblStyle}>Primary category</label>
-              <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} style={inpStyle}>
-                <option value="">— none —</option>
-                {categories.map((c) => <option key={c.id} value={c.id}>{c.nameEn}</option>)}
-              </select>
-
-              {/* Multi-category cross-listing. Clicking a chip toggles. The
-                  primary is hidden from this list (it's already counted). */}
-              <label style={lblStyle}>Also list under (optional)</label>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 4, padding: 6, background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 6, minHeight: 36 }}>
-                {categories.filter((c) => c.id !== categoryId).map((c) => {
-                  const on = additionalCategoryIds.includes(c.id);
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => setAdditionalCategoryIds((prev) =>
-                        prev.includes(c.id) ? prev.filter((x) => x !== c.id) : [...prev, c.id]
-                      )}
-                      style={{
-                        padding: "3px 10px",
-                        fontSize: 11,
-                        fontWeight: 600,
-                        border: `1px solid ${on ? "#93c5fd" : "#e5e7eb"}`,
-                        background: on ? "#eff6ff" : "#fff",
-                        color: on ? "#1e40af" : "#374151",
-                        borderRadius: 999,
-                        cursor: "pointer",
-                      }}
-                    >
-                      {on ? "✓ " : ""}{c.nameEn}
-                    </button>
-                  );
-                })}
-                {categories.length === 0 && <span style={{ fontSize: 11, color: "#9ca3af" }}>Loading…</span>}
+              <div className="space-y-1.5">
+                <Label htmlFor="category-select">Primary category</Label>
+                <SearchableSelect
+                  id="category-select"
+                  value={categoryId}
+                  onValueChange={setCategoryId}
+                  emptyLabel="None"
+                  searchPlaceholder="Search categories…"
+                  // Child categories show their parent's nameEn as sublabel so
+                  // "Automobile" reads as "Automobile (Business)". Lookup table
+                  // built once per render - categories list is ~60 rows so this
+                  // is cheap.
+                  options={(() => {
+                    const byId = new Map(categories.map((c) => [c.id, c.nameEn]));
+                    return categories.map((c) => ({
+                      value: c.id,
+                      label: c.nameEn,
+                      sublabel: c.parentId ? `(${byId.get(c.parentId) ?? "-"})` : undefined,
+                    }));
+                  })()}
+                />
               </div>
-              {additionalCategoryIds.length > 0 && (
-                <p style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>
-                  Cross-listed in {additionalCategoryIds.length} extra categor{additionalCategoryIds.length === 1 ? "y" : "ies"}.
-                </p>
-              )}
 
-              <label style={lblStyle}>Desk (auto-resolves if blank)</label>
-              <select value={deskId} onChange={(e) => setDeskId(e.target.value)} style={inpStyle}>
-                <option value="">— auto —</option>
-                {desks.map((d) => <option key={d.id} value={d.id}>{d.nameEn} · {d.branch}</option>)}
-              </select>
-              <label style={lblStyle}>Constituency</label>
-              <select value={constituencyId} onChange={(e) => setConstituencyId(e.target.value)} style={inpStyle}>
-                <option value="">— none —</option>
-                {constituencies.map((c: any) => (
-                  <option key={c.id} value={c.id}>{c.nameEn} ({c.districtName})</option>
-                ))}
-              </select>
-              <label style={lblStyle}>Language</label>
-              <select value={language} onChange={(e) => setLanguage(e.target.value)} style={inpStyle}>
-                <option value="TELUGU">Telugu</option>
-                <option value="ENGLISH">English</option>
-              </select>
-              <label style={lblStyle}>Tags (comma-separated)</label>
-              <input value={tagsInput} onChange={(e) => setTagsInput(e.target.value)}
-                placeholder="elections, politics, ap" style={inpStyle} />
+              {/* Multi-category cross-listing - collapsed by default so the
+                  sidebar isn't dominated by ~60 chips. Native <details> so
+                  there's no extra dep; the summary shows the current count.
+                  Auto-opens when at least one extra category is already set. */}
+              <details
+                className="group rounded-md border bg-white"
+                open={additionalCategoryIds.length > 0}
+              >
+                <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-xs font-semibold text-gray-700 select-none">
+                  <span>
+                    Also list under{" "}
+                    {additionalCategoryIds.length > 0 ? (
+                      <span className="ml-1 rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">
+                        {additionalCategoryIds.length}
+                      </span>
+                    ) : (
+                      <span className="font-normal text-gray-400">(optional)</span>
+                    )}
+                  </span>
+                  <ChevronDownIcon
+                    aria-hidden="true"
+                    size={14}
+                    className="text-gray-400 transition-transform group-open:rotate-180"
+                  />
+                </summary>
+                <div className="border-t bg-gray-50 p-2">
+                  <div className="flex max-h-48 flex-wrap gap-1 overflow-y-auto">
+                    {categories.filter((c) => c.id !== categoryId).map((c) => {
+                      const on = additionalCategoryIds.includes(c.id);
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => setAdditionalCategoryIds((prev) =>
+                            prev.includes(c.id) ? prev.filter((x) => x !== c.id) : [...prev, c.id]
+                          )}
+                          className={cn(
+                            "rounded-full border px-2.5 py-0.5 text-[11px] font-semibold transition-colors",
+                            on
+                              ? "border-blue-300 bg-blue-50 text-blue-700"
+                              : "border-gray-200 bg-white text-gray-700 hover:bg-gray-100",
+                          )}
+                        >
+                          {on ? "✓ " : ""}{c.nameEn}
+                        </button>
+                      );
+                    })}
+                    {categories.length === 0 && (
+                      <span className="text-[11px] text-gray-400">Loading…</span>
+                    )}
+                  </div>
+                </div>
+              </details>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="desk-select">Desk (auto-resolves if blank)</Label>
+                <SearchableSelect
+                  id="desk-select"
+                  value={deskId}
+                  onValueChange={setDeskId}
+                  emptyLabel="Auto"
+                  searchPlaceholder="Search desks…"
+                  // Display strips the publication prefix ("Rayalaseema News ")
+                  // so the dropdown reads "Movie Reviews Desk" / "Business Desk"
+                  // - value (d.id) is unchanged.
+                  options={desks.map((d) => ({
+                    value: d.id,
+                    label: d.nameEn.replace(/^Rayalaseema News\s+/i, ""),
+                  }))}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="constituency-select">Constituency</Label>
+                <SearchableSelect
+                  id="constituency-select"
+                  value={constituencyId}
+                  onValueChange={setConstituencyId}
+                  emptyLabel="None"
+                  searchPlaceholder="Search constituencies or districts…"
+                  options={constituencies.map((c: any) => ({
+                    value: c.id,
+                    label: c.nameEn,
+                    sublabel: `(${c.districtName})`,
+                  }))}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="language-select">Language</Label>
+                <SearchableSelect
+                  id="language-select"
+                  value={language}
+                  onValueChange={setLanguage}
+                  searchPlaceholder="Filter language…"
+                  options={[
+                    { value: "TELUGU", label: "Telugu" },
+                    { value: "ENGLISH", label: "English" },
+                  ]}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="tags-input">Tags (comma-separated)</Label>
+                <Input
+                  id="tags-input"
+                  value={tagsInput}
+                  onChange={(e) => setTagsInput(e.target.value)}
+                  placeholder="elections, politics, ap"
+                  className="bg-white"
+                />
+                {/* Curated + usage-ranked tag suggestions, scoped to the
+                    currently selected category. Click a chip → appended to
+                    the comma-separated input (deduped, case-insensitive). */}
+                <TagSuggestions
+                  categoryId={categoryId}
+                  currentNames={
+                    new Set(
+                      tagsInput
+                        .split(",")
+                        .map((s) => s.trim().toLowerCase())
+                        .filter(Boolean),
+                    )
+                  }
+                  onAddTag={(name) => {
+                    const existing = tagsInput
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter(Boolean);
+                    const lc = name.toLowerCase();
+                    if (existing.some((t) => t.toLowerCase() === lc)) return;
+                    setTagsInput([...existing, name].join(", "));
+                  }}
+                  onRemoveTag={(name) => {
+                    const lc = name.toLowerCase();
+                    const next = tagsInput
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter(Boolean)
+                      .filter((t) => t.toLowerCase() !== lc);
+                    setTagsInput(next.join(", "));
+                  }}
+                />
+              </div>
             </Section>
 
           </div>
@@ -672,7 +1083,7 @@ export default function ContentEditorPage() {
           onClose={() => setCropSrc(null)}
           onConfirm={async (dataUrl) => {
             // Crop modal returns a data URL. If user skipped crop the data
-            // URL == the original Azure URL we passed in — bail out without
+            // URL == the original Azure URL we passed in - bail out without
             // re-uploading.
             if (!dataUrl.startsWith("data:")) { setCropSrc(null); return; }
             try {
@@ -696,12 +1107,11 @@ export default function ContentEditorPage() {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div style={{ background: "#fff", borderRadius: 10, padding: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
-      <h3 style={{ fontSize: 13, fontWeight: 700, color: "#111", marginBottom: 10, paddingBottom: 8, borderBottom: "1px solid #f3f4f6" }}>{title}</h3>
-      {children}
-    </div>
+    <Card className="gap-3 py-4">
+      <CardHeader className="px-4">
+        <CardTitle className="text-sm">{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 px-4">{children}</CardContent>
+    </Card>
   );
 }
-
-const lblStyle: React.CSSProperties = { display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginTop: 12, marginBottom: 4 };
-const inpStyle: React.CSSProperties = { width: "100%", padding: "8px 10px", border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 13, outline: "none", background: "#fff", boxSizing: "border-box" };

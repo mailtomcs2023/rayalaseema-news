@@ -1,4 +1,4 @@
-// /api/content — unified content CRUD (Spec #1, issue #107).
+// /api/content - unified content CRUD (Spec #1, issue #107).
 // Replaces /api/articles + /api/videos + /api/reels + /api/stories +
 // /api/galleries + /api/cartoons + /api/breaking-news once those are
 // retired in Phase H (#131, #133).
@@ -7,29 +7,55 @@
 // (packages/db/src/payload-schemas.ts). Bad payload → 400 with the
 // field-level ZodError flattened.
 import { NextRequest, NextResponse } from "next/server";
-import { prisma, ContentType, safeValidatePayload } from "@rayalaseema/db";
+import {
+  prisma,
+  ContentType,
+  safeValidatePayload,
+  contentCreateSchema,
+} from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
+import { requireKyc } from "@/lib/kyc-guard";
 import { logAudit } from "@/lib/audit";
 import { sanitizeSlug } from "@/lib/slug";
 import { resolveDeskId } from "@/lib/desk-resolver";
 
 const VALID_TYPES = Object.values(ContentType) as string[];
 
-// GET /api/content — list with filters (type, status, category, search) + pagination
+// GET /api/content - list with filters (type, status, category, search) + pagination
+// GET /api/content - list with filters + pagination.
+//
+// Two pagination modes:
+//
+//   1. CURSOR (preferred, constant-time) - pass `?cursor=<id>&limit=15`.
+//      Returns `nextCursor` (or null when done) and `hasMore`. Forward-only.
+//      No `total` unless `?includeTotal=1` is also passed, because the count()
+//      is what makes large pages slow in the first place.
+//
+//   2. OFFSET (legacy fallback) - pass `?page=2&limit=15` like before.
+//      Returns `total` + `page` + `limit`. Cost grows with page number.
+//      Use only for "jump to page N" UX - and even then, expensive past
+//      page 50 on a multi-thousand-row table.
+//
+// The /content table page still uses offset today; switching it to cursor is
+// a separate frontend PR (TanStack Query) so this route ships
+// backward-compatibly.
 export async function GET(req: NextRequest) {
   const session = await requireAuth();
   if (isAuthError(session)) return session;
   try {
     const { searchParams } = new URL(req.url);
+    const cursor = searchParams.get("cursor") || "";
     const page = parseInt(searchParams.get("page") || "1");
-    const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "15"), 1), 200);
+    // Default 10 matches the admin's standard per-page size across every
+    // paginated table - callers can still override via ?limit=N up to 200.
+    const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "10"), 1), 200);
+    const includeTotal = searchParams.get("includeTotal") === "1" || !cursor;
     const search = searchParams.get("search") || "";
     const type = searchParams.get("type") || "";
     const status = searchParams.get("status") || "";
     const category = searchParams.get("category") || "";
-    const offset = (page - 1) * limit;
 
-    // `?ids=a,b,c` short-circuits — returns just those rows (lookup helper).
+    // `?ids=a,b,c` short-circuits - returns just those rows (lookup helper).
     const idsParam = searchParams.get("ids");
     if (idsParam) {
       const ids = idsParam.split(",").map((s) => s.trim()).filter(Boolean).slice(0, 500);
@@ -37,7 +63,7 @@ export async function GET(req: NextRequest) {
         where: { id: { in: ids } },
         select: { id: true, type: true, title: true, slug: true, summary: true, featuredImage: true },
       });
-      return NextResponse.json({ items, total: items.length });
+      return NextResponse.json({ items, total: items.length, hasMore: false, nextCursor: null });
     }
 
     const where: any = {};
@@ -57,11 +83,34 @@ export async function GET(req: NextRequest) {
     if (status) where.status = status;
     if (category) where.categoryId = category;
 
-    // Visibility: REPORTER sees only their own rows. SUB_EDITOR / EDITOR /
-    // CHIEF_SUB_EDITOR / ADMIN see everything. Prevents reporters from
-    // browsing admin drafts and unpublished editorial copy.
+    // Visibility:
+    //   REPORTER   - only their own rows.
+    //   SUB_EDITOR - rows in their assigned categories OR rows they authored.
+    //                Mirrors /api/review's strict-assignment scope so a SE
+    //                doesn't see sports articles when they only cover crime.
+    //   EDITOR / ADMIN - everything (editor is the cross-
+    //                category super-reviewer in this newsroom).
     if (session.user.role === "REPORTER") {
       where.authorId = session.user.id;
+    } else if (session.user.role === "SUB_EDITOR") {
+      const assignments = await prisma.userCategory.findMany({
+        where: { userId: session.user.id },
+        select: { categoryId: true },
+      });
+      const categoryIds = assignments.map((a) => a.categoryId);
+      // OR clause merges with any existing search OR - wrap in AND so search
+      // (title-contains) and scope (own-or-in-my-categories) both apply.
+      const scopeOr = [
+        { authorId: session.user.id },
+        ...(categoryIds.length > 0 ? [{ categoryId: { in: categoryIds } }] : []),
+      ];
+      if (where.OR) {
+        const existingOr = where.OR;
+        delete where.OR;
+        where.AND = [{ OR: existingOr }, { OR: scopeOr }];
+      } else {
+        where.OR = scopeOr;
+      }
     }
 
     // Soft-delete: hide trashed rows by default. `?trash=1` (admin/editor)
@@ -70,7 +119,7 @@ export async function GET(req: NextRequest) {
     const trash = searchParams.get("trash") === "1";
     if (trash) {
       const role = session.user.role;
-      if (role !== "ADMIN" && role !== "EDITOR" && role !== "CHIEF_SUB_EDITOR") {
+      if (role !== "ADMIN" && role !== "EDITOR") {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
       where.deletedAt = { not: null };
@@ -78,27 +127,64 @@ export async function GET(req: NextRequest) {
       where.deletedAt = null;
     }
 
-    const [items, total] = await Promise.all([
+    // Stable ordering for cursor pagination - createdAt alone isn't unique
+    // enough (two rows can share a timestamp), so we add `id` as the secondary
+    // key. Both columns indexed together is the right shape for the composite
+    // index we'll add in PR 14.
+    const orderBy = [{ createdAt: "desc" as const }, { id: "desc" as const }];
+
+    // Cursor mode - fetch one extra row to detect `hasMore` cheaply, then
+    // slice it off before returning. `skip: 1` tells Prisma the cursor row
+    // is the EXCLUSIVE boundary (the last item of the previous page),
+    // not part of this page.
+    if (cursor) {
+      const findArgs: any = {
+        where,
+        include: {
+          category: { select: { name: true, nameEn: true, slug: true, color: true } },
+          author: { select: { name: true } },
+        },
+        orderBy,
+        take: limit + 1,
+        cursor: { id: cursor },
+        skip: 1,
+      };
+      const [rows, total] = await Promise.all([
+        prisma.content.findMany(findArgs),
+        includeTotal ? prisma.content.count({ where }) : Promise.resolve(null),
+      ]);
+      const hasMore = rows.length > limit;
+      const items = hasMore ? rows.slice(0, limit) : rows;
+      const nextCursor = hasMore && items.length > 0 ? items[items.length - 1].id : null;
+      return NextResponse.json({ items, hasMore, nextCursor, total, limit });
+    }
+
+    // Offset mode (legacy). Kept so the existing /content UI works unchanged
+    // until it migrates to cursor in the TanStack Query PR.
+    const offset = (page - 1) * limit;
+    const [rows, total] = await Promise.all([
       prisma.content.findMany({
         where,
         include: {
           category: { select: { name: true, nameEn: true, slug: true, color: true } },
           author: { select: { name: true } },
         },
-        orderBy: { createdAt: "desc" },
-        take: limit,
+        orderBy,
+        take: limit + 1,
         skip: offset,
       }),
       prisma.content.count({ where }),
     ]);
-
-    return NextResponse.json({ items, total, page, limit });
+    const hasMore = rows.length > limit;
+    const items = hasMore ? rows.slice(0, limit) : rows;
+    const nextCursor = hasMore && items.length > 0 ? items[items.length - 1].id : null;
+    return NextResponse.json({ items, total, page, limit, hasMore, nextCursor });
   } catch (error) {
     return apiError(error);
   }
 }
 
-// POST /api/content — create new content row.
+// POST /api/content - create new content row.
 // Required: type, title.
 // Optional everything else (slug, body, category, payload, etc.).
 // Per-type defaults: BREAKING_NEWS starts SUBMITTED (skips Draft step); all
@@ -109,8 +195,21 @@ export async function POST(req: NextRequest) {
   if (isAuthError(session)) return session;
   try {
     const authorId = session.user.id;
-    const body = await req.json();
+    const rawBody = await req.json();
 
+    // Zod validation at the boundary - every field is shape-checked +
+    // length-capped before we run any DB queries. Failures surface as
+    // structured `fieldErrors` so clients can render per-field messages.
+    const parsed = contentCreateSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          error: "Invalid request body",
+          fieldErrors: parsed.error.flatten().fieldErrors,
+        },
+        { status: 400 },
+      );
+    }
     const {
       type,
       title,
@@ -128,16 +227,25 @@ export async function POST(req: NextRequest) {
       sourceUrl,
       tagNames,
       needsPibApproval,
-      // Multi-category cross-listing. Editor passes an array of category
-      // IDs to ALSO list this content under (primary stays in categoryId).
       additionalCategoryIds,
-    } = body;
+    } = parsed.data;
 
-    // Required validation.
-    if (!type || !VALID_TYPES.includes(type)) {
-      return NextResponse.json({ error: `Invalid type. Must be one of: ${VALID_TYPES.join(", ")}` }, { status: 400 });
+    // KYC gate. ADMINs bypass; every other role must be VERIFIED to
+    // create editorial content at any status. Was previously per-status
+    // (PUBLISHED/SCHEDULED only, with REPORTER blocked entirely) but
+    // editors+sub-editors should be in the same boat - no drafting, no
+    // scheduling, no publishing before identity is confirmed.
+    {
+      const block = await requireKyc(
+        { id: session.user.id, role: session.user.role },
+        status === "PUBLISHED"
+          ? "publish"
+          : status === "SCHEDULED"
+            ? "schedule"
+            : "create articles",
+      );
+      if (block) return block;
     }
-    if (!title || !title.trim()) return NextResponse.json({ error: "Title is required" }, { status: 400 });
 
     // Slug optional for BREAKING_NEWS (no public URL); required for everything else.
     // Sanitize + uniqueness check when present.
@@ -185,53 +293,67 @@ export async function POST(req: NextRequest) {
       constituencyId: constituencyId || null,
     });
 
-    const content = await prisma.content.create({
-      data: {
-        type: type as ContentType,
-        title: title.trim(),
-        slug: cleanSlug,
-        summary: summary?.trim() || null,
-        body: contentBody || null,
-        featuredImage: featuredImage?.trim() || null,
-        payload: payload ?? undefined,
-        categoryId: categoryId || null,
-        authorId,
-        deskId: resolvedDeskId,
-        constituencyId: constituencyId || null,
-        status: finalStatus as any,
-        featured: featured ?? false,
-        language: "TELUGU",
-        sourceUrl: sourceUrl?.trim() || null,
-        needsPibApproval: needsPibApproval ?? false,
-        publishedAt: finalStatus === "PUBLISHED" ? new Date() : null,
-        scheduledAt: scheduledDate,
-      },
+    // Atomic write: Content row + cross-listed categories + tags all land
+    // together or none of them do. Without the transaction, an N+1 .catch()
+    // loop could leave a half-tagged article on disk if the DB blipped
+    // mid-loop (silent corruption - the worst kind).
+    const slugify = (s: string) => s.toLowerCase().trim().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-").substring(0, 80);
+    const content = await prisma.$transaction(async (tx) => {
+      const created = await tx.content.create({
+        data: {
+          type: type as ContentType,
+          title: title.trim(),
+          slug: cleanSlug,
+          summary: summary?.trim() || null,
+          body: contentBody || null,
+          featuredImage: featuredImage?.trim() || null,
+          payload: payload ?? undefined,
+          categoryId: categoryId || null,
+          authorId,
+          deskId: resolvedDeskId,
+          constituencyId: constituencyId || null,
+          status: finalStatus as any,
+          featured: featured ?? false,
+          language: "TELUGU",
+          sourceUrl: sourceUrl?.trim() || null,
+          needsPibApproval: needsPibApproval ?? false,
+          publishedAt: finalStatus === "PUBLISHED" ? new Date() : null,
+          scheduledAt: scheduledDate,
+        },
+      });
+
+      // Multi-category cross-listing. Dedupe + skip the primary (redundant
+      // join + would violate the composite PK).
+      if (Array.isArray(additionalCategoryIds) && additionalCategoryIds.length > 0) {
+        const extras = [...new Set(additionalCategoryIds.filter((id) => id && id !== created.categoryId))];
+        if (extras.length > 0) {
+          await tx.contentCategory.createMany({
+            data: extras.map((cid) => ({ contentId: created.id, categoryId: cid })),
+            skipDuplicates: true,
+          });
+        }
+      }
+
+      // Tags (auto-create missing). Same slugify rules as the legacy article API.
+      if (Array.isArray(tagNames) && tagNames.length > 0) {
+        const seen = new Set<string>();
+        for (const raw of tagNames) {
+          const name = String(raw || "").trim();
+          if (!name) continue;
+          const tagSlug = slugify(name);
+          if (!tagSlug || seen.has(tagSlug)) continue;
+          seen.add(tagSlug);
+          const tag = await tx.tag.upsert({
+            where: { slug: tagSlug },
+            update: {},
+            create: { name, slug: tagSlug },
+          });
+          await tx.contentTag.create({ data: { contentId: created.id, tagId: tag.id } });
+        }
+      }
+
+      return created;
     });
-
-    // Multi-category cross-listing. Dedupe + skip the primary (would be
-    // a redundant join row + violates contentCategory composite PK on
-    // re-save). Silently ignores invalid IDs — Prisma FK rejects them.
-    if (Array.isArray(additionalCategoryIds) && additionalCategoryIds.length > 0) {
-      const extras = [...new Set(additionalCategoryIds.filter((id) => id && id !== content.categoryId))];
-      for (const cid of extras) {
-        await prisma.contentCategory.create({ data: { contentId: content.id, categoryId: cid } }).catch(() => {});
-      }
-    }
-
-    // Tags (auto-create missing). Same slugify rules as the legacy article API.
-    if (Array.isArray(tagNames) && tagNames.length > 0) {
-      const slugify = (s: string) => s.toLowerCase().trim().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-").substring(0, 80);
-      const seen = new Set<string>();
-      for (const raw of tagNames) {
-        const name = String(raw || "").trim();
-        if (!name) continue;
-        const tagSlug = slugify(name);
-        if (!tagSlug || seen.has(tagSlug)) continue;
-        seen.add(tagSlug);
-        const tag = await prisma.tag.upsert({ where: { slug: tagSlug }, update: {}, create: { name, slug: tagSlug } });
-        await prisma.contentTag.create({ data: { contentId: content.id, tagId: tag.id } }).catch(() => {});
-      }
-    }
 
     await logAudit({
       action: "content.create",

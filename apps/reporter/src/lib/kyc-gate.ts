@@ -6,14 +6,23 @@ import type { useRouter } from "expo-router";
 export type KycStatus = "PENDING" | "SUBMITTED" | "VERIFIED" | "REJECTED";
 
 // Stored under "user" on login by /api/reporter/login.
-async function readCachedKycStatus(): Promise<KycStatus | null> {
+async function readCachedUserState(): Promise<{
+  status: KycStatus | null;
+  registrationComplete: boolean;
+}> {
   try {
     const raw = await AsyncStorage.getItem("user");
-    if (!raw) return null;
+    if (!raw) return { status: null, registrationComplete: true };
     const u = JSON.parse(raw);
-    return (u.kycStatus as KycStatus) || null;
+    return {
+      status: (u.kycStatus as KycStatus) || null,
+      // Older login responses didn't include the flag; default to TRUE so
+      // existing self-registered reporters aren't mis-classified as
+      // incomplete.
+      registrationComplete: u.registrationComplete !== false,
+    };
   } catch {
-    return null;
+    return { status: null, registrationComplete: true };
   }
 }
 
@@ -22,19 +31,37 @@ type Router = ReturnType<typeof useRouter>;
 /**
  * Gate for article-creation entry points (FAB, empty-state CTAs, etc).
  *
- * Returns true only if the reporter's KYC is VERIFIED — in which case the
+ * Returns true only if the reporter's KYC is VERIFIED - in which case the
  * caller proceeds with the navigation. Otherwise an Alert tailored to the
- * current KYC state explains the block; the caller does nothing further.
+ * current state explains the block; the caller does nothing further.
+ *
+ * Three blocking states, in order of precedence:
+ *   1. Registration incomplete (admin-created reporter, profile not filled).
+ *      Wins over KYC status because there's no point asking them to upload
+ *      docs they haven't typed an address for yet. CTA → /complete-registration.
+ *   2. KYC state (PENDING / SUBMITTED / REJECTED). CTA → /kyc.
  *
  * The server enforces the same rule on POST /api/reporter/articles, so this
- * is a UX hint — not the security boundary.
+ * is a UX hint - not the security boundary.
  */
 export async function requireVerifiedKyc(
   t: (k: string) => string,
   router: Router,
 ): Promise<boolean> {
-  const status = await readCachedKycStatus();
+  const { status, registrationComplete } = await readCachedUserState();
   if (status === "VERIFIED") return true;
+
+  // Registration incomplete trumps KYC state - the reporter literally
+  // hasn't told us their phone / address / pincode yet, so an "Upload
+  // documents" CTA would land them on a screen that asks for KYC docs
+  // before the personal step.
+  if (!registrationComplete) {
+    Alert.alert(t("kyc.gate.incompleteTitle"), t("kyc.gate.incomplete"), [
+      { text: t("kyc.gate.completeCta"), onPress: () => router.push("/complete-registration") },
+      { text: t("common.ok"), style: "cancel" },
+    ]);
+    return false;
+  }
 
   // PENDING / null → reporter hasn't uploaded docs yet, point them at KYC.
   // SUBMITTED      → docs uploaded, waiting on admin; no actionable button.

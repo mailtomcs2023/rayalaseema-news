@@ -9,10 +9,10 @@ import { Sparkles, Camera, ImageIcon, Lock, X, Loader2 } from "lucide-react";
 // Same fields and same submission flow:
 //   • title  (multiline)
 //   • summary (multiline)
-//   • body (plain text — wrapped in <p>…</p> on save, mirroring the Expo client)
+//   • body (plain text - wrapped in <p>…</p> on save, mirroring the Expo client)
 //   • category (chip picker, /api/reporter/categories)
 //   • featured image (file picker + preview, uploaded to /api/reporter/upload)
-//   • "Translate to Telugu" — calls /api/ai/rewrite { action: "translate" }
+//   • "Translate to Telugu" - calls /api/ai/rewrite { action: "translate" }
 //   • Save Draft / Submit for Review buttons
 //
 // The Expo screen also supports edit mode via ?id=. This web version is
@@ -211,7 +211,7 @@ export function ArticleEditor({ kycVerified }: Props) {
         </div>
       ) : null}
 
-      {/* Featured image — moved to the top so the visual hero anchors the
+      {/* Featured image - moved to the top so the visual hero anchors the
           page; the rest of the form (headline / body / category) sits below. */}
       <Label>Featured image</Label>
       <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>

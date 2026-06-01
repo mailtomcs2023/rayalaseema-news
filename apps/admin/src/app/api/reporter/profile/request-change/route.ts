@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { KycStatus } from "@rayalaseema/db";
 import { getReporterId } from "@/lib/reporter-auth";
+import { decryptProfileFields } from "@/lib/crypto/kyc";
 import {
   PROFILE_FIELDS,
   LOCKED_FIELDS,
@@ -12,7 +13,7 @@ import {
   newKycStatusOnRequest,
 } from "@/lib/profile-fields";
 
-// POST { field, value } — reporter requests a change to a single field.
+// POST { field, value } - reporter requests a change to a single field.
 //
 // Behaviour:
 // - email / role / kycStatus are rejected (admin-only).
@@ -54,14 +55,19 @@ export async function POST(req: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { id: reporterId },
-      include: { journalistProfile: true },
+      include: { reporterProfile: true },
     });
-    if (!user || !user.journalistProfile) {
+    if (!user || !user.reporterProfile) {
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
-    const profile = user.journalistProfile;
+    const profile = user.reporterProfile;
 
-    const currentValue = getCurrentValue({ ...profile, user }, def);
+    // Decrypt PII fields before capturing the "before" value into the
+    // ProfileUpdateRequest row, so the admin sees plaintext in both the
+    // old + new columns when reviewing. The live profile keeps its
+    // encrypted storage; we only decrypt for this transient request row.
+    const decryptedProfile = decryptProfileFields(profile);
+    const currentValue = getCurrentValue({ ...decryptedProfile, user }, def);
     const newStored = serializeForStorage(def, value);
     const oldStored = valueToStorage(def, currentValue);
 
@@ -75,12 +81,12 @@ export async function POST(req: NextRequest) {
 
     const result = await prisma.$transaction(async (tx) => {
       await tx.profileUpdateRequest.deleteMany({
-        where: { journalistProfileId: profile.id, field, status: "PENDING" },
+        where: { reporterProfileId: profile.id, field, status: "PENDING" },
       });
 
       const created = await tx.profileUpdateRequest.create({
         data: {
-          journalistProfileId: profile.id,
+          reporterProfileId: profile.id,
           field,
           oldValue: oldStored,
           newValue: newStored,
@@ -90,7 +96,7 @@ export async function POST(req: NextRequest) {
       });
 
       if (newKyc) {
-        await tx.journalistProfile.update({
+        await tx.reporterProfile.update({
           where: { id: profile.id },
           data: { kycStatus: newKyc },
         });
@@ -109,7 +115,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// DELETE /api/reporter/profile/request-change?field=phone — withdraw a
+// DELETE /api/reporter/profile/request-change?field=phone - withdraw a
 // pending request. If it was KYC-critical and we paused the reporter's
 // KYC, restore the previous status.
 export async function DELETE(req: NextRequest) {
@@ -124,15 +130,15 @@ export async function DELETE(req: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { id: reporterId },
-      include: { journalistProfile: true },
+      include: { reporterProfile: true },
     });
-    if (!user?.journalistProfile) {
+    if (!user?.reporterProfile) {
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
-    const profile = user.journalistProfile;
+    const profile = user.reporterProfile;
 
     const pending = await prisma.profileUpdateRequest.findFirst({
-      where: { journalistProfileId: profile.id, field, status: "PENDING" },
+      where: { reporterProfileId: profile.id, field, status: "PENDING" },
     });
     if (!pending) {
       return NextResponse.json({ error: "No pending request for that field" }, { status: 404 });
@@ -141,7 +147,7 @@ export async function DELETE(req: NextRequest) {
     await prisma.$transaction(async (tx) => {
       await tx.profileUpdateRequest.delete({ where: { id: pending.id } });
       if (pending.previousKycStatus) {
-        await tx.journalistProfile.update({
+        await tx.reporterProfile.update({
           where: { id: profile.id },
           data: { kycStatus: pending.previousKycStatus },
         });

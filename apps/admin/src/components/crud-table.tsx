@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Languages } from "lucide-react";
+import { toast as sonner } from "sonner";
+import { useKycGate } from "@/components/kyc-gated-link";
 
 // English text → URL-safe slug. Lowercase, dashes, alphanumerics only, ≤60 chars.
 const slugify = (s: string) =>
@@ -40,12 +42,30 @@ interface Field {
   // fills this field with the Telugu translation via /api/ai/rewrite.
   translateFromKey?: string;
   // When set, this field auto-fills with a slugified version of the source
-  // key as the user types — until the user manually edits the slug.
+  // key as the user types - until the user manually edits the slug.
   slugFromKey?: string;
 }
 
 export function CrudTable({ title, apiPath, columns, data, fields }: CrudTableProps) {
   const router = useRouter();
+  // KYC gate. Every shared admin CRUD page (epaper-images, epaper-ads,
+  // ads, polls, mandi, categories, desks, …) routes through this
+  // component, so gating once here covers all of them. Unverified non-
+  // ADMINs get a red sonner toast and the action is suppressed; ADMINs
+  // pass through unchanged.
+  const { blocked: kycBlocked, kycStatus: gateKycStatus } = useKycGate();
+  const fireKycToast = (action: string) => {
+    sonner.error(`Your KYC must be verified to ${action}.`, {
+      description:
+        gateKycStatus === "SUBMITTED"
+          ? "Documents are under review - usually verified within 24 hours."
+          : gateKycStatus === "REJECTED"
+            ? "Your last submission was rejected. Re-upload from the KYC page."
+            : "Upload your documents from the KYC page to unlock editorial actions.",
+      action: { label: "Complete KYC", onClick: () => router.push("/onboarding/kyc") },
+      duration: 8000,
+    });
+  };
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Record<string, any>>({});
@@ -92,6 +112,7 @@ export function CrudTable({ title, apiPath, columns, data, fields }: CrudTablePr
   };
 
   const openCreate = () => {
+    if (kycBlocked) { fireKycToast(`add a new ${title.replace(/s$/, "").toLowerCase()}`); return; }
     setEditId(null);
     setFormData({});
     setShowForm(true);
@@ -99,6 +120,7 @@ export function CrudTable({ title, apiPath, columns, data, fields }: CrudTablePr
   };
 
   const openEdit = (row: any) => {
+    if (kycBlocked) { fireKycToast("edit this item"); return; }
     setEditId(row.id);
     setFormData({ ...row });
     setShowForm(true);
@@ -106,6 +128,7 @@ export function CrudTable({ title, apiPath, columns, data, fields }: CrudTablePr
   };
 
   const handleDelete = async (id: string) => {
+    if (kycBlocked) { fireKycToast("delete this item"); return; }
     if (!confirm("Are you sure you want to delete this?")) return;
     try {
       const res = await fetch(`/api/${apiPath}/${id}`, { method: "DELETE" });
@@ -151,7 +174,7 @@ export function CrudTable({ title, apiPath, columns, data, fields }: CrudTablePr
       const next = { ...prev, [key]: value };
       // Cascade: if another field auto-derives its slug from `key`, refresh it.
       // Only refresh when the slug field is empty or still matches the slug
-      // we previously derived — preserves manual edits.
+      // we previously derived - preserves manual edits.
       for (const f of fields) {
         if (f.slugFromKey === key) {
           const currentSlug = String(prev[f.key] || "");
@@ -167,7 +190,7 @@ export function CrudTable({ title, apiPath, columns, data, fields }: CrudTablePr
 
   return (
     <>
-      {/* Toast — fixed top-right, auto-dismisses */}
+      {/* Toast - fixed top-right, auto-dismisses */}
       {toast && (
         <div
           style={{
@@ -235,7 +258,7 @@ export function CrudTable({ title, apiPath, columns, data, fields }: CrudTablePr
                       ) : col.type === "link" ? (
                         val ? "Yes" : "-"
                       ) : col.type === "url" ? (
-                        // Image columns — render a small thumbnail when the cell
+                        // Image columns - render a small thumbnail when the cell
                         // is an image URL (epaper-ads, epaper-images). Falls
                         // back to the URL text if the image fails to load.
                         val ? (

@@ -12,7 +12,7 @@ import { ScreenHeader } from "../components/ScreenHeader";
 import { KycBanner } from "../components/KycBanner";
 import { requireVerifiedKyc } from "../lib/kyc-gate";
 
-// Short, locale-aware date for the meta row. We keep it brief — the card is
+// Short, locale-aware date for the meta row. We keep it brief - the card is
 // dense and a "23 May" or "23 May 2025" reads better at small sizes than a
 // full "23/5/2026" or ISO blob.
 function formatShortDate(iso: string): string {
@@ -77,7 +77,7 @@ function dateCutoff(range: DateRangeKey): number | null {
 }
 
 // Visual spec per empty-state variant. Filtered shows a clearable warning;
-// each status shows a tone-matched encouragement (green for "no rejections —
+// each status shows a tone-matched encouragement (green for "no rejections -
 // good!", amber for "still waiting on review", etc.) plus an optional CTA.
 type EmptyVariant = {
   icon: string;
@@ -174,7 +174,7 @@ function EmptyState({
 
 const emptyStyles = StyleSheet.create({
   // Centered column near the top of the list area, not vertically dead-
-  // center — feels more like "intentional empty" than "broken page".
+  // center - feels more like "intentional empty" than "broken page".
   wrap: {
     paddingTop: 48, paddingHorizontal: 32, paddingBottom: 32,
     alignItems: "center", gap: 12,
@@ -196,7 +196,7 @@ const emptyStyles = StyleSheet.create({
   ctaText: { color: "#fff", fontSize: 14, fontWeight: "800" },
 });
 
-// The "Articles" tab — the reporter's full article list, with a + New action.
+// The "Articles" tab - the reporter's full article list, with a + New action.
 export function ArticlesScreen() {
   const { t, lang } = useT();
   const router = useRouter();
@@ -252,12 +252,12 @@ export function ArticlesScreen() {
     } catch {}
   }, []);
 
-  // Refetch on focus — see DashboardScreen for rationale.
+  // Refetch on focus - see DashboardScreen for rationale.
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const onRefresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
 
-  // Inline delete from the list. Server enforces "SUBMITTED only" — we only
+  // Inline delete from the list. Server enforces "SUBMITTED only" - we only
   // expose the button for that status so a non-editable article never gets
   // here, but if it did the 403 would surface via the Alert.
   const confirmDelete = useCallback((article: { id: string; title: string }) => {
@@ -295,7 +295,7 @@ export function ArticlesScreen() {
       if (a.categoryId && a.category && !seen.has(a.categoryId)) {
         seen.set(a.categoryId, {
           id: a.categoryId,
-          name: a.category.nameEn || a.category.name || a.category.slug || "—",
+          name: a.category.nameEn || a.category.name || a.category.slug || "-",
           color: a.category.color || "#94a3b8",
         });
       }
@@ -315,7 +315,7 @@ export function ArticlesScreen() {
     return c;
   }, [articles]);
 
-  // The list rendered in the FlatList — status chip + every sheet dimension
+  // The list rendered in the FlatList - status chip + every sheet dimension
   // applied. Memoised on its dependencies so toggling a checkbox doesn't
   // re-sort 1000 items.
   const visibleArticles = useMemo(() => {
@@ -394,7 +394,7 @@ export function ArticlesScreen() {
           contentContainerStyle={styles.filterRow}
           style={{ flex: 1 }}
           onLayout={(e) => {
-            // The visible width of the chip rail — used to centre the
+            // The visible width of the chip rail - used to centre the
             // active chip inside it.
             railWidth.current = e.nativeEvent.layout.width;
           }}
@@ -458,7 +458,7 @@ export function ArticlesScreen() {
           const categoryName = (lang === "en"
             ? (item.category?.nameEn || item.category?.name)
             : (item.category?.name || item.category?.nameEn))
-            || "—";
+            || "-";
           return (
             <TouchableOpacity
               style={styles.card}
@@ -467,12 +467,12 @@ export function ArticlesScreen() {
             >
               <View style={styles.cardBody}>
                 <View style={styles.content}>
-                  {/* Line 1 — headline. Status is redundant here because the
+                  {/* Line 1 - headline. Status is redundant here because the
                       chip bar at the top of the screen already filters by it;
                       we only show it inside the rejection box (when relevant). */}
                   <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
 
-                  {/* Line 2 — category + date + views on the left, edit/delete
+                  {/* Line 2 - category + date + views on the left, edit/delete
                       icons hugging the right edge. Only shown when editable. */}
                   <View style={styles.metaRow}>
                     <View style={styles.metaLeft}>
@@ -534,7 +534,7 @@ export function ArticlesScreen() {
         }
       />
 
-      {/* New-article action — a floating button (the header is shared/global) */}
+      {/* New-article action - a floating button (the header is shared/global) */}
       <TouchableOpacity
         style={styles.fab}
         onPress={async () => {
@@ -612,7 +612,7 @@ export function ArticlesScreen() {
                 })}
               </View>
 
-              {/* Categories — only renders if there's at least one to choose */}
+              {/* Categories - only renders if there's at least one to choose */}
               <Text style={styles.sectionLabel}>{t("filterSort.categories")}</Text>
               {availableCategories.length === 0 ? (
                 <Text style={styles.sectionEmpty}>{t("filterSort.noCategoriesYet")}</Text>
@@ -678,7 +678,7 @@ export function ArticlesScreen() {
               </View>
             </ScrollView>
 
-            {/* Sticky footer with Clear / Apply (the latter just closes — all
+            {/* Sticky footer with Clear / Apply (the latter just closes - all
                 filters are live, so there's no "pending" state to commit). */}
             <View style={styles.sheetFooter}>
               <TouchableOpacity onPress={clearAll} style={styles.clearBtn}>
@@ -698,14 +698,14 @@ export function ArticlesScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#f3f4f6" },
 
-  // Filter bar — chips on the left (scrollable), funnel button on the right.
+  // Filter bar - chips on the left (scrollable), funnel button on the right.
   filterBar: { flexDirection: "row", alignItems: "center", backgroundColor: "#f3f4f6", paddingVertical: 10, paddingRight: 10 },
   filterRow: { paddingHorizontal: 14, gap: 8 },
   chip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: "#fff", borderWidth: 1, borderColor: "#e5e7eb" },
   chipActive: { backgroundColor: "#FF2C2C", borderColor: "#FF2C2C" },
   chipText: { fontSize: 13, fontWeight: "700", color: "#555" },
   chipTextActive: { color: "#fff" },
-  // The count number tucked after each label — slightly de-emphasised so the
+  // The count number tucked after each label - slightly de-emphasised so the
   // label stays the primary glyph. On the active chip it picks up the white
   // colour via inheritance from chipTextActive.
   chipCount: { fontSize: 12, fontWeight: "800", color: "#aaa", letterSpacing: 0.2 },
@@ -751,7 +751,7 @@ const styles = StyleSheet.create({
 
   rejectionBox: {
     marginTop: 12, padding: 10, backgroundColor: "#fef2f2",
-    // Flat left edge (keeps the red accent border), rounded right edge — reads
+    // Flat left edge (keeps the red accent border), rounded right edge - reads
     // as a callout marker rather than a floating card.
     borderTopLeftRadius: 0, borderBottomLeftRadius: 0,
     borderTopRightRadius: 10, borderBottomRightRadius: 10,

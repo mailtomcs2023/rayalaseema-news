@@ -36,7 +36,7 @@ export async function uploadBuffer(buffer: Buffer, ext: string, contentType: str
  */
 export async function uploadImageFromUrl(srcUrl: string | null | undefined): Promise<string | null> {
   if (!srcUrl || !CONN) return null;
-  // Already an RE blob — don't re-host
+  // Already an RE blob - don't re-host
   if (srcUrl.includes(".blob.core.windows.net/")) return srcUrl;
 
   try {
@@ -61,7 +61,7 @@ export async function uploadImageFromUrl(srcUrl: string | null | undefined): Pro
       const processed = await processImageBuffer(buffer);
       return await uploadBuffer(processed.buffer, processed.ext, processed.contentType);
     } catch (e) {
-      // If sharp chokes on the format (rare — animated GIF, exotic AVIF),
+      // If sharp chokes on the format (rare - animated GIF, exotic AVIF),
       // fall back to uploading the original bytes. Better a clean republish
       // than a 404 on the public site.
       console.warn("[uploadImageFromUrl] processImageBuffer failed, uploading raw:", e);

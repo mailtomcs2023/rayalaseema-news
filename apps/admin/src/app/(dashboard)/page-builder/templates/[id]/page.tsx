@@ -1,4 +1,4 @@
-// Page Builder (Spec #2) — visual editor shell (E1 #163).
+// Page Builder (Spec #2) - visual editor shell (E1 #163).
 // Loads the template + the published web URL into a client component
 // that owns the 3-pane layout (palette | canvas iframe | config panel).
 // Subsequent E phases (#164-#167) wire the interactivity:
@@ -9,7 +9,6 @@
 
 import { prisma, layoutSchema, BUILTIN_BLOCK_TYPES } from "@rayalaseema/db";
 import { notFound } from "next/navigation";
-import { Sidebar } from "@/components/sidebar";
 import { EditorShell } from "./editor-shell";
 
 export const dynamic = "force-dynamic";
@@ -54,7 +53,6 @@ export default async function TemplateEditorPage({
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-      <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: "16px 20px" }}>
         <EditorShell
           initial={initial}

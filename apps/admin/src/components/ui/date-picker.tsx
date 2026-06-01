@@ -24,7 +24,7 @@ function toISO(d: Date): string {
 }
 
 /**
- * shadcn date picker — a drop-in replacement for <input type="date">.
+ * shadcn date picker - a drop-in replacement for <input type="date">.
  * `value` / `onChange` use a "YYYY-MM-DD" string, same as a native date input.
  */
 export function DatePicker({

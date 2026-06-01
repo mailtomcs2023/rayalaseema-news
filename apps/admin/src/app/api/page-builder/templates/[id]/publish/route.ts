@@ -1,4 +1,4 @@
-// Page Builder (Spec #2) — publish draft.
+// Page Builder (Spec #2) - publish draft.
 //
 //   POST /api/page-builder/templates/[id]/publish   { editNote? }
 //
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const parsed = layoutSchema.safeParse(candidate);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "Cannot publish — layout is invalid", details: parsed.error.flatten() },
+        { error: "Cannot publish - layout is invalid", details: parsed.error.flatten() },
         { status: 400 },
       );
     }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 
-// GET /api/dialect-gloss — full glossary, cached aggressively.
+// GET /api/dialect-gloss - full glossary, cached aggressively.
 // Small list (curated, hundreds not thousands) so shipping the whole map
 // to every article reader is fine and lets the tooltip work without N
 // extra requests per page.

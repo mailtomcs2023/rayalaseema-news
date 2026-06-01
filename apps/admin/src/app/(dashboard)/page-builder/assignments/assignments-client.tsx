@@ -1,6 +1,6 @@
 "use client";
 
-// Page Builder (Spec #2) — assignments client UI. Table, create/edit modal,
+// Page Builder (Spec #2) - assignments client UI. Table, create/edit modal,
 // delete, and the live Test URL widget that calls the API resolver.
 
 import { useRouter } from "next/navigation";
@@ -189,7 +189,7 @@ function TestUrlWidget() {
             </div>
           ) : (
             <div style={{ color: "#92400E" }}>
-              ⚠ No active+published template matches this URL — the public page would render the empty fallback.
+              ⚠ No active+published template matches this URL - the public page would render the empty fallback.
             </div>
           )}
         </div>
@@ -246,7 +246,7 @@ function EditModal({
         <select value={templateId} onChange={(e) => setTemplateId(e.target.value)} required style={inp}>
           {templates.map((t) => (
             <option key={t.id} value={t.id}>
-              {t.name} ({t.slug}){t.isPublished ? "" : " — Unpublished"}
+              {t.name} ({t.slug}){t.isPublished ? "" : " - Unpublished"}
             </option>
           ))}
         </select>

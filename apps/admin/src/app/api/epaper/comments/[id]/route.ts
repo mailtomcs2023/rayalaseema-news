@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 
-// PATCH /api/epaper/comments/[id] — toggle resolved or edit text
+// PATCH /api/epaper/comments/[id] - toggle resolved or edit text
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAuth();
   if (isAuthError(session)) return session;

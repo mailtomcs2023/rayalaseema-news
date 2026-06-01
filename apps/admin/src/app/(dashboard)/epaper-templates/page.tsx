@@ -1,12 +1,11 @@
 "use client";
 
 // E-paper template CRUD. Lets DTP staff edit/add page layouts without
-// touching code. Each template's `layout` field is JSON — for now we expose
+// touching code. Each template's `layout` field is JSON - for now we expose
 // it as a textarea (operator-friendly JSON). A future iteration adds a
 // visual block-builder.
 
 import { useEffect, useState } from "react";
-import { Sidebar } from "@/components/sidebar";
 
 interface Template {
   id: string;
@@ -87,7 +86,6 @@ export default function TemplatesPage() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-      <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, color: "#111", marginBottom: 16 }}>ePaper Templates</h1>
 
@@ -139,7 +137,7 @@ export default function TemplatesPage() {
                     <input value={selected.name} onChange={(e) => setSelected({ ...selected, name: e.target.value })}
                       style={inputStyle} />
                   </Field>
-                  <Field label="Slug (immutable in practice — touch with care)">
+                  <Field label="Slug (immutable in practice - touch with care)">
                     <input value={selected.slug} onChange={(e) => setSelected({ ...selected, slug: e.target.value })}
                       style={inputStyle} />
                   </Field>

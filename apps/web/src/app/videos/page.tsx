@@ -8,11 +8,11 @@ import { getSiteConfig } from "@/lib/db-queries";
 export const metadata: Metadata = {
   title: "వీడియోలు | రాయలసీమ న్యూస్",
   description:
-    "రాయలసీమ న్యూస్ సొంత నిర్మాణ వీడియోలు — ఇంటర్వ్యూలు, గ్రౌండ్ రిపోర్ట్‌లు, ఎక్స్‌ప్లైనర్‌లు, జిల్లా కవరేజీ.",
+    "రాయలసీమ న్యూస్ సొంత నిర్మాణ వీడియోలు - ఇంటర్వ్యూలు, గ్రౌండ్ రిపోర్ట్‌లు, ఎక్స్‌ప్లైనర్‌లు, జిల్లా కవరేజీ.",
 };
 
 export default async function VideosPage() {
-  // Spec #1 A1C (#189) — reads Content where type=VIDEO. payload fields
+  // Spec #1 A1C (#189) - reads Content where type=VIDEO. payload fields
   // (videoUrl, duration sec, thumbnailUrl) projected onto the item shape.
   const [config, videoRows] = await Promise.all([
     getSiteConfig(),
@@ -65,7 +65,7 @@ export default async function VideosPage() {
               margin: "4px 0 0",
             }}
           >
-            సొంత నిర్మాణ సంస్థ — ఇంటర్వ్యూలు · గ్రౌండ్ రిపోర్ట్‌లు · ఎక్స్‌ప్లైనర్‌లు · జిల్లా కవరేజీ
+            సొంత నిర్మాణ సంస్థ - ఇంటర్వ్యూలు · గ్రౌండ్ రిపోర్ట్‌లు · ఎక్స్‌ప్లైనర్‌లు · జిల్లా కవరేజీ
           </p>
         </div>
         <VideoGrid videos={items} />

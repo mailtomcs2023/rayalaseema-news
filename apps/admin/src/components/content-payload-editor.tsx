@@ -10,6 +10,8 @@
 
 import { useState } from "react";
 import { ImageUpload } from "@/components/image-upload";
+import { DatePicker } from "@/components/ui/date-picker";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 
 type Payload = Record<string, unknown>;
 
@@ -23,7 +25,7 @@ export function ContentPayloadEditor({ type, payload, setPayload }: ContentPaylo
   const upd = (patch: Payload) => setPayload({ ...payload, ...patch });
 
   if (type === "VIDEO") {
-    // F2 — VIDEO subform. videoUrl + duration (sec) + optional thumbnail.
+    // F2 - VIDEO subform. videoUrl + duration (sec) + optional thumbnail.
     return (
       <SectionBox title="Video details">
         <Field label="Video URL">
@@ -46,7 +48,7 @@ export function ContentPayloadEditor({ type, payload, setPayload }: ContentPaylo
   }
 
   if (type === "REEL") {
-    // F2 — REEL subform. Vertical short clip URL + duration.
+    // F2 - REEL subform. Vertical short clip URL + duration.
     return (
       <SectionBox title="Reel details">
         <Field label="Clip URL (vertical 9:16)">
@@ -65,7 +67,7 @@ export function ContentPayloadEditor({ type, payload, setPayload }: ContentPaylo
   }
 
   if (type === "WEB_STORY") {
-    // F3 — slide builder. Add/remove rows; per-slide image + caption. Reorder
+    // F3 - slide builder. Add/remove rows; per-slide image + caption. Reorder
     // via up/down buttons (drag-drop in a polish PR).
     const slides = (Array.isArray(payload.slides) ? payload.slides : []) as Array<{ image: string; caption?: string }>;
     const setSlides = (next: typeof slides) => upd({ slides: next });
@@ -106,7 +108,7 @@ export function ContentPayloadEditor({ type, payload, setPayload }: ContentPaylo
   }
 
   if (type === "PHOTO_GALLERY") {
-    // F4 — multi-photo. Same shape as slides but no ordering UI required by
+    // F4 - multi-photo. Same shape as slides but no ordering UI required by
     // most galleries; still expose move buttons for cover-image ordering.
     const photos = (Array.isArray(payload.photos) ? payload.photos : []) as Array<{ url: string; caption?: string }>;
     const setPhotos = (next: typeof photos) => upd({ photos: next });
@@ -145,7 +147,7 @@ export function ContentPayloadEditor({ type, payload, setPayload }: ContentPaylo
   }
 
   if (type === "CARTOON") {
-    // F5 — single image (use featuredImage on the parent) + caption + date.
+    // F5 - single image (use featuredImage on the parent) + caption + date.
     // Date defaults to today on first edit; stored as ISO datetime string.
     return (
       <SectionBox title="Cartoon details">
@@ -155,9 +157,10 @@ export function ContentPayloadEditor({ type, payload, setPayload }: ContentPaylo
             placeholder="రాజకీయ వ్యంగ్యం…" style={{ ...inpStyle, resize: "vertical" }} />
         </Field>
         <Field label="Publish date">
-          <input type="date" value={dateOnly((payload.date as string) || "")}
-            onChange={(e) => upd({ date: new Date(e.target.value).toISOString() })}
-            style={inpStyle} />
+          <DatePicker
+            value={dateOnly((payload.date as string) || "")}
+            onChange={(v) => upd({ date: v ? new Date(v).toISOString() : undefined })}
+          />
         </Field>
         <p style={{ fontSize: 11, color: "#6b7280", marginTop: 6 }}>
           Cartoon image lives in the featured-image slot (parent sidebar). No body / no separate gallery.
@@ -167,7 +170,7 @@ export function ContentPayloadEditor({ type, payload, setPayload }: ContentPaylo
   }
 
   if (type === "BREAKING_NEWS") {
-    // F6 — ticker headline. No body, no image, slug auto-generated. Priority
+    // F6 - ticker headline. No body, no image, slug auto-generated. Priority
     // 1 = top of ticker; expiresAt auto-hides on the public side.
     return (
       <SectionBox title="Breaking ticker">
@@ -181,10 +184,10 @@ export function ContentPayloadEditor({ type, payload, setPayload }: ContentPaylo
           </select>
         </Field>
         <Field label="Expires at (auto-hides after)">
-          <input type="datetime-local"
+          <DateTimePicker
             value={dateTimeLocal((payload.expiresAt as string) || "")}
-            onChange={(e) => upd({ expiresAt: e.target.value ? new Date(e.target.value).toISOString() : undefined })}
-            style={inpStyle} />
+            onChange={(v) => upd({ expiresAt: v ? new Date(v).toISOString() : undefined })}
+          />
         </Field>
         <p style={{ fontSize: 11, color: "#6b7280", marginTop: 6 }}>
           Breaking news has no body, no slug, no public detail page. The title shows in the ticker only.

@@ -1,4 +1,4 @@
-// Spec #4 K3 (#248) — /devotional hub.
+// Spec #4 K3 (#248) - /devotional hub.
 //
 // Single canonical URL collecting Tirumala-Tirupati Devasthanams (TTD)
 // news + Hindu festival schedules + temple-town stories. Articles
@@ -17,7 +17,7 @@ export const revalidate = 600;
 const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
 
 export const metadata: Metadata = {
-  title: "Devotional news — Tirumala, Tirupati, AP temples | Rayalaseema News News",
+  title: "Devotional news - Tirumala, Tirupati, AP temples | Rayalaseema News News",
   description:
     "TTD news, seva booking updates, festival schedules, and devotional stories from across Andhra Pradesh's temple towns. Tirumala, Tirupati, Srisailam, Kanipakam and more.",
   alternates: { canonical: `${SITE_URL}/devotional` },
@@ -70,7 +70,7 @@ export default async function DevotionalPage() {
 
         {articles.length === 0 ? (
           <p style={{ fontSize: 14, color: "#888", padding: 24, textAlign: "center" }}>
-            No devotional articles yet — check back shortly.
+            No devotional articles yet - check back shortly.
           </p>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>

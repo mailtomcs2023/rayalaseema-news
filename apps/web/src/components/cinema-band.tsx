@@ -37,7 +37,7 @@ function Stars({ rating }: { rating: number }) {
 }
 
 /**
- * IE-Screen-style cinema band — Tollywood-first for a Telugu audience.
+ * IE-Screen-style cinema band - Tollywood-first for a Telugu audience.
  * Red branded header + tabs, lead story + hero image, 2x2 grid, movie-review rail with stars.
  */
 export function CinemaBand({

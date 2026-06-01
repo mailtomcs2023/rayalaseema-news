@@ -7,7 +7,7 @@ import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 //   &q=&windowDays=7&sort=newest|views|breaking|featured&limit=100
 //
 // Every filter is OPTIONAL. The editor passes the slot's defaults but lets the
-// operator untick chips to widen — the API just honors whatever it gets.
+// operator untick chips to widen - the API just honors whatever it gets.
 export async function GET(req: NextRequest) {
   const session = await requireAuth();
   if (isAuthError(session)) return session;
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
       : sort === "featured" ? [{ featured: "desc" as const }, { publishedAt: "desc" as const }]
       : { publishedAt: "desc" as const };
 
-    // Fetch a larger pool when minWords > 0 — body-length filter runs in app code
+    // Fetch a larger pool when minWords > 0 - body-length filter runs in app code
     // (no efficient SQL for `LENGTH(strip_html(body))`).
     const rows = await prisma.content.findMany({
       where: where as any,
@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
       : rows;
 
     // `totalInWindow` (the "X published in 7d window" hint) skipped when the
-    // client opts out via `skipTotal=1` — the editor sets that on every fetch
+    // client opts out via `skipTotal=1` - the editor sets that on every fetch
     // after the first per-block load so chip toggles don't re-pay the count
     // cost. Speeds up typical interactions from ~600 ms to ~120 ms.
     let totalInWindow = -1;

@@ -52,7 +52,7 @@ function timeAgo(iso?: string | null): string {
 }
 
 /**
- * Generic IE-style section band — lead story + hero image, 2x2 grid, trending rail.
+ * Generic IE-style section band - lead story + hero image, 2x2 grid, trending rail.
  * Reused across Sports, Politics, and any future category section.
  */
 export function SectionBand({
@@ -128,7 +128,7 @@ export function SectionBand({
         </div>
 
         <aside className="sb-rail">
-          {/* CRICKET — live scores when a match is on, else upcoming fixtures */}
+          {/* CRICKET - live scores when a match is on, else upcoming fixtures */}
           {scores && scores.length > 0 && (() => {
             const anyLive = scores.some((m) => m.isLive);
             return (

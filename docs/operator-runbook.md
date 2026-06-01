@@ -1,4 +1,4 @@
-# ePaper Editor v2 — Operator Runbook
+# ePaper Editor v2 - Operator Runbook
 
 Day-to-day operations for the new pro-grade ePaper editor (#108).
 
@@ -13,15 +13,15 @@ Day-to-day operations for the new pro-grade ePaper editor (#108).
 
 | Action | Mouse | Keyboard |
 |---|---|---|
-| Select block | Click | — |
-| Multi-select | Shift+click / marquee drag | — |
-| Drag block | Drag inside | — |
-| Resize block | Drag corner handle | — |
-| Bypass column-snap | Hold **Alt** during drag/resize | — |
+| Select block | Click | - |
+| Multi-select | Shift+click / marquee drag | - |
+| Drag block | Drag inside | - |
+| Resize block | Drag corner handle | - |
+| Bypass column-snap | Hold **Alt** during drag/resize | - |
 | Zoom in / out | Ctrl+wheel | `+` / `-` |
-| 100% zoom | — | `0` |
-| Pan canvas | Space + drag | — |
-| Fit page / Fit width | Bottom-right buttons | — |
+| 100% zoom | - | `0` |
+| Pan canvas | Space + drag | - |
+| Fit page / Fit width | Bottom-right buttons | - |
 | Open preflight panel | Click `⚠ N issues` chip | `P` |
 
 Column-snap behavior:
@@ -62,10 +62,10 @@ Front-master masthead has two slots: `ad-left` and `ad-right`.
 Replaces every `alert()` from v1. Lists every issue that could block publish.
 
 **Severity tiers:**
-- 🔴 **Blocking** — refuses APPROVED → PUBLISHED transition until resolved (or downgraded with audit-logged override).
+- 🔴 **Blocking** - refuses APPROVED → PUBLISHED transition until resolved (or downgraded with audit-logged override).
   - `overflow` (block past trim)
   - `image-unlicensed` (asset has no `licenseType` or expired)
-- 🟡 **Warn** — visible but doesn't block publish.
+- 🟡 **Warn** - visible but doesn't block publish.
   - `block-overflow` (story text exceeds block capacity)
   - `telugu-typo`, `english-blob`, `missing-glyph`
   - `empty-story` (story block has no article)
@@ -93,17 +93,17 @@ Per-edition override: set `EpaperEdition.pageGeometry` JSON in the DB to run a S
 
 Existing pages with the old 12-col × 30-row grid layout (`coordSystem: 'grid-v1'` or missing) are **auto-migrated** to mm-v2 on first load in v2. Scaled proportionally, X+W column-snapped to the new 8-col grid.
 
-The legacy renderer is kept alive — published archive pages render identically. Only new edits write `coordSystem: 'mm-v2'`.
+The legacy renderer is kept alive - published archive pages render identically. Only new edits write `coordSystem: 'mm-v2'`.
 
 ## 8. Render pipeline
 
 | Endpoint | Action |
 |---|---|
-| **Preview PDF** | Loads `/api/epaper/page/[id]/preview` in iframe — instant, uses same render path as PDF |
-| **Render PDF** | POST `/api/epaper/render-v2` — Playwright builds vector PDF per page, merges via pdf-lib |
+| **Preview PDF** | Loads `/api/epaper/page/[id]/preview` in iframe - instant, uses same render path as PDF |
+| **Render PDF** | POST `/api/epaper/render-v2` - Playwright builds vector PDF per page, merges via pdf-lib |
 | `?grid=1` on preview | Overlays 4.23 mm baseline grid (debugging only) |
 | Imposed PDF (#71) | POST `/api/epaper/imposed-pdf { foldType: "2up"\|"4up" }` for press signatures |
-| CMYK convert (#101) | POST `/api/epaper/cmyk { editionId }` — needs `GHOSTSCRIPT_BIN` env |
+| CMYK convert (#101) | POST `/api/epaper/cmyk { editionId }` - needs `GHOSTSCRIPT_BIN` env |
 
 ## 9. Publish
 

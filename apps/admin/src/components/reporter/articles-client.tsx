@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FileText, SlidersHorizontal, X, Search } from "lucide-react";
 
-// Web port of the Expo ArticlesScreen — status chips + a "funnel" button
+// Web port of the Expo ArticlesScreen - status chips + a "funnel" button
 // that opens a bottom-sheet of advanced filters (search, sort, categories,
 // date range, photo filter). All filter state is held client-side and
 // applied to the server-fetched article list.
@@ -185,7 +185,7 @@ export function ArticlesClient({ articles, countByStatus, categories }: Props) {
 
   return (
     <>
-      {/* Filter bar — status chips on the left (scroll on overflow), funnel button on the right */}
+      {/* Filter bar - status chips on the left (scroll on overflow), funnel button on the right */}
       <div
         style={{
           display: "flex",
@@ -515,7 +515,7 @@ export function ArticlesClient({ articles, countByStatus, categories }: Props) {
                             display: "inline-block",
                           }}
                         />
-                        {c.nameEn || c.name || "—"}
+                        {c.nameEn || c.name || "-"}
                       </button>
                     );
                   })}

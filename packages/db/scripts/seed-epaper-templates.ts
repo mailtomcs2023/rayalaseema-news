@@ -13,7 +13,7 @@
 // Layout uses a 12-column × N-row grid. Row height ≈ 92px on a 1480×2760
 // broadsheet canvas. Each template targets 14-20 articles per page.
 //
-// Idempotent — upserts by slug.
+// Idempotent - upserts by slug.
 
 import { PrismaClient } from "@prisma/client";
 
@@ -60,13 +60,13 @@ interface TemplateSpec {
 }
 
 // =========== FRONT PAGE ===========
-// 12 cols × 30 rows — fits the Indian broadsheet printable area exactly
+// 12 cols × 30 rows - fits the Indian broadsheet printable area exactly
 // (30 rows × 92 px = 2760 px = PDF page height). Anything past row 30 gets
 // clipped by Playwright page.pdf, so the front page is tuned to land here.
 //
-// Story slots: 1 lead, 2 majors, 4 secondaries, 6 briefs (was 8 — trimmed
+// Story slots: 1 lead, 2 majors, 4 secondaries, 6 briefs (was 8 - trimmed
 // to fit). minWords filter removed from lead so editorial-light days still
-// fill the lead — score function still favors breaking+featured+image.
+// fill the lead - score function still favors breaking+featured+image.
 const frontPage: TemplateSpec = {
   slug: "front",
   name: "Front Page",
@@ -82,7 +82,7 @@ const frontPage: TemplateSpec = {
       // secondaries 5 + briefs 4 + ad 3 = 30. Fits the print page exactly.
       { id: "mh", type: "masthead", x: 0, y: 0, w: 12, h: 4 },
       { id: "ad-top", type: "ad", x: 0, y: 4, w: 12, h: 2 },
-      // Lead — image preferred but not mandatory (so it always fills)
+      // Lead - image preferred but not mandatory (so it always fills)
       { id: "lead", type: "lead", x: 0, y: 6, w: 8, h: 12, slotFilter: { minImages: 1 } },
       // Right column majors
       { id: "maj-1", type: "major", x: 8, y: 6, w: 4, h: 6, slotFilter: { minImages: 1 } },
@@ -92,7 +92,7 @@ const frontPage: TemplateSpec = {
       { id: "sec-2", type: "secondary", x: 3, y: 18, w: 3, h: 5 },
       { id: "sec-3", type: "secondary", x: 6, y: 18, w: 3, h: 5 },
       { id: "sec-4", type: "secondary", x: 9, y: 18, w: 3, h: 5 },
-      // Briefs — 2 cols × 2 rows
+      // Briefs - 2 cols × 2 rows
       { id: "br-1", type: "brief", x: 0, y: 23, w: 6, h: 2 },
       { id: "br-2", type: "brief", x: 0, y: 25, w: 6, h: 2 },
       { id: "br-3", type: "brief", x: 6, y: 23, w: 6, h: 2 },
@@ -140,7 +140,7 @@ function districtPage(slug: string, nameTe: string, sortOrder: number): Template
 // Generic dense section page. Used for state, world, topical, utility pages.
 function sectionPage(
   slug: string,
-  nameSlug: string | null,            // category filter — null = no filter
+  nameSlug: string | null,            // category filter - null = no filter
   name: string,
   label: string,
   sortOrder: number,
@@ -292,7 +292,7 @@ const DISTRICTS: Array<{ slug: string; nameTe: string }> = [
 // Section templates routed through categories. Restructured to lead with our
 // brand-unique sections (Navyaseema, Rayalaseema Ruchulu, Yetteta, NRI,
 // Puzzles) instead of mimicking Eenadu/Sakshi tab-for-tab. Standalone
-// Mandi/Panchangam/Weather were dropped — they're quarter-page widgets and
+// Mandi/Panchangam/Weather were dropped - they're quarter-page widgets and
 // belong inside the Utility page, not their own broadsheet pages.
 //
 // `seed.ts` ensures every referenced category is upserted on deploy.

@@ -10,7 +10,7 @@ import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 // (separate from the OpenAI deployment used elsewhere).
 //
 // Returns 503 if not configured so the editor can degrade gracefully and
-// show a "smart-crop disabled — set AZURE_VISION_KEY" notice instead of a
+// show a "smart-crop disabled - set AZURE_VISION_KEY" notice instead of a
 // silent failure.
 
 const ENDPOINT = process.env.AZURE_VISION_ENDPOINT;

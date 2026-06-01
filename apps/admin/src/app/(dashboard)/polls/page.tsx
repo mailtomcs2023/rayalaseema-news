@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Sidebar } from "@/components/sidebar";
 
 interface PollOption { id: string; text: string; votes: number; }
 interface Poll { id: string; question: string; active: boolean; options: PollOption[]; createdAt: string; }
@@ -48,7 +47,6 @@ export default function PollsPage() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-      <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
         <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111", marginBottom: 24 }}>Polls & Surveys</h1>
 

@@ -12,11 +12,11 @@ interface LogAuditArgs {
   resource?: string;     // e.g. "article", "user"
   resourceId?: string;
   meta?: Record<string, unknown>;
-  actor?: Actor;         // pass from session.user — null/empty for system actions
+  actor?: Actor;         // pass from session.user - null/empty for system actions
   req?: NextRequest;     // optional, used to extract IP + user-agent
 }
 
-// Fire-and-forget audit logger. Never throws — audit failures must not block real work.
+// Fire-and-forget audit logger. Never throws - audit failures must not block real work.
 // Captures IP from common proxy headers (x-forwarded-for, x-real-ip) when req is passed.
 export async function logAudit(args: LogAuditArgs): Promise<void> {
   try {
@@ -47,7 +47,7 @@ export async function logAudit(args: LogAuditArgs): Promise<void> {
 }
 
 // Compute a lightweight diff summary of changed fields for the audit `meta` payload.
-// Avoid logging full body text — only field names and short before/after values.
+// Avoid logging full body text - only field names and short before/after values.
 export function diffSummary(
   before: Record<string, unknown> | null | undefined,
   after: Record<string, unknown>

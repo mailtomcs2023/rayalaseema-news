@@ -7,7 +7,7 @@
 //
 // Editorial-policy URLs (ethics / corrections / ownership / fact-checking)
 // point at /ethics-policy /corrections-policy /ownership /editorial-standards
-// — those pages ship in Phase C (#205, #206, #211, #207). Until then the
+// - those pages ship in Phase C (#205, #206, #211, #207). Until then the
 // URLs 404 cleanly, which is harmless for schema and self-heals once C lands.
 
 import type { JsonLd, PublisherConfig } from "./types";
@@ -21,7 +21,7 @@ export interface EditorialPolicies {
   editorialStandards?: string;
   /** /diversity-policy (C5 #208) */
   diversityPolicy?: string;
-  /** /ownership (C8 #211) — also feeds ownershipFundingInfo */
+  /** /ownership (C8 #211) - also feeds ownershipFundingInfo */
   ownershipFundingInfo?: string;
   /** /editorial-standards or dedicated /verification page if it exists */
   verificationFactCheckingPolicy?: string;
@@ -30,7 +30,7 @@ export interface EditorialPolicies {
 export interface ContactPoint {
   email?: string;
   phone?: string;
-  contactType?: string; // "editorial" | "customer service" | "corrections" — defaults to "editorial"
+  contactType?: string; // "editorial" | "customer service" | "corrections" - defaults to "editorial"
 }
 
 export interface AddressInput {
@@ -52,7 +52,7 @@ interface BuildArgs {
   policies?: EditorialPolicies;
   /**
    * Optional `disambiguatingDescription` for the org. Useful when the brand
-   * name collides with another well-known entity — e.g. "Rayalaseema News"
+   * name collides with another well-known entity - e.g. "Rayalaseema News"
    * is also Indian Railways train 12793/12794, and we use this field to tell
    * Google + AI engines we are a separate entity (the news publication, not
    * the train).

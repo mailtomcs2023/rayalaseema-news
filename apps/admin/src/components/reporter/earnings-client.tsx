@@ -5,8 +5,8 @@
 // switching + per-category aggregation, and applies a date-range filter
 // (Today / Yesterday / Last 7 days / This month / Last month / Custom).
 //
-// The filter is computed against each row's "relevant date" — paidAt for
-// settled, approvedAt for approved, createdAt for pending — so picking
+// The filter is computed against each row's "relevant date" - paidAt for
+// settled, approvedAt for approved, createdAt for pending - so picking
 // "This month" really means "what entered its current state this month".
 
 import { useMemo, useState } from "react";
@@ -26,7 +26,7 @@ interface Payment {
   paymentMethod: string | null;
   transactionId: string | null;
   note: string | null;
-  // Article's editorial rejection note — shown on CANCELLED rows so the
+  // Article's editorial rejection note - shown on CANCELLED rows so the
   // reporter can see why the payment was voided + what to fix to resubmit.
   rejectionNote: string | null;
   article: {
@@ -120,7 +120,7 @@ function rangeFor(preset: DatePreset, customFrom: string, customTo: string): { f
     }
     case "custom": {
       const from = customFrom ? startOfDay(new Date(customFrom)) : null;
-      // Custom "to" is INCLUSIVE — user picks "to: May 26" and means "through May 26 end-of-day".
+      // Custom "to" is INCLUSIVE - user picks "to: May 26" and means "through May 26 end-of-day".
       const to = customTo ? new Date(startOfDay(new Date(customTo)).getTime() + 86_400_000) : null;
       return { from, to };
     }
@@ -197,7 +197,7 @@ export function ReporterEarningsClient({
 
   return (
     <>
-      {/* Hero — settled within current filter window */}
+      {/* Hero - settled within current filter window */}
       <div style={{
         backgroundColor: "#FF2C2C",
         borderRadius: 20,
@@ -291,7 +291,7 @@ export function ReporterEarningsClient({
         )}
       </div>
 
-      {/* Tab strip — 4 lifecycle states */}
+      {/* Tab strip - 4 lifecycle states */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 16 }}>
         {TABS.map((tab) => {
           const isActive = active === tab.key;
@@ -396,7 +396,7 @@ export function ReporterEarningsClient({
                 ? "No approved payments yet."
                 : active === "settled"
                 ? "No settled payments yet. Earnings appear here after admin pays out."
-                : "No cancelled payments — every payment has stayed on track.")
+                : "No cancelled payments - every payment has stayed on track.")
               : `No ${active} payments in this date range.`}
           </p>
         </div>
@@ -409,7 +409,7 @@ export function ReporterEarningsClient({
   );
 }
 
-// Redesigned payment row card — no border-left accent. Status is shown via:
+// Redesigned payment row card - no border-left accent. Status is shown via:
 //   1. The status pill (colored, top-left)
 //   2. A status-tinted "indicator dot" right before the pill, like an LED
 //   3. A subtle status-tinted ring on the card (1px, low opacity)
@@ -428,7 +428,7 @@ export function ReporterEarningsClient({
 //   │ "Optional note from sub-editor"                             │
 //   └─────────────────────────────────────────────────────────────┘
 function PaymentCard({ row }: { row: Payment }) {
-  // Status palette — extends to CANCELLED (red) so the LED dot + pill
+  // Status palette - extends to CANCELLED (red) so the LED dot + pill
   // + ambient shadow all match the editorial "this got rejected" signal.
   const tint =
     row.status === "PAID"      ? "#16a34a" :
@@ -461,12 +461,12 @@ function PaymentCard({ row }: { row: Payment }) {
       borderRadius: 16,
       // Two-layer shadow: a tiny hairline tint at the bottom in the status
       // colour (subtle ambient awareness) + the standard soft drop shadow.
-      // No border-left, no hard accent — the status pill carries the signal.
+      // No border-left, no hard accent - the status pill carries the signal.
       boxShadow: `0 1px 2px ${tint}14, 0 4px 12px rgba(0,0,0,0.04)`,
       padding: 18,
       transition: "transform 0.12s ease, box-shadow 0.12s ease",
     }}>
-      {/* Header — status pill + amount on the same line */}
+      {/* Header - status pill + amount on the same line */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 12 }}>
         <span style={{
           display: "inline-flex", alignItems: "center", gap: 6,
@@ -475,7 +475,7 @@ function PaymentCard({ row }: { row: Payment }) {
           color: tintFg, backgroundColor: tintBg,
           padding: "4px 10px", borderRadius: 999,
         }}>
-          {/* Status indicator dot (LED-style) — same hue as the pill text */}
+          {/* Status indicator dot (LED-style) - same hue as the pill text */}
           <span style={{
             width: 6, height: 6, borderRadius: "50%",
             backgroundColor: tint,
@@ -488,7 +488,7 @@ function PaymentCard({ row }: { row: Payment }) {
         </p>
       </div>
 
-      {/* Title — up to 2 lines, semibold, with comfortable line-height */}
+      {/* Title - up to 2 lines, semibold, with comfortable line-height */}
       <p style={{
         fontSize: 15, fontWeight: 700, color: "#111", lineHeight: 1.4,
         display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
@@ -497,7 +497,7 @@ function PaymentCard({ row }: { row: Payment }) {
         {row.article.title}
       </p>
 
-      {/* Meta row — category chip + dated context label */}
+      {/* Meta row - category chip + dated context label */}
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
         {row.article.category && (
           <span style={{
@@ -515,7 +515,7 @@ function PaymentCard({ row }: { row: Payment }) {
         </span>
       </div>
 
-      {/* Settled-only — payment method + transaction ID */}
+      {/* Settled-only - payment method + transaction ID */}
       {row.status === "PAID" && (row.paymentMethod || row.transactionId) && (
         <>
           <div style={{ height: 1, background: "#f3f4f6", margin: "14px 0 10px" }} />
@@ -535,7 +535,7 @@ function PaymentCard({ row }: { row: Payment }) {
         </>
       )}
 
-      {/* Cancelled-only — show WHY (article's rejection note) so the
+      {/* Cancelled-only - show WHY (article's rejection note) so the
           reporter knows what to fix before resubmitting. Tinted red block
           to match the cancelled state; uses the same indent-line treatment
           as the sub-editor's note for visual consistency. */}
@@ -563,7 +563,7 @@ function PaymentCard({ row }: { row: Payment }) {
       )}
 
       {/* Sub-editor's note, if any. Uses a thin grey indent rule (NOT a
-          colored left border — that's the look we're avoiding) plus italic
+          colored left border - that's the look we're avoiding) plus italic
           text to make it read like a quote without copying the card style. */}
       {row.note && (
         <p style={{

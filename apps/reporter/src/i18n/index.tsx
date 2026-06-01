@@ -7,7 +7,7 @@ export { LANGUAGE_NAMES } from "./translations";
 
 const STORAGE_KEY = "app-language";
 
-// Pick the device language on first launch — Telugu if the phone is set to
+// Pick the device language on first launch - Telugu if the phone is set to
 // Telugu, English otherwise. The reporter can override this via the toggle.
 // Uses Intl (built into Hermes) so no native locale module is needed.
 function detectDeviceLang(): Lang {

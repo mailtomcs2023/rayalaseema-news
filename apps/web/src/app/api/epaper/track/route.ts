@@ -4,7 +4,7 @@ import crypto from "crypto";
 
 // POST /api/epaper/track
 // Body: { editionId, pageNumber, articleSlug? }
-// Fire-and-forget ping from the /epaper viewer. No auth — public viewer.
+// Fire-and-forget ping from the /epaper viewer. No auth - public viewer.
 // IP + UA get sha256'd into a single short hash so we can approximate uniques
 // without storing PII.
 export async function POST(req: NextRequest) {
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json({ ok: true });
   } catch {
-    // Swallow — never break the viewer over telemetry
+    // Swallow - never break the viewer over telemetry
     return NextResponse.json({ ok: false });
   }
 }

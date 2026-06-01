@@ -1,12 +1,12 @@
-// POST /api/content/[id]/restore — undo a soft-delete. Clears deletedAt +
-// deletedById. Only ADMIN / EDITOR / CHIEF_SUB_EDITOR may restore.
+// POST /api/content/[id]/restore - undo a soft-delete. Clears deletedAt +
+// deletedById. Only ADMIN / EDITOR may restore.
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 import { logAudit } from "@/lib/audit";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await requireAuth(["ADMIN", "EDITOR", "CHIEF_SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(session)) return session;
   try {
     const { id } = await params;

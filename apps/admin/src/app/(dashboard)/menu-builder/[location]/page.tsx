@@ -1,11 +1,10 @@
-// /menu-builder/[location] — three locations served by the same editor:
+// /menu-builder/[location] - three locations served by the same editor:
 //   /menu-builder/header  /menu-builder/footer  /menu-builder/mobile
 //
 // Spec #3 B1 #177 + C1-C3 #178-#180. Server component picks the right
 // location enum value, then hands off to the client tree editor.
 import { redirect, notFound } from "next/navigation";
 import { prisma, MenuLocation } from "@rayalaseema/db";
-import { Sidebar } from "@/components/sidebar";
 import { auth } from "@/lib/auth";
 import { MenuTreeEditor } from "@/components/menu-tree-editor";
 
@@ -30,8 +29,8 @@ export default async function MenuBuilderPage({ params }: { params: Promise<{ lo
   const session = await auth();
   if (!session?.user) redirect("/login");
   const role = (session.user as any).role;
-  // ADMIN + (CHIEF_SUB_)EDITOR — same gate as Page Builder.
-  if (!["ADMIN", "EDITOR", "CHIEF_SUB_EDITOR"].includes(role)) redirect("/");
+  // ADMIN + EDITOR - same gate as Page Builder.
+  if (!["ADMIN", "EDITOR"].includes(role)) redirect("/");
 
   const { location: slug } = await params;
   const location = parseLocation(slug);
@@ -70,7 +69,7 @@ export default async function MenuBuilderPage({ params }: { params: Promise<{ lo
   ]);
   const categories = rawCategories.map((c) => ({ slug: c.slug, name: c.name, nameEn: c.nameEn ?? c.name }));
 
-  // Spec #3 F1 #185 — broken-link detection. Collect every CATEGORY slug and
+  // Spec #3 F1 #185 - broken-link detection. Collect every CATEGORY slug and
   // CONTENT id referenced by the menu (draft view, since editor shows draft),
   // then check which still exist. Items pointing at deleted rows get the ⚠
   // marker + a top-of-page banner.
@@ -103,14 +102,13 @@ export default async function MenuBuilderPage({ params }: { params: Promise<{ lo
       : Promise.resolve([]),
   ]);
   const validCategorySlugs = new Set(validCategoryRows.map((r) => r.slug));
-  // Treat unpublished content as broken — public site won't render the link.
+  // Treat unpublished content as broken - public site won't render the link.
   const validContentIds = new Set(
     validContentRows.filter((r) => r.status === "PUBLISHED").map((r) => r.id),
   );
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-      <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
         <MenuTreeEditor
           menuId={menu.id}

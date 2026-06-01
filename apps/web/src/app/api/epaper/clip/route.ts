@@ -4,7 +4,7 @@ import { BlobServiceClient } from "@azure/storage-blob";
 const CONN = process.env.AZURE_STORAGE_CONNECTION_STRING;
 const CONTAINER = "uploads";
 
-// POST /api/epaper/clip — receives a cropped PNG, stores it, returns shareable URL.
+// POST /api/epaper/clip - receives a cropped PNG, stores it, returns shareable URL.
 // Public: any reader can clip an e-paper region.
 export async function POST(req: NextRequest) {
   if (!CONN) {

@@ -1,6 +1,6 @@
 "use client";
 
-// Tiny toast queue — no external lib, no context provider. The page that
+// Tiny toast queue - no external lib, no context provider. The page that
 // wants toasts holds the state and uses the `useToasts` hook to push them.
 // Auto-dismiss after 5 s; click any toast to dismiss early.
 

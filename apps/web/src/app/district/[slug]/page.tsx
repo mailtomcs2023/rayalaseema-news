@@ -87,21 +87,19 @@ export default async function DistrictPage({ params }: { params: Promise<{ slug:
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: stringifyJsonLd(breadcrumbLd) }} />
       <Header config={config} breakingNews={[]} />
 
-      {/* Branded header */}
-      <div style={{ background: "var(--brand, #E01B1B)" }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-          <div>
-            <span style={{ fontFamily: "var(--font-telugu-heading), serif", fontSize: 26, fontWeight: 800, color: "#fff" }}>
-              {district.name} జిల్లా
-            </span>
-            <div style={{ fontFamily: "var(--font-telugu-body), sans-serif", fontSize: 12, color: "rgba(255,255,255,0.85)", marginTop: 2 }}>
-              {district.nameEn} · {district.constituencies.length} నియోజకవర్గాలు
-            </div>
+      {/* District header - plain white bg, title in dark text, matches site shell */}
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "16px 12px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+        <div>
+          <span style={{ fontFamily: "var(--font-telugu-heading), serif", fontSize: 26, fontWeight: 800, color: "var(--n-900, #111827)" }}>
+            {district.name} జిల్లా
+          </span>
+          <div style={{ fontFamily: "var(--font-telugu-body), sans-serif", fontSize: 12, color: "#6b7280", marginTop: 2 }}>
+            {district.nameEn} · {district.constituencies.length} నియోజకవర్గాలు
           </div>
-          <ConstituencyFilter
-            constituencies={district.constituencies.map((c) => ({ id: c.id, name: c.name, nameEn: c.nameEn, slug: c.slug }))}
-          />
         </div>
+        <ConstituencyFilter
+          constituencies={district.constituencies.map((c) => ({ id: c.id, name: c.name, nameEn: c.nameEn, slug: c.slug }))}
+        />
       </div>
 
       <main style={{ maxWidth: 1280, margin: "0 auto", padding: "18px 12px 48px" }}>
@@ -118,7 +116,7 @@ export default async function DistrictPage({ params }: { params: Promise<{ slug:
               marginBottom: 14,
             }}
           >
-            {district.name} జిల్లా వార్తలు త్వరలో — ప్రస్తుతం తాజా వార్తలు చూపిస్తున్నాము.
+            {district.name} జిల్లా వార్తలు త్వరలో - ప్రస్తుతం తాజా వార్తలు చూపిస్తున్నాము.
           </div>
         )}
 

@@ -1,4 +1,4 @@
-// Spec #4 C6 (#209) — /mission.
+// Spec #4 C6 (#209) - /mission.
 
 import type { Metadata } from "next";
 import { Header } from "@/components/header";
@@ -10,7 +10,7 @@ const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
 export const metadata: Metadata = {
   title: "Our Mission | రాయలసీమ న్యూస్",
   description:
-    "Why Rayalaseema News exists — our mission to deliver hyper-local Telugu news for the eight districts of the Rayalaseema region.",
+    "Why Rayalaseema News exists - our mission to deliver hyper-local Telugu news for the eight districts of the Rayalaseema region.",
   alternates: { canonical: `${SITE_URL}/mission` },
 };
 
@@ -24,19 +24,19 @@ export default function MissionPage() {
       <Header />
       <main style={{ maxWidth: 800, margin: "0 auto", padding: "40px 16px" }}>
         <h1 style={{ fontSize: 32, fontWeight: 900, marginBottom: 6, color: "#111" }}>Our Mission</h1>
-        <p style={{ fontSize: 13, color: "#888", marginBottom: 24 }}>రాయలసీమ న్యూస్ — Why we exist</p>
+        <p style={{ fontSize: 13, color: "#888", marginBottom: 24 }}>రాయలసీమ న్యూస్ - Why we exist</p>
 
         <div className="article-body" style={{ fontSize: 16, lineHeight: 1.85, color: "#333" }}>
           <p>
             Rayalaseema News was founded to give the Rayalaseema region of Andhra Pradesh a Telugu-first news
             outlet that takes hyper-local reporting as seriously as state and national coverage. We cover eight
-            districts — Kurnool, Nandyal, Anantapuramu, Sri Sathya Sai, YSR-Kadapa, Annamayya, Tirupati, and
-            Chittoor — down to the mandal level.
+            districts - Kurnool, Nandyal, Anantapuramu, Sri Sathya Sai, YSR-Kadapa, Annamayya, Tirupati, and
+            Chittoor - down to the mandal level.
           </p>
 
           <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 32, marginBottom: 10 }}>What we do</h2>
           <p>
-            We publish original reporting from across Rayalaseema — political coverage at the constituency level,
+            We publish original reporting from across Rayalaseema - political coverage at the constituency level,
             agricultural and mandi-price reporting for the farming community, devotional and cultural news from
             Tirumala-Tirupati and other temple towns, exam-result coverage during the academic season, cinema and
             entertainment reviews, and breaking news with the speed local readers expect.
@@ -54,7 +54,7 @@ export default function MissionPage() {
           <p>
             We will not be a propaganda outlet for any political party or community. We will not be a paid-news
             broker. We will not chase virality at the cost of accuracy. We will not publish content we cannot stand
-            behind in public — every story carries a real byline and a route to feedback.
+            behind in public - every story carries a real byline and a route to feedback.
           </p>
 
           <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 32, marginBottom: 10 }}>How we sustain this</h2>

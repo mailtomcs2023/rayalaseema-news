@@ -1,9 +1,9 @@
-// Spec #4 C1 (#204) — /masthead public page.
+// Spec #4 C1 (#204) - /masthead public page.
 //
 // Editorial transparency surface required by Google News Publisher Center +
 // E-E-A-T scoring. Lists the editorial team with role, bio, photo. Sourced
 // from User rows with editorial roles (ADMIN / EDITOR / CHIEF_SUB_EDITOR /
-// SUB_EDITOR). REPORTER role is intentionally excluded — reporters have
+// SUB_EDITOR). REPORTER role is intentionally excluded - reporters have
 // their own /author/<slug> profiles but don't appear on the masthead.
 
 import Link from "next/link";
@@ -18,7 +18,7 @@ const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
 export const metadata: Metadata = {
   title: "Masthead | రాయలసీమ న్యూస్",
   description:
-    "Editorial team and leadership of Rayalaseema News — Editor-in-Chief, desk leads, and editorial staff covering Rayalaseema regional news.",
+    "Editorial team and leadership of Rayalaseema News - Editor-in-Chief, desk leads, and editorial staff covering Rayalaseema regional news.",
   alternates: { canonical: `${SITE_URL}/masthead` },
   openGraph: { title: "Masthead", url: `${SITE_URL}/masthead`, type: "profile", locale: "te_IN" },
 };
@@ -41,7 +41,7 @@ export default async function MastheadPage() {
   const team = await prisma.user.findMany({
     where: {
       active: true,
-      role: { in: ["ADMIN", "EDITOR", "CHIEF_SUB_EDITOR", "SUB_EDITOR"] },
+      role: { in: ["ADMIN", "EDITOR", "SUB_EDITOR"] },
     },
     select: {
       id: true, name: true, bio: true, avatar: true, role: true,
@@ -65,13 +65,13 @@ export default async function MastheadPage() {
       <main style={{ maxWidth: 900, margin: "0 auto", padding: "40px 16px" }}>
         <h1 style={{ fontSize: 32, fontWeight: 900, marginBottom: 6, color: "#111" }}>Masthead</h1>
         <p style={{ fontSize: 14, color: "#888", marginBottom: 32 }}>
-          The editorial team behind Rayalaseema News. Last updated: rolling — staff is added or removed as roles change.
+          The editorial team behind Rayalaseema News. Last updated: rolling - staff is added or removed as roles change.
         </p>
 
         <p style={{ fontSize: 15, color: "#444", lineHeight: 1.8, marginBottom: 32 }}>
           Editorial decisions at Rayalaseema News are made by the team listed below. The Editor-in-Chief carries final
           responsibility for everything published. The masthead is updated whenever staff change roles or join the team.
-          Reporters are not listed here — they appear on their individual <Link href="/author" style={{ color: "var(--color-brand)" }}>author profiles</Link>.
+          Reporters are not listed here - they appear on their individual <Link href="/author" style={{ color: "var(--color-brand)" }}>author profiles</Link>.
         </p>
 
         {team.length === 0 ? (

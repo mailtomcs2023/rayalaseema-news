@@ -5,11 +5,11 @@
 // pdf-lib + sharp, then OCRs with tesseract.js using telugu + english
 // traineddata.
 //
-// Idempotent — re-running only processes pages without ocrText.
+// Idempotent - re-running only processes pages without ocrText.
 //
 // Run: bun packages/db/scripts/ocr-epaper-pages.ts
 //
-// Status: SCAFFOLD ONLY — full Tesseract pipeline lands in a follow-up.
+// Status: SCAFFOLD ONLY - full Tesseract pipeline lands in a follow-up.
 // Surface the column + search wiring now so /epaper/search returns results
 // for live articles immediately, while OCR for the legacy archive lands
 // when the worker is enabled.
@@ -28,7 +28,7 @@ async function main() {
   console.log(`[ocr] ${candidates.length} pages awaiting OCR`);
 
   if (candidates.length === 0) {
-    console.log("[ocr] nothing to do — all pages already OCR'd");
+    console.log("[ocr] nothing to do - all pages already OCR'd");
     return;
   }
 

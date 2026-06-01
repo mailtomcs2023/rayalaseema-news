@@ -14,7 +14,7 @@ interface DistrictNews {
     featuredImage: string | null;
     publishedAt: string | null;
     category: { name: string; color: string };
-    // Optional — only populated when the upstream API includes constituency.
+    // Optional - only populated when the upstream API includes constituency.
     // Falls through to /news/ fallback URL otherwise.
     constituency?: { slug: string; district: { slug: string } } | null;
   }[];

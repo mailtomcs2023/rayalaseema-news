@@ -14,11 +14,11 @@ async function main() {
     create: { email: "admin@rayalaseemanews.com", name: "Admin", passwordHash: adminPwd, role: Role.ADMIN },
   });
 
-  const chiefSubPwd = await hash("chief123", 12);
+  const editorPwd = await hash("editor123", 12);
   await prisma.user.upsert({
-    where: { email: "chief@rayalaseemanews.com" },
+    where: { email: "editor@rayalaseemanews.com" },
     update: {},
-    create: { email: "chief@rayalaseemanews.com", name: "Chief Sub-Editor", passwordHash: chiefSubPwd, role: Role.CHIEF_SUB_EDITOR },
+    create: { email: "editor@rayalaseemanews.com", name: "Editor", passwordHash: editorPwd, role: Role.EDITOR },
   });
 
   const subEditorPwd = await hash("subeditor123", 12);
@@ -34,7 +34,7 @@ async function main() {
     update: {},
     create: { email: "reporter@rayalaseemanews.com", name: "Reporter", passwordHash: reporterPwd, role: Role.REPORTER },
   });
-  console.log("  4 users created (Admin, Chief Sub-Editor, Sub-Editor, Reporter)");
+  console.log("  4 users created (Admin, Editor, Sub-Editor, Reporter)");
 
   // ========== CATEGORIES ==========
   const categories = [
@@ -60,7 +60,7 @@ async function main() {
     { name: "నవ్యసీమ", nameEn: "Navyaseema", slug: "navyaseema", color: "#E11D48", sortOrder: 20 },
     { name: "రియల్ ఎస్టేట్", nameEn: "Real Estate", slug: "real-estate", color: "#D97706", sortOrder: 21 },
     { name: "సంపాదకీయం", nameEn: "Editorial", slug: "editorial", color: "#374151", sortOrder: 22 },
-    // Categories surfaced from the "మరిన్ని" dropdown in header.tsx — added so the
+    // Categories surfaced from the "మరిన్ని" dropdown in header.tsx - added so the
     // links don't 404. Geographic + section pages even if we don't curate them yet.
     { name: "ఆంధ్రప్రదేశ్", nameEn: "Andhra Pradesh", slug: "andhra-pradesh", color: "#0891B2", sortOrder: 23 },
     { name: "తెలంగాణ", nameEn: "Telangana", slug: "telangana", color: "#DC2626", sortOrder: 24 },
@@ -74,10 +74,53 @@ async function main() {
     { name: "హాయ్ బుజ్జి", nameEn: "Hai Bujji", slug: "hai-bujji", color: "#F59E0B", sortOrder: 31 },
     { name: "ఆదివారం మాగజైన్", nameEn: "Sunday Magazine", slug: "sunday-magazine", color: "#7C3AED", sortOrder: 32 },
     { name: "శ్రద్ధాంజలి", nameEn: "Obituaries & Birthdays", slug: "obituaries", color: "#475569", sortOrder: 33 },
+    // Spec parity adds - categories Sakshi/Eenadu ship that we were missing.
+    // sortOrder 34+ keeps them after the original block so existing nav order
+    // isn't disturbed.
+    { name: "ఫ్యాక్ట్ చెక్", nameEn: "Fact Check", slug: "fact-check", color: "#0EA5E9", sortOrder: 34 },
+    { name: "గుడ్ న్యూస్", nameEn: "Good News", slug: "good-news", color: "#22C55E", sortOrder: 35 },
+    { name: "ఆహా", nameEn: "Recipes", slug: "recipes", color: "#F97316", sortOrder: 36 },
+    { name: "లైఫ్‌స్టైల్‌", nameEn: "Lifestyle", slug: "lifestyle", color: "#EC4899", sortOrder: 37 },
+    { name: "కార్టూన్", nameEn: "Cartoon", slug: "cartoon", color: "#FBBF24", sortOrder: 38 },
+    { name: "ఈతరం", nameEn: "Youth", slug: "youth", color: "#8B5CF6", sortOrder: 39 },
+    { name: "వెబ్ ప్రత్యేకం", nameEn: "Explained", slug: "explained", color: "#0D9488", sortOrder: 40 },
+    { name: "క్యాలెండర్ / పంచాంగం", nameEn: "Calendar & Panchangam", slug: "calendar-panchangam", color: "#F59E0B", sortOrder: 41 },
+    { name: "గెస్ట్ కాలమ్", nameEn: "Guest Columns", slug: "guest-columns", color: "#475569", sortOrder: 42 },
+    { name: "సోషల్ మీడియా", nameEn: "Social Media", slug: "social-media", color: "#3B82F6", sortOrder: 43 },
+    { name: "కర్ణాటక", nameEn: "Karnataka", slug: "karnataka", color: "#DC2626", sortOrder: 44 },
+    { name: "తమిళనాడు", nameEn: "Tamil Nadu", slug: "tamil-nadu", color: "#7C3AED", sortOrder: 45 },
+    { name: "ఫన్ డే", nameEn: "Funday", slug: "funday", color: "#F472B6", sortOrder: 46 },
+    { name: "వింతలు విశేషాలు", nameEn: "Curiosities", slug: "vintalu-visheshalu", color: "#A855F7", sortOrder: 47 },
+    { name: "పాడ్‌కాస్ట్‌", nameEn: "Podcasts", slug: "podcasts", color: "#1E40AF", sortOrder: 48 },
+    // Cinema sub-categories - nest under `entertainment` so /entertainment
+    // remains the cinema landing, and Tollywood/Bollywood/etc. live one
+    // level deeper. parentSlug is resolved to parentId in the upsert loop.
+    { name: "టాలీవుడ్", nameEn: "Tollywood", slug: "tollywood", color: "#DB2777", sortOrder: 49, parentSlug: "entertainment" },
+    { name: "బాలీవుడ్", nameEn: "Bollywood", slug: "bollywood", color: "#F43F5E", sortOrder: 50, parentSlug: "entertainment" },
+    { name: "హాలీవుడ్", nameEn: "Hollywood", slug: "hollywood", color: "#9333EA", sortOrder: 51, parentSlug: "entertainment" },
+    { name: "సౌత్ ఇండియా", nameEn: "South Cinema", slug: "south-cinema", color: "#E11D48", sortOrder: 52, parentSlug: "entertainment" },
+    { name: "ఓటీటీ", nameEn: "OTT", slug: "ott", color: "#7C3AED", sortOrder: 53, parentSlug: "entertainment" },
+    // Business sub-categories - nest under `business`.
+    { name: "మార్కెట్", nameEn: "Market", slug: "market", color: "#16A34A", sortOrder: 54, parentSlug: "business" },
+    { name: "కార్పొరేట్", nameEn: "Corporate", slug: "corporate", color: "#1E40AF", sortOrder: 55, parentSlug: "business" },
+    { name: "పర్సనల్‌ ఫైనాన్స్‌", nameEn: "Personal Finance", slug: "personal-finance", color: "#0891B2", sortOrder: 56, parentSlug: "business" },
+    { name: "ఆటోమొబైల్", nameEn: "Automobile", slug: "automobile", color: "#DC2626", sortOrder: 57, parentSlug: "business" },
+    { name: "ఎకానమీ", nameEn: "Economy", slug: "economy", color: "#0D9488", sortOrder: 58, parentSlug: "business" },
+    // Sports sub-category - popular enough to surface on its own.
+    { name: "క్రికెట్", nameEn: "Cricket", slug: "cricket", color: "#16A34A", sortOrder: 59, parentSlug: "sports" },
   ];
 
+  // Two-phase upsert: the array is ordered so parents come before children,
+  // and we resolve parentSlug → parent.connect on the way in. Children that
+  // reference a missing parent slug are simply created without a parent
+  // (rather than failing the seed) so partial data still works locally.
   for (const cat of categories) {
-    await prisma.category.upsert({ where: { slug: cat.slug }, update: cat, create: cat });
+    const { parentSlug, ...rest } = cat as typeof cat & { parentSlug?: string };
+    const data: any = { ...rest };
+    if (parentSlug) {
+      data.parent = { connect: { slug: parentSlug } };
+    }
+    await prisma.category.upsert({ where: { slug: cat.slug }, update: data, create: data });
   }
   console.log(`  ${categories.length} categories created`);
 
@@ -129,7 +172,7 @@ async function main() {
     { key: "homepage_layout", value: "eenadu" },
     { key: "ticker_speed", value: "60" },
     { key: "logo_url", value: "/logo.svg" },
-    // Spec #4 A4 (#195) — analytics + indexing IDs. Default to empty; editor
+    // Spec #4 A4 (#195) - analytics + indexing IDs. Default to empty; editor
     // populates via /settings → SEO & Analytics section. Frontend code already
     // gates script loading on truthy value (see apps/web/src/app/layout.tsx).
     { key: "bing_webmaster_id", value: "" },          // <meta name="msvalidate.01">
@@ -144,7 +187,7 @@ async function main() {
   }
   console.log(`  ${configs.length} site config entries created`);
 
-  // ========== SPEC #4 A2 — Author profile slug backfill ==========
+  // ========== SPEC #4 A2 - Author profile slug backfill ==========
   // Idempotent: only populates publicProfileSlug for users that don't have
   // one yet. Runs on every deploy via deploy.yml's `bunx tsx prisma/seed.ts`,
   // a no-op once everyone has a slug. New users get a slug auto-assigned
@@ -175,7 +218,7 @@ async function main() {
       console.log(`  ${u.email} -> /author/${slug}`);
     }
   } else {
-    console.log("\nAll active users already have publicProfileSlug — skipping backfill.");
+    console.log("\nAll active users already have publicProfileSlug - skipping backfill.");
   }
 
   console.log("\nSeed complete! (No dummy articles/videos/reels - add real content from admin)");

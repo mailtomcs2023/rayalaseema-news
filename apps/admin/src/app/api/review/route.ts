@@ -6,7 +6,7 @@ import { pickLeastLoadedReviewer } from "@/lib/reviewer-assignment";
 // ============ /api/review ============
 // Editorial review queue. Reads + writes the unified `Content` table.
 //
-// Payment lifecycle (Stage 1 — per-article amount set by sub-editor):
+// Payment lifecycle (Stage 1 - per-article amount set by sub-editor):
 //   action=review  → article SUBMITTED → IN_REVIEW
 //                    Requires `paymentAmount`. Creates (or refreshes) a
 //                    ContentPayment row at status=CALCULATED so the reporter
@@ -14,7 +14,7 @@ import { pickLeastLoadedReviewer } from "@/lib/reviewer-assignment";
 //   action=reject  → article → REJECTED
 //                    ContentPayment flips to CANCELLED (row kept for audit).
 //   action=approve → article IN_REVIEW → APPROVED
-//                    No payment change — Editor approving doesn't pay out yet.
+//                    No payment change - Editor approving doesn't pay out yet.
 //   action=publish → article APPROVED → PUBLISHED
 //                    ContentPayment → APPROVED, approvedById/At stamped.
 //   action=unpublish → article PUBLISHED → DRAFT
@@ -33,14 +33,14 @@ import { pickLeastLoadedReviewer } from "@/lib/reviewer-assignment";
 // so two sub-editors clicking simultaneously can't both claim the row. The
 // loser gets a clean 409, no double payment, no overlapping reviews.
 
-// Helper — sentinel error that the outer catch maps to a status code.
+// Helper - sentinel error that the outer catch maps to a status code.
 class WorkflowError extends Error {
   constructor(public status: number, message: string) {
     super(message);
   }
 }
 
-// GET /api/review — articles pending review for current user
+// GET /api/review - articles pending review for current user
 export async function GET(req: NextRequest) {
   const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR"]);
   if (isAuthError(session)) return session;
@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
       // Sub-editor view: articles AUTO-ASSIGNED to them, plus the pool of
       // unassigned articles in their categories (the fallback when no
       // sub-editor was available at submit time). Anything assigned to a
-      // different sub-editor is hidden — strict assignment, no poaching.
+      // different sub-editor is hidden - strict assignment, no poaching.
       const assignments = await prisma.userCategory.findMany({
         where: { userId },
         select: { categoryId: true },
@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
       take: 50,
     });
 
-    // Counts must respect the same scoping as the list — otherwise a sub
+    // Counts must respect the same scoping as the list - otherwise a sub
     // editor's tab badge says "5" but the table shows their 2 visible rows.
     const countWhere: any = { type: "ARTICLE" };
     if (where.OR) countWhere.OR = where.OR;
@@ -100,7 +100,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/review — take an editorial action on a Content row.
+// POST /api/review - take an editorial action on a Content row.
 // Body: { articleId | contentId, action, note?, paymentAmount? }
 export async function POST(req: NextRequest) {
   const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR", "REPORTER"]);
@@ -135,7 +135,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `${role} cannot ${action}` }, { status: 403 });
     }
 
-    // Validate paymentAmount upfront for "review" — sub-editor MUST set one.
+    // Validate paymentAmount upfront for "review" - sub-editor MUST set one.
     let paymentAmount: number | null = null;
     if (action === "review") {
       const n = Number(rawAmount);
@@ -145,7 +145,7 @@ export async function POST(req: NextRequest) {
       paymentAmount = n;
     }
 
-    // return-to-se requires a non-empty note — the SE needs to know WHY it
+    // return-to-se requires a non-empty note - the SE needs to know WHY it
     // came back. Reject empty/whitespace upfront before the transaction opens.
     if (action === "return-to-se") {
       if (!note || !String(note).trim()) {
@@ -171,10 +171,10 @@ export async function POST(req: NextRequest) {
 
       switch (action) {
         case "review": {
-          // Stage 2 — strict assignment for SUB_EDITOR. They can claim only
+          // Stage 2 - strict assignment for SUB_EDITOR. They can claim only
           // their own assigned articles, OR pool articles (unassigned, in
           // their category) when no sub-editor was available at submit time.
-          // EDITOR / ADMIN bypass this — they can claim anything.
+          // EDITOR / ADMIN bypass this - they can claim anything.
           if (role === "SUB_EDITOR") {
             if (article.assignedReviewerId && article.assignedReviewerId !== userId) {
               throw new WorkflowError(403, "Assigned to another reviewer");
@@ -191,7 +191,7 @@ export async function POST(req: NextRequest) {
             }
           }
 
-          // Atomic claim — only succeeds if still SUBMITTED AND either
+          // Atomic claim - only succeeds if still SUBMITTED AND either
           // assigned to me OR unassigned. Closes the race where two sub-
           // editors look at the pool simultaneously: whichever UPDATE lands
           // first sets assignedReviewerId=them, the other gets count=0.
@@ -215,7 +215,7 @@ export async function POST(req: NextRequest) {
             throw new WorkflowError(409, "Already claimed or no longer in Submitted");
           }
 
-          // Clear any editor-return note now that the SE has re-claimed —
+          // Clear any editor-return note now that the SE has re-claimed -
           // the article is moving forward, the prior feedback is resolved.
           await tx.content.update({
             where: { id: articleId },
@@ -268,14 +268,14 @@ export async function POST(req: NextRequest) {
             where: { id: articleId },
             data: { status: "APPROVED", approvedById: userId, approvedAt: new Date(), editorNote: null } as any,
           });
-          // Payment stays at CALCULATED — only publish flips it to APPROVED.
+          // Payment stays at CALCULATED - only publish flips it to APPROVED.
           break;
         }
 
         case "return-to-se": {
           // Editor sees a SE mistake and bounces it back. Revert to SUBMITTED
           // keeping the SAME assignedReviewerId so it lands in that SE's
-          // queue (not redistributed). Payment stays CALCULATED — SE can
+          // queue (not redistributed). Payment stays CALCULATED - SE can
           // adjust amount on re-claim if needed.
           const bounce = await tx.content.updateMany({
             where: { id: articleId, status: "IN_REVIEW" },
@@ -314,7 +314,7 @@ export async function POST(req: NextRequest) {
 
         case "unpublish": {
           if (payment?.status === "PAID") {
-            throw new WorkflowError(409, "Cannot unpublish — payment already settled");
+            throw new WorkflowError(409, "Cannot unpublish - payment already settled");
           }
           await tx.content.update({
             where: { id: articleId },
@@ -339,7 +339,7 @@ export async function POST(req: NextRequest) {
             data: { status: "SUBMITTED", assignedReviewerId: nextReviewer },
           });
           // Payment from a previous review cycle (now CANCELLED) is left as-is
-          // — the sub-editor will re-set the amount on next "review" click.
+          // - the sub-editor will re-set the amount on next "review" click.
           break;
         }
 

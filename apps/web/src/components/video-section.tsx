@@ -30,7 +30,7 @@ function fmtViews(n: number): string {
 }
 
 /**
- * Homepage cinematic video band — dark "cinema" block, intentional contrast vs white news.
+ * Homepage cinematic video band - dark "cinema" block, intentional contrast vs white news.
  * Hero plays inline (YouTube iframe swap on click); rail items also play inline.
  */
 export function VideoSection({ videos }: { videos: VideoItem[] }) {

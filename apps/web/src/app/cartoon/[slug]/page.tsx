@@ -1,4 +1,4 @@
-// /cartoon/[slug] — CARTOON Content type detail page (Spec #1 #111).
+// /cartoon/[slug] - CARTOON Content type detail page (Spec #1 #111).
 // Single image, optional caption, publish date. Newsroom uses this for the
 // daily editorial cartoon (ఎట్టెట / యెట్టెట section).
 import { notFound } from "next/navigation";

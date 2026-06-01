@@ -84,7 +84,7 @@ async function categoryHeatMap(): Promise<Record<string, number>> {
   const sumBySlug: Record<string, number> = {};
   let total = 0;
   for (const r of rows) {
-    // Content.category is nullable — skip uncategorised rows from the heat map.
+    // Content.category is nullable - skip uncategorised rows from the heat map.
     const slug = r.category?.slug;
     if (!slug) continue;
     sumBySlug[slug] = (sumBySlug[slug] || 0) + r.viewCount;
@@ -240,7 +240,7 @@ export async function autofillTemplate(input: AutofillInput): Promise<AutofillRe
     if (b.locked && b.articleId) used.add(b.articleId);
   }
 
-  // Sort slots by priority — fill leads before briefs so leads get pick of pool.
+  // Sort slots by priority - fill leads before briefs so leads get pick of pool.
   const storySlots = input.templateLayout.blocks
     .filter((b) => STORY_TYPES.has(b.type) && !b.locked)
     .sort((a, b) => (SLOT_TYPE_PRIORITY[b.type] ?? 0) - (SLOT_TYPE_PRIORITY[a.type] ?? 0));

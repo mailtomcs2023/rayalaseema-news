@@ -1,16 +1,64 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { Home, FileText, Wallet, User, Plus } from "lucide-react";
 import { ReactNode } from "react";
+import { toast } from "sonner";
+
+type KycStatus = "PENDING" | "SUBMITTED" | "VERIFIED" | "REJECTED";
 
 // Web mirror of the Expo reporter app's chrome: red rounded header with the
 // inverse logo on top, four-tab nav strip at the bottom (and as a side rail on
-// desktop). The reporter never sees the admin sidebar — only their own four
+// desktop). The reporter never sees the admin sidebar - only their own four
 // surfaces: Home, My Articles, Earnings, Profile.
-export function ReporterShell({ children }: { children: ReactNode }) {
+//
+// The FAB is always visible on Home + Articles. Tap behaviour depends on
+// `kycStatus`:
+//   - VERIFIED   → navigate straight to /reporter/articles/new
+//   - PENDING    → red toast "Upload your KYC documents first" + Upload action
+//   - SUBMITTED  → blue/info toast "KYC awaiting admin approval"
+//   - REJECTED   → red toast with the rejection note + Re-upload action
+// This way the FAB is always discoverable but un-verified reporters get a
+// clear, contextual reason instead of a silently missing button.
+export function ReporterShell({
+  children,
+  kycStatus = "VERIFIED",
+}: {
+  children: ReactNode;
+  kycStatus?: KycStatus;
+}) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const onFabClick = (e: React.MouseEvent) => {
+    if (kycStatus === "VERIFIED") return; // let the Link navigate
+    e.preventDefault();
+    if (kycStatus === "SUBMITTED") {
+      toast.info("KYC awaiting admin approval", {
+        description: "You can start writing articles once your documents are verified - usually within 24 hours.",
+      });
+      return;
+    }
+    if (kycStatus === "REJECTED") {
+      toast.error("KYC was rejected", {
+        description: "Please re-upload the documents flagged by the admin.",
+        action: {
+          label: "Re-upload",
+          onClick: () => router.push("/reporter/profile#kyc"),
+        },
+      });
+      return;
+    }
+    // PENDING (or anything unexpected)
+    toast.error("Upload your KYC documents first", {
+      description: "We need your identity verified before you can start writing articles.",
+      action: {
+        label: "Upload now",
+        onClick: () => router.push("/reporter/profile#kyc"),
+      },
+    });
+  };
 
   const tabs = [
     { href: "/reporter", label: "Home", icon: Home },
@@ -21,7 +69,7 @@ export function ReporterShell({ children }: { children: ReactNode }) {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f3f4f6", display: "flex", flexDirection: "column" }}>
-      {/* Brand header — bottom-rounded red banner matching ScreenHeader in Expo.
+      {/* Brand header - bottom-rounded red banner matching ScreenHeader in Expo.
           Sticky so it stays pinned while the page scrolls underneath, the way
           the native Expo header does. */}
       <header
@@ -41,7 +89,7 @@ export function ReporterShell({ children }: { children: ReactNode }) {
         <img src="/logo-inverse.svg" alt="Rayalaseema News" style={{ height: 32, display: "block" }} />
       </header>
 
-      {/* Page body — leaves room for the fixed bottom tab bar. Pages own
+      {/* Page body - leaves room for the fixed bottom tab bar. Pages own
           their own top padding so layout matches the Expo `paddingTop`
           values exactly. Headings inside reset their browser-default top/
           bottom margins (see the global rule in the <style> block below). */}
@@ -54,7 +102,7 @@ export function ReporterShell({ children }: { children: ReactNode }) {
           // headings, and chips all align on the same vertical line.
           paddingLeft: 14,
           paddingRight: 14,
-          // Tab bar (~56) + FAB clearance (~80 to bottom) — keep the last
+          // Tab bar (~56) + FAB clearance (~80 to bottom) - keep the last
           // article card from being hidden behind the floating "+" button.
           paddingBottom: 140,
           maxWidth: 960,
@@ -66,20 +114,22 @@ export function ReporterShell({ children }: { children: ReactNode }) {
         {children}
       </main>
 
-      {/* Floating "new article" button — only shown on Home + Articles, the
-          same two screens that show a FAB in the Expo app. Hidden on
-          Earnings, Profile, and the editor itself. */}
+      {/* Floating "new article" button - shown on Home + Articles. Hidden on
+          Earnings, Profile, and the editor itself. For un-verified reporters
+          the FAB stays visible but the click is intercepted and a contextual
+          toast explains the KYC state. */}
       {(pathname === "/reporter" || pathname === "/reporter/articles") && (
         <Link
           href="/reporter/articles/new"
           aria-label="New article"
           className="reporter-fab"
+          onClick={onFabClick}
         >
           <Plus size={26} />
         </Link>
       )}
 
-      {/* Bottom tab bar — fixed to the viewport, matching the native tab bar */}
+      {/* Bottom tab bar - fixed to the viewport, matching the native tab bar */}
       <nav className="reporter-tabs">
         {tabs.map((t) => {
           // Home is active only on exact /reporter; deeper tabs match either

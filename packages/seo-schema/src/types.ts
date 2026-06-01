@@ -1,4 +1,4 @@
-// Shared types for schema.org JSON-LD payloads. Kept loose intentionally —
+// Shared types for schema.org JSON-LD payloads. Kept loose intentionally -
 // the schema.org vocabulary is huge and full strictness via schema-dts would
 // bloat compile time on Next.js apps. Generators in this package return
 // `JsonLd` (an object that serializes cleanly via JSON.stringify) and pages
@@ -7,7 +7,7 @@
 
 /**
  * An object that JSON.stringify produces a valid JSON-LD payload from.
- * Always includes "@context" + "@type". Extra arbitrary keys allowed —
+ * Always includes "@context" + "@type". Extra arbitrary keys allowed -
  * schema.org has hundreds of optional properties and we add them per
  * generator without trying to enumerate the whole vocabulary in types.
  */
@@ -47,13 +47,13 @@ export type AuthorRef = {
   affiliations?: string[];
 };
 
-/** Publication-level constants — passed once to every org-level generator. */
+/** Publication-level constants - passed once to every org-level generator. */
 export type PublisherConfig = {
   siteUrl: string;             // e.g. "https://rayalaseemanews.com"
   publicationName: string;     // e.g. "Rayalaseema News"
   publicationNameTe: string;   // e.g. "రాయలసీమ న్యూస్"
   logoUrl: string;
-  // Optional but populated for full E-E-A-T signal — fields default to
+  // Optional but populated for full E-E-A-T signal - fields default to
   // sensible empties if not provided.
   sameAs?: string[];
   contactEmail?: string;

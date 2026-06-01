@@ -1,6 +1,6 @@
 "use client";
 
-// Page Builder (Spec #2) — composites list client UI. New / Edit (name +
+// Page Builder (Spec #2) - composites list client UI. New / Edit (name +
 // description) / Delete. The actual blocks JSON is shaped via the visual
 // editor's Group action (F1 #168); creating from here gives you an empty
 // composite ready to be filled in.

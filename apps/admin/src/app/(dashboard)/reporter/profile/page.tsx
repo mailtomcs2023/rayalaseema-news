@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@rayalaseema/db";
@@ -6,14 +7,14 @@ import { KycBanner } from "@/components/reporter/kyc-banner";
 import { SignOutButton } from "@/components/reporter/sign-out-button";
 import { ShieldCheck } from "lucide-react";
 
-// Reporter Profile — mirrors the Expo ProfileScreen.
+// Reporter Profile - mirrors the Expo ProfileScreen.
 // Avatar hero • role + KYC pills • optional KYC rejection box •
 // grouped settings-style menu rows • sign out.
 //
 // The mobile app has dedicated editor screens for every section
 // (/profile-section/<key>, /profile-password, /kyc). The web portal is
 // read-only for now; tapping a row sends the reporter back to the mobile
-// app for editing — same constraint as the rest of the reporter web UI.
+// app for editing - same constraint as the rest of the reporter web UI.
 
 const KYC_PILL: Record<string, { label: string; bg: string; text: string }> = {
   PENDING: { label: "KYC pending", bg: "#fef3c7", text: "#92400e" },
@@ -38,7 +39,7 @@ export default async function ReporterProfilePage() {
       email: true,
       phone: true,
       avatar: true,
-      journalistProfile: {
+      reporterProfile: {
         select: {
           kycStatus: true,
           kycRejectionNote: true,
@@ -59,11 +60,11 @@ export default async function ReporterProfilePage() {
   });
   if (!data) redirect("/login");
 
-  const p = data.journalistProfile;
+  const p = data.reporterProfile;
 
-  // Pending profile-update requests — drives the badge on the row.
-  // ProfileUpdateRequest is keyed by JournalistProfile.id, not User.id.
-  const pendingCount = (await prisma.journalistProfile
+  // Pending profile-update requests - drives the badge on the row.
+  // ProfileUpdateRequest is keyed by ReporterProfile.id, not User.id.
+  const pendingCount = (await prisma.reporterProfile
     .findUnique({
       where: { userId },
       select: { _count: { select: { profileUpdateRequests: { where: { status: "PENDING" } } } } },
@@ -84,7 +85,7 @@ export default async function ReporterProfilePage() {
       <div style={{ paddingTop: 14 }}>
         <KycBanner userId={userId} />
 
-        {/* Avatar hero card — large centred avatar + name + role/KYC pills. */}
+        {/* Avatar hero card - large centred avatar + name + role/KYC pills. */}
         <div
           style={{
             background: "#fff",
@@ -122,7 +123,7 @@ export default async function ReporterProfilePage() {
             )}
           </div>
           <p style={{ fontSize: 20, lineHeight: "26px", fontWeight: 800, color: "#111", textAlign: "center" }}>
-            {data.name || "—"}
+            {data.name || "-"}
           </p>
           <div
             style={{
@@ -181,11 +182,12 @@ export default async function ReporterProfilePage() {
           ) : null}
         </div>
 
-        {/* Section group — Personal / Address / KYC / Bank.
-            The rows are read-only on web (no edit screens exist yet) — show
+        {/* Section group - Personal / Address / KYC / Bank.
+            The rows are read-only on web (no edit screens exist yet) - show
             a subtitle summary and a chevron, but don't link anywhere. */}
         <MenuGroup>
           <MenuRow
+            href="/reporter/profile/personal"
             iconBg="#3b82f614"
             iconColor="#3b82f6"
             iconPath="M16 14c-1.5 0-3.5 1-4 2-.5 1 1 2 4 2s4.5-1 4-2c-.5-1-2.5-2-4-2zM12 12a4 4 0 100-8 4 4 0 000 8z"
@@ -197,6 +199,7 @@ export default async function ReporterProfilePage() {
           />
           <Divider />
           <MenuRow
+            href="/reporter/profile/address"
             iconBg="#16a34a14"
             iconColor="#16a34a"
             iconPath="M12 21s-7-7.5-7-12a7 7 0 1114 0c0 4.5-7 12-7 12zm0-10a2 2 0 100-4 2 2 0 000 4z"
@@ -205,6 +208,8 @@ export default async function ReporterProfilePage() {
           />
           <Divider />
           <MenuRow
+            href="/reporter/profile/kyc"
+            id="kyc"
             iconBg="#FF2C2C14"
             iconColor="#FF2C2C"
             iconPath="M12 2l8 4v5c0 5-3.5 9.5-8 11-4.5-1.5-8-6-8-11V6l8-4z"
@@ -216,6 +221,7 @@ export default async function ReporterProfilePage() {
 
         <MenuGroup>
           <MenuRow
+            href="/reporter/profile/bank"
             iconBg="#a855f714"
             iconColor="#a855f7"
             iconPath="M2 7h20v10H2zm0 4h20M6 15h2"
@@ -225,7 +231,7 @@ export default async function ReporterProfilePage() {
           />
         </MenuGroup>
 
-        {/* Pending requests — only when there's something to look at. */}
+        {/* Pending requests - only when there's something to look at. */}
         {pendingCount > 0 ? (
           <MenuGroup>
             <MenuRow
@@ -239,7 +245,7 @@ export default async function ReporterProfilePage() {
           </MenuGroup>
         ) : null}
 
-        {/* Email — locked. Web UI is informational; editing requires admin. */}
+        {/* Email - locked. Web UI is informational; editing requires admin. */}
         <MenuGroup>
           <MenuRow
             iconBg="#64748b14"
@@ -254,11 +260,12 @@ export default async function ReporterProfilePage() {
 
         <MenuGroup>
           <MenuRow
+            href="/reporter/profile/phone"
             iconBg="#FF2C2C14"
             iconColor="#FF2C2C"
             iconPath="M12 11a4 4 0 100-8 4 4 0 000 8zM6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"
             label="Phone"
-            sub={data.phone || "—"}
+            sub={data.phone || "-"}
             last
           />
         </MenuGroup>
@@ -296,6 +303,8 @@ function Divider() {
 }
 
 function MenuRow({
+  href,
+  id,
   iconBg,
   iconColor,
   iconPath,
@@ -305,6 +314,8 @@ function MenuRow({
   locked,
   last,
 }: {
+  href?: string;
+  id?: string;
   iconBg: string;
   iconColor: string;
   iconPath: string;
@@ -314,16 +325,32 @@ function MenuRow({
   locked?: boolean;
   last?: boolean;
 }) {
+  const rowStyle: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    gap: 14,
+    padding: "12px 16px",
+    minHeight: 56,
+    // Pad the scroll target so deep-link anchor jumps don't hide the
+    // row under the sticky red header.
+    scrollMarginTop: 80,
+    color: "inherit",
+    textDecoration: "none",
+  };
+
+  const Wrapper = ({ children }: { children: React.ReactNode }) =>
+    href ? (
+      <Link href={href} id={id} style={rowStyle}>
+        {children}
+      </Link>
+    ) : (
+      <div id={id} style={rowStyle}>
+        {children}
+      </div>
+    );
+
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 14,
-        padding: "12px 16px",
-        minHeight: 56,
-      }}
-    >
+    <Wrapper>
       <span
         style={{
           width: 24,
@@ -387,8 +414,8 @@ function MenuRow({
         </svg>
       )}
       {/* `last` prop kept for API symmetry with the Expo MenuRow but unused
-          here — dividers are sibling elements instead of an inset border. */}
+          here - dividers are sibling elements instead of an inset border. */}
       {void last}
-    </div>
+    </Wrapper>
   );
 }

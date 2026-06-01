@@ -1,6 +1,6 @@
 "use client";
 
-// Multi-select dropdown — same shape + UX as the wds-shadcn-registry
+// Multi-select dropdown - same shape + UX as the wds-shadcn-registry
 // component (https://wds-shadcn-registry.netlify.app/components/multi-select/)
 // but built on the primitives this app already has (Popover + Checkbox)
 // so we don't pull in `cmdk` for one widget.
@@ -20,7 +20,6 @@
 import * as React from "react";
 import { Check, ChevronsUpDown, X, Search } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -98,7 +97,7 @@ export function MultiSelect({
           aria-expanded={open}
           aria-haspopup="listbox"
           className={cn(
-            // Trigger styled like shadcn's Input — same border/ring, but
+            // Trigger styled like shadcn's Input - same border/ring, but
             // multiline-friendly so wrapped pills don't get clipped.
             "flex w-full min-h-9 items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none",
             "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
@@ -201,7 +200,7 @@ export function MultiSelect({
           className="max-h-64 overflow-y-auto p-1"
           onWheel={(e) => {
             // When the popover is nested inside a Dialog, react-remove-scroll
-            // swallows wheel events on portaled siblings — drag-scroll on the
+            // swallows wheel events on portaled siblings - drag-scroll on the
             // scrollbar works but the mouse wheel doesn't. Scroll manually.
             e.currentTarget.scrollTop += e.deltaY;
           }}
@@ -224,7 +223,21 @@ export function MultiSelect({
                     checked && "bg-accent/40",
                   )}
                 >
-                  <Checkbox checked={checked} className="pointer-events-none" />
+                  {/* Visual-only checkbox. The real shadcn <Checkbox /> renders
+                      a Radix Primitive.button, which is illegal nested inside
+                      this row's <button> (React/HTML throws a hydration error).
+                      A purely presentational <span> mirrors the checkbox look
+                      without an interactive element - the row's own onClick
+                      handles toggling, so no behaviour is lost. */}
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border border-primary shadow",
+                      checked && "bg-primary text-primary-foreground",
+                    )}
+                  >
+                    {checked && <Check className="h-3.5 w-3.5" />}
+                  </span>
                   <span
                     className="inline-block size-2 rounded-full"
                     style={{ background: o.color || "#9ca3af" }}

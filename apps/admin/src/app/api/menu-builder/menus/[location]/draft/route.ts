@@ -1,4 +1,4 @@
-// PUT /api/menu-builder/menus/[location]/draft — save draftItems (Spec #3 D1).
+// PUT /api/menu-builder/menus/[location]/draft - save draftItems (Spec #3 D1).
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, MenuLocation, safeValidateMenuItems } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
@@ -10,7 +10,7 @@ function parseLocation(slug: string): MenuLocation | null {
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ location: string }> }) {
-  const session = await requireAuth(["ADMIN", "EDITOR", "CHIEF_SUB_EDITOR"]);
+  const session = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(session)) return session;
   try {
     const { location: slug } = await params;

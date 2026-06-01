@@ -2,7 +2,7 @@ import { prisma } from "@rayalaseema/db";
 import Link from "next/link";
 import { AlertCircle, Hourglass, FileText, ArrowRight } from "lucide-react";
 
-// Mirrors the Expo app's KycBanner. Server component — fetches fresh KYC
+// Mirrors the Expo app's KycBanner. Server component - fetches fresh KYC
 // status from the DB on every render (no AsyncStorage cache like the
 // mobile app, since SSR re-runs per request). Renders nothing for
 // VERIFIED reporters.
@@ -17,7 +17,7 @@ interface Props {
 type KycStatus = "PENDING" | "SUBMITTED" | "VERIFIED" | "REJECTED";
 
 export async function KycBanner({ userId }: Props) {
-  const profile = await prisma.journalistProfile.findUnique({
+  const profile = await prisma.reporterProfile.findUnique({
     where: { userId },
     select: { kycStatus: true, kycRejectionNote: true },
   });
@@ -114,7 +114,7 @@ export async function KycBanner({ userId }: Props) {
         })}
       </div>
 
-      {/* SUBMITTED — ETA hint */}
+      {/* SUBMITTED - ETA hint */}
       {ui.eta ? (
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <Hourglass size={13} color={ui.accent} />
@@ -122,7 +122,7 @@ export async function KycBanner({ userId }: Props) {
         </div>
       ) : null}
 
-      {/* REJECTED — admin's rejection note */}
+      {/* REJECTED - admin's rejection note */}
       {status === "REJECTED" && note ? (
         <div
           style={{
@@ -141,7 +141,7 @@ export async function KycBanner({ userId }: Props) {
         </div>
       ) : null}
 
-      {/* CTA — only for actionable states */}
+      {/* CTA - only for actionable states */}
       {ui.cta ? (
         <Link
           href={ui.cta.href}

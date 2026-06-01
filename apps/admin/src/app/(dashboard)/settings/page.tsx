@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Sidebar } from "@/components/sidebar";
 
 type SettingField = {
   key: string;
@@ -62,11 +61,11 @@ const sections: { title: string; icon: string; fields: SettingField[] }[] = [
       { key: "google_tag_manager_id", label: "Google Tag Manager ID", type: "text", placeholder: "GTM-XXXXXXX" },
       { key: "meta_keywords", label: "Default Meta Keywords", type: "text", placeholder: "Telugu news, Rayalaseema, Kurnool..." },
       { key: "onesignal_app_id", label: "OneSignal App ID", type: "text", placeholder: "From onesignal.com dashboard" },
-      // Spec #4 A4 (#195) — new SEO/analytics provider IDs.
+      // Spec #4 A4 (#195) - new SEO/analytics provider IDs.
       { key: "bing_webmaster_id", label: "Bing Webmaster verification", type: "text", placeholder: "msvalidate.01 content (no quotes)" },
       { key: "clarity_project_id", label: "Microsoft Clarity Project ID", type: "text", placeholder: "From clarity.microsoft.com" },
-      { key: "sentry_dsn_web", label: "Sentry DSN — apps/web", type: "password", placeholder: "https://...@o0.ingest.sentry.io/0" },
-      { key: "sentry_dsn_admin", label: "Sentry DSN — apps/admin", type: "password", placeholder: "https://...@o0.ingest.sentry.io/0" },
+      { key: "sentry_dsn_web", label: "Sentry DSN - apps/web", type: "password", placeholder: "https://...@o0.ingest.sentry.io/0" },
+      { key: "sentry_dsn_admin", label: "Sentry DSN - apps/admin", type: "password", placeholder: "https://...@o0.ingest.sentry.io/0" },
       { key: "indexnow_key", label: "IndexNow API key (Bing/Yandex/Naver)", type: "text", placeholder: "32-char hex; saved to /.well-known/<key>.txt" },
       { key: "google_news_publisher_id", label: "Google News Publisher Center publication id", type: "text", placeholder: "From publishercenter.google.com" },
     ],
@@ -127,7 +126,6 @@ export default function SettingsPage() {
 
   if (loading) return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-      <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <p style={{ color: "#888" }}>Loading settings...</p>
       </main>
@@ -136,7 +134,6 @@ export default function SettingsPage() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-      <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 24, position: "sticky", top: 0, background: "#f3f4f6", zIndex: 10, padding: "8px 0" }}>

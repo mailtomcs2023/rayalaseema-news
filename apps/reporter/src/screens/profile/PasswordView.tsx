@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
 import { TextInput } from "../../components/Input";
 import { getAuthToken } from "../../lib/secure-token";
 import * as Haptics from "expo-haptics";
@@ -10,10 +12,15 @@ import { API_URL } from "../../api/client";
 import { changePasswordSchema, fieldErrors } from "../../lib/validation";
 
 /**
- * Standalone Change Password screen. Self-service (no admin approval) —
+ * Standalone Change Password screen. Self-service (no admin approval) -
  * the only profile field reporters can change without a request flow.
+ *
+ * `forced` flips the screen into the auth-gate's lockout mode: shows a
+ * "you can't leave until this is done" banner and, on success, jumps to
+ * /home so the auth-gate re-evaluates (and routes on to /kyc if needed).
  */
-export function ProfilePasswordView() {
+export function ProfilePasswordView({ forced = false }: { forced?: boolean }) {
+  const router = useRouter();
   const { t } = useT();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -41,7 +48,28 @@ export function ProfilePasswordView() {
       if (!res.ok || out.error) throw new Error(out.error || "Request failed");
       setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert(t("profile.changedTitle"), t("profile.changedMsg"));
+
+      // Flip the cached `mustChangePassword` flag locally so the auth-gate
+      // stops bouncing the reporter back here on the next launch (the server
+      // already cleared it via the change-password endpoint).
+      try {
+        const cached = await AsyncStorage.getItem("user");
+        if (cached) {
+          const u = JSON.parse(cached);
+          u.mustChangePassword = false;
+          await AsyncStorage.setItem("user", JSON.stringify(u));
+        }
+      } catch {}
+
+      if (forced) {
+        // Forced flow: send them home so the auth-gate re-runs and either
+        // lands them on /home or pushes them on to /kyc.
+        Alert.alert(t("profile.changedTitle"), t("profile.changedMsg"), [
+          { text: "OK", onPress: () => router.replace("/home") },
+        ]);
+      } else {
+        Alert.alert(t("profile.changedTitle"), t("profile.changedMsg"));
+      }
     } catch (e: any) {
       Alert.alert(t("common.error"), e.message);
     }
@@ -59,6 +87,19 @@ export function ProfilePasswordView() {
         keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
       >
+        {forced && (
+          <View style={s.forcedBanner}>
+            <Ionicons name="shield-outline" size={18} color="#92400e" style={{ marginTop: 2 }} />
+            <View style={{ flex: 1 }}>
+              <Text style={s.forcedTitle}>Set a new password</Text>
+              <Text style={s.forcedBody}>
+                Your account was created with a temporary password. Choose a
+                permanent one before continuing.
+              </Text>
+            </View>
+          </View>
+        )}
+
         <View style={s.card}>
           <Text style={s.fieldLabel}>{t("profile.currentPassword")}</Text>
           <TextInput
@@ -126,4 +167,16 @@ const s = StyleSheet.create({
   submit: { backgroundColor: "#FF2C2C", borderRadius: 12, padding: 15, alignItems: "center", marginTop: 4 },
   submitDisabled: { backgroundColor: "#999" },
   submitText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+  forcedBanner: {
+    flexDirection: "row",
+    gap: 10,
+    backgroundColor: "#fef3c7",
+    borderColor: "#fde68a",
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+  forcedTitle: { fontSize: 13, fontWeight: "700", color: "#92400e", marginBottom: 2 },
+  forcedBody: { fontSize: 12, color: "#92400e", lineHeight: 17 },
 });

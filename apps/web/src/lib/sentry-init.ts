@@ -1,4 +1,4 @@
-// Spec #4 H6 (#239) — Sentry init shim.
+// Spec #4 H6 (#239) - Sentry init shim.
 //
 // Conditional Sentry initialisation. If SENTRY_DSN_WEB is set in the env
 // AND @sentry/nextjs is installed, configure Sentry with sensible defaults.
@@ -7,7 +7,7 @@
 //
 // Full Sentry setup (sentry.client.config.ts + sentry.server.config.ts +
 // instrumentation.ts + next.config wrap) is a heavier integration that
-// can be tracked as a follow-up — this shim covers the basic "capture
+// can be tracked as a follow-up - this shim covers the basic "capture
 // uncaught error to a DSN" use case which is 80% of the value.
 //
 // Activation: editor pastes the DSN into SiteConfig.sentry_dsn_web via
@@ -21,10 +21,14 @@ export async function initSentryIfConfigured(): Promise<void> {
   const dsn = process.env.SENTRY_DSN_WEB;
   if (!dsn) return;
   try {
+    // @sentry/nextjs is an optional runtime dependency - the catch() below
+    // turns "not installed" into a no-op. The string-form import + @ts-ignore
+    // keep TypeScript quiet without forcing every dev to install the package.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
+    // @ts-ignore - optional peer dependency, may not be installed
     const Sentry = await import("@sentry/nextjs").catch(() => null);
     if (!Sentry || typeof Sentry.init !== "function") {
-      // Package not installed; deliberate — leaves Sentry optional.
+      // Package not installed; deliberate - leaves Sentry optional.
       return;
     }
     Sentry.init({
@@ -35,7 +39,7 @@ export async function initSentryIfConfigured(): Promise<void> {
     });
     initialised = true;
   } catch {
-    // Silently skip — we'd rather render the page than fail boot on a
+    // Silently skip - we'd rather render the page than fail boot on a
     // misconfigured DSN.
   }
 }

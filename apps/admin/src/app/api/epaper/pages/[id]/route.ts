@@ -89,9 +89,9 @@ export async function POST(_: NextRequest, { params }: { params: Promise<{ id: s
 // PATCH /api/epaper/pages/[id]
 // Body shapes:
 //   { label: "..." }                  rename page
-//   { moveTo: <pageNumber 1-based> }  reorder — shifts other pages to make room
+//   { moveTo: <pageNumber 1-based> }  reorder - shifts other pages to make room
 //
-// (Layout-editing PATCH lives on /api/epaper/page/[id] — that's the
+// (Layout-editing PATCH lives on /api/epaper/page/[id] - that's the
 // authoritative editor write path. This route handles the structural ops.)
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR"]);
@@ -120,7 +120,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       // Park source page in negative space; shift the affected range; restore source.
       await prisma.epaperPage.update({ where: { id }, data: { pageNumber: -1 } });
       if (dest < page.pageNumber) {
-        // Moving earlier — bump pages in [dest..page.pageNumber-1] by +1.
+        // Moving earlier - bump pages in [dest..page.pageNumber-1] by +1.
         const affected = await prisma.epaperPage.findMany({
           where: { editionId: page.editionId, pageNumber: { gte: dest, lte: page.pageNumber - 1 } },
           orderBy: { pageNumber: "desc" },
@@ -133,7 +133,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           await prisma.epaperPage.update({ where: { id: p.id }, data: { pageNumber: p.pageNumber + 1 } });
         }
       } else {
-        // Moving later — bump pages in [page.pageNumber+1..dest] by -1.
+        // Moving later - bump pages in [page.pageNumber+1..dest] by -1.
         const affected = await prisma.epaperPage.findMany({
           where: { editionId: page.editionId, pageNumber: { gte: page.pageNumber + 1, lte: dest } },
           orderBy: { pageNumber: "asc" },

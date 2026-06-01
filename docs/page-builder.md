@@ -86,7 +86,7 @@ Zod-validated by `layoutSchema` in `packages/db/src/page-builder-schemas.ts` on 
 
 | `type` | Component | Configurable props |
 |---|---|---|
-| `ReturnVisitBanner` | `<ReturnVisitBanner>` | — |
+| `ReturnVisitBanner` | `<ReturnVisitBanner>` | - |
 | `AdHeaderLeaderboard` | `<AdHeaderLeaderboard>` | `position` |
 | `AboveFold` | `<AboveFold>` | `districtCount`, `latestCount`, `excludeCategories[]` |
 | `AdBannerMid` | `<AdBannerMid>` | `position` |
@@ -100,7 +100,7 @@ Zod-validated by `layoutSchema` in `packages/db/src/page-builder-schemas.ts` on 
 | `Composite` | (inlined) | `compositeId` |
 
 When `SectionBand`'s `brand` / `brandHref` / `categorySlug` are omitted, the fetcher
-reads them from `PageContext` (set by the public route — `/category/sports` ⇒ slug =
+reads them from `PageContext` (set by the public route - `/category/sports` ⇒ slug =
 `sports`). That's what lets one **Standard Category** template serve every category URL.
 
 ## Pattern matcher
@@ -124,25 +124,25 @@ All endpoints live under `/api/page-builder/` in `apps/admin`.
 | `GET` | `/templates` | session |
 | `POST` | `/templates` | ADMIN, EDITOR |
 | `GET` | `/templates/[id]` | session |
-| `PUT` | `/templates/[id]` | ADMIN, EDITOR — rename/redesc |
-| `DELETE` | `/templates/[id]` | ADMIN — cascade to assignments + versions |
-| `PUT` | `/templates/[id]/draft` | ADMIN, EDITOR — Zod-validated |
-| `POST` | `/templates/[id]/publish` | ADMIN, EDITOR — snapshot + flip |
+| `PUT` | `/templates/[id]` | ADMIN, EDITOR - rename/redesc |
+| `DELETE` | `/templates/[id]` | ADMIN - cascade to assignments + versions |
+| `PUT` | `/templates/[id]/draft` | ADMIN, EDITOR - Zod-validated |
+| `POST` | `/templates/[id]/publish` | ADMIN, EDITOR - snapshot + flip |
 | `POST` | `/templates/[id]/discard-draft` | ADMIN, EDITOR |
 | `GET` | `/templates/[id]/versions` | session |
-| `POST` | `/templates/[id]/restore/[versionId]` | ADMIN — into `draftLayout` |
+| `POST` | `/templates/[id]/restore/[versionId]` | ADMIN - into `draftLayout` |
 | `GET`/`POST`/`PUT`/`DELETE` | `/assignments[/…]` | ADMIN, EDITOR |
-| `GET` | `/assignments/test?url=…` | session — resolver dry-run |
+| `GET` | `/assignments/test?url=…` | session - resolver dry-run |
 | `GET`/`POST`/`PUT`/`DELETE` | `/composites[/…]` | ADMIN, EDITOR |
 
 ## Editor
 
 Route: `apps/admin/src/app/(dashboard)/page-builder/templates/[id]`.
 
-- **Palette** — drag-source list of built-in block types + composites
-- **Canvas** — outline list (drag-reorder + Move ▲/▼ + Delete) sitting above an
+- **Palette** - drag-source list of built-in block types + composites
+- **Canvas** - outline list (drag-reorder + Move ▲/▼ + Delete) sitting above an
   iframe pointing at `apps/web/.../page-builder/preview/[id]?draft=1`
-- **Config** — per-type form generated from the block registry (numbers, text,
+- **Config** - per-type form generated from the block registry (numbers, text,
   selects, checkboxes; arrays fall back to a JSON textarea)
 
 ### Editor ↔ preview message protocol
@@ -159,7 +159,7 @@ editor → preview
 ```
 
 Mutations (insert / reorder / delete) flow through the outline state, then a full
-iframe reload picks them up — surgical DOM mutations are a future-work item.
+iframe reload picks them up - surgical DOM mutations are a future-work item.
 
 ### Keyboard
 
@@ -178,7 +178,7 @@ iframe reload picks them up — surgical DOM mutations are a future-work item.
 ## Seed
 
 `packages/db/scripts/seed-templates.ts` creates three templates + their assignments
-on first run (idempotent — keyed by `Template.slug`):
+on first run (idempotent - keyed by `Template.slug`):
 
 | Slug | Pattern | Priority |
 |---|---|---|
@@ -205,5 +205,5 @@ templates landing in DB.
 
 ## Tests
 
-`bun test packages/db` — unit tests for the pattern matcher, resolver tie-break,
+`bun test packages/db` - unit tests for the pattern matcher, resolver tie-break,
 layout Zod, and composite block validation. See `packages/db/__tests__/page-builder.test.ts`.

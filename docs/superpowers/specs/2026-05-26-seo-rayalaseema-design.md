@@ -10,7 +10,7 @@ Strategic framing: [`feedback_seo_strategy.md`](../../../C:/Users/reddygs/.claud
 - **8 Rayalaseema districts × ~52 constituencies × ~200 mandals** = the durable ranking targets. Hub-page depth (Phase F) is where editorial-review time concentrates.
 - News articles get auto-defaults (schema, OG, IndexNow ping, image pipeline) and are otherwise allowed to index naturally. No per-article SEO tuning.
 - New shared packages: **`@rayalaseema/seo-schema`** (JSON-LD generators) and **`@rayalaseema/nlp`** (location NER + summary gen).
-- **URL migration to `/[district]/[town]/<slug>-<id>`** — decided by Daisy despite the rule-#6 push-back. Phase A0 ships the migration with 301 middleware, slug preservation, rollback flag, and a 30-day GSC monitoring window.
+- **URL migration to `/[district]/[town]/<slug>-<id>`** - decided by Daisy despite the rule-#6 push-back. Phase A0 ships the migration with 301 middleware, slug preservation, rollback flag, and a 30-day GSC monitoring window.
 - **GSC baseline is effectively zero** (reported 34 indexed, but per Daisy includes legacy dummy content). Treat this as a fresh SEO launch.
 - All NEW analytics accounts owned by `rsepress2026@gmail.com`; legacy admin `reddygs@medhahosting.com` retained as backup.
 - **Skipped:** `llms.txt` (research confirms Google + major LLM crawlers ignore it; no consumer for the signal).
@@ -83,18 +83,18 @@ Foundation already in production (do NOT redo; extend where flagged):
 | OG card generator | [`apps/web/src/app/api/og/[slug]`](../../apps/web/src/app/api/og) | Auto-branded. Works. |
 | District hub | [`apps/web/src/app/district/[slug]/page.tsx`](../../apps/web/src/app/district/%5Bslug%5D/page.tsx) | Live with metadata + canonical. No 800-word context, no FAQ, no MLA card. Uses crude title-contains fallback for un-tagged articles. |
 | Constituency hub | [`apps/web/src/app/constituency/[slug]/page.tsx`](../../apps/web/src/app/constituency/%5Bslug%5D/page.tsx) | Live, mandal-pill list. No depth content, no FAQ, no MLA card, no JSON-LD. |
-| Mandal hub | — | Does not exist. Phase F3. |
+| Mandal hub | - | Does not exist. Phase F3. |
 | Author profile | [`apps/web/src/app/author/[slug]/page.tsx`](../../apps/web/src/app/author/%5Bslug%5D/page.tsx) | Live; basic photo + bio + articles list. No Person JSON-LD, no social links. |
 | Trust pages | `apps/web/src/app/{about,contact,privacy,terms}/` | 4 of 12 done. Missing: masthead, ethics-policy, corrections-policy, editorial-standards, diversity-policy, mission, feedback-policy, ownership. |
 | Analytics loader | [`apps/web/src/app/layout.tsx:73-114`](../../apps/web/src/app/layout.tsx) | GA4 / GTM / AdSense loaded via `SiteConfig` runtime config (DB-backed). |
 | Location data | [`packages/db/prisma/location-data.json`](../../packages/db/prisma/location-data.json) + [`seed-locations.ts`](../../packages/db/prisma/seed-locations.ts) | All 8 districts, ~52 constituencies, ~200 mandals seeded. |
 | Content × Location FK | [`packages/db/prisma/schema.prisma:1021-1091`](../../packages/db/prisma/schema.prisma) | `Content.constituencyId` exists (single FK). Phase A1 adds multi-location join. |
-| middleware.ts | — | Does not exist. Phase A0 creates. |
-| `@rayalaseema/seo-schema` | — | Does not exist. Phase B0 creates. |
-| `@rayalaseema/nlp` | — | Does not exist. Phase G1 creates. |
-| `sharp` | — | Not in any package.json. Phase E1 adds to `apps/admin`. |
-| `web-vitals` | — | Not in any package.json. Phase E2 adds to `apps/web`. |
-| `@sentry/*` | — | Not in any package.json. Phase H6 adds to both apps. |
+| middleware.ts | - | Does not exist. Phase A0 creates. |
+| `@rayalaseema/seo-schema` | - | Does not exist. Phase B0 creates. |
+| `@rayalaseema/nlp` | - | Does not exist. Phase G1 creates. |
+| `sharp` | - | Not in any package.json. Phase E1 adds to `apps/admin`. |
+| `web-vitals` | - | Not in any package.json. Phase E2 adds to `apps/web`. |
+| `@sentry/*` | - | Not in any package.json. Phase H6 adds to both apps. |
 
 ## Data model changes
 
@@ -105,7 +105,7 @@ Foundation already in production (do NOT redo; extend where flagged):
 model ContentLocation {
   contentId   String
   content     Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  locationId  String     // FK to one of District/Constituency/Mandal — polymorphic via locationType
+  locationId  String     // FK to one of District/Constituency/Mandal - polymorphic via locationType
   locationType LocationType
   // High = headline mention, medium = lede mention, low = body-only mention
   confidence  Confidence @default(MEDIUM)
@@ -195,123 +195,123 @@ model SiteConfig {
 |---|---|---|
 | Article | `/[district-slug]/[mandal-or-town-slug]/<slug>-<id>` | Slug preserved from `Content.slug`; `id` is the numeric portion of `Content.id` (cuid → take last 8 chars). |
 | Article AMP | **REMOVED** | Legacy `/article/<slug>/amp` 301s to canonical (no AMP on new pattern). |
-| District hub | `/[district-slug]` | E.g. `/kurnool`. Conflicts with existing `/about`, `/api`, etc. — Phase A0 reserves a slug-blocklist. |
+| District hub | `/[district-slug]` | E.g. `/kurnool`. Conflicts with existing `/about`, `/api`, etc. - Phase A0 reserves a slug-blocklist. |
 | Constituency hub | `/[district-slug]/[constituency-slug]` | E.g. `/kurnool/nandikotkur-141`. |
-| Mandal hub | `/[district-slug]/[constituency-slug]/[mandal-slug]` | Phase F3. Optional — may launch with just district + constituency. |
+| Mandal hub | `/[district-slug]/[constituency-slug]/[mandal-slug]` | Phase F3. Optional - may launch with just district + constituency. |
 | Category | `/category/[slug]` | Unchanged. |
 | Tag | `/tag/[slug]` | Unchanged. |
 | Author | `/author/[publicProfileSlug]` | Phase A2 migrates from `/author/[id]` → `/author/[slug]`. |
 | Trust pages | `/about`, `/masthead`, `/ethics-policy`, etc. | Reserved slugs (Phase A0). |
 | Sitemap index | `/sitemap-index.xml` | New, Phase D1. |
-| Main sitemap | `/sitemap.xml` | Existing — Phase D3 swaps hardcoded district array for dynamic query. |
-| News sitemap | `/news-sitemap.xml` | Existing — Phase D2 changes cap from last-1000 to last-48h. |
+| Main sitemap | `/sitemap.xml` | Existing - Phase D3 swaps hardcoded district array for dynamic query. |
+| News sitemap | `/news-sitemap.xml` | Existing - Phase D2 changes cap from last-1000 to last-48h. |
 | RSS feeds | `/rss/all.xml`, `/rss/district/[slug].xml`, `/rss/category/[slug].xml` | New, Phase D6. |
 | IndexNow key | `/.well-known/<indexnow-key>.txt` | New, Phase D5. |
 
 **Reserved root slugs (cannot be used as district slugs):** `about`, `api`, `article`, `author`, `cartoon`, `category`, `cinema`, `constituency`, `contact`, `district`, `epaper`, `gallery`, `horoscope`, `mandal`, `masthead`, `news-sitemap.xml`, `ownership`, `page-builder`, `privacy`, `reel`, `robots.txt`, `rss`, `search`, `sitemap.xml`, `sitemap-index.xml`, `story`, `tag`, `terms`, `video`, `videos`, `weather`, `well-known`, plus all 12 trust-page slugs.
 
-## Phase A — URL & data foundation
+## Phase A - URL & data foundation
 
-- [ ] **A0**: URL migration — `apps/web/middleware.ts` 301s `/article/<slug>` and `/article/<slug>/amp` to the new pattern; helper `articleHref(article)`; reserved-slug guard; rollback env flag `URL_PATTERN=legacy|new`; Playwright smoke test on 50 random old URLs.
-- [ ] **A1**: Prisma migration — `ContentLocation` join + `LocationType` + `Confidence` enums; keep `Content.constituencyId` as denormalized primary-constituency fast-path; add indexes.
-- [ ] **A2**: User model — `publicProfileSlug`, social links, expertise, affiliations. Backfill slugs from existing `name` for active users. Migrate `/author/[slug]` route from id to slug; redirect old id-based URLs.
-- [ ] **A3**: District / Constituency / Mandal enrichment fields — lat, lng, population, metaDescription, contextBlock + approval columns. Seed lat-lng from OSM Nominatim batch (offline script).
-- [ ] **A4**: `SiteConfig` additions — Bing, Clarity, Sentry, IndexNow, News Publisher Center.
+- [ ] **A0**: URL migration - `apps/web/middleware.ts` 301s `/article/<slug>` and `/article/<slug>/amp` to the new pattern; helper `articleHref(article)`; reserved-slug guard; rollback env flag `URL_PATTERN=legacy|new`; Playwright smoke test on 50 random old URLs.
+- [ ] **A1**: Prisma migration - `ContentLocation` join + `LocationType` + `Confidence` enums; keep `Content.constituencyId` as denormalized primary-constituency fast-path; add indexes.
+- [ ] **A2**: User model - `publicProfileSlug`, social links, expertise, affiliations. Backfill slugs from existing `name` for active users. Migrate `/author/[slug]` route from id to slug; redirect old id-based URLs.
+- [ ] **A3**: District / Constituency / Mandal enrichment fields - lat, lng, population, metaDescription, contextBlock + approval columns. Seed lat-lng from OSM Nominatim batch (offline script).
+- [ ] **A4**: `SiteConfig` additions - Bing, Clarity, Sentry, IndexNow, News Publisher Center.
 
-## Phase B — Schema generators (foundation, auto)
+## Phase B - Schema generators (foundation, auto)
 
 - [ ] **B0**: Create `packages/seo-schema/` package skeleton (TypeScript, no React deps so admin + web both consume).
-- [ ] **B1**: NewsArticle generator — Person author w/ `url`, NewsMediaOrganization publisher, image[3-aspect], `contentLocation` + `spatialCoverage` from primary `ContentLocation`, `inLanguage: "te"`, Speakable fragment.
-- [ ] **B2**: NewsMediaOrganization generator — full schema with `sameAs` (all social handles), `contactPoint`, `address`, `foundingDate`, `ethicsPolicy`, `correctionsPolicy`, `ownershipFundingInfo`, `verificationFactCheckingPolicy` URLs.
+- [ ] **B1**: NewsArticle generator - Person author w/ `url`, NewsMediaOrganization publisher, image[3-aspect], `contentLocation` + `spatialCoverage` from primary `ContentLocation`, `inLanguage: "te"`, Speakable fragment.
+- [ ] **B2**: NewsMediaOrganization generator - full schema with `sameAs` (all social handles), `contactPoint`, `address`, `foundingDate`, `ethicsPolicy`, `correctionsPolicy`, `ownershipFundingInfo`, `verificationFactCheckingPolicy` URLs.
 - [ ] **B3**: BreadcrumbList generator (extract from current inline article impl into shared generator).
-- [ ] **B4**: Person/Author generator — for `/author/[slug]` page + as `author` field in NewsArticle.
-- [ ] **B5**: FAQPage generator — consumed by hub pages in Phase F.
-- [ ] **B6**: Schema validation in CI — `schema-dts` types + runtime `@cyberalien/schema-validator` (or build a thin wrapper around Google's official JSON-LD validator). Fail PR on invalid schema.
+- [ ] **B4**: Person/Author generator - for `/author/[slug]` page + as `author` field in NewsArticle.
+- [ ] **B5**: FAQPage generator - consumed by hub pages in Phase F.
+- [ ] **B6**: Schema validation in CI - `schema-dts` types + runtime `@cyberalien/schema-validator` (or build a thin wrapper around Google's official JSON-LD validator). Fail PR on invalid schema.
 - [ ] **B7**: Wire generators into `apps/web/src/app/article/[district]/[town]/<slug>-<id>/page.tsx`, hub pages, author page, root layout.
 
-## Phase C — Trust pages (foundation, E-E-A-T)
+## Phase C - Trust pages (foundation, E-E-A-T)
 
-- [ ] **C1**: `/masthead` — Editor-in-Chief, deputy editors, desk leads. Sourced from User model (role + bio + photo).
-- [ ] **C2**: `/ethics-policy` — sourcing standards, conflict-of-interest, gifts, anonymous sources. AI-drafted, Daisy-reviewed.
-- [ ] **C3**: `/corrections-policy` — how to request a correction, timeline, public log link.
-- [ ] **C4**: `/editorial-standards` — fact-checking, attribution, off-the-record, embargo handling.
-- [ ] **C5**: `/diversity-policy` — coverage diversity, hiring diversity, sources diversity.
-- [ ] **C6**: `/mission` — what Rayalaseema Express is and isn't.
-- [ ] **C7**: `/feedback-policy` — how readers reach the editorial team, response SLAs.
-- [ ] **C8**: `/ownership` — publishing entity, funding sources, related properties. (Currently Medha Hosting OPC Pvt Ltd or separate entity? Confirm at issue time.)
-- [ ] **C9**: Footer — site-wide consistent links to all 12 trust pages + sitemap-index.
-- [ ] **C10**: `apps/admin` lockdown — root layout sets `robots: { index: false, follow: false }`; verify admin URL pattern not exposed in any sitemap.
+- [ ] **C1**: `/masthead` - Editor-in-Chief, deputy editors, desk leads. Sourced from User model (role + bio + photo).
+- [ ] **C2**: `/ethics-policy` - sourcing standards, conflict-of-interest, gifts, anonymous sources. AI-drafted, Daisy-reviewed.
+- [ ] **C3**: `/corrections-policy` - how to request a correction, timeline, public log link.
+- [ ] **C4**: `/editorial-standards` - fact-checking, attribution, off-the-record, embargo handling.
+- [ ] **C5**: `/diversity-policy` - coverage diversity, hiring diversity, sources diversity.
+- [ ] **C6**: `/mission` - what Rayalaseema Express is and isn't.
+- [ ] **C7**: `/feedback-policy` - how readers reach the editorial team, response SLAs.
+- [ ] **C8**: `/ownership` - publishing entity, funding sources, related properties. (Currently Medha Hosting OPC Pvt Ltd or separate entity? Confirm at issue time.)
+- [ ] **C9**: Footer - site-wide consistent links to all 12 trust pages + sitemap-index.
+- [ ] **C10**: `apps/admin` lockdown - root layout sets `robots: { index: false, follow: false }`; verify admin URL pattern not exposed in any sitemap.
 
-## Phase D — Indexing infrastructure (foundation)
+## Phase D - Indexing infrastructure (foundation)
 
-- [ ] **D1**: `/sitemap-index.xml` — points to sitemap.xml + news-sitemap.xml + per-district rss feeds. Submit to GSC + Bing.
-- [ ] **D2**: news-sitemap.xml — change cap from last-1000 to last-48h published. Validates against Google News schema. Cached `cacheLife('seconds')`.
-- [ ] **D3**: sitemap.xml — replace hardcoded district array with `prisma.district.findMany()`. Add `<lastmod>` to home. Include all hubs (district + constituency + mandal + author + tag + trust pages).
-- [ ] **D4**: robots.ts — add user-agent blocks for `GPTBot`, `ClaudeBot`, `CCBot`, `PerplexityBot`, `Google-Extended`, `Bytespider`. Allow `Googlebot`, `Googlebot-News`, `Googlebot-Image`, `Bingbot`. Reference sitemap-index instead of individual sitemaps.
-- [ ] **D5**: IndexNow integration — generate key, save to `apps/web/public/.well-known/<key>.txt`, hook into publish action in admin (POST to `https://api.indexnow.org/IndexNow` with article URL). Retry queue for failures.
-- [ ] **D6**: RSS feeds — `/rss/all.xml`, `/rss/district/[slug].xml`, `/rss/category/[slug].xml`. Validates in Feedly.
+- [ ] **D1**: `/sitemap-index.xml` - points to sitemap.xml + news-sitemap.xml + per-district rss feeds. Submit to GSC + Bing.
+- [ ] **D2**: news-sitemap.xml - change cap from last-1000 to last-48h published. Validates against Google News schema. Cached `cacheLife('seconds')`.
+- [ ] **D3**: sitemap.xml - replace hardcoded district array with `prisma.district.findMany()`. Add `<lastmod>` to home. Include all hubs (district + constituency + mandal + author + tag + trust pages).
+- [ ] **D4**: robots.ts - add user-agent blocks for `GPTBot`, `ClaudeBot`, `CCBot`, `PerplexityBot`, `Google-Extended`, `Bytespider`. Allow `Googlebot`, `Googlebot-News`, `Googlebot-Image`, `Bingbot`. Reference sitemap-index instead of individual sitemaps.
+- [ ] **D5**: IndexNow integration - generate key, save to `apps/web/public/.well-known/<key>.txt`, hook into publish action in admin (POST to `https://api.indexnow.org/IndexNow` with article URL). Retry queue for failures.
+- [ ] **D6**: RSS feeds - `/rss/all.xml`, `/rss/district/[slug].xml`, `/rss/category/[slug].xml`. Validates in Feedly.
 
-## Phase E — Performance (foundation)
+## Phase E - Performance (foundation)
 
-- [ ] **E1**: Image pipeline — install `sharp` in `apps/admin`; on upload, generate 16:9 / 4:3 / 1:1 in WebP + AVIF + JPEG fallback; filename `{contentId}-{aspect}.{ext}`; ALT text inherits article title + primary location name. Store in Azure Blob (already in `.env.example`).
+- [ ] **E1**: Image pipeline - install `sharp` in `apps/admin`; on upload, generate 16:9 / 4:3 / 1:1 in WebP + AVIF + JPEG fallback; filename `{contentId}-{aspect}.{ext}`; ALT text inherits article title + primary location name. Store in Azure Blob (already in `.env.example`).
 - [ ] **E2**: `web-vitals` library in `apps/web`; report LCP / INP / CLS / FCP to GA4 as `web_vital` events; dashboard panel in admin showing p75 of each metric over last 7 days.
 - [ ] **E3**: Lighthouse CI step in `.github/workflows/deploy.yml`; baseline captured first run; block deploy if regression > 10% on any CWV at p75.
-- [ ] **E4**: Cache Components migration — `cacheLife('hours')` + `cacheTag('article:<id>')` on article pages; `cacheLife('minutes')` + tag-by-location on hub pages; `cacheLife('minutes')` on main sitemap; `cacheLife('seconds')` on news-sitemap. `updateTag` invocations from admin publish/edit actions.
-- [ ] **E5**: Font loading — convert Telugu fonts from `<link>` to `next/font/google` with `display: 'swap'`, subsetted to Telugu glyph range, preload weights 400/700/900 only.
+- [ ] **E4**: Cache Components migration - `cacheLife('hours')` + `cacheTag('article:<id>')` on article pages; `cacheLife('minutes')` + tag-by-location on hub pages; `cacheLife('minutes')` on main sitemap; `cacheLife('seconds')` on news-sitemap. `updateTag` invocations from admin publish/edit actions.
+- [ ] **E5**: Font loading - convert Telugu fonts from `<link>` to `next/font/google` with `display: 'swap'`, subsetted to Telugu glyph range, preload weights 400/700/900 only.
 
-## Phase F — Hub pages (TIER-0 ranking targets)
+## Phase F - Hub pages (TIER-0 ranking targets)
 
-- [ ] **F1**: District hub depth — 800-word `contextBlock` rendered with Telugu typography; FAQPage JSON-LD (5 FAQs auto-generated from location data + editor-overridable); MLA-list table; neighbor-district links (sibling districts in Rayalaseema); 5 latest articles tagged to district; constituency grid.
-- [ ] **F2**: Constituency hub depth — MLA card (photo, party, tenure, contact); 800-word `contextBlock`; FAQPage JSON-LD; mandal grid (replaces current pill row); 5 latest articles tagged to constituency; sibling constituencies (neighbor links).
-- [ ] **F3**: Mandal hub page — new route `/[district-slug]/[constituency-slug]/[mandal-slug]`. Lighter content than constituency (300-word context + latest articles). Optional for MVP launch; defer if scope tight.
-- [ ] **F4**: Category page enrichment — add 300-word category description + FAQ; ensure breadcrumbs + canonical.
-- [ ] **F5**: Author profile enrichment — Person JSON-LD with social `sameAs`; bio paragraph; expertise tags; pagination on articles list (currently capped at 30).
+- [ ] **F1**: District hub depth - 800-word `contextBlock` rendered with Telugu typography; FAQPage JSON-LD (5 FAQs auto-generated from location data + editor-overridable); MLA-list table; neighbor-district links (sibling districts in Rayalaseema); 5 latest articles tagged to district; constituency grid.
+- [ ] **F2**: Constituency hub depth - MLA card (photo, party, tenure, contact); 800-word `contextBlock`; FAQPage JSON-LD; mandal grid (replaces current pill row); 5 latest articles tagged to constituency; sibling constituencies (neighbor links).
+- [ ] **F3**: Mandal hub page - new route `/[district-slug]/[constituency-slug]/[mandal-slug]`. Lighter content than constituency (300-word context + latest articles). Optional for MVP launch; defer if scope tight.
+- [ ] **F4**: Category page enrichment - add 300-word category description + FAQ; ensure breadcrumbs + canonical.
+- [ ] **F5**: Author profile enrichment - Person JSON-LD with social `sameAs`; bio paragraph; expertise tags; pagination on articles list (currently capped at 30).
 
-## Phase G — Indexing aids (auto, supports foundation)
+## Phase G - Indexing aids (auto, supports foundation)
 
-- [ ] **G0**: Create `packages/nlp/` package skeleton — TypeScript, no React deps.
-- [ ] **G1**: Location NER detector — input article body (te + en); output `{ primaryLocationId, mentions: [{ locationId, locationType, confidence }] }`. Uses dictionary match against `District/Constituency/Mandal.name + nameEn` with disambiguation rules (e.g. "Nandyal" = district unless mandal context).
-- [ ] **G2**: Admin publish hook — on publish, run G1 + write `ContentLocation` rows + set `Content.constituencyId` to primary. Editor can override in admin UI.
-- [ ] **G3**: Internal-linking automation — on publish, insert 3 contextual internal links into body HTML: primary district hub, primary constituency hub, 1 related-article (same category, last 30 days). Idempotent (won't re-insert if already present).
-- [ ] **G4 (deferred to Phase 2 — out of scope for Spec #4):** English summary block. Tracked separately.
+- [ ] **G0**: Create `packages/nlp/` package skeleton - TypeScript, no React deps.
+- [ ] **G1**: Location NER detector - input article body (te + en); output `{ primaryLocationId, mentions: [{ locationId, locationType, confidence }] }`. Uses dictionary match against `District/Constituency/Mandal.name + nameEn` with disambiguation rules (e.g. "Nandyal" = district unless mandal context).
+- [ ] **G2**: Admin publish hook - on publish, run G1 + write `ContentLocation` rows + set `Content.constituencyId` to primary. Editor can override in admin UI.
+- [ ] **G3**: Internal-linking automation - on publish, insert 3 contextual internal links into body HTML: primary district hub, primary constituency hub, 1 related-article (same category, last 30 days). Idempotent (won't re-insert if already present).
+- [ ] **G4 (deferred to Phase 2 - out of scope for Spec #4):** English summary block. Tracked separately.
 
-## Phase H — Monitoring (foundation)
+## Phase H - Monitoring (foundation)
 
-- [ ] **H1**: GA4 config — paste new GA4 Measurement ID into `SiteConfig.google_analytics_id`; enhanced measurement on; custom events: `article_read`, `hub_view`, `search_query`, `scroll_depth_50`, `scroll_depth_100`, `web_vital`. Verify in DebugView.
-- [ ] **H2**: GSC sitemap submission — submit `/sitemap-index.xml` (already verified property). Email alerts on coverage/manual-action issues.
-- [ ] **H3**: Bing Webmaster Tools — verify property under `rsepress2026@gmail.com`; submit sitemap-index; apply to Bing News PubHub.
-- [ ] **H4**: Google News Publisher Center — submit publication (name, logo, URL, country=IN, languages=[te, en], sections). Daisy executes the submission manually; we provide the asset bundle.
-- [ ] **H5**: Microsoft Clarity — create project; paste Project ID into `SiteConfig.clarity_project_id`; verify heatmaps + session replays appearing.
-- [ ] **H6**: Sentry — create web + admin projects; paste DSNs into `SiteConfig.sentry_dsn_web` + `SiteConfig.sentry_dsn_admin`; install `@sentry/nextjs` in both apps; verify test error appears.
-- [ ] **H7**: Daily SEO health check — `apps/admin/src/scripts/seo-daily-check.ts` cron via GitHub Actions schedule. Outputs: real-content articles published 24h; coverage by district; schema validation pass-rate; broken-link count; CWV p75; top-10 GSC queries (via GSC API); IndexNow ping success rate. Sends to Slack + email.
+- [ ] **H1**: GA4 config - paste new GA4 Measurement ID into `SiteConfig.google_analytics_id`; enhanced measurement on; custom events: `article_read`, `hub_view`, `search_query`, `scroll_depth_50`, `scroll_depth_100`, `web_vital`. Verify in DebugView.
+- [ ] **H2**: GSC sitemap submission - submit `/sitemap-index.xml` (already verified property). Email alerts on coverage/manual-action issues.
+- [ ] **H3**: Bing Webmaster Tools - verify property under `rsepress2026@gmail.com`; submit sitemap-index; apply to Bing News PubHub.
+- [ ] **H4**: Google News Publisher Center - submit publication (name, logo, URL, country=IN, languages=[te, en], sections). Daisy executes the submission manually; we provide the asset bundle.
+- [ ] **H5**: Microsoft Clarity - create project; paste Project ID into `SiteConfig.clarity_project_id`; verify heatmaps + session replays appearing.
+- [ ] **H6**: Sentry - create web + admin projects; paste DSNs into `SiteConfig.sentry_dsn_web` + `SiteConfig.sentry_dsn_admin`; install `@sentry/nextjs` in both apps; verify test error appears.
+- [ ] **H7**: Daily SEO health check - `apps/admin/src/scripts/seo-daily-check.ts` cron via GitHub Actions schedule. Outputs: real-content articles published 24h; coverage by district; schema validation pass-rate; broken-link count; CWV p75; top-10 GSC queries (via GSC API); IndexNow ping success rate. Sends to Slack + email.
 
-## Phase I — Launch & validation
+## Phase I - Launch & validation
 
-- [ ] **I1**: Pre-launch audit — Screaming Frog Free (or `crawler` npm equivalent). Check: broken links, missing meta, duplicate titles, missing alt, redirect chains > 1 hop, mixed content. Zero criticals before declaring epic complete.
-- [ ] **I2**: Internal SEO dashboard — new page in admin under `/dashboard/seo`: indexed-pages count from GSC API, top queries, coverage-by-district sparkline, CWV trend (last 30 days), schema-error count, IndexNow success rate. Daisy + assigned editors see it.
-- [ ] **I3**: 30-day post-cutover monitoring — daily check on URL migration health (404 spike on old URLs = redirect bug; ranking drop in GSC = expected dip, document recovery curve). Document outcome in epic body.
+- [ ] **I1**: Pre-launch audit - Screaming Frog Free (or `crawler` npm equivalent). Check: broken links, missing meta, duplicate titles, missing alt, redirect chains > 1 hop, mixed content. Zero criticals before declaring epic complete.
+- [ ] **I2**: Internal SEO dashboard - new page in admin under `/dashboard/seo`: indexed-pages count from GSC API, top queries, coverage-by-district sparkline, CWV trend (last 30 days), schema-error count, IndexNow success rate. Daisy + assigned editors see it.
+- [ ] **I3**: 30-day post-cutover monitoring - daily check on URL migration health (404 spike on old URLs = redirect bug; ranking drop in GSC = expected dip, document recovery curve). Document outcome in epic body.
 
-## Phase J — Docs
+## Phase J - Docs
 
-- [ ] **J1**: `docs/seo.md` developer guide — covers schema generator usage, sitemap/RSS routes, IndexNow trigger contract, NER pipeline, monitoring stack, runbook for "article isn't indexing" debug. README cross-link.
+- [ ] **J1**: `docs/seo.md` developer guide - covers schema generator usage, sitemap/RSS routes, IndexNow trigger contract, NER pipeline, monitoring stack, runbook for "article isn't indexing" debug. README cross-link.
 
 ## Workflow rules
 
 - **One issue per branch**; phase-grouped PRs (one PR per phase A–J).
-- **Phase A0 ships FIRST** and on its own — URL migration is foundational; everything after assumes new URL pattern.
-- **Phase A is additive (no destructive Prisma drops)** — `Content.constituencyId` stays alongside the new `ContentLocation` join.
-- **Phases B / C / D / E are independent** after A ships — can be parallelized across multiple working sessions.
-- **Phase F depends on Phase A + B + Phase H1 (GA4) for measurement** — start F only after we can measure hub-page traffic.
-- **Phase G depends on A + B + E** — needs location join, schema generators, image pipeline.
-- **Phase H depends on the surface it monitors** — H1 (GA4) early, H2 (GSC sitemap) after D, H7 (daily check) last.
+- **Phase A0 ships FIRST** and on its own - URL migration is foundational; everything after assumes new URL pattern.
+- **Phase A is additive (no destructive Prisma drops)** - `Content.constituencyId` stays alongside the new `ContentLocation` join.
+- **Phases B / C / D / E are independent** after A ships - can be parallelized across multiple working sessions.
+- **Phase F depends on Phase A + B + Phase H1 (GA4) for measurement** - start F only after we can measure hub-page traffic.
+- **Phase G depends on A + B + E** - needs location join, schema generators, image pipeline.
+- **Phase H depends on the surface it monitors** - H1 (GA4) early, H2 (GSC sitemap) after D, H7 (daily check) last.
 - **Phase I + J at the end.**
-- **No partial Lighthouse failures merge** — even a 10% regression on one CWV blocks merge until fixed.
-- **Schema CI gate is mandatory** — once B6 ships, no PR merges with invalid JSON-LD.
+- **No partial Lighthouse failures merge** - even a 10% regression on one CWV blocks merge until fixed.
+- **Schema CI gate is mandatory** - once B6 ships, no PR merges with invalid JSON-LD.
 
 ## Done
 
 All ~45 sub-issue checkboxes closed + epic body updated with:
-- Final GSC indexed-pages count for REAL articles (excluding any residual dummy pages — see [`project_seo_baseline.md`](../../../C:/Users/reddygs/.claude/projects/d--Rayalaseema-express/memory/project_seo_baseline.md)).
+- Final GSC indexed-pages count for REAL articles (excluding any residual dummy pages - see [`project_seo_baseline.md`](../../../C:/Users/reddygs/.claude/projects/d--Rayalaseema-express/memory/project_seo_baseline.md)).
 - 30-day post-cutover ranking-curve screenshot.
 - Lighthouse scores for top 10 page types.
 - Schema validation report.

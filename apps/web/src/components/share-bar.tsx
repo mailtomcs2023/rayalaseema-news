@@ -4,9 +4,9 @@ import { useState } from "react";
 
 interface Props {
   title: string;
-  // Canonical article URL — caller passes `${siteUrl}${articleHref(article)}`.
+  // Canonical article URL - caller passes `${siteUrl}${articleHref(article)}`.
   // Replaced the older { slug, siteUrl } pair so URL pattern lives in one
-  // place (apps/web/src/lib/article-href.ts) — Phase A0 URL migration.
+  // place (apps/web/src/lib/article-href.ts) - Phase A0 URL migration.
   articleUrl: string;
   body?: string;
   featuredImage?: string | null;
@@ -16,13 +16,13 @@ interface Props {
 /**
  * Single primary Share button + secondary platform icons.
  *
- * The primary button calls `navigator.share({ url, title, text })` — URL only.
+ * The primary button calls `navigator.share({ url, title, text })` - URL only.
  * WhatsApp / Telegram / Insta on mobile each render their own preview card
  * driven by the article's OG meta tags (og:image, og:title, og:description),
  * so the reader sees a thumbnail of the featured image without us doing any
  * canvas screenshotting on click.
  *
- * That keeps the share tap instant — earlier the client was painting a 1080×1080
+ * That keeps the share tap instant - earlier the client was painting a 1080×1080
  * PNG via Canvas + waiting on a cross-origin image load before opening the
  * share sheet, which felt sluggish.
  *
@@ -41,7 +41,7 @@ export function ShareBar({ title, articleUrl, featuredImage: _featuredImage, des
       }
       window.open(`https://wa.me/?text=${encodeURIComponent(waText)}`, "_blank", "noopener,noreferrer");
     } catch {
-      // user cancelled the share sheet — silent
+      // user cancelled the share sheet - silent
     } finally {
       setBusy(false);
     }
@@ -49,7 +49,7 @@ export function ShareBar({ title, articleUrl, featuredImage: _featuredImage, des
 
   return (
     <div style={{ display: "flex", gap: 10, padding: "12px 0", borderBottom: "1px solid #eee", alignItems: "center", flexWrap: "wrap" }}>
-      {/* Primary Share — opens the OS share sheet (WhatsApp/Insta/etc) on mobile,
+      {/* Primary Share - opens the OS share sheet (WhatsApp/Insta/etc) on mobile,
           WhatsApp Web on desktop. WhatsApp shows the OG image preview automatically. */}
       <button onClick={onShare} disabled={busy}
         aria-label="Share article"
@@ -68,7 +68,7 @@ export function ShareBar({ title, articleUrl, featuredImage: _featuredImage, des
 
       <div style={{ flex: 1 }} />
 
-      {/* Direct platform links (URL only — each platform shows its own preview card from our OG meta) */}
+      {/* Direct platform links (URL only - each platform shows its own preview card from our OG meta) */}
       <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(articleUrl)}`} target="_blank" rel="noopener noreferrer"
         aria-label="Facebook" style={iconStyle("#1877F2")}>
         <svg width="16" height="16" fill="#fff" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>

@@ -1,6 +1,6 @@
-// Page Builder (Spec #2) — assignments collection endpoint.
-//   GET  → list (joined with template name + publish state) — any session
-//   POST → create — ADMIN + EDITOR
+// Page Builder (Spec #2) - assignments collection endpoint.
+//   GET  → list (joined with template name + publish state) - any session
+//   POST → create - ADMIN + EDITOR
 //          body: { templateId, pattern, priority?, active? }
 
 import { NextRequest, NextResponse } from "next/server";

@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 
-// GET /api/epaper/masters/[slug] — full master incl. layout.
-// PATCH /api/epaper/masters/[slug] — { layout?, name?, geometryOverride?, expectedVersion? }
-// DELETE /api/epaper/masters/[slug] — refuse if any EpaperTemplate.masterSlug references it.
+// GET /api/epaper/masters/[slug] - full master incl. layout.
+// PATCH /api/epaper/masters/[slug] - { layout?, name?, geometryOverride?, expectedVersion? }
+// DELETE /api/epaper/masters/[slug] - refuse if any EpaperTemplate.masterSlug references it.
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const session = await requireAuth();
@@ -27,7 +27,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ sl
     if (!current) return NextResponse.json({ error: "Master not found" }, { status: 404 });
     if (typeof body.expectedVersion === "number" && body.expectedVersion !== current.version) {
       return NextResponse.json({
-        error: "Conflict — master was updated by someone else.",
+        error: "Conflict - master was updated by someone else.",
         code: "STALE_VERSION", currentVersion: current.version,
       }, { status: 409 });
     }
@@ -52,7 +52,7 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ slu
     const refs = await prisma.epaperTemplate.count({ where: { masterSlug: slug } });
     if (refs > 0) {
       return NextResponse.json({
-        error: `Master in use by ${refs} template${refs > 1 ? "s" : ""} — detach those templates before deleting.`,
+        error: `Master in use by ${refs} template${refs > 1 ? "s" : ""} - detach those templates before deleting.`,
         code: "MASTER_IN_USE", references: refs,
       }, { status: 409 });
     }

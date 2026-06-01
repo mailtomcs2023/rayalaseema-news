@@ -2,7 +2,7 @@
 //
 // Input: an EpaperPage row (layout JSON + label + templateSlug).
 // Output: an HTML document string that Playwright can convert to a *vector*
-// PDF via `page.pdf()`. Real selectable text + working `<a href>` links —
+// PDF via `page.pdf()`. Real selectable text + working `<a href>` links -
 // replaces the screenshot-then-embed-PNG path used by v1.
 //
 // The grid is 12 columns × N rows. Block coordinates are integer grid cells.
@@ -29,8 +29,8 @@ export interface Block {
     | "ad"
     | "text"
     | "story-jump"
-    | "pull-quote"   // #103 — emphasized excerpt block
-    | "folio";       // #146 — master footer with {{pageNumber}} / {{dateLabel}} / {{sectionLabel}}
+    | "pull-quote"   // #103 - emphasized excerpt block
+    | "folio";       // #146 - master footer with {{pageNumber}} / {{dateLabel}} / {{sectionLabel}}
   x: number;
   y: number;
   w: number;
@@ -44,11 +44,11 @@ export interface Block {
   href?: string;
   targetPage?: number;
   locked?: boolean;
-  /** Per-block style overrides — picked from the editor's 🎨 Style panel.
+  /** Per-block style overrides - picked from the editor's 🎨 Style panel.
    *  imagePosition: top (default), left, right, none.
    *  imageSize: percent of block width when position=left/right (10..70, default 40).
    *  textColumns: 1 | 2 | 3 (default 2 on lead, 1 elsewhere).
-   *  hlScale: 0.75..2 — multiplier on default headline font-size.
+   *  hlScale: 0.75..2 - multiplier on default headline font-size.
    *  hlColor: hex headline text color.
    *  hlBgColor: hex headline panel background (Eenadu-style red banner).
    *  blockBgColor: hex whole-block bg (left-rail bullet panels, etc).
@@ -66,8 +66,8 @@ export interface Block {
     textColor?: string;
     padding?: number;
     margin?: number;
-    dropCap?: boolean;           // #103 — drop cap on lead body first letter
-    pullQuoteAttribution?: string; // #103 — small "— By X" line under pull-quote
+    dropCap?: boolean;           // #103 - drop cap on lead body first letter
+    pullQuoteAttribution?: string; // #103 - small "- By X" line under pull-quote
   };
   // Continuation metadata (matches continuation.ts)
   continuesToPage?: number;
@@ -97,7 +97,7 @@ interface RenderInput {
   layout: { blocks: Block[] };
   // ad image map keyed by block id
   ads?: Record<string, { imageUrl: string; href?: string | null }>;
-  // Masthead metadata (#5 Eenadu-style header). Optional — renderer falls
+  // Masthead metadata (#5 Eenadu-style header). Optional - renderer falls
   // back to sensible defaults when omitted.
   mastheadInfo?: {
     dayLabel?: string;          // "సోమవారం"
@@ -133,7 +133,7 @@ function articleLink(a: ResolvedArticle, inner: string): string {
   return `<a class="story-link" href="${esc(articleHref(a.slug))}">${inner}</a>`;
 }
 
-// Module-scoped layout flag — set by renderLayoutToHtml before iterating
+// Module-scoped layout flag - set by renderLayoutToHtml before iterating
 // blocks. blockStyle reads it to pick grid-v1 vs mm-v2 positioning.
 let CURRENT_COORD_SYSTEM: "grid-v1" | "mm-v2" = "grid-v1";
 
@@ -174,7 +174,7 @@ function imageOrFallback(url: string | null | undefined, className: string, crop
   if (url) {
     // When an imageCrop is set, scale the image so the crop rect fills the
     // container, then offset so the crop window starts at (0,0). Simple
-    // transform — works in PDF render because Playwright honors CSS transforms.
+    // transform - works in PDF render because Playwright honors CSS transforms.
     let imgStyle = "";
     if (crop && crop.w > 0 && crop.h > 0) {
       const scaleX = 1 / crop.w;
@@ -214,7 +214,7 @@ function masthead(b: Block, opts: { dateLabel: string; totalPages: number; meta?
       <div class="mast-center">
         <img class="mast-logo-img" src="${esc(logoSrc)}" alt="రాయలసీమ న్యూస్"
           onerror="this.outerHTML='<div class=\\'mast-logo\\'>రాయలసీమ న్యూస్</div>'"/>
-        <div class="mast-tag">THE VOICE OF RAYALASEEMA — Largest circulated Rayalaseema daily</div>
+        <div class="mast-tag">THE VOICE OF RAYALASEEMA - Largest circulated Rayalaseema daily</div>
       </div>
       ${rightSlot}
     </div>
@@ -235,7 +235,7 @@ function sectionBand(b: Block, label: string, opts: { dateLabel: string; pageNum
 }
 
 function leadBlock(b: Block, a: ResolvedArticle): string {
-  const desk = a.deskName ? `<div class="byline">— ${esc(a.deskName.replace(/ - /g, ", "))}</div>` : "";
+  const desk = a.deskName ? `<div class="byline">- ${esc(a.deskName.replace(/ - /g, ", "))}</div>` : "";
   const displayTitle = b.overrideTitle?.trim() || a.title;
   const displaySummary = b.overrideDek?.trim() || a.summary || "";
 
@@ -265,7 +265,7 @@ function leadBlock(b: Block, a: ResolvedArticle): string {
   const dekHtml = (() => {
     if (b.continuesToPage && b.continuesToBlockId) {
       const target = b.continuesToPage;
-      // bodyStart is char offset of where the split happens — known only on
+      // bodyStart is char offset of where the split happens - known only on
       // the continuation block, but the renderer can re-derive a sensible cut
       // by trimming summary || bodyText to the same approximate length.
       const text = a.bodyText || a.summary || "";
@@ -341,7 +341,7 @@ function continuationBlock(b: Block, a: ResolvedArticle): string {
   const from = b.continuesFromPage ?? 0;
   const start = typeof b.bodyStart === "number" ? b.bodyStart : 0;
   const tail = a.bodyText.slice(start).trim();
-  // Cap at a generous slice — anything longer gets clipped by CSS overflow.
+  // Cap at a generous slice - anything longer gets clipped by CSS overflow.
   const slice = tail.slice(0, 3000);
   const inner = `
     <div class="block-inner">
@@ -407,7 +407,7 @@ function textBlock(b: Block): string {
   return `<div class="block text" style="${blockStyle(b)}">${b.content ?? ""}</div>`;
 }
 
-// #146 — folio block: master-defined footer w/ {{pageNumber}}, {{dateLabel}},
+// #146 - folio block: master-defined footer w/ {{pageNumber}}, {{dateLabel}},
 // {{sectionLabel}} placeholders substituted per page at render time. Used by
 // front/district/section masters so the bottom-of-page footer line propagates
 // from the master once and renders per-page content for free.
@@ -423,7 +423,7 @@ function folioBlock(b: Block, ctx: { pageNumber: number; dateLabel: string; sect
 function pullQuoteBlock(b: Block): string {
   const text = b.content ?? "";
   const attribution = b.style?.pullQuoteAttribution
-    ? `<span class="pq-attr">— ${esc(b.style.pullQuoteAttribution)}</span>`
+    ? `<span class="pq-attr">- ${esc(b.style.pullQuoteAttribution)}</span>`
     : "";
   return `<div class="block pull-quote" style="${blockStyle(b)}">${esc(text)}${attribution}</div>`;
 }
@@ -504,7 +504,7 @@ export async function renderLayoutToHtml(input: RenderInput): Promise<string> {
   const articles = await resolveArticles(input.layout.blocks);
 
   // Resolve any image-library references attached to image blocks. The block
-  // schema reuses `adAssetId` as a generic asset pointer for now — if it
+  // schema reuses `adAssetId` as a generic asset pointer for now - if it
   // matches an EpaperImageAsset id we wire it through to the renderer.
   const imageAssetIds = Array.from(new Set(
     input.layout.blocks.filter((b) => b.type === "image" && b.adAssetId).map((b) => b.adAssetId!)
@@ -518,7 +518,7 @@ export async function renderLayoutToHtml(input: RenderInput): Promise<string> {
     imageAssetsById = Object.fromEntries(rows.map((r) => [r.id, { imageUrl: r.imageUrl, caption: r.caption }]));
   }
 
-  // Group consecutive brief blocks that share a region — each `brief` block
+  // Group consecutive brief blocks that share a region - each `brief` block
   // gets its OWN articleId assignment from autofill, but visually we want
   // multiple briefs to render as a list inside one block. The autofill engine
   // assigns one article per brief slot; the renderer treats each brief block
@@ -603,10 +603,10 @@ export async function renderLayoutToHtml(input: RenderInput): Promise<string> {
     font-family:'Noto Serif Telugu',serif;
     background:#FCFAF3;color:#14110b;
     padding:0;
-    /* Baseline grid: 6 mm (~23 px @ 125 dpi) — all body line-heights snap to
+    /* Baseline grid: 6 mm (~23 px @ 125 dpi) - all body line-heights snap to
        a multiple of this so text aligns horizontally across columns. */
     --baseline: 23px;
-    /* Widow/orphan defaults — Telugu broadsheet convention: never leave a
+    /* Widow/orphan defaults - Telugu broadsheet convention: never leave a
        single line at the top of a column or the bottom of a paragraph. */
     orphans: 2;
     widows: 2;
@@ -622,7 +622,7 @@ export async function renderLayoutToHtml(input: RenderInput): Promise<string> {
   /* Headlines should never break across columns or pages. */
   .lead-hl, .maj-hl, .sec-hl, .cont-hl, .kicker, .byline { break-inside: avoid; page-break-inside: avoid; }
 
-  /* Drop cap (#103) — opt-in via b.style.dropCap on lead blocks. Renders
+  /* Drop cap (#103) - opt-in via b.style.dropCap on lead blocks. Renders
      the first character ~3 lines tall, floated. */
   .lead-dek.drop-cap::first-letter {
     initial-letter: 3;
@@ -637,7 +637,7 @@ export async function renderLayoutToHtml(input: RenderInput): Promise<string> {
     margin-top: 4px;
   }
 
-  /* Pull quote (#103) — emphasized excerpt rendered as its own block type. */
+  /* Pull quote (#103) - emphasized excerpt rendered as its own block type. */
   .pull-quote { border-top: 3px double #A50D0D; border-bottom: 3px double #A50D0D;
     padding: 14px 18px; margin: 8px 0; font-family: 'Ramabhadra', serif;
     font-size: 22px; line-height: 1.4; color: #5b1f1f; font-style: italic;
@@ -674,7 +674,7 @@ export async function renderLayoutToHtml(input: RenderInput): Promise<string> {
     row-gap: 12px;
     /* Hard contain the page to one PDF sheet (1480×2760px = 300×560mm
        @ ~125 dpi). 30 rows × 92px = 2760px = exact fit. No padding so
-       the grid math stays clean — visual breathing room is per-block. */
+       the grid math stays clean - visual breathing room is per-block. */
     width: 1480px;
     height: 2760px;
     max-height: 2760px;
@@ -730,7 +730,7 @@ export async function renderLayoutToHtml(input: RenderInput): Promise<string> {
   .kicker.sm{font-size:11px;margin:5px 0 3px}
   .byline{font-family:'Noto Sans Telugu',sans-serif;font-size:13px;font-weight:700;color:#A50D0D;font-style:italic;margin:0 0 8px}
 
-  /* Lead — block-inner layout variants for image-position style */
+  /* Lead - block-inner layout variants for image-position style */
   .lead-stack { display: flex; flex-direction: column; }
   .lead-flex-row { display: flex; flex-direction: row; gap: 12px; }
   .lead-flex-row-rev { display: flex; flex-direction: row-reverse; gap: 12px; }
@@ -848,7 +848,7 @@ export async function renderEpaperPageById(pageId: string): Promise<string> {
 
   // Master blocks (#108 / #146): only merge masters when the page itself
   // is on mm-v2. v1 (grid-v1) pages keep their original masthead/section-band
-  // blocks inline — merging an mm-v2 master into a grid-v1 layout caused
+  // blocks inline - merging an mm-v2 master into a grid-v1 layout caused
   // duplicate masthead + body-empty render bugs (rolled back as part of the
   // v2 burn-in).
   const pageLayout = (page.layout as unknown as { coordSystem?: string; masterSlug?: string; blocks: Block[] }) ?? { blocks: [] };
@@ -871,8 +871,8 @@ export async function renderEpaperPageById(pageId: string): Promise<string> {
   }
 
   // Masthead ad slots (#145). Priority:
-  //   1. EpaperEdition.mastheadAds[slot] — operator-selected per edition.
-  //   2. Top 2 active EpaperAdAsset rows by validFrom — auto fallback.
+  //   1. EpaperEdition.mastheadAds[slot] - operator-selected per edition.
+  //   2. Top 2 active EpaperAdAsset rows by validFrom - auto fallback.
   let mastheadLeft: { imageUrl: string; href?: string | null } | undefined;
   let mastheadRight: { imageUrl: string; href?: string | null } | undefined;
   try {

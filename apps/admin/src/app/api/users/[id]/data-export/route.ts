@@ -6,7 +6,7 @@ import { logAudit } from "@/lib/audit";
 // GET /api/users/[id]/data-export
 //
 // DPDPA / GDPR personal-data export (#100). Returns every row in the DB
-// associated with the user — profile, authored articles (id + slug + title
+// associated with the user - profile, authored articles (id + slug + title
 // only, full body via the public site), comments, audit-log actions they
 // triggered. JSON download.
 //
@@ -16,7 +16,7 @@ import { logAudit } from "@/lib/audit";
 // Audit-logged either way.
 //
 // Right-to-be-forgotten (account deletion) is a separate endpoint (DELETE)
-// — splitting export from deletion lets users keep a copy before wiping.
+// - splitting export from deletion lets users keep a copy before wiping.
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAuth();
   if (isAuthError(session)) return session;
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const { id } = await params;
     const role = (session.user as any).role;
     if (session.user.id !== id && role !== "ADMIN") {
-      return NextResponse.json({ error: "Forbidden — users can only export their own data" }, { status: 403 });
+      return NextResponse.json({ error: "Forbidden - users can only export their own data" }, { status: 403 });
     }
 
     const user = await prisma.user.findUnique({

@@ -6,9 +6,10 @@ import { KycBanner } from "@/components/reporter/kyc-banner";
 import { ArticleEditor } from "@/components/reporter/article-editor";
 
 // New-article page for the reporter web portal. Mirrors the Expo
-// NewArticleScreen (create mode). Reporters who haven't completed KYC can
-// still save drafts, but the "Submit for Review" button is replaced by a
-// locked hint — same UX rule as the mobile app.
+// NewArticleScreen (create mode). KYC is a HARD gate: unverified reporters
+// are bounced back to /reporter so the KYC banner there nudges them to the
+// upload screen. (Previously we let them draft and only blocked "Submit
+// for Review" - too easy to miss the difference.)
 export default async function NewReporterArticle() {
   const session = await auth();
   if (!session?.user) redirect("/login");
@@ -17,14 +18,15 @@ export default async function NewReporterArticle() {
   if (role && role !== "REPORTER") redirect("/");
   if (!userId) redirect("/login");
 
-  const profile = await prisma.journalistProfile.findUnique({
+  const profile = await prisma.reporterProfile.findUnique({
     where: { userId },
     select: { kycStatus: true },
   });
   const kycVerified = profile?.kycStatus === "VERIFIED";
+  if (!kycVerified) redirect("/reporter");
 
   return (
-    <ReporterShell>
+    <ReporterShell kycStatus="VERIFIED">
       <div style={{ paddingTop: 16 }}>
         <KycBanner userId={userId} />
         <ArticleEditor kycVerified={kycVerified} />

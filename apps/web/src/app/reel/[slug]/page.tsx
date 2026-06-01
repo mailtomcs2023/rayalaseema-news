@@ -1,4 +1,4 @@
-// /reel/[slug] — REEL Content type detail page (Spec #1 #111).
+// /reel/[slug] - REEL Content type detail page (Spec #1 #111).
 // Vertical-oriented short-clip player (9:16 aspect). Native <video> tag for
 // hosted clips since reels are typically Azure Blob MP4s, not embeds.
 import { notFound } from "next/navigation";

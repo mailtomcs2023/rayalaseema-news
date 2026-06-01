@@ -1,4 +1,4 @@
-// Spec #4 G3 (#233) — internal-link automation on publish.
+// Spec #4 G3 (#233) - internal-link automation on publish.
 //
 // Inserts up to two contextual internal links into the article body HTML:
 //   1) First mention of the primary district name → /district/<slug>
@@ -10,7 +10,7 @@
 //
 // Purpose: builds hub→article internal-link graph so hub pages accumulate
 // authority + orphan articles get discovered via the hub crawl path.
-// Spec doc Section 6 — internal linking is the cheap, structural way to
+// Spec doc Section 6 - internal linking is the cheap, structural way to
 // move PageRank from heavy hubs to long-tail articles.
 
 import { prisma } from "@rayalaseema/db";
@@ -38,7 +38,7 @@ function insertFirstLink(body: string, target: LinkTarget): { body: string; chan
     return { body, changed: false };
   }
   // Walk the body, skipping anchor blocks + tag interiors. Use a simple
-  // tokeniser instead of full HTML parsing — body sanitizer already gave
+  // tokeniser instead of full HTML parsing - body sanitizer already gave
   // us safe HTML.
   const variants = [target.nameEn, target.name].filter(Boolean).filter((v) => v.length >= 3);
   if (variants.length === 0) return { body, changed: false };

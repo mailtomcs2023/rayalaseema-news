@@ -9,15 +9,15 @@ const NEWSDATA_API_KEY = process.env.NEWSDATA_API_KEY;
 // GET /api/fetch-news?provider=newsdata|googlenews&q=...
 //
 // Two free providers shipped:
-//   newsdata   — NewsData.io REST API. Requires NEWSDATA_API_KEY.
-//   googlenews — Google News RSS endpoint. No key required, no rate limit
+//   newsdata   - NewsData.io REST API. Requires NEWSDATA_API_KEY.
+//   googlenews - Google News RSS endpoint. No key required, no rate limit
 //                docs but treated as zero-trust public surface.
 //
 // Both return the same shape: { articles: [{ externalId, title, description,
 // imageUrl, sourceUrl, source, language, publishedAt, keywords }] }. POST
 // /api/fetch-news (further down this file) imports a result row as a draft.
 export async function GET(req: NextRequest) {
-  const session = await requireAuth(["ADMIN", "EDITOR", "CHIEF_SUB_EDITOR", "SUB_EDITOR", "REPORTER"]);
+  const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR", "REPORTER"]);
   if (isAuthError(session)) return session;
   const { searchParams } = new URL(req.url);
   const provider = (searchParams.get("provider") || "newsdata").toLowerCase();
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
 
   try {
     if (provider === "googlenews") {
-      // Google News RSS — no auth, no key. hl/gl/ceid pick UI lang + region.
+      // Google News RSS - no auth, no key. hl/gl/ceid pick UI lang + region.
       // We default to Telugu; UI can switch to English via ?language=en.
       const hl = language.startsWith("te") ? "te" : "en-IN";
       const ceid = language.startsWith("te") ? "IN:te" : "IN:en";
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
       if (!res.ok) return NextResponse.json({ error: `Google News ${res.status}` }, { status: 502 });
       const xml = await res.text();
 
-      // Lightweight RSS parser — Google News RSS is well-formed XML so a few
+      // Lightweight RSS parser - Google News RSS is well-formed XML so a few
       // anchored regexes are fine here (no need to pull in a full DOM lib).
       const items: any[] = [];
       const itemRe = /<item>([\s\S]*?)<\/item>/g;
@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
       // Google News RSS doesn't include images. Scrape og:image / twitter:image
       // from each result's article URL in parallel. Per-item 4s timeout keeps
       // the total bounded under the proxy limit even when one publisher is slow.
-      // Results without an image still come back — image is just null.
+      // Results without an image still come back - image is just null.
       await Promise.all(items.map(async (item) => {
         if (!item.sourceUrl) return;
         try {
@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
           });
           clearTimeout(t);
           if (!r.ok) return;
-          // Only read the first ~80KB of HTML — meta tags live in <head>.
+          // Only read the first ~80KB of HTML - meta tags live in <head>.
           const reader = r.body?.getReader();
           if (!reader) return;
           let html = "";
@@ -102,7 +102,7 @@ export async function GET(req: NextRequest) {
             pickMeta(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i) ||
             pickMeta(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
           if (img) item.imageUrl = img;
-        } catch { /* timeout / network / parse — leave imageUrl null */ }
+        } catch { /* timeout / network / parse - leave imageUrl null */ }
       }));
       return NextResponse.json({ total: items.length, articles: items, provider: "googlenews" });
     }
@@ -139,7 +139,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/fetch-news - import a news article as draft
 export async function POST(req: NextRequest) {
-  const session2 = await requireAuth(["ADMIN", "EDITOR", "CHIEF_SUB_EDITOR", "SUB_EDITOR", "REPORTER"]);
+  const session2 = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR", "REPORTER"]);
   if (isAuthError(session2)) return session2;
   try {
     const body = await req.json();
@@ -158,7 +158,7 @@ export async function POST(req: NextRequest) {
       categoryId = defaultCat?.id || "";
     }
 
-    // Dedup — skip if this source URL is already in Content (Spec #1 #109).
+    // Dedup - skip if this source URL is already in Content (Spec #1 #109).
     if (sourceUrl) {
       const dupe = await prisma.content.findUnique({ where: { sourceUrl }, select: { id: true, slug: true } });
       if (dupe) return NextResponse.json({ error: "Already imported", existing: dupe }, { status: 409 });
@@ -170,7 +170,7 @@ export async function POST(req: NextRequest) {
     // Re-host source image on Azure Blob (publishers block hotlinking)
     const hostedImage = await uploadImageFromUrl(imageUrl);
 
-    // Create slug from title — sanitized + timestamp for uniqueness
+    // Create slug from title - sanitized + timestamp for uniqueness
     const slug = sanitizeSlug(`${buildSlugFromTitle(title)}-${Date.now()}`);
 
     const content = await prisma.content.create({

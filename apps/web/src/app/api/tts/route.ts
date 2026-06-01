@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
 
     // Telugu neural voices: te-IN-ShrutiNeural (F), te-IN-MohanNeural (M).
     // express-as styles only work for voices that publish them; te-IN doesn't list any
-    // supported styles as of the 2026 voice catalog — sending an unsupported style
+    // supported styles as of the 2026 voice catalog - sending an unsupported style
     // silently returns 200 + empty audio. Use plain <voice> only.
     const ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="te-IN">
       <voice name="${VOICE}">${escapeXml(cleanText)}</voice>
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
       }
     );
 
-    // Diagnostic mode (?diag=1) — emits Azure status + headers WITHOUT leaking the key,
+    // Diagnostic mode (?diag=1) - emits Azure status + headers WITHOUT leaking the key,
     // so we can debug "200 empty body" cases from the browser.
     const url = new URL(req.url);
     if (url.searchParams.get("diag") === "1") {
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
 
     const audioBuffer = await res.arrayBuffer();
 
-    // Don't cache an empty body — earlier deploys returned 200 + 0 bytes and the 24h
+    // Don't cache an empty body - earlier deploys returned 200 + 0 bytes and the 24h
     // public cache-control froze that empty response in nginx/CDN for everyone.
     if (audioBuffer.byteLength === 0) {
       const azureReqId = res.headers.get("x-requestid") || res.headers.get("x-microsoft-cognitiveservices-tts-request-id");

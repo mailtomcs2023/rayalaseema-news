@@ -3,7 +3,9 @@ import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 import { getReporterId } from "@/lib/reporter-auth";
 import { isUrlSafeToFetch } from "@/lib/ssrf-guard";
 import { runPipeline } from "@/lib/ai/pipeline";
+import { AITruncationError, AIContentFilterError } from "@/lib/ai/client";
 import { uploadImageFromUrl } from "@/lib/blob";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT;
 const KEY = process.env.AZURE_OPENAI_KEY;
@@ -24,12 +26,12 @@ RULES:
 8. NEVER put translations in brackets
 9. If the source is in English, translate naturally - don't do word-by-word translation
 
-PRIMARY vs SECONDARY SPEECH (CRITICAL — most common AI failure):
+PRIMARY vs SECONDARY SPEECH (CRITICAL - most common AI failure):
 - PRIMARY speech = direct quotes by a named person, marked in the source with quotation marks ("..." or "...") or phrases like "said", "stated", "అన్నారు", "చెప్పారు", "తెలిపారు". Render as <blockquote> in FIRST PERSON exactly as the speaker said it.
 - SECONDARY speech = reporter narration ABOUT what someone said or did. Render as <p> in THIRD PERSON ("X said that...", "X మాట్లాడుతూ...అని పేర్కొన్నారు"). NEVER convert this into a fabricated first-person quote.
 - DO NOT invent quotes. If the source does not contain quoted text by a person, your output MUST NOT contain a first-person quote attributed to that person.
 - DO NOT switch a reporter's third-person summary into a speaker's first-person claim. That is fabrication.
-- Proper nouns (people, place, party names) stay untranslated — write them in Telugu script phonetically, not translated.`;
+- Proper nouns (people, place, party names) stay untranslated - write them in Telugu script phonetically, not translated.`;
 
 // Rayalaseema dialect - ONLY for editorials/opinion pieces
 const DIALECT_PROMPT = `You are an editorial writer for "Rayalaseema News". Write opinion/editorial pieces with Rayalaseema dialect flavor.
@@ -54,7 +56,7 @@ DIALECT WORDS (use sparingly):
 // (169.254.169.254 → Azure/AWS creds), IPv6 loopback (::1), IPv4-mapped IPv6,
 // and DNS-rebinding tricks (evil.com → 127.0.0.1). isUrlSafeToFetch does a
 // real DNS lookup and rejects any hostname whose A/AAAA records land in a
-// private/loopback/link-local/multicast range — see lib/ssrf-guard.ts.
+// private/loopback/link-local/multicast range - see lib/ssrf-guard.ts.
 async function scrapeSource(url: string): Promise<{ text: string; ogImage: string | null; ogTitle: string | null }> {
   try {
     const safety = await isUrlSafeToFetch(url);
@@ -69,7 +71,7 @@ async function scrapeSource(url: string): Promise<{ text: string; ogImage: strin
     });
     const html = await res.text();
 
-    // Meta extraction BEFORE stripping tags — og:image / twitter:image /
+    // Meta extraction BEFORE stripping tags - og:image / twitter:image /
     // og:title. Tolerant of attribute order; honors both " and '.
     const pickMeta = (re: RegExp): string | null => {
       const m = html.match(re);
@@ -85,7 +87,7 @@ async function scrapeSource(url: string): Promise<{ text: string; ogImage: strin
 
     // Readability-style extraction. Strip noise (scripts, styles, nav,
     // header, footer, aside, forms, comment widgets, social embeds, ads),
-    // then PREFER the <article> / <main> element if one exists — those
+    // then PREFER the <article> / <main> element if one exists - those
     // wrap the actual story body on most modern news sites. Falls back
     // to <body> when neither is present. Cap raised from 5K to 18K chars
     // so multi-page wire reports (specific reliability targets, sectoral
@@ -134,9 +136,21 @@ export async function POST(req: NextRequest) {
   // mobile path first and fall back to the admin-session check.
   const reporterId = await getReporterId(req);
   if (!reporterId) {
-    const session = await requireAuth(["ADMIN", "EDITOR", "CHIEF_SUB_EDITOR", "SUB_EDITOR", "REPORTER"]);
+    const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR", "REPORTER"]);
     if (isAuthError(session)) return session;
   }
+
+  // Bill protection. Every call here can spend ~$0.01-$0.10 in Azure OpenAI
+  // credits; 30/min per IP is generous for legitimate editorial use and
+  // catches runaway scripts before they burn the budget. Returns 429 with
+  // Retry-After when exceeded.
+  const blocked = checkRateLimit(req, {
+    max: 30,
+    windowMs: 60_000,
+    prefix: "ai-rewrite",
+  });
+  if (blocked) return blocked;
+
   if (!ENDPOINT || !KEY) {
     return NextResponse.json({ error: "AZURE_OPENAI not configured" }, { status: 503 });
   }
@@ -167,7 +181,7 @@ export async function POST(req: NextRequest) {
       // Rehost the source's og:image on Azure Blob (EXIF-stripped +
       // RE-stamped via uploadImageFromUrl → processImageBuffer).
       // Returning the raw publisher CDN URL meant the public site
-      // hotlinked them — fragile (403 / takedowns / hotlink-blocked)
+      // hotlinked them - fragile (403 / takedowns / hotlink-blocked)
       // and skipped our metadata-cleanup pipeline.
       if (scraped.ogImage) {
         try {
@@ -190,13 +204,13 @@ export async function POST(req: NextRequest) {
       const wordCount = fullText.trim().split(/\s+/).filter(Boolean).length;
       if (wordCount < 150) {
         return NextResponse.json({
-          error: `Source content too thin (${wordCount} words). The scraper couldn't extract a full article body — likely the page is paywalled, requires JavaScript, or this is a listing page. Paste the article TEXT directly into the body field, then run తెలుగులో రాయండి.`,
+          error: `Source content too thin (${wordCount} words). The scraper couldn't extract a full article body - likely the page is paywalled, requires JavaScript, or this is a listing page. Paste the article TEXT directly into the body field, then run తెలుగులో రాయండి.`,
           wordCount,
         }, { status: 422 });
       }
     }
 
-    // action="full-import" — Eenadu-grade pipeline (extract → compose →
+    // action="full-import" - Eenadu-grade pipeline (extract → compose →
     // fact-check + repair up to 2x). Each step lives in lib/ai/. The
     // pipeline returns the composed article PLUS any fact-check issues
     // remaining after retries, so the editor UI can surface them.
@@ -225,6 +239,21 @@ export async function POST(req: NextRequest) {
         });
       } catch (e: any) {
         console.error("[ai/rewrite] pipeline failed:", e);
+        if (e instanceof AITruncationError) {
+          return NextResponse.json({
+            error: `This article is too long for the AI to process in one pass (output exceeded ${e.attemptedMaxTokens} tokens at every retry). Please trim the source to under ~2000 words and try again, or split it into two stories.`,
+            code: "ai_truncated",
+            attemptedMaxTokens: e.attemptedMaxTokens,
+          }, { status: 413 });
+        }
+        if (e instanceof AIContentFilterError) {
+          return NextResponse.json({
+            error: `Azure's content filter blocked the ${e.stage} (${e.categories.join(", ") || "unknown"}). The article likely contains material flagged by the safety policy - edit the source and retry, or use the dialect/translate modes which do not run the full pipeline.`,
+            code: "ai_content_filter",
+            stage: e.stage,
+            categories: e.categories,
+          }, { status: 422 });
+        }
         return NextResponse.json({ error: e?.message || "Pipeline failed" }, { status: 500 });
       }
     }
@@ -244,14 +273,28 @@ STRICT FIDELITY RULES:
 
 SOURCE:
 ${fullText}`,
-      // Short-text translation — single word / phrase / label. No HTML, no
+      // Short-text translation - single word / phrase / label. No HTML, no
       // article structure, no quotes. Just the Telugu equivalent.
-      phrase: `Translate this English text to Telugu. Return ONLY the Telugu translation as plain text — no quotes, no explanation, no English in brackets, no HTML:\n\n${fullText}`,
+      phrase: `Translate this English text to Telugu. Return ONLY the Telugu translation as plain text - no quotes, no explanation, no English in brackets, no HTML:\n\n${fullText}`,
       rewrite: `Rewrite this as a standard Telugu newspaper article. Clean, professional Telugu:\n\n${fullText}`,
       editorial: `Write a Rayalaseema-style editorial/opinion piece about this topic. Use dialect words in headlines and quotes only:\n\n${fullText}`,
       dialect: `Add slight Rayalaseema dialect flavor to this article. Only change headlines and quotes, keep body in standard Telugu:\n\n${fullText}`,
       summarize: `Summarize in exactly 60 words in Telugu. Only return the summary, no HTML:\n\n${fullText}`,
       headline: `Suggest 5 catchy Telugu headlines for this article. Return as numbered list:\n\n${fullText}`,
+      // Telugu (or any-language) headline → short SEO-friendly English URL slug.
+      // 3-5 words, hyphenated, ASCII only. Used by the article editor to fill
+      // the slug field as the user types the title.
+      slug: `Convert this news headline into a short, SEO-friendly English URL slug.
+RULES:
+- 3 to 5 words ONLY
+- All lowercase ASCII
+- Words separated by hyphens
+- No punctuation, no diacritics, no Telugu characters
+- Capture the main subject + action (e.g. "rajadhani-construction-begins", not "the-rajadhani-construction-begins-tomorrow")
+- Return ONLY the slug - no quotes, no explanation, no period at the end
+
+HEADLINE:
+${fullText}`,
       proofread: `Proofread and fix Telugu spelling/grammar errors. Return corrected HTML:\n\n${fullText}`,
       expand: `Expand this short news into a full 400-word Telugu newspaper article:\n\n${fullText}`,
     };

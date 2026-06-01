@@ -4,5 +4,11 @@
     "outDir": "./dist",
     "rootDir": "./src"
   },
-  "include": ["src/**/*", "prisma/**/*"]
+  // `prisma/**/*` was previously listed here but conflicted with rootDir
+  // (rootDir must contain every input). The seed scripts under prisma/ are
+  // executed via `tsx prisma/seed.ts` (transpile-on-the-fly) and are not
+  // imported by anything we ship, so they don't belong in the build program.
+  // To typecheck the seeds, run `bunx tsc --noEmit -p prisma/tsconfig.json`
+  // with a separate config; the build itself doesn't need them.
+  "include": ["src/**/*"]
 }

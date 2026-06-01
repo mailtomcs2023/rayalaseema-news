@@ -40,7 +40,7 @@ export async function runPipeline(sourceText: string): Promise<PipelineResult> {
     };
   }
 
-  // English / other-language source — full 3-step pipeline.
+  // English / other-language source - full 3-step pipeline.
   const facts = await extractFacts(sourceText);
 
   let article = await composeArticle(facts);

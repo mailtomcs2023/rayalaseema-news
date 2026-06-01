@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Sidebar } from "@/components/sidebar";
 
 interface MasterListItem {
   id: string; slug: string; name: string; version: number; updatedAt: string;
@@ -21,7 +20,6 @@ export default function MastersListPage() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
-      <Sidebar />
       <main style={{ marginLeft: 240, flex: 1, padding: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, color: "#111", marginBottom: 16 }}>ePaper Masters</h1>
         <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 16 }}>

@@ -7,7 +7,7 @@ import { prisma } from "@rayalaseema/db";
 // here so click attribution lands in HeadlineTest.clicksA/B. After counting,
 // 302s to the article page.
 //
-// Public — no auth.
+// Public - no auth.
 export async function GET(req: NextRequest) {
   try {
     const sp = req.nextUrl.searchParams;
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     if (!slug) return NextResponse.json({ error: "slug required" }, { status: 400 });
 
     if (testId && (v === "A" || v === "B")) {
-      // Soft-fail — if the test row was deleted we still send the reader on.
+      // Soft-fail - if the test row was deleted we still send the reader on.
       try {
         await prisma.headlineTest.update({
           where: { id: testId },

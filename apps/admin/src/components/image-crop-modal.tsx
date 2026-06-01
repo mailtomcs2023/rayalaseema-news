@@ -42,7 +42,7 @@ export function ImageCropModal({ src, onConfirm, onClose }: ImageCropModalProps)
     }
   }, [aspect]);
 
-  // Pick a new aspect — re-center the crop at that aspect.
+  // Pick a new aspect - re-center the crop at that aspect.
   const setAspectAndRecenter = (a?: number) => {
     setAspect(a);
     if (imgRef.current && a) {
@@ -55,7 +55,7 @@ export function ImageCropModal({ src, onConfirm, onClose }: ImageCropModalProps)
 
   const applyCrop = async () => {
     if (!imgRef.current || !completedCrop) {
-      // No crop drawn — return original
+      // No crop drawn - return original
       onConfirm(src);
       return;
     }
@@ -137,7 +137,7 @@ export function ImageCropModal({ src, onConfirm, onClose }: ImageCropModalProps)
 
 // Render the user's crop selection onto a canvas at native resolution and
 // export it as a JPEG data URL. The native canvas approach avoids needing
-// a server-side image worker — small images (<2MB) round-trip fine in the
+// a server-side image worker - small images (<2MB) round-trip fine in the
 // browser.
 async function drawCropToDataUrl(img: HTMLImageElement, crop: PixelCrop): Promise<string> {
   const scaleX = img.naturalWidth / img.width;

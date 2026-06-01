@@ -1,8 +1,9 @@
 // Shared article-detail body, rendered by both the legacy /article/[slug]
 // route and the new /[district]/[constituency]/[slugid] + /news/[slugid]
-// routes (Phase A0 URL migration). Pure server component — no client state.
+// routes (Phase A0 URL migration). Pure server component - no client state.
 
 import Link from "next/link";
+import Image from "next/image";
 import { Badge } from "@rayalaseema/ui";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
@@ -18,7 +19,7 @@ import { articleHref } from "@/lib/article-href";
 import { buildNewsArticleSchema, buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 import type { LocationChain, AuthorRef, PublisherConfig } from "@rayalaseema/seo-schema";
 
-// Loose type — matches the projected shape returned by
+// Loose type - matches the projected shape returned by
 // getArticleBySlug + getTrendingArticles + getArticlesByCategory in db-queries.
 // Components never read every field; we accept anything that has the keys we
 // touch and let TypeScript widen elsewhere.
@@ -83,7 +84,7 @@ export function ArticleView({ article, related, trending, siteUrl }: Props) {
       updatedAt: article.updatedAt,
       articleSection: a.category?.nameEn || article.category.name,
       // Spec #4 brand disambiguation + AI-search keyword signal. Tags + the
-      // category English name fed in as a comma-joined keyword list — AI
+      // category English name fed in as a comma-joined keyword list - AI
       // engines (Perplexity / ChatGPT / Gemini) read it; Google doesn't but
       // ignores it harmlessly.
       keywords: [
@@ -168,7 +169,7 @@ export function ArticleView({ article, related, trending, siteUrl }: Props) {
               {article.title}
             </h1>
 
-            {/* Byline strip — desk name + (published / updated) timestamps. */}
+            {/* Byline strip - desk name + (published / updated) timestamps. */}
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 12, paddingBottom: 12, borderBottom: "1px solid #eee" }}>
               <div>
                 <div style={{ fontFamily: "var(--font-telugu-heading), serif", fontSize: 15, fontWeight: 800, color: "#1a1a1a" }}>
@@ -203,7 +204,20 @@ export function ArticleView({ article, related, trending, siteUrl }: Props) {
 
             {article.featuredImage && (
               <div style={{ marginTop: 20 }}>
-                <img src={article.featuredImage} alt={article.title} style={{ width: "100%", borderRadius: 8, maxHeight: 500, objectFit: "cover" }} />
+                {/* next/image - AVIF/WebP negotiated automatically, responsive
+                    variants generated based on `sizes`. width/height are
+                    intrinsic-ratio hints (16:9); CSS does the actual display
+                    sizing + maxHeight cap. `priority` because this is the
+                    article hero - Lighthouse penalises LCP otherwise. */}
+                <Image
+                  src={article.featuredImage}
+                  alt={article.title}
+                  width={1200}
+                  height={675}
+                  sizes="(max-width: 768px) 100vw, 800px"
+                  priority
+                  style={{ width: "100%", height: "auto", borderRadius: 8, maxHeight: 500, objectFit: "cover" }}
+                />
                 {article.imageCaption && <p style={{ fontSize: 12, color: "#888", marginTop: 6, fontStyle: "italic" }}>{article.imageCaption}</p>}
               </div>
             )}
@@ -236,7 +250,13 @@ export function ArticleView({ article, related, trending, siteUrl }: Props) {
                   {related.filter((r) => r.id !== article.id).slice(0, 4).map((r) => (
                     <Link key={r.id} href={articleHref(r)} style={{ display: "flex", gap: 10, textDecoration: "none" }}>
                       {r.featuredImage && (
-                        <img src={r.featuredImage} alt="" style={{ width: 100, height: 70, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} />
+                        <Image
+                          src={r.featuredImage}
+                          alt=""
+                          width={100}
+                          height={70}
+                          style={{ borderRadius: 6, objectFit: "cover", flexShrink: 0 }}
+                        />
                       )}
                       <div>
                         <p style={{ fontSize: 14, fontWeight: 700, color: "#111", lineHeight: 1.5 }}>{r.title}</p>

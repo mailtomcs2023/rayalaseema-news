@@ -1,4 +1,4 @@
-// Spec #4 C7 (#210) — /feedback-policy.
+// Spec #4 C7 (#210) - /feedback-policy.
 
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -11,7 +11,7 @@ const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
 export const metadata: Metadata = {
   title: "Feedback Policy | రాయలసీమ న్యూస్",
   description:
-    "How Rayalaseema News handles reader feedback — channels, response timelines, and escalation paths.",
+    "How Rayalaseema News handles reader feedback - channels, response timelines, and escalation paths.",
   alternates: { canonical: `${SITE_URL}/feedback-policy` },
 };
 
@@ -29,8 +29,8 @@ export default function FeedbackPolicyPage() {
 
         <div className="article-body" style={{ fontSize: 16, lineHeight: 1.85, color: "#333" }}>
           <p>
-            Reader feedback shapes how Rayalaseema News improves. We treat every message as a signal — even
-            short ones — and respond within published timelines.
+            Reader feedback shapes how Rayalaseema News improves. We treat every message as a signal - even
+            short ones - and respond within published timelines.
           </p>
 
           <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 32, marginBottom: 10 }}>How to reach us</h2>
@@ -55,7 +55,7 @@ export default function FeedbackPolicyPage() {
           <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 32, marginBottom: 10 }}>What we do not respond to</h2>
           <p>
             We do not respond to anonymous abuse, bulk-template messages, or messages whose only content is
-            "remove this article". We do reply to legitimate takedown requests that cite a specific legal basis —
+            "remove this article". We do reply to legitimate takedown requests that cite a specific legal basis -
             send those to <a href="mailto:editor@rayalaseemanews.com" style={{ color: "var(--color-brand)" }}>editor@rayalaseemanews.com</a>.
           </p>
 

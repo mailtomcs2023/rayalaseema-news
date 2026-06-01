@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 //     <TooltipContent>Tooltip text</TooltipContent>
 //   </Tooltip>
 //
-// A single <TooltipProvider delayDuration={...}> at the app root is enough —
+// A single <TooltipProvider delayDuration={...}> at the app root is enough -
 // all Tooltip instances inherit from it. We mount one in `app/providers.tsx`.
 //
 // Prefer this over the native HTML `title` attribute everywhere in JSX:

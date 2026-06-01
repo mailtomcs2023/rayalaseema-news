@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Sidebar } from "@/components/sidebar";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -63,7 +63,7 @@ interface ProfileRequest {
   reviewedById: string | null;
   reviewedAt: string | null;
   createdAt: string;
-  journalistProfile: {
+  reporterProfile: {
     id: string;
     fullName: string;
     kycStatus: string;
@@ -73,12 +73,23 @@ interface ProfileRequest {
 }
 
 function formatStoredValue(field: string, stored: string | null): string {
-  if (stored == null || stored === "") return "—";
+  if (stored == null || stored === "") return "-";
   if (ARRAY_FIELDS.has(field)) {
     try { return (JSON.parse(stored) as string[]).join(", "); } catch { return stored; }
   }
   if (field === "dateOfBirth") {
-    try { return new Date(stored).toLocaleDateString(); } catch { return stored; }
+    // Accept either a full ISO timestamp ("2000-01-01T00:00:00.000Z" - how
+    // Prisma serialises the stored DateTime) or a "YYYY-MM-DD" string from
+    // the reporter app's date picker. Render as "Jan 31, 2000" - unambiguous
+    // across locales (toLocaleDateString() defaults to "1/31/2000" in en-US,
+    // "31/01/2000" in en-GB, etc., which is confusing on the admin UI).
+    try {
+      const d = new Date(stored);
+      if (Number.isNaN(d.getTime())) return stored;
+      return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+    } catch {
+      return stored;
+    }
   }
   return stored;
 }
@@ -97,7 +108,7 @@ export default function ProfileRequestsPage() {
 
 function ProfileRequestsPageBody() {
   const searchParams = useSearchParams();
-  const journalistId = searchParams.get("journalistId");
+  const reporterId = searchParams.get("reporterId");
   const initialStatus = searchParams.get("status") === "ALL" ? "ALL" : "PENDING";
 
   const [filter, setFilter] = useState<"PENDING" | "ALL">(initialStatus);
@@ -113,7 +124,7 @@ function ProfileRequestsPageBody() {
     setLoading(true);
     try {
       const qs = new URLSearchParams({ status: filter });
-      if (journalistId) qs.set("journalistId", journalistId);
+      if (reporterId) qs.set("reporterId", reporterId);
       const res = await fetch(`/api/admin/profile-requests?${qs}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
@@ -121,20 +132,20 @@ function ProfileRequestsPageBody() {
       setPendingCount(data.pendingCount || 0);
     } catch (e: any) {
       console.error(e);
-      alert(e.message);
+      toast.error(e.message);
     } finally {
       setLoading(false);
     }
-  }, [filter, journalistId]);
+  }, [filter, reporterId]);
 
   useEffect(() => { load(); }, [load]);
 
-  // When filtering by a journalist, surface their identity above the list so
+  // When filtering by a reporter, surface their identity above the list so
   // it's clear whose changes the admin is reviewing.
-  const filteredJournalist = useMemo(() => {
-    if (!journalistId || items.length === 0) return null;
-    return items[0]?.journalistProfile?.user ?? null;
-  }, [journalistId, items]);
+  const filteredReporter = useMemo(() => {
+    if (!reporterId || items.length === 0) return null;
+    return items[0]?.reporterProfile?.user ?? null;
+  }, [reporterId, items]);
 
   const doApprove = async () => {
     if (!approveTarget) return;
@@ -150,7 +161,7 @@ function ProfileRequestsPageBody() {
       setApproveTarget(null);
       await load();
     } catch (e: any) {
-      alert(e.message);
+      toast.error(e.message);
     } finally {
       setBusy(false);
     }
@@ -171,7 +182,7 @@ function ProfileRequestsPageBody() {
       setRejectNote("");
       await load();
     } catch (e: any) {
-      alert(e.message);
+      toast.error(e.message);
     } finally {
       setBusy(false);
     }
@@ -179,7 +190,6 @@ function ProfileRequestsPageBody() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f9fafb" }}>
-      <Sidebar />
       <main style={{ flex: 1, padding: "28px 32px", marginLeft: 240 }} className="admin-main">
         <header style={{ marginBottom: 24 }}>
           <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111827", margin: 0 }}>
@@ -191,9 +201,9 @@ function ProfileRequestsPageBody() {
           </p>
         </header>
 
-        {/* Journalist-filter banner — shown when arriving from the journalists
-            page via /profile-requests?journalistId=... */}
-        {journalistId ? (
+        {/* Reporter-filter banner - shown when arriving from the users
+            page via /profile-requests?reporterId=... */}
+        {reporterId ? (
           <div style={{
             display: "flex", alignItems: "center", gap: 10,
             padding: "10px 14px", marginBottom: 16,
@@ -201,9 +211,9 @@ function ProfileRequestsPageBody() {
           }}>
             <Badge variant="outline" style={{ fontWeight: 700 }}>Filtered</Badge>
             <span style={{ fontSize: 13, color: "#374151" }}>
-              {filteredJournalist
-                ? <>Reviewing requests from <strong>{filteredJournalist.name}</strong> · {filteredJournalist.email}</>
-                : <>Reviewing requests for reporter <code style={{ fontSize: 12 }}>{journalistId}</code> (no requests on file)</>}
+              {filteredReporter
+                ? <>Reviewing requests from <strong>{filteredReporter.name}</strong> · {filteredReporter.email}</>
+                : <>Reviewing requests for reporter <code style={{ fontSize: 12 }}>{reporterId}</code> (no requests on file)</>}
             </span>
             <Link href="/profile-requests" style={{ marginLeft: "auto" }}>
               <Button variant="ghost" size="sm" className="h-7 gap-1 px-2 text-xs">
@@ -261,7 +271,7 @@ function ProfileRequestsPageBody() {
               {approveTarget ? (
                 <>
                   Apply <strong>{FIELD_LABEL[approveTarget.field] || approveTarget.field}</strong> change for{" "}
-                  <strong>{approveTarget.journalistProfile.user.name}</strong>.
+                  <strong>{approveTarget.reporterProfile.user.name}</strong>.
                   {KYC_FIELDS.has(approveTarget.field)
                     ? " This will set their KYC back to Verified and resume earnings."
                     : ""}
@@ -337,14 +347,14 @@ function RequestCard({ request, onApprove, onReject }: {
       background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: 18,
       display: "flex", flexDirection: "column", gap: 14,
     }}>
-      {/* Header — journalist + field + status */}
+      {/* Header - journalist + field + status */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <div>
           <div style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>
-            {request.journalistProfile.user.name}
+            {request.reporterProfile.user.name}
           </div>
           <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
-            {request.journalistProfile.user.email} • {request.journalistProfile.user.phone || "no phone"}
+            {request.reporterProfile.user.email} • {request.reporterProfile.user.phone || "no phone"}
           </div>
           <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
             <Badge variant="outline" style={{ fontWeight: 600 }}>{FIELD_LABEL[request.field] || request.field}</Badge>
@@ -365,32 +375,71 @@ function RequestCard({ request, onApprove, onReject }: {
           text="Bank change: approving routes future payments to the new account. Verify the new details before approving." />
       ) : null}
 
-      {/* Old vs new */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 14, alignItems: "stretch" }}>
-        <ValueBox label="Current" value={request.oldValue} isImage={isImage} />
-        <div style={{ display: "flex", alignItems: "center", color: "#9ca3af", fontWeight: 700 }}>→</div>
-        <ValueBox label="Proposed" value={request.newValue} isImage={isImage} field={request.field} highlight />
-      </div>
+      {/* Old vs new.
+          - Text fields: single inline row "<old> → <new>" with the action
+            buttons on the right so the whole diff is scannable at a glance.
+          - Image fields: keep the stacked side-by-side card layout since
+            thumbnails need the vertical space. */}
+      {isImage ? (
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 14, alignItems: "stretch" }}>
+            <ValueBox label="Current" value={request.oldValue} isImage field={request.field} />
+            <div style={{ display: "flex", alignItems: "center", color: "#9ca3af", fontWeight: 700 }}>→</div>
+            <ValueBox label="Proposed" value={request.newValue} isImage field={request.field} highlight />
+          </div>
+          {isPending ? (
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <Button variant="outline" onClick={onReject}>
+                <XCircle style={{ width: 14, height: 14, marginRight: 6 }} /> Reject
+              </Button>
+              <Button onClick={onApprove}>
+                <CheckCircle2 style={{ width: 14, height: 14, marginRight: 6 }} /> Approve
+              </Button>
+            </div>
+          ) : null}
+        </>
+      ) : (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
+          padding: "10px 14px", background: "#f9fafb", border: "1px solid #e5e7eb",
+          borderRadius: 10,
+        }}>
+          <span style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: 0.4 }}>
+            Current
+          </span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "#374151", wordBreak: "break-word" }}>
+            {formatStoredValue(request.field, request.oldValue)}
+          </span>
+          <span style={{ color: "#9ca3af", fontWeight: 700 }}>→</span>
+          <span style={{ fontSize: 10, fontWeight: 700, color: "#92400e", textTransform: "uppercase", letterSpacing: 0.4 }}>
+            Proposed
+          </span>
+          <span style={{
+            fontSize: 13, fontWeight: 700, color: "#111827", wordBreak: "break-word",
+            padding: "3px 8px", background: "#fef3c7", borderRadius: 6, border: "1px solid #fde68a",
+          }}>
+            {formatStoredValue(request.field, request.newValue)}
+          </span>
+          {isPending ? (
+            <div style={{ display: "flex", gap: 8, marginLeft: "auto" }}>
+              <Button variant="outline" size="sm" onClick={onReject}>
+                <XCircle style={{ width: 14, height: 14, marginRight: 6 }} /> Reject
+              </Button>
+              <Button size="sm" onClick={onApprove}>
+                <CheckCircle2 style={{ width: 14, height: 14, marginRight: 6 }} /> Approve
+              </Button>
+            </div>
+          ) : null}
+        </div>
+      )}
 
       {/* Reviewer note for resolved items */}
       {request.status !== "PENDING" && request.reviewerNote ? (
         <div style={{ padding: 10, background: "#f9fafb", borderRadius: 8, fontSize: 12, color: "#374151" }}>
           <span style={{ fontWeight: 700 }}>Reviewer note:</span> {request.reviewerNote}
           {request.reviewedBy ? (
-            <span style={{ color: "#6b7280", marginLeft: 6 }}>— {request.reviewedBy.name}</span>
+            <span style={{ color: "#6b7280", marginLeft: 6 }}>- {request.reviewedBy.name}</span>
           ) : null}
-        </div>
-      ) : null}
-
-      {/* Actions */}
-      {isPending ? (
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <Button variant="outline" onClick={onReject}>
-            <XCircle style={{ width: 14, height: 14, marginRight: 6 }} /> Reject
-          </Button>
-          <Button onClick={onApprove}>
-            <CheckCircle2 style={{ width: 14, height: 14, marginRight: 6 }} /> Approve
-          </Button>
         </div>
       ) : null}
     </div>

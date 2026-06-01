@@ -4,7 +4,7 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 async function main() {
-  // Spec #1 A1C (#189) — `articles` back-relation on Constituency removed
+  // Spec #1 A1C (#189) - `articles` back-relation on Constituency removed
   // when Article was dropped. Replace with Content count via a separate
   // groupBy below.
   const acs = await prisma.constituency.findMany({

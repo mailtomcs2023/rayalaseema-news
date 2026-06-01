@@ -12,7 +12,7 @@ import React from "react";
 import Highlight from "@tiptap/extension-highlight";
 import { useState, useCallback, useRef, useEffect } from "react";
 
-// Spec #1 G1 #127 — industry-standard extensions.
+// Spec #1 G1 #127 - industry-standard extensions.
 // TipTap v3 exports many of these as named (not default). Color lives inside
 // extension-text-style; text-style must be loaded for color to attach.
 import { TextStyle, Color } from "@tiptap/extension-text-style";
@@ -26,7 +26,7 @@ import { Superscript } from "@tiptap/extension-superscript";
 import { Subscript } from "@tiptap/extension-subscript";
 import { Youtube } from "@tiptap/extension-youtube";
 
-// G2 #129 — crop modal opened on image insert + on selected image edit.
+// G2 #129 - crop modal opened on image insert + on selected image edit.
 import { ImageCropModal } from "@/components/image-crop-modal";
 
 // Google Transliteration API (free, no key needed, works in 2026)
@@ -70,7 +70,7 @@ export const RichEditor = React.forwardRef<RichEditorRef, { content: string; onC
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       Underline,
       Highlight,
-      // Spec #1 G1 #127 additions — text color, task list, table, sub/sup,
+      // Spec #1 G1 #127 additions - text color, task list, table, sub/sup,
       // YouTube embed. text-style first so color can attach to its mark.
       TextStyle,
       Color,
@@ -198,7 +198,7 @@ export const RichEditor = React.forwardRef<RichEditorRef, { content: string; onC
         <T on={editor.isActive("heading", { level: 5 })} fn={() => editor.chain().focus().toggleHeading({ level: 5 }).run()}>H5</T>
         <T on={editor.isActive("heading", { level: 6 })} fn={() => editor.chain().focus().toggleHeading({ level: 6 }).run()}>H6</T>
         <S />
-        {/* Spec #1 G1 #127 — color picker, code, sub/sup, task list, table, YouTube */}
+        {/* Spec #1 G1 #127 - color picker, code, sub/sup, task list, table, YouTube */}
         <label title="Text color" style={{ display: "inline-flex", alignItems: "center", padding: "0 6px", height: 30, cursor: "pointer" }}>
           <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>A</span>
           <input type="color" onChange={(e) => editor.chain().focus().setColor(e.target.value).run()}
@@ -241,7 +241,7 @@ export const RichEditor = React.forwardRef<RichEditorRef, { content: string; onC
         <T on={activePanel === "image"} fn={() => togglePanel("image")}>
           <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/><path d="M21 15l-5-5L5 21"/></svg>
         </T>
-        <T on={false} fn={() => editor.chain().focus().setHorizontalRule().run()}>—</T>
+        <T on={false} fn={() => editor.chain().focus().setHorizontalRule().run()}>-</T>
         <S />
         <T on={false} fn={() => editor.chain().focus().undo().run()}>
           <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 10h10a5 5 0 015 5 5 5 0 01-5 5H3" strokeLinecap="round"/><path d="M7 6l-4 4 4 4" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -309,7 +309,7 @@ export const RichEditor = React.forwardRef<RichEditorRef, { content: string; onC
       {/* Editor Content */}
       <EditorContent editor={editor} />
 
-      {/* G2 #129 crop modal — opens whenever an image is queued for insert. */}
+      {/* G2 #129 crop modal - opens whenever an image is queued for insert. */}
       {cropSrc && (
         <ImageCropModal
           src={cropSrc}

@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 
-// GET /api/headline-test — list recent tests with status + variant click counts.
-// POST /api/headline-test — body { articleId, variantA, variantB } — create test.
+// GET /api/headline-test - list recent tests with status + variant click counts.
+// POST /api/headline-test - body { articleId, variantA, variantB } - create test.
 // Push send + click tracking + promote-winner live on separate routes.
 
 export async function GET() {
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   if (isAuthError(session)) return session;
   try {
     const body = await req.json();
-    // Spec #1 A1B (#188) — column renamed articleId -> contentId. Accept the
+    // Spec #1 A1B (#188) - column renamed articleId -> contentId. Accept the
     // old `articleId` key as an alias so any in-flight client code still works.
     const contentId: string | undefined = body.contentId || body.articleId;
     const { variantA, variantB } = body as { variantA?: string; variantB?: string };

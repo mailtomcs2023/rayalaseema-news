@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 
-// GET /api/breaking-news — Spec #1 #133: reads Content with type=BREAKING_NEWS
+// GET /api/breaking-news - Spec #1 #133: reads Content with type=BREAKING_NEWS
 // and projects to the old BreakingNews row shape so the header ticker
 // (apps/web/src/components/header.tsx) doesn't need to change. The legacy
 // BreakingNews table is dropped in #189.

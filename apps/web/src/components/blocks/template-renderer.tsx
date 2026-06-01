@@ -1,10 +1,10 @@
-// Page Builder (Spec #2) — top-level renderer for a URL path.
+// Page Builder (Spec #2) - top-level renderer for a URL path.
 //
 // Looks up the winning Template via the assignment table (priority DESC +
 // pattern-length DESC tie-break), validates the stored layout JSON with the
 // shared Zod schema, and renders each block via BlockRenderer.
 //
-// `?draft=1` query — when present, the iframe preview route (E1) uses the
+// `?draft=1` query - when present, the iframe preview route (E1) uses the
 // template's draftLayout instead of the published layout. The public entry
 // points never set this.
 
@@ -14,7 +14,7 @@ import { BlockRenderer, type CompositeMap } from "./block-renderer";
 
 // Cheap composite map: one query that grabs everything referenced (or
 // likely to be referenced) by the rendered template. We pull all
-// composites unconditionally — the row count is small (curated by
+// composites unconditionally - the row count is small (curated by
 // editors, not bulk-imported), so a single query beats N round-trips
 // for individual Composite blocks.
 async function fetchComposites(): Promise<CompositeMap> {
@@ -75,7 +75,7 @@ export function EmptyTemplate({ urlPath }: { urlPath: string }) {
 interface TemplateRendererProps {
   urlPath: string;
   ctx?: Partial<Omit<PageContext, "urlPath">>;
-  // Optional override — when supplied the renderer skips assignment lookup
+  // Optional override - when supplied the renderer skips assignment lookup
   // and renders this template directly. Used by the editor preview route.
   templateOverride?: { layout: unknown; draftLayout?: unknown } | null;
   draft?: boolean;
