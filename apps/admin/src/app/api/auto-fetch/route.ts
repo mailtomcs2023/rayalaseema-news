@@ -74,7 +74,7 @@ async function translateToTelugu(title: string, content: string): Promise<{ titl
           messages: [
             {
               role: "system",
-              content: `You are a Telugu news editor for Rayalaseema Express newspaper. Convert the given English news into a Telugu newspaper article.
+              content: `You are a Telugu news editor for Rayalaseema News newspaper. Convert the given English news into a Telugu newspaper article.
 
 OUTPUT FORMAT (strictly follow):
 TITLE: [Telugu headline - max 15 words, catchy]

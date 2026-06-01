@@ -1,5 +1,5 @@
 // Seed Desk table (idempotent, upserts by slug):
-//   - 1 root GEOGRAPHIC desk (Rayalaseema Express)
+//   - 1 root GEOGRAPHIC desk (Rayalaseema News)
 //   - 1 per district (8) under root
 //   - 1 per constituency (55) under matching district
 //   - 1 TOPICAL per active root category (~21 - skip "editorial", handled by EDITORIAL branch)
@@ -11,9 +11,9 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-const ROOT_SLUG = "desk-rayalaseema-express";
-const ROOT_NAME_TE = "రాయలసీమ ఎక్స్‌ప్రెస్";
-const ROOT_NAME_EN = "Rayalaseema Express";
+const ROOT_SLUG = "desk-rayalaseema-news";
+const ROOT_NAME_TE = "రాయలసీమ న్యూస్";
+const ROOT_NAME_EN = "Rayalaseema News";
 
 async function main() {
   // 1. Root GEOGRAPHIC desk
@@ -31,7 +31,7 @@ async function main() {
   console.log(`root: ${root.nameEn}`);
 
   // 2. District desks (child of root). Byline prefixed with the brand:
-  //    "రాయలసీమ ఎక్స్‌ప్రెస్ - కర్నూలు" / "Rayalaseema Express - Kurnool"
+  //    "రాయలసీమ న్యూస్ - కర్నూలు" / "Rayalaseema News - Kurnool"
   const districts = await prisma.district.findMany({
     orderBy: { sortOrder: "asc" },
     select: { id: true, name: true, nameEn: true, slug: true },
@@ -58,7 +58,7 @@ async function main() {
   console.log(`district desks: ${dCount}`);
 
   // 3. AC desks (child of their district desk). Byline prefixed with the brand:
-  //    "రాయలసీమ ఎక్స్‌ప్రెస్ - ప్రొద్దుటూరు" / "Rayalaseema Express - Proddatur"
+  //    "రాయలసీమ న్యూస్ - ప్రొద్దుటూరు" / "Rayalaseema News - Proddatur"
   const acs = await prisma.constituency.findMany({
     where: { acNumber: { not: null } },
     orderBy: { acNumber: "asc" },
@@ -101,7 +101,7 @@ async function main() {
   // Telugu script (e.g. "పొలిటికల్", "స్పోర్ట్స్"), NOT the Telugu translation that the
   // category nameField uses (e.g. "రాజకీయాలు", "క్రీడలు"). Categories stay as-is.
   //
-  // Format: "<root-te> <transliterated-en-te> డెస్క్" → "రాయలసీమ ఎక్స్‌ప్రెస్ పొలిటికల్ డెస్క్"
+  // Format: "<root-te> <transliterated-en-te> డెస్క్" → "రాయలసీమ న్యూస్ పొలిటికల్ డెస్క్"
   const TOPICAL_BYLINE: Record<string, string> = {
     politics: "పొలిటికల్",
     crime: "క్రైమ్",

@@ -16,7 +16,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ slug: stri
     where: { slug },
     select: { title: true, summary: true, type: true, category: { select: { name: true } } },
   });
-  const title = article?.title || "రాయలసీమ ఎక్స్‌ప్రెస్";
+  const title = article?.title || "రాయలసీమ న్యూస్";
   const category = article?.category?.name || "వార్తలు";
 
   return new ImageResponse(
@@ -32,7 +32,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ slug: stri
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <div style={{ width: 12, height: 56, background: "#E01B1B", borderRadius: 2 }} />
           <div style={{ fontSize: 28, fontWeight: 800, color: "#E01B1B", letterSpacing: 1 }}>
-            రాయలసీమ ఎక్స్‌ప్రెస్
+            రాయలసీమ న్యూస్
           </div>
         </div>
 
@@ -55,7 +55,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ slug: stri
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 22, color: "#6b6155" }}>
           <span>THE VOICE OF RAYALASEEMA</span>
-          <span style={{ fontWeight: 700 }}>rayalaseemaexpress.com</span>
+          <span style={{ fontWeight: 700 }}>rayalaseemanews.com</span>
         </div>
       </div>
     ),

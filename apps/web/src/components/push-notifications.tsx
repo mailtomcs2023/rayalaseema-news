@@ -21,7 +21,7 @@ export function PushNotifications() {
             safari_web_id: config.onesignal_safari_id || undefined,
             notifyButton: { enable: true, size: "small", position: "bottom-left" },
             welcomeNotification: {
-              title: "రాయలసీమ ఎక్స్‌ప్రెస్",
+              title: "రాయలసీమ న్యూస్",
               message: "Breaking news alerts enabled!",
             },
             promptOptions: {
@@ -30,7 +30,7 @@ export function PushNotifications() {
                   type: "push",
                   autoPrompt: true,
                   text: {
-                    actionMessage: "రాయలసీమ ఎక్స్‌ప్రెస్ వార్త నోటిఫికేషన్లు పొందండి",
+                    actionMessage: "రాయలసీమ న్యూస్ వార్త నోటిఫికేషన్లు పొందండి",
                     acceptButton: "Allow",
                     cancelButton: "Later",
                   },

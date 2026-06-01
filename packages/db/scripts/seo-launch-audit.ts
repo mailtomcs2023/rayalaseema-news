@@ -14,10 +14,10 @@
 // but don't fail.
 //
 // Usage:
-//   BASE_URL=https://rayalaseemaexpress.com bun packages/db/scripts/seo-launch-audit.ts
+//   BASE_URL=https://rayalaseemanews.com bun packages/db/scripts/seo-launch-audit.ts
 //   BASE_URL=http://localhost:3000 bun packages/db/scripts/seo-launch-audit.ts
 
-const BASE_URL = (process.env.BASE_URL || "https://rayalaseemaexpress.com").replace(/\/$/, "");
+const BASE_URL = (process.env.BASE_URL || "https://rayalaseemanews.com").replace(/\/$/, "");
 const MAX_URLS = Number(process.env.MAX_URLS || 200);
 
 interface Finding {

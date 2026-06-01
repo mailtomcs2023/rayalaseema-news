@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
     }
 
     const dateLabel = editionDate.toLocaleDateString("te-IN", { day: "numeric", month: "long", year: "numeric" });
-    const title = `రాయలసీమ ఎక్స్‌ప్రెస్${districtName ? ` - ${districtName} ఎడిషన్` : ""} · ${dateLabel}`;
+    const title = `రాయలసీమ న్యూస్${districtName ? ` - ${districtName} ఎడిషన్` : ""} · ${dateLabel}`;
 
     const existing = await prisma.epaperEdition.findUnique({
       where: { date_edition: { date: editionDate, edition: editionKey } },

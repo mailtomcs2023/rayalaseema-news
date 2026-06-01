@@ -30,7 +30,7 @@ const TRUST_PAGES = [
 ];
 
 export async function GET() {
-  const siteUrl = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+  const siteUrl = process.env.SITE_URL || "https://rayalaseemanews.com";
   const now = new Date().toISOString();
 
   const [articles, categories, districts, constituencies, tags, authors] = await Promise.all([

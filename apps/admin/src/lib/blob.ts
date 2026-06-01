@@ -55,7 +55,7 @@ export async function uploadImageFromUrl(srcUrl: string | null | undefined): Pro
     const buffer = Buffer.from(await res.arrayBuffer());
     if (buffer.length === 0 || buffer.length > 8 * 1024 * 1024) return null;
 
-    // Strip third-party EXIF + stamp Rayalaseema Express. Defaults: resize
+    // Strip third-party EXIF + stamp Rayalaseema News. Defaults: resize
     // to 1600px wide, JPEG q85 (PNG if source had alpha).
     try {
       const processed = await processImageBuffer(buffer);

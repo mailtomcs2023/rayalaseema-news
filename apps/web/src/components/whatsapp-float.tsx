@@ -14,7 +14,7 @@ export function WhatsAppFloat() {
   const whatsappNumber = config.whatsapp_number;
   if (!whatsappNumber || dismissed) return null;
 
-  const waLink = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent("రాయలసీమ ఎక్స్‌ప్రెస్ వార్తలు కావాలి")}`;
+  const waLink = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent("రాయలసీమ న్యూస్ వార్తలు కావాలి")}`;
 
   return (
     <>

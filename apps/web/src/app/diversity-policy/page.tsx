@@ -5,12 +5,12 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 
-const SITE_URL = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
 
 export const metadata: Metadata = {
-  title: "Diversity Policy | రాయలసీమ ఎక్స్‌ప్రెస్",
+  title: "Diversity Policy | రాయలసీమ న్యూస్",
   description:
-    "Rayalaseema Express diversity policy - coverage diversity, hiring practices, and our commitment to representation across the 8 districts.",
+    "Rayalaseema News diversity policy - coverage diversity, hiring practices, and our commitment to representation across the 8 districts.",
   alternates: { canonical: `${SITE_URL}/diversity-policy` },
 };
 
@@ -28,7 +28,7 @@ export default function DiversityPolicyPage() {
 
         <div className="article-body" style={{ fontSize: 16, lineHeight: 1.85, color: "#333" }}>
           <p>
-            Rayalaseema Express is committed to representing the full breadth of the eight districts we cover -
+            Rayalaseema News is committed to representing the full breadth of the eight districts we cover -
             Kurnool, Nandyal, Anantapuramu, Sri Sathya Sai, YSR-Kadapa, Annamayya, Tirupati, Chittoor - across
             geography, gender, caste, religion, language, and economic background.
           </p>

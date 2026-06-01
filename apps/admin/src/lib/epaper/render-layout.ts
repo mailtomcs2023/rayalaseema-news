@@ -13,7 +13,7 @@ import { prisma } from "@rayalaseema/db";
 import { hyphenateTelugu } from "./telugu-hyphenation";
 import { migrateLegacyLayout, isLegacyLayout } from "./migrate-layout";
 
-const SITE_URL = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
 
 export interface Block {
   id: string;
@@ -185,7 +185,7 @@ function imageOrFallback(url: string | null | undefined, className: string, crop
     }
     return `<div class="ph ${className}"><img src="${esc(url)}" alt="" loading="eager" crossorigin="anonymous" referrerpolicy="no-referrer"${imgStyle} /></div>`;
   }
-  return `<div class="ph ${className} noimg">రాయలసీమ ఎక్స్‌ప్రెస్</div>`;
+  return `<div class="ph ${className} noimg">రాయలసీమ న్యూస్</div>`;
 }
 
 function masthead(b: Block, opts: { dateLabel: string; totalPages: number; meta?: RenderInput["mastheadInfo"] }): string {
@@ -212,15 +212,15 @@ function masthead(b: Block, opts: { dateLabel: string; totalPages: number; meta?
     <div class="mast-row">
       ${leftSlot}
       <div class="mast-center">
-        <img class="mast-logo-img" src="${esc(logoSrc)}" alt="రాయలసీమ ఎక్స్‌ప్రెస్"
-          onerror="this.outerHTML='<div class=\\'mast-logo\\'>రాయలసీమ ఎక్స్‌ప్రెస్</div>'"/>
+        <img class="mast-logo-img" src="${esc(logoSrc)}" alt="రాయలసీమ న్యూస్"
+          onerror="this.outerHTML='<div class=\\'mast-logo\\'>రాయలసీమ న్యూస్</div>'"/>
         <div class="mast-tag">THE VOICE OF RAYALASEEMA - Largest circulated Rayalaseema daily</div>
       </div>
       ${rightSlot}
     </div>
     <div class="mast-bib">
       <span class="mast-bib-left">కర్నూలు · ${esc(opts.dateLabel)}${day ? ` · ${esc(day)}` : ""} · సంపుటి ${vol} · సంచిక ${iss}</span>
-      <span class="mast-bib-right">రూ. ${priceRupees}-${pricePaise} · పేజీలు ${opts.totalPages} · www.rayalaseemaexpress.com</span>
+      <span class="mast-bib-right">రూ. ${priceRupees}-${pricePaise} · పేజీలు ${opts.totalPages} · www.rayalaseemanews.com</span>
     </div>
     <div class="mast-cities">హైదరాబాద్ · కర్నూలు · నంద్యాల · అనంతపురం · శ్రీసత్యసాయి · వైఎస్సార్ కడప · అన్నమయ్య · తిరుపతి · చిత్తూర్</div>
   </div>`;
@@ -230,7 +230,7 @@ function masthead(b: Block, opts: { dateLabel: string; totalPages: number; meta?
 function sectionBand(b: Block, label: string, opts: { dateLabel: string; pageNumber: number }): string {
   return `<div class="secbar" style="${blockStyle(b)}">
     <span class="secbar-name">${esc(label)}</span>
-    <span class="secbar-meta">రాయలసీమ ఎక్స్‌ప్రెస్ · ${esc(opts.dateLabel)} · పేజీ ${opts.pageNumber}</span>
+    <span class="secbar-meta">రాయలసీమ న్యూస్ · ${esc(opts.dateLabel)} · పేజీ ${opts.pageNumber}</span>
   </div>`;
 }
 

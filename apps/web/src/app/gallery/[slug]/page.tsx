@@ -8,7 +8,7 @@ import { Footer } from "@/components/footer";
 import { ShareBar } from "@/components/share-bar";
 import { getPhotoGalleryBySlug, getSiteConfig, incrementViewCount } from "@/lib/db-queries";
 
-const SITE_URL = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const url = `${SITE_URL}/gallery/${slug}`;
   const ogImage = gallery.coverImage || gallery.featuredImage || `${SITE_URL}/api/og/${slug}`;
   return {
-    title: `${gallery.title} | రాయలసీమ ఎక్స్‌ప్రెస్`,
+    title: `${gallery.title} | రాయలసీమ న్యూస్`,
     description: gallery.summary || `${gallery._count.photos} photos`,
     alternates: { canonical: url },
     openGraph: { title: gallery.title, url, type: "article", locale: "te_IN", images: ogImage ? [{ url: ogImage }] : undefined },

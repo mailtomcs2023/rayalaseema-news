@@ -75,7 +75,7 @@ export default async function DashboardPage() {
         <div className="dashboard-header">
           <div>
             <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111" }}>Dashboard</h1>
-            <p style={{ fontSize: 13, color: "#888", marginTop: 4 }}>Welcome to Rayalaseema Express CMS</p>
+            <p style={{ fontSize: 13, color: "#888", marginTop: 4 }}>Welcome to Rayalaseema News CMS</p>
           </div>
           <KycGatedLink
             href="/content/new"

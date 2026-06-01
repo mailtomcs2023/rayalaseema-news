@@ -8,12 +8,12 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 
-const SITE_URL = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
 
 export const metadata: Metadata = {
-  title: "Editorial Standards | రాయలసీమ ఎక్స్‌ప్రెస్",
+  title: "Editorial Standards | రాయలసీమ న్యూస్",
   description:
-    "Editorial standards at Rayalaseema Express - fact-checking, attribution, embargoes, off-the-record handling, and bilingual translation rules.",
+    "Editorial standards at Rayalaseema News - fact-checking, attribution, embargoes, off-the-record handling, and bilingual translation rules.",
   alternates: { canonical: `${SITE_URL}/editorial-standards` },
 };
 
@@ -68,7 +68,7 @@ export default function EditorialStandardsPage() {
 
           <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 32, marginBottom: 10 }}>Bilingual translation</h2>
           <p>
-            Rayalaseema Express publishes primarily in Telugu, with English summaries on news that has regional or
+            Rayalaseema News publishes primarily in Telugu, with English summaries on news that has regional or
             national significance. Our AI-assisted translation pipeline (extract → compose → fact-check) preserves
             named entities, numbers, and direct quotes exactly; cultural references and idioms are rendered into
             natural Telugu rather than literally translated. A human editor reviews every translated article before

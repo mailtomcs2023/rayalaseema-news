@@ -7,9 +7,9 @@ import { getSiteConfig } from "@/lib/db-queries";
 import { articleHref } from "@/lib/article-href";
 
 export const metadata: Metadata = {
-  title: "సినిమా | రాయలసీమ ఎక్స్‌ప్రెస్",
+  title: "సినిమా | రాయలసీమ న్యూస్",
   description:
-    "టాలీవుడ్, బాలీవుడ్, హాలీవుడ్ సినిమా వార్తలు, మూవీ రివ్యూలు, రేటింగ్‌లు - రాయలసీమ ఎక్స్‌ప్రెస్.",
+    "టాలీవుడ్, బాలీవుడ్, హాలీవుడ్ సినిమా వార్తలు, మూవీ రివ్యూలు, రేటింగ్‌లు - రాయలసీమ న్యూస్.",
 };
 
 const TABS = [

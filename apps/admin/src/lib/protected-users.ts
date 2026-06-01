@@ -13,10 +13,10 @@
 // canonical row) and bump the deploy. To grant edit access to a different
 // admin, create a NEW user with role=ADMIN - don't try to delete the seed.
 export const PROTECTED_USER_EMAILS: ReadonlySet<string> = new Set([
-  "admin@rayalaseemaexpress.com",
-  "editor@rayalaseemaexpress.com",
-  "subeditor@rayalaseemaexpress.com",
-  "reporter@rayalaseemaexpress.com",
+  "admin@rayalaseemanews.com",
+  "editor@rayalaseemanews.com",
+  "subeditor@rayalaseemanews.com",
+  "reporter@rayalaseemanews.com",
 ]);
 
 /** Case-insensitive check - matches the canonicalization in lib/email.ts. */

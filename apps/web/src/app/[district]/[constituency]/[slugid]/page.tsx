@@ -14,7 +14,7 @@ import { buildArticleMetadata } from "@/lib/article-metadata";
 import { getArticleBySlug, getTrendingArticles, getArticlesByCategory, incrementViewCount } from "@/lib/db-queries";
 import { articleHref, parseSlugId, suffixMatchesId } from "@/lib/article-href";
 
-const SITE_URL = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
 
 type Params = Promise<{ district: string; constituency: string; slugid: string }>;
 

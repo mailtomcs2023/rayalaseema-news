@@ -1,7 +1,7 @@
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 
-export const metadata = { title: "Privacy Policy | Rayalaseema Express" };
+export const metadata = { title: "Privacy Policy | Rayalaseema News" };
 
 export default function PrivacyPage() {
   return (
@@ -13,7 +13,7 @@ export default function PrivacyPage() {
           <p><strong>Last Updated:</strong> April 2026</p>
 
           <h2>1. Information We Collect</h2>
-          <p>Rayalaseema Express ("we", "our") collects the following information when you visit our website:</p>
+          <p>Rayalaseema News ("we", "our") collects the following information when you visit our website:</p>
           <ul>
             <li><strong>Usage Data:</strong> Pages visited, time spent, browser type, device information, IP address</li>
             <li><strong>Cookies:</strong> We use cookies and similar tracking technologies for analytics and advertising</li>
@@ -60,12 +60,12 @@ export default function PrivacyPage() {
 
           <h2>7. Grievance Officer (IT Act, 2000)</h2>
           <p>In accordance with the Information Technology Act, 2000, the Grievance Officer for this website is:</p>
-          <p><strong>Rayalaseema Express Editor</strong><br />
-          Email: editor@rayalaseemaexpress.com<br />
+          <p><strong>Rayalaseema News Editor</strong><br />
+          Email: editor@rayalaseemanews.com<br />
           Response time: Within 36 hours of receiving the complaint</p>
 
           <h2>8. Contact Us</h2>
-          <p>For privacy-related queries, contact us at: <a href="mailto:privacy@rayalaseemaexpress.com">privacy@rayalaseemaexpress.com</a></p>
+          <p>For privacy-related queries, contact us at: <a href="mailto:privacy@rayalaseemanews.com">privacy@rayalaseemanews.com</a></p>
         </div>
       </main>
       <Footer />

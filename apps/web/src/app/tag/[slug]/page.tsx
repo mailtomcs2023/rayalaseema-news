@@ -16,9 +16,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const tag = await prisma.tag.findUnique({ where: { slug } });
   if (!tag) return { title: "Tag not found" };
-  const siteUrl = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+  const siteUrl = process.env.SITE_URL || "https://rayalaseemanews.com";
   return {
-    title: `${tag.name} | రాయలసీమ ఎక్స్‌ప్రెస్`,
+    title: `${tag.name} | రాయలసీమ న్యూస్`,
     description: `${tag.name} - తాజా వార్తలు, విశ్లేషణలు`,
     alternates: { canonical: `${siteUrl}/tag/${slug}` },
     openGraph: {
@@ -55,7 +55,7 @@ export default async function TagPage({ params }: Props) {
   const config = await getSiteConfig();
   const articles = contentTags.map((ct) => ct.content);
 
-  const siteUrl = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+  const siteUrl = process.env.SITE_URL || "https://rayalaseemanews.com";
   const breadcrumbLd = buildBreadcrumbListSchema({
     items: [
       { name: "Home", url: siteUrl },

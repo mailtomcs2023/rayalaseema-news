@@ -106,7 +106,7 @@ export default function TemplatesPage() {
                 <div style={{ fontSize: 36, marginBottom: 8 }}>📄</div>
                 <p style={{ fontSize: 13, fontWeight: 700, color: "#111", marginBottom: 6 }}>No templates yet</p>
                 <p style={{ fontSize: 12, marginBottom: 12 }}>Seed the 31 default broadsheet templates with one click:</p>
-                <a href="https://github.com/mailtomcs2023/rayalaseema-express/blob/main/packages/db/scripts/seed-epaper-templates.ts" target="_blank" rel="noopener"
+                <a href="https://github.com/mailtomcs2023/rayalaseema-news/blob/main/packages/db/scripts/seed-epaper-templates.ts" target="_blank" rel="noopener"
                   style={{ fontSize: 11, color: "#4f46e5", textDecoration: "underline" }}>
                   How to seed
                 </a>

@@ -1,7 +1,7 @@
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 
-export const metadata = { title: "Terms of Service | Rayalaseema Express" };
+export const metadata = { title: "Terms of Service | Rayalaseema News" };
 
 export default function TermsPage() {
   return (
@@ -13,11 +13,11 @@ export default function TermsPage() {
           <p><strong>Last Updated:</strong> April 2026</p>
 
           <h2>1. Acceptance of Terms</h2>
-          <p>By accessing and using Rayalaseema Express (rayalaseemaexpress.com), you accept and agree to be bound by these Terms of Service.</p>
+          <p>By accessing and using Rayalaseema News (rayalaseemanews.com), you accept and agree to be bound by these Terms of Service.</p>
 
           <h2>2. Content Usage</h2>
           <ul>
-            <li>All content on this website is copyrighted by Rayalaseema Express</li>
+            <li>All content on this website is copyrighted by Rayalaseema News</li>
             <li>You may share articles via social media using the provided share buttons</li>
             <li>Reproducing, copying, or distributing content without written permission is prohibited</li>
             <li>News agencies and media outlets must obtain prior permission for syndication</li>
@@ -37,7 +37,7 @@ export default function TermsPage() {
             <li>You retain ownership of comments you post</li>
             <li>By posting, you grant us a non-exclusive license to display your content</li>
             <li>We reserve the right to remove any comment without notice</li>
-            <li>Comments do not represent the views of Rayalaseema Express</li>
+            <li>Comments do not represent the views of Rayalaseema News</li>
           </ul>
 
           <h2>5. Advertisements</h2>
@@ -55,7 +55,7 @@ export default function TermsPage() {
           <p>These terms are governed by the laws of India. Any disputes shall be subject to the exclusive jurisdiction of courts in Kurnool, Andhra Pradesh.</p>
 
           <h2>8. Contact</h2>
-          <p>For queries regarding these terms: <a href="mailto:legal@rayalaseemaexpress.com">legal@rayalaseemaexpress.com</a></p>
+          <p>For queries regarding these terms: <a href="mailto:legal@rayalaseemanews.com">legal@rayalaseemanews.com</a></p>
         </div>
       </main>
       <Footer />

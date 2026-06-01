@@ -105,7 +105,7 @@ export function Sidebar({ initialRole }: { initialRole?: Role }) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
-        <img src="/logo.png" alt="Rayalaseema Express" style={{ height: 26 }} />
+        <img src="/logo.png" alt="Rayalaseema News" style={{ height: 26 }} />
       </header>
 
       {/* Drawer backdrop (mobile only, when open) */}
@@ -123,7 +123,7 @@ export function Sidebar({ initialRole }: { initialRole?: Role }) {
           {/* White-on-transparent wordmark - sidebar bg is #111827, so the
               inverse logo (apps/admin/public/logo-inverse.svg) reads cleanly. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-inverse.svg" alt="Rayalaseema Express" style={{ height: 44, width: "auto", display: "block" }} />
+          <img src="/logo-inverse.svg" alt="Rayalaseema News" style={{ height: 44, width: "auto", display: "block" }} />
         </div>
 
         {/* Nav - filtered by the signed-in user's role. The API-side

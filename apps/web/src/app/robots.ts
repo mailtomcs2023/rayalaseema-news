@@ -47,7 +47,7 @@ const AI_TRAINING_BOTS = [
 ];
 
 export default function robots(): MetadataRoute.Robots {
-  const siteUrl = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+  const siteUrl = process.env.SITE_URL || "https://rayalaseemanews.com";
   return {
     rules: [
       // Generic crawlers: allow with the usual exclusions.

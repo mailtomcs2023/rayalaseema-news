@@ -275,7 +275,7 @@ export default async function ReporterProfilePage() {
         </div>
 
         <p style={{ textAlign: "center", fontSize: 12, color: "#bbb", fontWeight: 600, paddingBottom: 4 }}>
-          Rayalaseema Express
+          Rayalaseema News
         </p>
       </div>
     </ReporterShell>

@@ -14,15 +14,15 @@ import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-sch
 
 export const revalidate = 600; // 10 min - rates only update a few times a day
 
-const SITE_URL = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
 
 export const metadata: Metadata = {
-  title: "Gold rate today in Andhra Pradesh - Rayalaseema Express News",
+  title: "Gold rate today in Andhra Pradesh - Rayalaseema News News",
   description:
     "Today's gold and silver rates in Hyderabad, Vijayawada, Tirupati, Kurnool, Anantapuramu, Kadapa, Nellore, Chittoor. 22K + 24K gold + silver per gram. Updated daily.",
   alternates: { canonical: `${SITE_URL}/gold-rate` },
   openGraph: {
-    title: "Gold rate today | Rayalaseema Express News",
+    title: "Gold rate today | Rayalaseema News News",
     description: "Daily-updated gold and silver rates across Telugu cities.",
     url: `${SITE_URL}/gold-rate`,
     type: "website",
@@ -59,7 +59,7 @@ export default async function GoldRatePage() {
     description: "Daily-updated gold (22K + 24K) and silver rates per gram in Hyderabad, Vijayawada, Tirupati, Kurnool, Anantapuramu, Kadapa, Nellore, and Chittoor.",
     datePublished: rows[0]?.date.toISOString() || new Date().toISOString(),
     dateModified: rows[0]?.date.toISOString() || new Date().toISOString(),
-    publisher: { "@type": "NewsMediaOrganization", name: "Rayalaseema Express News", url: SITE_URL },
+    publisher: { "@type": "NewsMediaOrganization", name: "Rayalaseema News News", url: SITE_URL },
     mainEntityOfPage: { "@type": "WebPage", "@id": `${SITE_URL}/gold-rate` },
     inLanguage: "te",
   };

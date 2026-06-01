@@ -1,7 +1,7 @@
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 
-export const metadata = { title: "సంప్రదించండి | Rayalaseema Express" };
+export const metadata = { title: "సంప్రదించండి | Rayalaseema News" };
 
 export default function ContactPage() {
   return (
@@ -14,14 +14,14 @@ export default function ContactPage() {
           <div style={{ background: "#fff", borderRadius: 12, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
             <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: "#111" }}>Editorial</h3>
             <p style={{ fontSize: 14, color: "#555", lineHeight: 2 }}>
-              Email: <a href="mailto:editor@rayalaseemaexpress.com" style={{ color: "var(--color-brand)" }}>editor@rayalaseemaexpress.com</a><br />
-              News Tips: <a href="mailto:news@rayalaseemaexpress.com" style={{ color: "var(--color-brand)" }}>news@rayalaseemaexpress.com</a>
+              Email: <a href="mailto:editor@rayalaseemanews.com" style={{ color: "var(--color-brand)" }}>editor@rayalaseemanews.com</a><br />
+              News Tips: <a href="mailto:news@rayalaseemanews.com" style={{ color: "var(--color-brand)" }}>news@rayalaseemanews.com</a>
             </p>
           </div>
           <div style={{ background: "#fff", borderRadius: 12, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
             <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: "#111" }}>Advertising</h3>
             <p style={{ fontSize: 14, color: "#555", lineHeight: 2 }}>
-              Email: <a href="mailto:ads@rayalaseemaexpress.com" style={{ color: "var(--color-brand)" }}>ads@rayalaseemaexpress.com</a><br />
+              Email: <a href="mailto:ads@rayalaseemanews.com" style={{ color: "var(--color-brand)" }}>ads@rayalaseemanews.com</a><br />
               For ad rates and media kit
             </p>
           </div>
@@ -29,14 +29,14 @@ export default function ContactPage() {
             <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: "#111" }}>Grievance Officer</h3>
             <p style={{ fontSize: 14, color: "#555", lineHeight: 2 }}>
               As per IT Act, 2000<br />
-              Email: <a href="mailto:grievance@rayalaseemaexpress.com" style={{ color: "var(--color-brand)" }}>grievance@rayalaseemaexpress.com</a><br />
+              Email: <a href="mailto:grievance@rayalaseemanews.com" style={{ color: "var(--color-brand)" }}>grievance@rayalaseemanews.com</a><br />
               Response: Within 36 hours
             </p>
           </div>
           <div style={{ background: "#fff", borderRadius: 12, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
             <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: "#111" }}>General</h3>
             <p style={{ fontSize: 14, color: "#555", lineHeight: 2 }}>
-              Email: <a href="mailto:info@rayalaseemaexpress.com" style={{ color: "var(--color-brand)" }}>info@rayalaseemaexpress.com</a><br />
+              Email: <a href="mailto:info@rayalaseemanews.com" style={{ color: "var(--color-brand)" }}>info@rayalaseemanews.com</a><br />
               Andhra Pradesh, India
             </p>
           </div>

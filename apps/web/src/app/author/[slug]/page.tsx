@@ -7,7 +7,7 @@ import { prisma } from "@rayalaseema/db";
 import { articleHref } from "@/lib/article-href";
 import { buildPersonSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 
-const SITE_URL = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
 
 // Phase A2 (#193) - route now keys on User.publicProfileSlug, not User.id.
 // Old /author/<cuid> URLs return 404 (clean cutover; same approach as A0 article
@@ -28,8 +28,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const author = await fetchAuthor(slug);
   if (!author) return { title: "Author not found" };
   return {
-    title: `${author.name} | Rayalaseema Express`,
-    description: author.bio || `${author.name}, ${author.role} at Rayalaseema Express. Read all articles by ${author.name}.`,
+    title: `${author.name} | Rayalaseema News`,
+    description: author.bio || `${author.name}, ${author.role} at Rayalaseema News. Read all articles by ${author.name}.`,
     alternates: { canonical: `${SITE_URL}/author/${author.publicProfileSlug}` },
     openGraph: {
       title: author.name,
@@ -99,8 +99,8 @@ export default async function AuthorPage({
     },
     publisher: {
       siteUrl: SITE_URL,
-      publicationName: "Rayalaseema Express",
-      publicationNameTe: "రాయలసీమ ఎక్స్‌ప్రెస్",
+      publicationName: "Rayalaseema News",
+      publicationNameTe: "రాయలసీమ న్యూస్",
       logoUrl: `${SITE_URL}/logo.png`,
     },
   });

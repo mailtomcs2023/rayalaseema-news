@@ -33,7 +33,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ slug: string }
   });
   if (!category) return notFound();
 
-  const siteUrl = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+  const siteUrl = process.env.SITE_URL || "https://rayalaseemanews.com";
   const articles = await prisma.content.findMany({
     where: { type: "ARTICLE", status: "PUBLISHED", categoryId: category.id },
     select: {
@@ -59,10 +59,10 @@ export async function GET(_req: Request, ctx: { params: Promise<{ slug: string }
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Rayalaseema Express - ${escXml(category.nameEn || category.name)}</title>
+    <title>Rayalaseema News - ${escXml(category.nameEn || category.name)}</title>
     <link>${siteUrl}/category/${category.slug}</link>
     <atom:link href="${siteUrl}/rss/category/${category.slug}.xml" rel="self" type="application/rss+xml" />
-    <description>${escXml(category.nameEn || category.name)} news from Rayalaseema Express.</description>
+    <description>${escXml(category.nameEn || category.name)} news from Rayalaseema News.</description>
     <language>te</language>
     <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
 ${items}
