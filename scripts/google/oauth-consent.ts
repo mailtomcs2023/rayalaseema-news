@@ -27,6 +27,12 @@ const SCOPES = [
   "https://www.googleapis.com/auth/tagmanager.publish",
   "https://www.googleapis.com/auth/tagmanager.manage.users",
   "https://www.googleapis.com/auth/cloud-platform",
+  "https://www.googleapis.com/auth/youtube",
+  "https://www.googleapis.com/auth/youtube.force-ssl",
+  "https://www.googleapis.com/auth/youtube.upload",
+  "https://www.googleapis.com/auth/youtubepartner",
+  "https://www.googleapis.com/auth/userinfo.email",
+  "https://www.googleapis.com/auth/userinfo.profile",
 ];
 
 type OAuthClient = {
