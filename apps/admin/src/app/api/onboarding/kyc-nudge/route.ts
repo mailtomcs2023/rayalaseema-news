@@ -11,6 +11,7 @@
 // setting the suppression cookie is harmless even if hit directly.
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { publicUrl } from "@/lib/public-url";
 
 export async function GET(req: Request) {
   const cookieStore = await cookies();
@@ -20,5 +21,5 @@ export async function GET(req: Request) {
     httpOnly: true,
     sameSite: "lax",
   });
-  return NextResponse.redirect(new URL("/onboarding/kyc", req.url));
+  return NextResponse.redirect(publicUrl(req, "/onboarding/kyc"));
 }

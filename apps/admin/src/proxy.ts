@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { canVisit, landingFor } from "@/lib/roles";
 import { validateCsrf } from "@/lib/csrf";
+import { publicUrl } from "@/lib/public-url";
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -43,8 +44,7 @@ export async function proxy(req: NextRequest) {
     req.cookies.has("__Secure-next-auth.session-token");
 
   if (!hasSession) {
-    const loginUrl = new URL("/login", req.url);
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.redirect(publicUrl(req, "/login"));
   }
 
   // Role-based gate: decode the JWT and refuse off-limits routes for the
@@ -78,7 +78,7 @@ export async function proxy(req: NextRequest) {
     // (REPORTERs get their own stricter mobile-app gate.)
 
     if (role && !canVisit(role, pathname)) {
-      return NextResponse.redirect(new URL(landingFor(role), req.url));
+      return NextResponse.redirect(publicUrl(req, landingFor(role)));
     }
   } catch {
     // Decode failure - let the page handle it.

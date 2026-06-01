@@ -10,6 +10,7 @@
 // to /login. `?reason=...` is optional and just for the login page banner.
 
 import { NextRequest, NextResponse } from "next/server";
+import { publicUrl } from "@/lib/public-url";
 
 const COOKIE_NAMES = [
   "authjs.session-token",
@@ -25,7 +26,7 @@ const COOKIE_NAMES = [
 ];
 
 function clearAndRedirect(req: NextRequest): NextResponse {
-  const url = new URL("/login", req.url);
+  const url = publicUrl(req, "/login");
   const reason = req.nextUrl.searchParams.get("reason");
   if (reason) url.searchParams.set("reason", reason);
   const res = NextResponse.redirect(url);
