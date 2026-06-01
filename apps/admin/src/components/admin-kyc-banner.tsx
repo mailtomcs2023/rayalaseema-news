@@ -13,8 +13,11 @@
 //   REJECTED   → red,   "Action required" + rejection note
 //   VERIFIED   → no banner (null)
 //
-// USER role + accounts without a profile row (legacy seeds, pre-merge
-// data) also render no banner - KYC only applies to staff.
+// Missing profile row → treated as PENDING. This keeps the banner in sync
+// with the client-side toast (useKycGate), which blocks any non-VERIFIED
+// kycStatus. Without this, legacy seeded staff with no profile would see
+// the toast fire on every gated action but no banner explaining why -
+// confusing UX. The KYC page handles the create-or-update flow.
 
 import { prisma } from "@rayalaseema/db";
 import Link from "next/link";
@@ -23,18 +26,14 @@ import { AlertCircle, FileText, Hourglass, ArrowRight } from "lucide-react";
 type KycStatus = "PENDING" | "SUBMITTED" | "VERIFIED" | "REJECTED";
 
 export async function AdminKycBanner({ userId }: { userId: string }) {
-  // findUnique - every staff account auto-creates one of these via
-  // /api/users POST (PR earlier this session). Older seeded accounts
-  // may still be missing one; we treat that case as "no profile, no
-  // banner" rather than blocking them.
   const profile = await prisma.reporterProfile.findUnique({
     where: { userId },
     select: { kycStatus: true, kycRejectionNote: true },
   });
-  if (!profile) return null;
 
-  const status = profile.kycStatus as KycStatus;
+  const status: KycStatus = (profile?.kycStatus as KycStatus) ?? "PENDING";
   if (status === "VERIFIED") return null;
+  const rejectionNote = profile?.kycRejectionNote ?? null;
 
   const ui =
     status === "REJECTED"
@@ -86,9 +85,9 @@ export async function AdminKycBanner({ userId }: { userId: string }) {
         </span>
         <div className={`flex-1 min-w-0 ${ui.text}`}>
           <p className="text-sm font-semibold leading-tight">{ui.title}</p>
-          {status === "REJECTED" && profile.kycRejectionNote && (
-            <p className="mt-1 truncate text-xs italic opacity-90" title={profile.kycRejectionNote}>
-              &ldquo;{profile.kycRejectionNote}&rdquo;
+          {status === "REJECTED" && rejectionNote && (
+            <p className="mt-1 truncate text-xs italic opacity-90" title={rejectionNote}>
+              &ldquo;{rejectionNote}&rdquo;
             </p>
           )}
         </div>
