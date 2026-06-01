@@ -66,6 +66,12 @@ jobs:
 
             bunx prisma db push --skip-generate --accept-data-loss
 
+            echo "=== Merge legacy seed admin into live admin, then delete it (idempotent) ==="
+            # Folds admin@rayalaseemaexpress.com (old rebrand-orphaned seed
+            # admin) into admin@rayalaseemanews.com and removes it. No-ops once
+            # done. Runs AFTER the pg_dump backup above so it's recoverable.
+            bunx tsx scripts/merge-legacy-admin.ts
+
             echo "=== Rebuild constituencies (idempotent: inserts missing ACs + remaps old) ==="
             bunx tsx scripts/rebuild-constituencies.ts
             bunx tsx scripts/remap-constituencies.ts
