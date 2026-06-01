@@ -25,18 +25,20 @@ export async function GET() {
   const session = await requireAuth();
   if (isAuthError(session)) return session;
   try {
-    const profile = await prisma.reporterProfile.findUnique({
+    // Lazily ensure a profile row exists (pre-merge accounts never got one
+    // auto-created) so the rest of the flow has something to write against.
+    // Must be an upsert, not find-then-create: this GET fires twice on first
+    // mount (React strict mode double-invokes the effect, and any concurrent
+    // caller hits the same path), and two parallel creates on a row that
+    // doesn't exist yet would race on the userId @unique constraint - the
+    // loser throwing P2002 and 500ing. upsert compiles to a single
+    // INSERT ... ON CONFLICT DO UPDATE on Postgres, which is race-safe.
+    // Empty `update` keeps it a no-op when the row already exists.
+    const profile = await prisma.reporterProfile.upsert({
       where: { userId: session.user.id },
+      update: {},
+      create: { userId: session.user.id, fullName: session.user.name },
     });
-    if (!profile) {
-      // Pre-merge accounts that never got a profile row auto-created.
-      // Lazily create one so the rest of the flow has something to write
-      // against - no admin intervention required.
-      const created = await prisma.reporterProfile.create({
-        data: { userId: session.user.id, fullName: session.user.name },
-      });
-      return NextResponse.json({ profile: decryptProfileFields(created) });
-    }
     return NextResponse.json({ profile: decryptProfileFields(profile) });
   } catch (e) {
     return apiError(e);
