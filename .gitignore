@@ -56,3 +56,9 @@ rayalaseema-recruitment.xlsx
 
 # Expo CLI local state (per-machine devices, credentials, generated README)
 .expo/
+
+# Google Cloud service account keys
+.gcp-sa.*.json
+*-gcp-sa*.json
+*service-account*.json
+.oauth-client*.json
