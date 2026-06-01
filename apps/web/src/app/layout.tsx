@@ -43,15 +43,15 @@ export const metadata: Metadata = {
   // Spec #4 brand disambiguation — title carries " News" suffix so Google
   // doesn't collapse our brand into the Indian Railways train of the same
   // name. See ~/.claude/.../memory/project_brand_disambiguation.md.
-  title: "Rayalaseema Express News | రాయలసీమ ఎక్స్‌ప్రెస్ వార్తలు",
+  title: "Rayalaseema News News | రాయలసీమ న్యూస్ వార్తలు",
   description:
     "Telugu news portal covering the Rayalaseema region of Andhra Pradesh. Hyper-local news from Kurnool, Nandyal, Anantapuramu, Sri Sathya Sai, YSR-Kadapa, Annamayya, Tirupati, and Chittoor.",
   manifest: "/manifest.json",
   themeColor: "#E01B1B",
   keywords: [
-    "Rayalaseema Express News",
+    "Rayalaseema News News",
     "Rayalaseema news",
-    "రాయలసీమ ఎక్స్‌ప్రెస్ వార్తలు",
+    "రాయలసీమ న్యూస్ వార్తలు",
     "Telugu news portal",
     "Telugu news Andhra Pradesh",
     "Kurnool news",
@@ -62,7 +62,7 @@ export const metadata: Metadata = {
     "Nandyal news",
   ],
   openGraph: {
-    title: "Rayalaseema Express News | రాయలసీమ ఎక్స్‌ప్రెస్ వార్తలు",
+    title: "Rayalaseema News News | రాయలసీమ న్యూస్ వార్తలు",
     description: "Telugu news portal for the Rayalaseema region of Andhra Pradesh.",
     type: "website",
     locale: "te_IN",
@@ -88,7 +88,7 @@ export default async function RootLayout({
   // stringifyJsonLd. Editorial-policy URLs point at C-phase trust pages;
   // they 404 until those land (#205 ethics, #206 corrections, #207 editorial-
   // standards, #208 diversity, #211 ownership).
-  const siteUrl = config.site_url || "https://rayalaseemaexpress.com";
+  const siteUrl = config.site_url || "https://rayalaseemanews.com";
   const sameAs = [
     config.facebook_url, config.twitter_url, config.youtube_url,
     config.instagram_url, config.threads_url, config.linkedin_url,
@@ -97,13 +97,13 @@ export default async function RootLayout({
   const orgLd = buildNewsMediaOrganizationSchema({
     publisher: {
       siteUrl,
-      // Spec #4 brand disambiguation (2026-05-27) — "Rayalaseema Express" is
+      // Spec #4 brand disambiguation (2026-05-27) — "Rayalaseema News" is
       // also Indian Railways train 12793/12794. We brand the publication as
-      // "Rayalaseema Express News" so search engines + AI engines see a
+      // "Rayalaseema News News" so search engines + AI engines see a
       // distinct entity from the train. alternateName preserves the legacy
       // brand for users typing the shorter form.
-      publicationName: "Rayalaseema Express News",
-      publicationNameTe: "రాయలసీమ ఎక్స్‌ప్రెస్ - వార్తలు",
+      publicationName: "Rayalaseema News News",
+      publicationNameTe: "రాయలసీమ న్యూస్ - వార్తలు",
       logoUrl: `${siteUrl}/logo.png`,
     },
     disambiguatingDescription:

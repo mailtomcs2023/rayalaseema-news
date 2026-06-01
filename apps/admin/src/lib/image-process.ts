@@ -4,8 +4,8 @@
 // EXIF GPS location can't reveal a stringer's whereabouts.
 import sharp from "sharp";
 
-const BRAND = "© Rayalaseema Express";
-const ARTIST = "Rayalaseema Express";
+const BRAND = "© Rayalaseema News";
+const ARTIST = "Rayalaseema News";
 
 export interface ProcessOpts {
   // Output max width — keeps featured images sane (Azure egress costs).
@@ -46,7 +46,7 @@ export async function processImageBuffer(
     IFD0: {
       Copyright: BRAND,
       Artist: ARTIST,
-      Software: "Rayalaseema Express CMS",
+      Software: "Rayalaseema News CMS",
     },
   });
 
@@ -98,7 +98,7 @@ export async function generateAspectVariants(input: Buffer): Promise<AspectVaria
     const base = sharp(input)
       .rotate()
       .resize({ width: a.width, height: a.height, fit: "cover", position: "attention" })
-      .withExif({ IFD0: { Copyright: BRAND, Artist: ARTIST, Software: "Rayalaseema Express CMS" } });
+      .withExif({ IFD0: { Copyright: BRAND, Artist: ARTIST, Software: "Rayalaseema News CMS" } });
     const [webp, jpeg] = await Promise.all([
       base.clone().webp({ quality: 82 }).toBuffer(),
       base.clone().jpeg({ quality: 85, mozjpeg: true }).toBuffer(),

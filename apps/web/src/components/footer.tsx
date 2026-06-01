@@ -27,7 +27,7 @@ export function Footer({ config: initialConfig = {} }: FooterProps) {
                   on transparent) reads cleanly without a white card around it. */}
               <img
                 src="/logo-inverse.png"
-                alt="రాయలసీమ ఎక్స్‌ప్రెస్"
+                alt="రాయలసీమ న్యూస్"
                 className="h-12 w-auto"
               />
             </div>
@@ -145,7 +145,7 @@ export function Footer({ config: initialConfig = {} }: FooterProps) {
               <li><Link href="/diversity-policy" className="hover:text-white transition-colors">Diversity Policy</Link></li>
               <li><Link href="/feedback-policy" className="hover:text-white transition-colors">Feedback Policy</Link></li>
               <li><Link href="/contact" className="hover:text-white transition-colors font-telugu">సంప్రదించండి (Contact)</Link></li>
-              <li><a href="mailto:ads@rayalaseemaexpress.com" className="hover:text-white transition-colors font-telugu">ప్రకటనలు (Advertise)</a></li>
+              <li><a href="mailto:ads@rayalaseemanews.com" className="hover:text-white transition-colors font-telugu">ప్రకటనలు (Advertise)</a></li>
               <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
               <li><Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
               <li><a href="/sitemap.xml" className="hover:text-white transition-colors">Sitemap</a></li>
@@ -168,7 +168,7 @@ export function Footer({ config: initialConfig = {} }: FooterProps) {
       <div className="border-t border-gray-800">
         <div className="container-news py-5 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-gray-500">
           <p className="font-telugu">
-            &copy; {new Date().getFullYear()} రాయలసీమ ఎక్స్‌ప్రెస్. సర్వ హక్కులు
+            &copy; {new Date().getFullYear()} రాయలసీమ న్యూస్. సర్వ హక్కులు
             రిజర్వ్ చేయబడ్డాయి.
           </p>
           <p>

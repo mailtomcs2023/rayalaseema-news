@@ -10,12 +10,12 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 
-const SITE_URL = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
 
 export const metadata: Metadata = {
-  title: "Corrections Policy | రాయలసీమ ఎక్స్‌ప్రెస్",
+  title: "Corrections Policy | రాయలసీమ న్యూస్",
   description:
-    "How Rayalaseema Express handles factual errors — corrections process, timelines, and how to request a correction.",
+    "How Rayalaseema News handles factual errors — corrections process, timelines, and how to request a correction.",
   alternates: { canonical: `${SITE_URL}/corrections-policy` },
 };
 
@@ -33,7 +33,7 @@ export default function CorrectionsPolicyPage() {
 
         <div className="article-body" style={{ fontSize: 16, lineHeight: 1.85, color: "#333" }}>
           <p>
-            Rayalaseema Express commits to fixing factual errors promptly and transparently. Readers should never
+            Rayalaseema News commits to fixing factual errors promptly and transparently. Readers should never
             be left guessing whether what we publish is accurate.
           </p>
 
@@ -46,7 +46,7 @@ export default function CorrectionsPolicyPage() {
 
           <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 32, marginBottom: 10 }}>How to request a correction</h2>
           <p>
-            Email <a href="mailto:corrections@rayalaseemaexpress.com" style={{ color: "var(--color-brand)" }}>corrections@rayalaseemaexpress.com</a> with:
+            Email <a href="mailto:corrections@rayalaseemanews.com" style={{ color: "var(--color-brand)" }}>corrections@rayalaseemanews.com</a> with:
           </p>
           <ul style={{ paddingLeft: 24, marginBottom: 16 }}>
             <li>The article URL</li>
@@ -83,7 +83,7 @@ export default function CorrectionsPolicyPage() {
           <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 32, marginBottom: 10 }}>Escalation</h2>
           <p>
             If you disagree with how we handled a correction request, escalate to the Editor-in-Chief at
-            {" "}<a href="mailto:editor@rayalaseemaexpress.com" style={{ color: "var(--color-brand)" }}>editor@rayalaseemaexpress.com</a>.
+            {" "}<a href="mailto:editor@rayalaseemanews.com" style={{ color: "var(--color-brand)" }}>editor@rayalaseemanews.com</a>.
             We will respond within five working days. If you remain dissatisfied, you may approach the Press Council
             of India.
           </p>

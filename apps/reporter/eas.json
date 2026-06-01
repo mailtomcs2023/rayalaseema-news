@@ -9,21 +9,21 @@
       "distribution": "internal",
       "android": { "buildType": "apk" },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://admin.rayalaseemaexpress.com"
+        "EXPO_PUBLIC_API_URL": "https://admin.rayalaseemanews.com"
       }
     },
     "preview": {
       "distribution": "internal",
       "android": { "buildType": "apk" },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://admin.rayalaseemaexpress.com"
+        "EXPO_PUBLIC_API_URL": "https://admin.rayalaseemanews.com"
       }
     },
     "production": {
       "android": { "buildType": "app-bundle" },
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://admin.rayalaseemaexpress.com"
+        "EXPO_PUBLIC_API_URL": "https://admin.rayalaseemanews.com"
       }
     }
   },

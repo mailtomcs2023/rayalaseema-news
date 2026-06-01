@@ -16,7 +16,7 @@ function cfg(config: Record<string, string>, dbKey: string, envKey: string): str
 
 let _config: Record<string, string> = {};
 
-const SITE_URL = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
 
 // Telegram
 async function postTelegram(article: any) {

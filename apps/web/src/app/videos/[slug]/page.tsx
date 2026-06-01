@@ -44,9 +44,9 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const video = await getVideoBySlug(slug);
-  if (!video) return { title: "వీడియో దొరకలేదు | రాయలసీమ ఎక్స్‌ప్రెస్" };
+  if (!video) return { title: "వీడియో దొరకలేదు | రాయలసీమ న్యూస్" };
   return {
-    title: `${video.title} | రాయలసీమ ఎక్స్‌ప్రెస్`,
+    title: `${video.title} | రాయలసీమ న్యూస్`,
     description: video.description?.substring(0, 160) || video.title,
     openGraph: {
       title: video.title,

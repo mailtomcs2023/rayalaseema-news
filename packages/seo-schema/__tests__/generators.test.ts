@@ -21,10 +21,10 @@ import {
 } from "../src";
 
 const PUBLISHER: PublisherConfig = {
-  siteUrl: "https://rayalaseemaexpress.com",
-  publicationName: "Rayalaseema Express",
-  publicationNameTe: "రాయలసీమ ఎక్స్‌ప్రెస్",
-  logoUrl: "https://rayalaseemaexpress.com/logo.png",
+  siteUrl: "https://rayalaseemanews.com",
+  publicationName: "Rayalaseema News",
+  publicationNameTe: "రాయలసీమ న్యూస్",
+  logoUrl: "https://rayalaseemanews.com/logo.png",
 };
 
 const AUTHOR: AuthorRef = {
@@ -32,7 +32,7 @@ const AUTHOR: AuthorRef = {
   publicProfileSlug: "suresh-reddy",
   role: "EDITOR",
   bio: "Investigative reporter covering Rayalaseema politics.",
-  avatar: "https://rayalaseemaexpress.com/uploads/suresh.jpg",
+  avatar: "https://rayalaseemanews.com/uploads/suresh.jpg",
   twitterHandle: "sureshreddy",
   linkedinUrl: "https://linkedin.com/in/sureshreddy",
   facebookUrl: null,
@@ -60,7 +60,7 @@ describe("NewsArticle generator", () => {
     author: AUTHOR,
     publisher: PUBLISHER,
     locationChain: LOCATION,
-    canonicalUrl: "https://rayalaseemaexpress.com/tirupati/chandragiri-166/test-article-cm12345",
+    canonicalUrl: "https://rayalaseemanews.com/tirupati/chandragiri-166/test-article-cm12345",
     images: "https://example.com/img.jpg",
   });
 
@@ -77,7 +77,7 @@ describe("NewsArticle generator", () => {
     expect(ld.author).toMatchObject({
       "@type": "Person",
       name: "Suresh Reddy",
-      url: "https://rayalaseemaexpress.com/author/suresh-reddy",
+      url: "https://rayalaseemanews.com/author/suresh-reddy",
     });
     expect((ld.author as any).sameAs).toContain("https://twitter.com/sureshreddy");
     expect((ld.author as any).sameAs).toContain("https://linkedin.com/in/sureshreddy");
@@ -118,21 +118,21 @@ describe("NewsMediaOrganization generator", () => {
     const ld = buildNewsMediaOrganizationSchema({
       publisher: PUBLISHER,
       sameAs: ["https://twitter.com/rayalaseema", "https://facebook.com/rayalaseema"],
-      contactPoint: { email: "editor@rayalaseemaexpress.com", phone: "+91-1234567890" },
+      contactPoint: { email: "editor@rayalaseemanews.com", phone: "+91-1234567890" },
       address: { locality: "Kurnool", region: "Andhra Pradesh", country: "IN" },
       foundingDate: "2026-01-15",
       policies: {
-        ethicsPolicy: "https://rayalaseemaexpress.com/ethics-policy",
-        correctionsPolicy: "https://rayalaseemaexpress.com/corrections-policy",
-        ownershipFundingInfo: "https://rayalaseemaexpress.com/ownership",
+        ethicsPolicy: "https://rayalaseemanews.com/ethics-policy",
+        correctionsPolicy: "https://rayalaseemanews.com/corrections-policy",
+        ownershipFundingInfo: "https://rayalaseemanews.com/ownership",
       },
     });
     expect(ld["@type"]).toBe("NewsMediaOrganization");
     expect(ld.sameAs).toHaveLength(2);
-    expect((ld.contactPoint as any).email).toBe("editor@rayalaseemaexpress.com");
+    expect((ld.contactPoint as any).email).toBe("editor@rayalaseemanews.com");
     expect((ld.address as any).addressLocality).toBe("Kurnool");
     expect(ld.foundingDate).toBe("2026-01-15");
-    expect(ld.ethicsPolicy).toBe("https://rayalaseemaexpress.com/ethics-policy");
+    expect(ld.ethicsPolicy).toBe("https://rayalaseemanews.com/ethics-policy");
   });
 
   test("optional fields strip when undefined", () => {
@@ -148,8 +148,8 @@ describe("BreadcrumbList generator", () => {
   test("auto-numbers position + handles current-page (no url) last item", () => {
     const ld = buildBreadcrumbListSchema({
       items: [
-        { name: "Home", url: "https://rayalaseemaexpress.com" },
-        { name: "Politics", url: "https://rayalaseemaexpress.com/category/politics" },
+        { name: "Home", url: "https://rayalaseemanews.com" },
+        { name: "Politics", url: "https://rayalaseemanews.com/category/politics" },
         { name: "Latest article" }, // current page, no url
       ],
     });
@@ -166,8 +166,8 @@ describe("Person generator", () => {
   test("emits worksFor + sameAs + knowsAbout + alumniOf", () => {
     const ld = buildPersonSchema({ author: AUTHOR, publisher: PUBLISHER });
     expect(ld["@type"]).toBe("Person");
-    expect(ld.url).toBe("https://rayalaseemaexpress.com/author/suresh-reddy");
-    expect((ld.worksFor as any).name).toBe("Rayalaseema Express");
+    expect(ld.url).toBe("https://rayalaseemanews.com/author/suresh-reddy");
+    expect((ld.worksFor as any).name).toBe("Rayalaseema News");
     expect(ld.knowsAbout).toEqual(["politics", "elections"]);
     expect(ld.alumniOf).toEqual(["Press Council of India"]);
   });

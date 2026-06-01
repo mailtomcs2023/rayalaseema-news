@@ -7,7 +7,7 @@ export interface EpaperArticle {
   summary?: string | null;
   featuredImage?: string | null;
   categoryName?: string | null;
-  deskName?: string | null;   // Telugu byline (e.g. "రాయలసీమ ఎక్స్‌ప్రెస్ బిజినెస్ డెస్క్", "ప్రొద్దుటూరు")
+  deskName?: string | null;   // Telugu byline (e.g. "రాయలసీమ న్యూస్ బిజినెస్ డెస్క్", "ప్రొద్దుటూరు")
 }
 
 export interface PageOptions {
@@ -34,7 +34,7 @@ function esc(s: string | null | undefined): string {
 function img(url: string | null | undefined, cls: string): string {
   return url
     ? `<div class="ph ${cls}"><img src="${esc(url)}" /></div>`
-    : `<div class="ph ${cls} noimg">రాయలసీమ ఎక్స్‌ప్రెస్</div>`;
+    : `<div class="ph ${cls} noimg">రాయలసీమ న్యూస్</div>`;
 }
 
 /** Build a dense broadsheet page as an HTML document string. */
@@ -43,7 +43,7 @@ export function renderBroadsheetPage(o: PageOptions): string {
     ? `<div class="masthead">
          <div class="mast-side">ఈ-ఎడిషన్<br/>${esc(o.dateLabel)}</div>
          <div class="mast-mid">
-           <div class="mast-logo">రాయలసీమ ఎక్స్‌ప్రెస్</div>
+           <div class="mast-logo">రాయలసీమ న్యూస్</div>
            <div class="mast-tag">— THE VOICE OF RAYALASEEMA —</div>
          </div>
          <div class="mast-side r">కర్నూలు · నంద్యాల · అనంతపురం<br/>కడప · తిరుపతి · చిత్తూరు</div>
@@ -51,7 +51,7 @@ export function renderBroadsheetPage(o: PageOptions): string {
        <div class="breakbar">తాజా · ${esc(o.lead.title).slice(0, 90)}</div>`
     : `<div class="secbar">
          <span class="secbar-name">${esc(o.sectionLabel)}</span>
-         <span class="secbar-meta">రాయలసీమ ఎక్స్‌ప్రెస్ · ${esc(o.dateLabel)} · పేజీ ${o.pageNumber}</span>
+         <span class="secbar-meta">రాయలసీమ న్యూస్ · ${esc(o.dateLabel)} · పేజీ ${o.pageNumber}</span>
        </div>`;
 
   // Lead — spans 4 cols: kicker, banner headline, byline, photo, 3-col justified dek
@@ -205,7 +205,7 @@ export function renderBroadsheetPage(o: PageOptions): string {
   ${briefs}
   ${o.adBottom ? `<div class="adzone adbot"><img src="${esc(o.adBottom)}" /></div>` : ""}
   <div class="pagefoot">
-    <span>www.rayalaseemaexpress.com</span>
+    <span>www.rayalaseemanews.com</span>
     <span>${esc(o.sectionLabel)} · పేజీ ${o.pageNumber} / ${o.totalPages}</span>
   </div>
 </body></html>`;

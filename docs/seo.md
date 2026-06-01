@@ -2,7 +2,7 @@
 
 Operational reference for the SEO machinery shipped in Spec #4. Use this when you need to add a JSON-LD field, debug a missing IndexNow ping, populate a new analytics provider, or understand why a given article doesn't appear in GSC.
 
-**Spec sources:** [design](./superpowers/specs/2026-05-26-seo-rayalaseema-design.md) · [research](./superpowers/specs/2026-05-26-seo-research.md) · [epic](https://github.com/mailtomcs2023/rayalaseema-express/issues/190)
+**Spec sources:** [design](./superpowers/specs/2026-05-26-seo-rayalaseema-design.md) · [research](./superpowers/specs/2026-05-26-seo-research.md) · [epic](https://github.com/mailtomcs2023/rayalaseema-news/issues/190)
 
 ## Architecture at a glance
 
@@ -123,7 +123,7 @@ SiteConfig (key-value rows in `site_config`) drives every provider. Editor popul
 `packages/db/scripts/seo-launch-audit.ts` — walks sitemap.xml, fetches each URL, reports non-200s + missing meta + dup titles + redirect chains. Exits non-zero on critical findings.
 
 ```bash
-BASE_URL=https://rayalaseemaexpress.com bun packages/db/scripts/seo-launch-audit.ts
+BASE_URL=https://rayalaseemanews.com bun packages/db/scripts/seo-launch-audit.ts
 ```
 
 ### Internal SEO dashboard
@@ -134,14 +134,14 @@ BASE_URL=https://rayalaseemaexpress.com bun packages/db/scripts/seo-launch-audit
 
 ### "This article isn't indexing in Google"
 
-1. Check the article is in `/sitemap.xml`: `curl https://rayalaseemaexpress.com/sitemap.xml | grep <slug>`.
+1. Check the article is in `/sitemap.xml`: `curl https://rayalaseemanews.com/sitemap.xml | grep <slug>`.
 2. Check it's in `/news-sitemap.xml` if published < 48h ago: same grep against the news sitemap.
 3. Verify `articleHref` produces the same URL Googlebot sees: open the article and check `<link rel="canonical">`.
 4. GSC > URL inspection: paste the canonical URL; check coverage status. Common causes of non-index:
    - "Crawled - currently not indexed" — Google's discretion; usually clears in 1-3 weeks as the page accrues internal links.
    - "Discovered - currently not indexed" — Google hasn't crawled it. Check IndexNow ping was sent: search admin logs for `[indexnow]`.
    - "Soft 404" — the page rendered but Google decided it's thin. Check that the article has a full body + featured image + non-empty NewsArticle JSON-LD.
-5. Check robots.txt: `curl https://rayalaseemaexpress.com/robots.txt` — the AI-bot disallows shouldn't apply, but verify Googlebot is in the allowlist.
+5. Check robots.txt: `curl https://rayalaseemanews.com/robots.txt` — the AI-bot disallows shouldn't apply, but verify Googlebot is in the allowlist.
 
 ### "Schema is broken"
 
@@ -153,7 +153,7 @@ BASE_URL=https://rayalaseemaexpress.com bun packages/db/scripts/seo-launch-audit
 ### "IndexNow isn't pinging"
 
 1. Confirm `SiteConfig.indexnow_key` has a value: open `/settings → SEO & Analytics` in admin.
-2. Verify the key file is reachable: `curl https://rayalaseemaexpress.com/.well-known/<key>.txt` should return the key as plain text.
+2. Verify the key file is reachable: `curl https://rayalaseemanews.com/.well-known/<key>.txt` should return the key as plain text.
 3. Watch admin logs for `[indexnow]` lines on the next publish; non-200 from `api.indexnow.org` is logged as a warning (non-fatal).
 
 ### "I need to add a new JSON-LD field"

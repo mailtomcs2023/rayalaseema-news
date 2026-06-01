@@ -29,7 +29,7 @@ jobs:
 
             # Clone or pull
             if [ ! -d ".git" ]; then
-              git clone https://github.com/mailtomcs2023/rayalaseema-express.git .
+              git clone https://github.com/mailtomcs2023/rayalaseema-news.git .
             else
               git fetch origin main
               git reset --hard origin/main
@@ -100,7 +100,7 @@ jobs:
             echo "=== Create production env files ==="
             cat > apps/web/.env << 'ENV'
             DATABASE_URL="postgresql://reapp:RayalaseemaExpress2026!@localhost:5432/rayalaseema_express"
-            SITE_URL="https://rayalaseemaexpress.com"
+            SITE_URL="https://rayalaseemanews.com"
             AZURE_OPENAI_ENDPOINT="https://rayalaseema-ai.openai.azure.com/"
             AZURE_OPENAI_KEY="${{ secrets.AZURE_OPENAI_KEY }}"
             AZURE_OPENAI_DEPLOYMENT="gpt51"
@@ -115,7 +115,7 @@ jobs:
             cat > apps/admin/.env << 'ENV'
             DATABASE_URL="postgresql://reapp:RayalaseemaExpress2026!@localhost:5432/rayalaseema_express"
             NEXTAUTH_SECRET="${{ secrets.NEXTAUTH_SECRET }}"
-            NEXTAUTH_URL="https://admin.rayalaseemaexpress.com"
+            NEXTAUTH_URL="https://admin.rayalaseemanews.com"
             AZURE_OPENAI_ENDPOINT="https://rayalaseema-ai.openai.azure.com/"
             AZURE_OPENAI_KEY="${{ secrets.AZURE_OPENAI_KEY }}"
             AZURE_OPENAI_DEPLOYMENT="gpt51"

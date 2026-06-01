@@ -88,7 +88,7 @@ export function Sidebar() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
-        <img src="/logo.png" alt="Rayalaseema Express" style={{ height: 26 }} />
+        <img src="/logo.png" alt="Rayalaseema News" style={{ height: 26 }} />
       </header>
 
       {/* Drawer backdrop (mobile only, when open) */}
@@ -106,7 +106,7 @@ export function Sidebar() {
                 dark (#111827) so the inverse logo reads cleanly. Mirror copy
                 already exists at apps/admin/public/logo-inverse.svg. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-inverse.svg" alt="Rayalaseema Express" style={{ height: 32, width: "auto" }} />
+            <img src="/logo-inverse.svg" alt="Rayalaseema News" style={{ height: 32, width: "auto" }} />
             <p style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>Content Management System</p>
           </div>
           <button

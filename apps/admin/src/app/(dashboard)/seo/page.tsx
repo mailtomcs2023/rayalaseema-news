@@ -19,7 +19,7 @@ import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError } from "@/lib/api-utils";
 import { redirect } from "next/navigation";
 
-export const metadata = { title: "SEO Dashboard | Rayalaseema Express Admin" };
+export const metadata = { title: "SEO Dashboard | Rayalaseema News Admin" };
 
 const ANALYTICS_KEYS = [
   ["google_analytics_id", "Google Analytics 4"],

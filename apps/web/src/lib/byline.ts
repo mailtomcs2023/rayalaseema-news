@@ -1,15 +1,15 @@
-const BRAND_TE = "రాయలసీమ ఎక్స్‌ప్రెస్";
+const BRAND_TE = "రాయలసీమ న్యూస్";
 
 /**
  * Inline byline formatting for the Sakshi/Eenadu newspaper style:
- *   "రాయలసీమ ఎక్స్‌ప్రెస్, బనగానపల్లె: <body>"
- *   "రాయలసీమ ఎక్స్‌ప్రెస్, పొలిటికల్ డెస్క్: <body>"
+ *   "రాయలసీమ న్యూస్, బనగానపల్లె: <body>"
+ *   "రాయలసీమ న్యూస్, పొలిటికల్ డెస్క్: <body>"
  *
- * The Desk table stores geographic desks with " - " ("రాయలసీమ ఎక్స్‌ప్రెస్ - బనగానపల్లె")
+ * The Desk table stores geographic desks with " - " ("రాయలసీమ న్యూస్ - బనగానపల్లె")
  * and topical/editorial desks with " " separators. For inline reading both should
  * read as "<brand>, <rest>" with a comma right after the brand. We:
  *  1. Swap any " - " for ", " (geographic).
- *  2. Insert ", " right after the "రాయలసీమ ఎక్స్‌ప్రెస్" prefix when the next char
+ *  2. Insert ", " right after the "రాయలసీమ న్యూస్" prefix when the next char
  *     is a space (topical/editorial), unless a comma is already there.
  */
 export function formatInlineByline(deskName: string | null | undefined): string {

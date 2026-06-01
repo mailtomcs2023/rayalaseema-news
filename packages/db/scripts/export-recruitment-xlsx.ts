@@ -130,7 +130,7 @@ function buildSummary(wb: ExcelJS.Workbook, districts: DistrictBundle[]) {
   // Brand banner
   ws.mergeCells("A1:G1");
   const banner = ws.getCell("A1");
-  banner.value = "రాయలసీమ ఎక్స్‌ప్రెస్ — Contributor Recruitment Tracker";
+  banner.value = "రాయలసీమ న్యూస్ — Contributor Recruitment Tracker";
   banner.font = { bold: true, color: { argb: "FFFFFFFF" }, name: "Noto Serif Telugu", size: 16 };
   banner.alignment = { vertical: "middle", horizontal: "center" };
   banner.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BRAND_RED } };
@@ -283,7 +283,7 @@ async function main() {
   }
 
   const wb = new ExcelJS.Workbook();
-  wb.creator = "Rayalaseema Express";
+  wb.creator = "Rayalaseema News";
   wb.created = new Date();
   wb.title = "Contributor Recruitment Tracker";
 

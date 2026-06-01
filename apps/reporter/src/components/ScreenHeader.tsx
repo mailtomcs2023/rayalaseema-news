@@ -24,7 +24,7 @@ export function ScreenHeader() {
           source={logoInverse}
           style={styles.logo}
           resizeMode="contain"
-          accessibilityLabel="Rayalaseema Express"
+          accessibilityLabel="Rayalaseema News"
         />
         <LanguageToggle onDark />
       </View>

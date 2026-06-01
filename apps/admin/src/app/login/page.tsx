@@ -22,10 +22,10 @@ import { Eye, EyeOff, AlertCircle, ShieldCheck, Pencil, ClipboardCheck, Newspape
 // retyping. Source of truth for these passwords is
 // packages/db/scripts/seed-test-users.ts — keep in sync.
 const DEMO_ROLES = [
-  { key: "admin",     label: "Admin",      email: "admin@rayalaseemaexpress.com",     password: "admin123",     accent: "#dc2626", Icon: ShieldCheck    },
-  { key: "editor",    label: "Editor",     email: "editor@rayalaseemaexpress.com",    password: "editor123",    accent: "#2563eb", Icon: Pencil         },
-  { key: "subeditor", label: "Sub Editor", email: "subeditor@rayalaseemaexpress.com", password: "subeditor123", accent: "#7c3aed", Icon: ClipboardCheck },
-  { key: "reporter",  label: "Reporter",   email: "reporter@rayalaseemaexpress.com",  password: "reporter123",  accent: "#16a34a", Icon: Newspaper      },
+  { key: "admin",     label: "Admin",      email: "admin@rayalaseemanews.com",     password: "admin123",     accent: "#dc2626", Icon: ShieldCheck    },
+  { key: "editor",    label: "Editor",     email: "editor@rayalaseemanews.com",    password: "editor123",    accent: "#2563eb", Icon: Pencil         },
+  { key: "subeditor", label: "Sub Editor", email: "subeditor@rayalaseemanews.com", password: "subeditor123", accent: "#7c3aed", Icon: ClipboardCheck },
+  { key: "reporter",  label: "Reporter",   email: "reporter@rayalaseemanews.com",  password: "reporter123",  accent: "#16a34a", Icon: Newspaper      },
 ] as const;
 
 // Mirrors the rules a NextAuth credentials provider can actually enforce. We
@@ -118,7 +118,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="Rayalaseema Express" className="h-12 mx-auto" />
+          <img src="/logo.png" alt="Rayalaseema News" className="h-12 mx-auto" />
           <CardTitle className="text-xl">Admin CMS</CardTitle>
           <CardDescription>Sign in to manage content</CardDescription>
         </CardHeader>

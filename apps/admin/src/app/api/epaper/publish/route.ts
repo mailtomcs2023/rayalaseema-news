@@ -32,8 +32,8 @@ export async function POST(req: NextRequest) {
       data: { active: true, workflowState: "PUBLISHED", status: "ready" },
     });
 
-    const headline = `రాయలసీమ ఎక్స్‌ప్రెస్ — ${edition.date.toLocaleDateString("te-IN", { day: "numeric", month: "long", year: "numeric" })} ఎడిషన్ విడుదలైంది`;
-    const siteUrl = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+    const headline = `రాయలసీమ న్యూస్ — ${edition.date.toLocaleDateString("te-IN", { day: "numeric", month: "long", year: "numeric" })} ఎడిషన్ విడుదలైంది`;
+    const siteUrl = process.env.SITE_URL || "https://rayalaseemanews.com";
     const editionUrl = `${siteUrl}/epaper?date=${edition.date.toISOString().slice(0, 10)}`;
 
     const dispatched: Record<string, boolean> = { web: true, whatsapp: false, push: false, tweet: false };

@@ -7,8 +7,8 @@ import { EpaperViewer } from "@/components/epaper-viewer";
 import { getSiteConfig } from "@/lib/db-queries";
 
 export const metadata: Metadata = {
-  title: "ఈ-పేపర్ | రాయలసీమ ఎక్స్‌ప్రెస్",
-  description: "రాయలసీమ ఎక్స్‌ప్రెస్ ఈ-పేపర్ — ప్రధాన + జిల్లా ఎడిషన్లు.",
+  title: "ఈ-పేపర్ | రాయలసీమ న్యూస్",
+  description: "రాయలసీమ న్యూస్ ఈ-పేపర్ — ప్రధాన + జిల్లా ఎడిషన్లు.",
 };
 
 const EDITION_NAMES: Record<string, string> = {

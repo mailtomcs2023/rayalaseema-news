@@ -39,10 +39,10 @@ jobs:
       - uses: treosh/lighthouse-ci-action@v12
         with:
           urls: |
-            https://rayalaseemaexpress.com/
-            https://rayalaseemaexpress.com/district/kurnool
-            https://rayalaseemaexpress.com/constituency/kurnool-137
-            https://rayalaseemaexpress.com/news/test-untagged-fallback-53bc53aa
+            https://rayalaseemanews.com/
+            https://rayalaseemanews.com/district/kurnool
+            https://rayalaseemanews.com/constituency/kurnool-137
+            https://rayalaseemanews.com/news/test-untagged-fallback-53bc53aa
           uploadArtifacts: true
           temporaryPublicStorage: true
           configPath: ./.github/lighthouse-ci.json

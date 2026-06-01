@@ -169,7 +169,7 @@ const KYC_BADGE: Record<string, string> = {
 };
 
 // Test/QA reporter account(s) — editable, but never deletable.
-const PROTECTED_EMAILS = new Set(["reporter@rayalaseemaexpress.com"]);
+const PROTECTED_EMAILS = new Set(["reporter@rayalaseemanews.com"]);
 const isProtected = (email: string) => PROTECTED_EMAILS.has((email || "").trim().toLowerCase());
 
 const fmtDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString() : "—");

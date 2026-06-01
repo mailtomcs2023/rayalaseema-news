@@ -24,9 +24,9 @@ export async function generateMetadata({
   const { slug } = await params;
   const cat = await prisma.category.findUnique({ where: { slug } });
   if (!cat) return { title: "Category not found" };
-  const siteUrl = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+  const siteUrl = process.env.SITE_URL || "https://rayalaseemanews.com";
   return {
-    title: `${cat.name} | రాయలసీమ ఎక్స్‌ప్రెస్`,
+    title: `${cat.name} | రాయలసీమ న్యూస్`,
     description: cat.description || `${cat.name} — తాజా వార్తలు, విశ్లేషణలు`,
     alternates: { canonical: `${siteUrl}/category/${slug}` },
     openGraph: {
@@ -49,7 +49,7 @@ export default async function CategoryPage({
 
   const config = await getSiteConfig();
 
-  const siteUrl = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+  const siteUrl = process.env.SITE_URL || "https://rayalaseemanews.com";
   const breadcrumbLd = buildBreadcrumbListSchema({
     items: [
       { name: "Home", url: siteUrl },

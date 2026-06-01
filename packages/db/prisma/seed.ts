@@ -9,30 +9,30 @@ async function main() {
   // ========== USERS ==========
   const adminPwd = await hash("admin123", 12);
   await prisma.user.upsert({
-    where: { email: "admin@rayalaseemaexpress.com" },
+    where: { email: "admin@rayalaseemanews.com" },
     update: {},
-    create: { email: "admin@rayalaseemaexpress.com", name: "Admin", passwordHash: adminPwd, role: Role.ADMIN },
+    create: { email: "admin@rayalaseemanews.com", name: "Admin", passwordHash: adminPwd, role: Role.ADMIN },
   });
 
   const chiefSubPwd = await hash("chief123", 12);
   await prisma.user.upsert({
-    where: { email: "chief@rayalaseemaexpress.com" },
+    where: { email: "chief@rayalaseemanews.com" },
     update: {},
-    create: { email: "chief@rayalaseemaexpress.com", name: "Chief Sub-Editor", passwordHash: chiefSubPwd, role: Role.CHIEF_SUB_EDITOR },
+    create: { email: "chief@rayalaseemanews.com", name: "Chief Sub-Editor", passwordHash: chiefSubPwd, role: Role.CHIEF_SUB_EDITOR },
   });
 
   const subEditorPwd = await hash("subeditor123", 12);
   await prisma.user.upsert({
-    where: { email: "subeditor@rayalaseemaexpress.com" },
+    where: { email: "subeditor@rayalaseemanews.com" },
     update: {},
-    create: { email: "subeditor@rayalaseemaexpress.com", name: "Sub-Editor", passwordHash: subEditorPwd, role: Role.SUB_EDITOR },
+    create: { email: "subeditor@rayalaseemanews.com", name: "Sub-Editor", passwordHash: subEditorPwd, role: Role.SUB_EDITOR },
   });
 
   const reporterPwd = await hash("reporter123", 12);
   await prisma.user.upsert({
-    where: { email: "reporter@rayalaseemaexpress.com" },
+    where: { email: "reporter@rayalaseemanews.com" },
     update: {},
-    create: { email: "reporter@rayalaseemaexpress.com", name: "Reporter", passwordHash: reporterPwd, role: Role.REPORTER },
+    create: { email: "reporter@rayalaseemanews.com", name: "Reporter", passwordHash: reporterPwd, role: Role.REPORTER },
   });
   console.log("  4 users created (Admin, Chief Sub-Editor, Sub-Editor, Reporter)");
 
@@ -123,7 +123,7 @@ async function main() {
   // ========== SITE CONFIG ==========
   const configs = [
     { key: "brand_color", value: "#FF2C2C" },
-    { key: "site_title", value: "రాయలసీమ ఎక్స్‌ప్రెస్" },
+    { key: "site_title", value: "రాయలసీమ న్యూస్" },
     { key: "site_description", value: "రాయలసీమ ప్రాంతం నుండి తాజా వార్తలు" },
     { key: "slider_count", value: "6" },
     { key: "homepage_layout", value: "eenadu" },
@@ -179,7 +179,7 @@ async function main() {
   }
 
   console.log("\nSeed complete! (No dummy articles/videos/reels - add real content from admin)");
-  console.log("  Admin: admin@rayalaseemaexpress.com / admin123");
+  console.log("  Admin: admin@rayalaseemanews.com / admin123");
 }
 
 main()

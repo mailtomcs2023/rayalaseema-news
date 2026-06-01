@@ -13,9 +13,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const district = await prisma.district.findUnique({ where: { slug } });
   if (!district) return { title: "District not found" };
-  const siteUrl = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+  const siteUrl = process.env.SITE_URL || "https://rayalaseemanews.com";
   return {
-    title: `${district.name} (${district.nameEn}) | రాయలసీమ ఎక్స్‌ప్రెస్`,
+    title: `${district.name} (${district.nameEn}) | రాయలసీమ న్యూస్`,
     description: `${district.name} జిల్లా నుండి తాజా వార్తలు, విశ్లేషణలు`,
     alternates: { canonical: `${siteUrl}/district/${slug}` },
     openGraph: { title: district.name, url: `${siteUrl}/district/${slug}`, type: "website", locale: "te_IN" },
@@ -74,7 +74,7 @@ export default async function DistrictPage({ params }: { params: Promise<{ slug:
   const grid = articles.slice(1, 5);
   const rest = articles.slice(5);
 
-  const siteUrl = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+  const siteUrl = process.env.SITE_URL || "https://rayalaseemanews.com";
   const breadcrumbLd = buildBreadcrumbListSchema({
     items: [
       { name: "Home", url: siteUrl },

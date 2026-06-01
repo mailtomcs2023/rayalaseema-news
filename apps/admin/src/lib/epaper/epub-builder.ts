@@ -117,7 +117,7 @@ export async function buildEpubForEdition(editionId: string): Promise<{ buffer: 
   const isoDate = edition.date.toISOString();
   const dateStr = isoDate.slice(0, 10);
   const uid = `urn:re-epaper:${editionId}:${createHash("sha1").update(editionId).digest("hex").slice(0, 16)}`;
-  const title = edition.title || `రాయలసీమ ఎక్స్‌ప్రెస్ — ${dateStr}`;
+  const title = edition.title || `రాయలసీమ న్యూస్ — ${dateStr}`;
 
   // Per-page chapters.
   const chapters: Array<{ id: string; href: string; title: string; xhtml: string }> = [];
@@ -152,7 +152,7 @@ export async function buildEpubForEdition(editionId: string): Promise<{ buffer: 
     <dc:title>${esc(title)}</dc:title>
     <dc:language>te</dc:language>
     <dc:date>${isoDate}</dc:date>
-    <dc:publisher>Rayalaseema Express</dc:publisher>
+    <dc:publisher>Rayalaseema News</dc:publisher>
     <meta property="dcterms:modified">${new Date().toISOString().replace(/\.\d+Z$/, "Z")}</meta>
   </metadata>
   <manifest>
@@ -190,6 +190,6 @@ export async function buildEpubForEdition(editionId: string): Promise<{ buffer: 
 
   return {
     buffer: buildZip(entries),
-    filename: `rayalaseema-express-${dateStr}-${edition.edition}.epub`,
+    filename: `rayalaseema-news-${dateStr}-${edition.edition}.epub`,
   };
 }

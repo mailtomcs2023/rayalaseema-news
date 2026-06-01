@@ -28,7 +28,7 @@ import { Footer } from "@/components/footer";
 import { articleHref } from "@/lib/article-href";
 import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 
-const SITE_URL = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
 
 // Route shape: /[district]/[constituency]/mandal/[slug]. The /mandal/ prefix
 // was added when this hub clashed with the article slugid route at the same
@@ -65,11 +65,11 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const mandal = await resolveMandal(p);
   if (!mandal) return { title: "Not found" };
   return {
-    title: `${mandal.name} (${mandal.nameEn}) | Rayalaseema Express News`,
+    title: `${mandal.name} (${mandal.nameEn}) | Rayalaseema News News`,
     description: `${mandal.name} మండలం నుండి తాజా వార్తలు. News from ${mandal.nameEn} mandal in ${mandal.constituency.district.nameEn} district.`,
     alternates: { canonical: `${SITE_URL}/${p.district}/${p.constituency}/mandal/${p.slug}` },
     openGraph: {
-      title: `${mandal.name} | రాయలసీమ ఎక్స్‌ప్రెస్`,
+      title: `${mandal.name} | రాయలసీమ న్యూస్`,
       url: `${SITE_URL}/${p.district}/${p.constituency}/mandal/${p.slug}`,
       type: "website",
       locale: "te_IN",

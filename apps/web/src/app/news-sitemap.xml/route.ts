@@ -35,7 +35,7 @@ export async function GET() {
     take: 1000,
   });
 
-  const siteUrl = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+  const siteUrl = process.env.SITE_URL || "https://rayalaseemanews.com";
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
@@ -44,7 +44,7 @@ ${articles.map((a) => `  <url>
     <loc>${siteUrl}${articleHref(a)}</loc>
     <news:news>
       <news:publication>
-        <news:name>Rayalaseema Express</news:name>
+        <news:name>Rayalaseema News</news:name>
         <news:language>te</news:language>
       </news:publication>
       <news:publication_date>${(a.publishedAt || new Date()).toISOString()}</news:publication_date>

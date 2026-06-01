@@ -9,12 +9,12 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 
-const SITE_URL = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
 
 export const metadata: Metadata = {
-  title: "Ownership & Funding | రాయలసీమ ఎక్స్‌ప్రెస్",
+  title: "Ownership & Funding | రాయలసీమ న్యూస్",
   description:
-    "Who owns Rayalaseema Express, how we are funded, and which related properties we operate.",
+    "Who owns Rayalaseema News, how we are funded, and which related properties we operate.",
   alternates: { canonical: `${SITE_URL}/ownership` },
 };
 
@@ -32,7 +32,7 @@ export default function OwnershipPage() {
 
         <div className="article-body" style={{ fontSize: 16, lineHeight: 1.85, color: "#333" }}>
           <p>
-            Rayalaseema Express is published by Medha Hosting OPC Pvt Ltd, an Indian private limited company
+            Rayalaseema News is published by Medha Hosting OPC Pvt Ltd, an Indian private limited company
             registered in Andhra Pradesh. This page discloses ownership, funding sources, and related properties.
           </p>
 
@@ -46,7 +46,7 @@ export default function OwnershipPage() {
 
           <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 32, marginBottom: 10 }}>Editorial independence</h2>
           <p>
-            Editorial decisions at Rayalaseema Express are taken by the editorial team described on our
+            Editorial decisions at Rayalaseema News are taken by the editorial team described on our
             {" "}<Link href="/masthead" style={{ color: "var(--color-brand)" }}>masthead</Link>{" "}
             page. The publishing company does not direct day-to-day editorial choices; the Editor-in-Chief carries
             final responsibility for content. The news desk operates without access to advertiser lists or revenue
@@ -55,7 +55,7 @@ export default function OwnershipPage() {
 
           <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 32, marginBottom: 10 }}>Funding sources</h2>
           <p>
-            Rayalaseema Express is funded primarily through:
+            Rayalaseema News is funded primarily through:
           </p>
           <ul style={{ paddingLeft: 24, marginBottom: 16 }}>
             <li>Display advertising served via Google AdSense and direct advertiser relationships</li>
@@ -72,7 +72,7 @@ export default function OwnershipPage() {
           <p>
             Medha Hosting OPC Pvt Ltd operates additional digital properties unrelated to news, including hosting,
             cloud-infrastructure, and Microsoft 365 partner services. None of those properties are involved in
-            editorial decisions for Rayalaseema Express.
+            editorial decisions for Rayalaseema News.
           </p>
 
           <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 32, marginBottom: 10 }}>Conflicts of interest</h2>
@@ -84,7 +84,7 @@ export default function OwnershipPage() {
 
           <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 32, marginBottom: 10 }}>Contact</h2>
           <p>
-            Press, legal, and ownership inquiries: <a href="mailto:editor@rayalaseemaexpress.com" style={{ color: "var(--color-brand)" }}>editor@rayalaseemaexpress.com</a>.
+            Press, legal, and ownership inquiries: <a href="mailto:editor@rayalaseemanews.com" style={{ color: "var(--color-brand)" }}>editor@rayalaseemanews.com</a>.
           </p>
         </div>
       </main>

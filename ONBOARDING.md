@@ -1,4 +1,4 @@
-# Rayalaseema Express — Developer Onboarding
+# Rayalaseema News — Developer Onboarding
 
 Get a new developer to an identical local setup — same code, same data.
 
@@ -20,8 +20,8 @@ Get a new developer to an identical local setup — same code, same data.
 
 ```bash
 # 1. Clone + install
-git clone https://github.com/mailtomcs2023/rayalaseema-express.git
-cd rayalaseema-express
+git clone https://github.com/mailtomcs2023/rayalaseema-news.git
+cd rayalaseema-news
 bun install
 
 # 2. Create the local database
@@ -61,4 +61,4 @@ pg_dump -U postgres --no-owner --no-acl rayalaseema_express > db-snapshot.sql
 
 ## Admin login (from the seed / snapshot)
 
-`admin@rayalaseemaexpress.com` / `admin123`
+`admin@rayalaseemanews.com` / `admin123`

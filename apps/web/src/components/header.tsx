@@ -221,7 +221,7 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
                 <source media="(min-width: 768px)" srcSet="/logo.png" />
                 <img
                   src="/logo-icon.png"
-                  alt="రాయలసీమ ఎక్స్‌ప్రెస్"
+                  alt="రాయలసీమ న్యూస్"
                   className="h-12 md:h-16 w-auto"
                 />
               </picture>

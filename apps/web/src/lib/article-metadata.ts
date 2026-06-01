@@ -33,7 +33,7 @@ export function buildArticleMetadata(article: ArticleMeta, siteUrl: string): Met
   const canonical = `${siteUrl}${articleHref(article)}`;
   const noindex = article.status !== "PUBLISHED";
   return {
-    title: `${metaTitle} | రాయలసీమ ఎక్స్‌ప్రెస్`,
+    title: `${metaTitle} | రాయలసీమ న్యూస్`,
     description: metaDescription,
     alternates: { canonical },
     robots: noindex

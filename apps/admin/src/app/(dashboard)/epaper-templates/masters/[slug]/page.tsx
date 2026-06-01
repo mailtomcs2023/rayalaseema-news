@@ -108,7 +108,7 @@ export default function MasterEditorPage() {
           renderBlockContent={(b) => (
             <>
               <div style={{ fontSize: 9, color: "#6b7280", fontWeight: 700, textTransform: "uppercase" }}>{b.type}</div>
-              {b.type === "masthead" && <div style={{ fontWeight: 700, marginTop: 3, color: "#A50D0D" }}>రాయలసీమ ఎక్స్‌ప్రెస్</div>}
+              {b.type === "masthead" && <div style={{ fontWeight: 700, marginTop: 3, color: "#A50D0D" }}>రాయలసీమ న్యూస్</div>}
               {b.type === "folio" && <div style={{ fontWeight: 700, marginTop: 3, color: "#111" }}>{`{{pageNumber}} · {{dateLabel}}`}</div>}
               {b.type === "section-band" && <div style={{ fontWeight: 700, marginTop: 3, color: "#A50D0D" }}>{`{{sectionLabel}}`}</div>}
             </>

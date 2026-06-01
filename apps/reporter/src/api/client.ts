@@ -53,7 +53,7 @@ function devApiUrl(): string | null {
 export const API_URL =
   process.env.EXPO_PUBLIC_API_URL ||
   (__DEV__ ? devApiUrl() : null) ||
-  "https://admin.rayalaseemaexpress.com";
+  "https://admin.rayalaseemanews.com";
 
 if (__DEV__) {
   // One-line log so you can see which host the app is talking to.

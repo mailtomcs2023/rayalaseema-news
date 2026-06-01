@@ -33,7 +33,7 @@ async function resolveDeskId(input: {
     });
     if (topical) return topical.id;
   }
-  const root = await prisma.desk.findUnique({ where: { slug: "desk-rayalaseema-express" }, select: { id: true } });
+  const root = await prisma.desk.findUnique({ where: { slug: "desk-rayalaseema-news" }, select: { id: true } });
   return root?.id ?? null;
 }
 

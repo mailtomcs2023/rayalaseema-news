@@ -20,10 +20,10 @@ interface Seed {
 }
 
 const SEEDS: Seed[] = [
-  { email: "admin@rayalaseemaexpress.com",      password: "admin123",      name: "Admin",      role: "ADMIN" },
-  { email: "editor@rayalaseemaexpress.com",     password: "editor123",     name: "Editor",     role: "EDITOR" },
-  { email: "subeditor@rayalaseemaexpress.com",  password: "subeditor123",  name: "Sub Editor", role: "SUB_EDITOR" },
-  { email: "reporter@rayalaseemaexpress.com",   password: "reporter123",   name: "Reporter",   role: "REPORTER" },
+  { email: "admin@rayalaseemanews.com",      password: "admin123",      name: "Admin",      role: "ADMIN" },
+  { email: "editor@rayalaseemanews.com",     password: "editor123",     name: "Editor",     role: "EDITOR" },
+  { email: "subeditor@rayalaseemanews.com",  password: "subeditor123",  name: "Sub Editor", role: "SUB_EDITOR" },
+  { email: "reporter@rayalaseemanews.com",   password: "reporter123",   name: "Reporter",   role: "REPORTER" },
 ];
 
 async function main() {

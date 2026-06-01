@@ -49,9 +49,9 @@ export function ScrollShareNudge({ title, slug, articleUrl }: { title: string; s
   // articleHref so URL pattern lives in one place). Fall back to the legacy
   // /article/<slug> path — middleware will 301 to canonical, costing one
   // extra hop only on shares from very old client bundles.
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://rayalaseemaexpress.com";
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://rayalaseemanews.com";
   const shareUrl = (articleUrl || `${origin}/article/${slug}`) + "?utm_source=whatsapp&utm_medium=share_nudge";
-  const shareText = `${title}\n\n${shareUrl}\n\nRayalaseema Express లో చదవండి`;
+  const shareText = `${title}\n\n${shareUrl}\n\nRayalaseema News లో చదవండి`;
   const waLink = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
 
   return (

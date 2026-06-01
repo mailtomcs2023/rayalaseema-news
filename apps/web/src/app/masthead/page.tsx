@@ -13,12 +13,12 @@ import { Footer } from "@/components/footer";
 import { prisma } from "@rayalaseema/db";
 import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 
-const SITE_URL = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
 
 export const metadata: Metadata = {
-  title: "Masthead | రాయలసీమ ఎక్స్‌ప్రెస్",
+  title: "Masthead | రాయలసీమ న్యూస్",
   description:
-    "Editorial team and leadership of Rayalaseema Express — Editor-in-Chief, desk leads, and editorial staff covering Rayalaseema regional news.",
+    "Editorial team and leadership of Rayalaseema News — Editor-in-Chief, desk leads, and editorial staff covering Rayalaseema regional news.",
   alternates: { canonical: `${SITE_URL}/masthead` },
   openGraph: { title: "Masthead", url: `${SITE_URL}/masthead`, type: "profile", locale: "te_IN" },
 };
@@ -65,11 +65,11 @@ export default async function MastheadPage() {
       <main style={{ maxWidth: 900, margin: "0 auto", padding: "40px 16px" }}>
         <h1 style={{ fontSize: 32, fontWeight: 900, marginBottom: 6, color: "#111" }}>Masthead</h1>
         <p style={{ fontSize: 14, color: "#888", marginBottom: 32 }}>
-          The editorial team behind Rayalaseema Express. Last updated: rolling — staff is added or removed as roles change.
+          The editorial team behind Rayalaseema News. Last updated: rolling — staff is added or removed as roles change.
         </p>
 
         <p style={{ fontSize: 15, color: "#444", lineHeight: 1.8, marginBottom: 32 }}>
-          Editorial decisions at Rayalaseema Express are made by the team listed below. The Editor-in-Chief carries final
+          Editorial decisions at Rayalaseema News are made by the team listed below. The Editor-in-Chief carries final
           responsibility for everything published. The masthead is updated whenever staff change roles or join the team.
           Reporters are not listed here — they appear on their individual <Link href="/author" style={{ color: "var(--color-brand)" }}>author profiles</Link>.
         </p>
@@ -116,7 +116,7 @@ export default async function MastheadPage() {
           <h2 style={{ fontSize: 20, fontWeight: 800, color: "#111", marginBottom: 12 }}>How to reach the editorial team</h2>
           <p style={{ fontSize: 15, color: "#444", lineHeight: 1.8 }}>
             For story tips, corrections, complaints, or general feedback, contact the editorial desk at
-            {" "}<a href="mailto:editor@rayalaseemaexpress.com" style={{ color: "var(--color-brand)" }}>editor@rayalaseemaexpress.com</a>.
+            {" "}<a href="mailto:editor@rayalaseemanews.com" style={{ color: "var(--color-brand)" }}>editor@rayalaseemanews.com</a>.
             See our <Link href="/feedback-policy" style={{ color: "var(--color-brand)" }}>feedback policy</Link> for response timelines and our
             {" "}<Link href="/corrections-policy" style={{ color: "var(--color-brand)" }}>corrections policy</Link> for how we handle errors.
           </p>

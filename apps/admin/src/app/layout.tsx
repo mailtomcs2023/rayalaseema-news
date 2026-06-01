@@ -4,8 +4,8 @@ import { auth } from "@/lib/auth";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Admin | Rayalaseema Express CMS",
-  description: "Content Management System for Rayalaseema Express",
+  title: "Admin | Rayalaseema News CMS",
+  description: "Content Management System for Rayalaseema News",
   // Spec #4 C10 (#213) — never index the admin app. Locks every page in the
   // CMS out of Google / Bing / AI-crawler caches. Applied at the root layout
   // so child routes inherit; explicit per-page robots can opt back in if we

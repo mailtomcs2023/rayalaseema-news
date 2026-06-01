@@ -5,7 +5,7 @@ import { hash } from "bcryptjs";
 import { randomInt } from "crypto";
 
 // Test/QA reporter account(s) — editable, but never deletable via the portal.
-const PROTECTED_EMAILS = ["reporter@rayalaseemaexpress.com"];
+const PROTECTED_EMAILS = ["reporter@rayalaseemanews.com"];
 
 // A readable temp password for admin-assisted resets — no ambiguous
 // chars (0/O/1/l/I) so it can be relayed over a phone call without confusion.

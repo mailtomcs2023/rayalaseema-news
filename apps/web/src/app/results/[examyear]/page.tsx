@@ -14,7 +14,7 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { buildBreadcrumbListSchema, buildLiveBlogPostingSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 
-const SITE_URL = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
 
 type Params = Promise<{ examyear: string }>;
 
@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   });
   if (!content) return { title: "Exam results not found" };
   return {
-    title: `${content.title} | Rayalaseema Express News`,
+    title: `${content.title} | Rayalaseema News News`,
     description: content.summary || content.title,
     alternates: { canonical: `${SITE_URL}/results/${examyear}` },
     openGraph: {
@@ -91,8 +91,8 @@ export default async function ExamResultsPage({ params }: { params: Params }) {
     },
     publisher: {
       siteUrl: SITE_URL,
-      publicationName: "Rayalaseema Express News",
-      publicationNameTe: "రాయలసీమ ఎక్స్‌ప్రెస్ - వార్తలు",
+      publicationName: "Rayalaseema News News",
+      publicationNameTe: "రాయలసీమ న్యూస్ - వార్తలు",
       logoUrl: `${SITE_URL}/logo.png`,
     },
     canonicalUrl: `${SITE_URL}/results/${examyear}`,

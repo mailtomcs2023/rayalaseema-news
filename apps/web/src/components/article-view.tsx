@@ -106,8 +106,8 @@ export function ArticleView({ article, related, trending, siteUrl }: Props) {
     } satisfies AuthorRef,
     publisher: {
       siteUrl,
-      publicationName: "Rayalaseema Express",
-      publicationNameTe: "రాయలసీమ ఎక్స్‌ప్రెస్",
+      publicationName: "Rayalaseema News",
+      publicationNameTe: "రాయలసీమ న్యూస్",
       logoUrl: `${siteUrl}/logo.png`,
     } satisfies PublisherConfig,
     locationChain: a.constituency

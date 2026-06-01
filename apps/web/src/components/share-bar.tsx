@@ -30,7 +30,7 @@ interface Props {
  */
 export function ShareBar({ title, articleUrl, featuredImage: _featuredImage, deskName: _deskName }: Props) {
   const [busy, setBusy] = useState(false);
-  const waText = `${title}\n\n${articleUrl}?utm_source=whatsapp\n\nరాయలసీమ ఎక్స్‌ప్రెస్ లో చదవండి`;
+  const waText = `${title}\n\n${articleUrl}?utm_source=whatsapp\n\nరాయలసీమ న్యూస్ లో చదవండి`;
 
   const onShare = async () => {
     setBusy(true);

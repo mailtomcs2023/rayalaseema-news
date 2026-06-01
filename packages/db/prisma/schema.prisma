@@ -723,14 +723,14 @@ model Constituency {
 // ============ DESKS (byline + e-paper section grouping) ============
 
 enum DeskBranch {
-  TOPICAL      // e.g. "రాయలసీమ ఎక్స్‌ప్రెస్ బిజినెస్ డెస్క్" (linked to a Category)
-  GEOGRAPHIC   // e.g. "రాయలసీమ ఎక్స్‌ప్రెస్" (root), "అనంతపురం" (district), "ప్రొద్దుటూరు" (AC)
-  EDITORIAL    // e.g. "రాయలసీమ ఎక్స్‌ప్రెస్ ఎడిటోరియల్ డెస్క్"
+  TOPICAL      // e.g. "రాయలసీమ న్యూస్ బిజినెస్ డెస్క్" (linked to a Category)
+  GEOGRAPHIC   // e.g. "రాయలసీమ న్యూస్" (root), "అనంతపురం" (district), "ప్రొద్దుటూరు" (AC)
+  EDITORIAL    // e.g. "రాయలసీమ న్యూస్ ఎడిటోరియల్ డెస్క్"
 }
 
 /// Desk = byline & section grouping. Hierarchical (Topical/Geographic/Editorial branches).
 /// Auto-resolved on article save via fallback chain (see lib/desk-resolver.ts):
-///   manual deskId → constituency desk → district desk → category desk → root (Rayalaseema Express)
+///   manual deskId → constituency desk → district desk → category desk → root (Rayalaseema News)
 model Desk {
   id              String        @id @default(cuid())
   name            String        // Telugu display name (the byline string)

@@ -95,7 +95,7 @@ async function main() {
   const webhook = process.env.SEO_HEALTH_WEBHOOK;
   if (webhook) {
     const text = [
-      "📊 *Rayalaseema Express — daily SEO health*",
+      "📊 *Rayalaseema News — daily SEO health*",
       `\`${now.toISOString().slice(0, 10)}\``,
       "",
       `📝 24h: ${last24h} published · all-time: ${publishedTotal}`,

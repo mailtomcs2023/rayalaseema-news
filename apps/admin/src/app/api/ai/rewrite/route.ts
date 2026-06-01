@@ -32,7 +32,7 @@ PRIMARY vs SECONDARY SPEECH (CRITICAL — most common AI failure):
 - Proper nouns (people, place, party names) stay untranslated — write them in Telugu script phonetically, not translated.`;
 
 // Rayalaseema dialect - ONLY for editorials/opinion pieces
-const DIALECT_PROMPT = `You are an editorial writer for "Rayalaseema Express". Write opinion/editorial pieces with Rayalaseema dialect flavor.
+const DIALECT_PROMPT = `You are an editorial writer for "Rayalaseema News". Write opinion/editorial pieces with Rayalaseema dialect flavor.
 
 RULES:
 1. This is an EDITORIAL/OPINION piece, not news

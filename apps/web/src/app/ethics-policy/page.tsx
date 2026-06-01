@@ -10,12 +10,12 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 
-const SITE_URL = process.env.SITE_URL || "https://rayalaseemaexpress.com";
+const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
 
 export const metadata: Metadata = {
-  title: "Ethics Policy | రాయలసీమ ఎక్స్‌ప్రెస్",
+  title: "Ethics Policy | రాయలసీమ న్యూస్",
   description:
-    "Rayalaseema Express ethics policy — sourcing standards, conflict of interest, anonymous sources, gifts, and paid content disclosure.",
+    "Rayalaseema News ethics policy — sourcing standards, conflict of interest, anonymous sources, gifts, and paid content disclosure.",
   alternates: { canonical: `${SITE_URL}/ethics-policy` },
 };
 
@@ -33,7 +33,7 @@ export default function EthicsPolicyPage() {
 
         <div className="article-body" style={{ fontSize: 16, lineHeight: 1.85, color: "#333" }}>
           <p>
-            Rayalaseema Express commits to honest, accurate, and independent journalism for the Rayalaseema region.
+            Rayalaseema News commits to honest, accurate, and independent journalism for the Rayalaseema region.
             Our ethics policy sets the standards every reporter, editor, and contributor follows. We treat these as
             commitments to our readers, not internal guidelines.
           </p>
@@ -48,7 +48,7 @@ export default function EthicsPolicyPage() {
 
           <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 32, marginBottom: 10 }}>Independence</h2>
           <p>
-            Rayalaseema Express is independent of any political party, government office, or corporate interest.
+            Rayalaseema News is independent of any political party, government office, or corporate interest.
             No reporter or editor may accept gifts, paid travel, or favours from sources, parties, or PR agencies
             whose work they cover. Reporters disclose any personal connection — family, financial, or social — to
             the subject of a story before reporting it.
@@ -95,8 +95,8 @@ export default function EthicsPolicyPage() {
 
           <h2 style={{ fontSize: 22, fontWeight: 800, marginTop: 32, marginBottom: 10 }}>How to report a violation</h2>
           <p>
-            If you believe Rayalaseema Express has violated this policy, email
-            {" "}<a href="mailto:ethics@rayalaseemaexpress.com" style={{ color: "var(--color-brand)" }}>ethics@rayalaseemaexpress.com</a>{" "}
+            If you believe Rayalaseema News has violated this policy, email
+            {" "}<a href="mailto:ethics@rayalaseemanews.com" style={{ color: "var(--color-brand)" }}>ethics@rayalaseemanews.com</a>{" "}
             with the article URL and a description of the concern. Complaints are reviewed by the Editor-in-Chief
             within five working days. See also our
             {" "}<Link href="/corrections-policy" style={{ color: "var(--color-brand)" }}>corrections policy</Link>{" "}

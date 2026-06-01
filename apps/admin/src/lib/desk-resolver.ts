@@ -7,8 +7,8 @@ import { prisma } from "@rayalaseema/db";
  *   1. Explicit `deskId` (verified to exist)
  *   2. Desk linked to the article's `constituencyId`        → e.g. "ప్రొద్దుటూరు"
  *   3. Desk linked to the constituency's parent district    → e.g. "కర్నూలు"
- *   4. Desk linked to the article's `categoryId`            → e.g. "రాయలసీమ ఎక్స్‌ప్రెస్ బిజినెస్ డెస్క్"
- *   5. Root "Rayalaseema Express" geographic desk
+ *   4. Desk linked to the article's `categoryId`            → e.g. "రాయలసీమ న్యూస్ బిజినెస్ డెస్క్"
+ *   5. Root "Rayalaseema News" geographic desk
  *
  * Returns `null` only if the Desk table is empty (i.e. seed never ran).
  */
@@ -51,6 +51,6 @@ export async function resolveDeskId(input: {
   }
 
   // 5. Root
-  const root = await prisma.desk.findUnique({ where: { slug: "desk-rayalaseema-express" }, select: { id: true } });
+  const root = await prisma.desk.findUnique({ where: { slug: "desk-rayalaseema-news" }, select: { id: true } });
   return root?.id ?? null;
 }

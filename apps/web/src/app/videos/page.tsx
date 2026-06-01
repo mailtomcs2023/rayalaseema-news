@@ -6,9 +6,9 @@ import { VideoGrid } from "@/components/video-grid";
 import { getSiteConfig } from "@/lib/db-queries";
 
 export const metadata: Metadata = {
-  title: "వీడియోలు | రాయలసీమ ఎక్స్‌ప్రెస్",
+  title: "వీడియోలు | రాయలసీమ న్యూస్",
   description:
-    "రాయలసీమ ఎక్స్‌ప్రెస్ సొంత నిర్మాణ వీడియోలు — ఇంటర్వ్యూలు, గ్రౌండ్ రిపోర్ట్‌లు, ఎక్స్‌ప్లైనర్‌లు, జిల్లా కవరేజీ.",
+    "రాయలసీమ న్యూస్ సొంత నిర్మాణ వీడియోలు — ఇంటర్వ్యూలు, గ్రౌండ్ రిపోర్ట్‌లు, ఎక్స్‌ప్లైనర్‌లు, జిల్లా కవరేజీ.",
 };
 
 export default async function VideosPage() {

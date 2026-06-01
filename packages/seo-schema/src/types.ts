@@ -49,9 +49,9 @@ export type AuthorRef = {
 
 /** Publication-level constants — passed once to every org-level generator. */
 export type PublisherConfig = {
-  siteUrl: string;             // e.g. "https://rayalaseemaexpress.com"
-  publicationName: string;     // e.g. "Rayalaseema Express"
-  publicationNameTe: string;   // e.g. "రాయలసీమ ఎక్స్‌ప్రెస్"
+  siteUrl: string;             // e.g. "https://rayalaseemanews.com"
+  publicationName: string;     // e.g. "Rayalaseema News"
+  publicationNameTe: string;   // e.g. "రాయలసీమ న్యూస్"
   logoUrl: string;
   // Optional but populated for full E-E-A-T signal — fields default to
   // sensible empties if not provided.
