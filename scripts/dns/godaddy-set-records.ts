@@ -22,8 +22,9 @@ const TTL = 600;
 type Record = { type: string; name: string; data: string; ttl: number };
 
 const RECORDS: Record[] = [
-  { type: "A",     name: "@",   data: TARGET_IP, ttl: TTL },
-  { type: "CNAME", name: "www", data: "@",       ttl: TTL },
+  { type: "A",     name: "@",     data: TARGET_IP, ttl: TTL },
+  { type: "A",     name: "admin", data: TARGET_IP, ttl: TTL },
+  { type: "CNAME", name: "www",   data: "@",       ttl: TTL },
 ];
 
 function loadEnv(): Record<string, string> {

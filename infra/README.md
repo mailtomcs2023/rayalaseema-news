@@ -26,33 +26,45 @@ dig +short rayalaseemanews.com           # expect 20.198.2.80
 dig +short www.rayalaseemanews.com       # expect rayalaseemanews.com.
 ```
 
-## 2. Nginx — new server block (on VM)
+## 2. Nginx — new server blocks (on VM)
 
-Copy `infra/nginx/rayalaseemanews.com.conf` to `/etc/nginx/sites-available/` on the VM.
+Two new sites — web (port 3000) and admin (port 3001):
 
 ```sh
 # On the VM
-sudo cp rayalaseemanews.com.conf /etc/nginx/sites-available/
-sudo ln -sf /etc/nginx/sites-available/rayalaseemanews.com.conf /etc/nginx/sites-enabled/rayalaseemanews.com.conf
-sudo nginx -t
-sudo systemctl reload nginx
+sudo cp rayalaseemanews.com.conf       /etc/nginx/sites-available/rayalaseema-news
+sudo cp admin.rayalaseemanews.com.conf /etc/nginx/sites-available/rayalaseema-news-admin
 
-# Issue cert + auto-edit nginx config for SSL
-sudo certbot --nginx -d rayalaseemanews.com -d www.rayalaseemanews.com
+sudo ln -sf /etc/nginx/sites-available/rayalaseema-news       /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/rayalaseema-news-admin /etc/nginx/sites-enabled/
+
+sudo nginx -t && sudo systemctl reload nginx
+
+# Issue certs + auto-edit nginx for SSL
+sudo certbot --nginx \
+  -d rayalaseemanews.com -d www.rayalaseemanews.com \
+  -d admin.rayalaseemanews.com \
+  --non-interactive --agree-tos -m reddygs@medhahosting.com
 ```
 
-## 3. Old domain — 301 redirect (on VM)
+## 3. Old domains — 301 redirect (on VM)
 
-After the NEW domain serves traffic on HTTPS, swap the OLD `rayalaseema-express.com` server block to a pure-redirect block:
+After the NEW domains serve HTTPS, swap the two OLD server blocks to pure-redirect blocks:
 
 ```sh
-# On the VM — use the file infra/nginx/rayalaseemaexpress.com-redirect.conf
-sudo cp rayalaseemaexpress.com-redirect.conf /etc/nginx/sites-available/rayalaseemaexpress.com.conf
-sudo nginx -t
-sudo systemctl reload nginx
+# Web (.com apex + www + .in apex + www) -> https://rayalaseemanews.com
+sudo cp rayalaseemaexpress.com-redirect.conf       /etc/nginx/sites-available/rayalaseema
+# Admin (admin.rayalaseemaexpress.com)             -> https://admin.rayalaseemanews.com
+sudo cp admin.rayalaseemaexpress.com-redirect.conf /etc/nginx/sites-available/rayalaseema-admin
+
+sudo nginx -t && sudo systemctl reload nginx
 ```
 
-Keep `certbot renew` running for the OLD domain so the HTTPS redirect stays valid. Drop the old cert only after >12 months of no traffic via the OLD domain (Google has long memory).
+Keep `certbot renew` running for the OLD domains so the HTTPS redirect stays valid. The `.in` legacy domain stays HTTP-only (no cert in original config); per-URL 301 still works for HTTP traffic. Drop the old cert only after >12 months of no traffic via the OLD domain (Google has long memory).
+
+### Decisions baked in
+- `rayalaseemanews.in` is NOT purchased. The legacy `rayalaseemaexpress.in` redirects to `rayalaseemanews.com` (cross-TLD). Going forward: `.com` only.
+- Admin subdomain is `admin.rayalaseemanews.com`, mirroring the old `admin.rayalaseemaexpress.com`.
 
 ## 4. App env (on VM, in PM2 ecosystem)
 
