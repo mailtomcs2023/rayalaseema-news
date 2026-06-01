@@ -61,6 +61,16 @@ const step3Schema = kycSubmitSchema.pick({
   bankBranch: true,
 });
 
+// The exact field set /api/onboarding/kyc/submit validates server-side.
+// Flushed in one PATCH right before submit so the persisted profile matches
+// what the client just validated (see submitForReview). Keep in sync with
+// the union of step1/step2/step3 schemas above.
+const SUBMIT_FIELDS = [
+  "fullName", "dateOfBirth", "address", "city", "pincode", "primaryDistrict",
+  "photoUrl", "aadhaarNumber", "aadhaarFrontUrl", "aadhaarBackUrl", "panNumber", "panCardUrl",
+  "upiId", "bankName", "bankAccount", "bankIfsc", "bankBranch",
+] as const satisfies readonly (keyof ProfileDraft)[];
+
 // Flattens a ZodError into { field: firstMessage } for per-input
 // highlighting. Same shape the reporter app uses (apps/reporter/src/lib
 // /validation.ts), so the helper is duplicated rather than imported.
@@ -292,6 +302,30 @@ export default function KycOnboardingPage() {
     setErrors({});
     setSubmitting(true);
     try {
+      // Flush the full form before submitting. Fields auto-save on blur, but
+      // the value typed into the last field can still be sitting in React
+      // state without its PATCH having landed (blur→save is async, or a save
+      // silently failed). The /submit endpoint validates the PERSISTED
+      // profile, not what the client holds - so without this flush the server
+      // 400s on a field the user has actually filled and the client just
+      // validated as complete.
+      const flushBody: Record<string, string | null> = {};
+      for (const key of SUBMIT_FIELDS) {
+        const v = form[key];
+        flushBody[key] = v ? String(v) : null;
+      }
+      const flush = await fetch("/api/onboarding/kyc", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(flushBody),
+      });
+      if (!flush.ok) {
+        const d = await flush.json().catch(() => ({}));
+        toast.error(d.error || "Could not save your details - try again.");
+        setSubmitting(false);
+        return;
+      }
+
       const res = await fetch("/api/onboarding/kyc/submit", { method: "POST" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
