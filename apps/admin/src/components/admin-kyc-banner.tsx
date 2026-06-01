@@ -3,10 +3,10 @@
 // status from the DB on every nav so a freshly-verified user sees the
 // banner disappear immediately.
 //
-// Floats at the BOTTOM-RIGHT of the viewport (fixed positioning, z-50) so
-// it nudges without displacing the page heading or the first row of
-// content. Spans full width on mobile (with a 16px margin), caps at ~440px
-// on >= sm so it doesn't dominate the desk on a laptop.
+// Pinned full-width to the BOTTOM of the viewport (fixed positioning,
+// z-50), offset by the 240px sidebar on the left so it aligns with the
+// page content gutter. Same shape as the original top banner - just
+// inverted to the bottom so it stops pushing the page heading down.
 //
 // Status palette:
 //   PENDING    → amber, "Complete your KYC"
@@ -67,12 +67,23 @@ export async function AdminKycBanner({ userId }: { userId: string }) {
           cta: "Upload documents",
         };
 
-  // Floating variant - fixed bottom-right, capped at ~440px wide on
-  // desktop, full-bleed (with 16px gutters) on mobile. Strong shadow +
-  // tinted border so it reads as a persistent nudge floating above the
-  // page content rather than part of the page itself.
+  // Full-width bottom variant - fixed strip pinned to the viewport floor,
+  // offset on the left by the sidebar (240px) so it lines up with the
+  // page content gutter. Same rounded card chrome as before; shadow now
+  // points UP (-y) since the elevation source is below the page.
   return (
-    <div className="shadcn-scope fixed bottom-4 left-4 right-4 z-50 sm:left-auto sm:right-4 sm:max-w-md">
+    <div
+      className="shadcn-scope"
+      style={{
+        position: "fixed",
+        bottom: 0,
+        left: 0,
+        right: 0,
+        marginLeft: 240,
+        padding: "0 24px 16px",
+        zIndex: 50,
+      }}
+    >
       <div
         role="status"
         className={`flex items-center gap-3 rounded-xl border ${ui.bg} ${ui.border} px-4 py-3 shadow-lg`}
