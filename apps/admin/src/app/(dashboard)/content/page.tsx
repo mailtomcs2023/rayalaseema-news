@@ -28,6 +28,7 @@ import {
   FilterIcon,
   ListFilterIcon,
   PlusIcon,
+  RefreshCwIcon,
   SparklesIcon,
   TrashIcon,
 } from "lucide-react";
@@ -338,6 +339,17 @@ export default function ContentListPage() {
             </span>
           );
         },
+      },
+      {
+        id: "author",
+        header: "Author",
+        size: 130,
+        enableSorting: false,
+        cell: ({ row }) => (
+          <span className="text-[13px] text-muted-foreground">
+            {row.original.author?.name ?? "—"}
+          </span>
+        ),
       },
       {
         accessorKey: "status",
@@ -745,6 +757,16 @@ export default function ContentListPage() {
                 </>
               )}
 
+              <Button
+                variant="outline"
+                size="icon"
+                title="Refresh list"
+                aria-label="Refresh list"
+                disabled={loading}
+                onClick={() => load()}
+              >
+                <RefreshCwIcon size={16} className={cn("opacity-70", loading && "animate-spin")} />
+              </Button>
               <WithTooltip
                 side="bottom"
                 text={"Bulk-fetch from NewsData.io, translate to Telugu via Azure OpenAI,\nand save as DRAFT in the review queue."}
