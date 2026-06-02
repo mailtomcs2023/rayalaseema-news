@@ -73,6 +73,12 @@ jobs:
             # log in by code, not just email.
             bunx tsx scripts/backfill-user-codes.ts
 
+            echo "=== Merge legacy seed admin into live admin, then delete it (idempotent) ==="
+            # Folds admin@rayalaseemaexpress.com (old rebrand-orphaned seed
+            # admin) into admin@rayalaseemanews.com and removes it. No-ops once
+            # done. Runs AFTER the pg_dump backup above so it's recoverable.
+            bunx tsx scripts/merge-legacy-admin.ts
+
             echo "=== Rebuild constituencies (idempotent: inserts missing ACs + remaps old) ==="
             bunx tsx scripts/rebuild-constituencies.ts
             bunx tsx scripts/remap-constituencies.ts
@@ -152,6 +158,11 @@ jobs:
             AZURE_IMAGES_DEPLOYMENT="gpt-image"
             AZURE_IMAGES_API_VERSION="2025-04-01-preview"
             AZURE_STORAGE_CONNECTION_STRING="${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}"
+            # Field-level encryption key for KYC PII (Aadhaar/PAN/bank). The
+            # /api/onboarding/kyc PATCH encrypts these on save; without this
+            # key encrypt() throws and the save 500s. 32-byte base64 - rotate
+            # via the GitHub secret, never commit a real value.
+            KYC_ENCRYPTION_KEY="${{ secrets.KYC_ENCRYPTION_KEY }}"
             ENV
 
             echo "=== Build apps ==="

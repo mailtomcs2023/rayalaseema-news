@@ -16,6 +16,7 @@ import { Suspense } from "react";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { AdminKycBanner } from "@/components/admin-kyc-banner";
+import { KycSessionRefresher } from "@/components/kyc-session-refresher";
 import { Sidebar } from "@/components/sidebar";
 import type { Role } from "@/lib/roles";
 
@@ -62,6 +63,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <>
+      {/* Re-reads kycStatus from the DB into the JWT so a user verified by
+          an admin sees the gate clear without logging out. Self-gates to
+          non-verified non-admins; inert otherwise. */}
+      <KycSessionRefresher />
       {!suppressSidebar && <Sidebar initialRole={initialRole} />}
       {/* The KYC banner does its own prisma.findUnique on every render,
           which used to block the WHOLE layout from streaming on every
