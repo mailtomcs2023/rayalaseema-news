@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 
 type SettingField = {
   key: string;
@@ -143,13 +144,9 @@ export default function SettingsPage() {
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             {saved && <span style={{ fontSize: 13, color: "#16a34a", fontWeight: 600, background: "#dcfce7", padding: "4px 12px", borderRadius: 6 }}>Saved!</span>}
-            <button onClick={handleSave} disabled={saving} style={{
-              padding: "10px 28px", background: saving ? "#999" : "#FF2C2C", color: "#fff",
-              borderRadius: 8, fontSize: 14, fontWeight: 700, border: "none", cursor: saving ? "not-allowed" : "pointer",
-              boxShadow: "0 2px 8px rgba(255,44,44,0.3)",
-            }}>
+            <Button onClick={handleSave} disabled={saving} className="bg-[#FF2C2C] px-7 font-bold text-white shadow-md hover:bg-[#e02525]">
               {saving ? "Saving..." : "Save All Settings"}
-            </button>
+            </Button>
           </div>
         </div>
 

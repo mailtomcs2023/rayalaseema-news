@@ -98,13 +98,15 @@ export default function ChangePasswordPage() {
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-inverse.svg" alt="Rayalaseema News" style={{ height: 32, display: "block" }} />
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => signOut({ callbackUrl: "/login" })}
-            className="inline-flex items-center gap-1.5 rounded-md bg-white/15 px-3 py-1.5 text-sm font-medium text-white hover:bg-white/25"
+            className="gap-1.5 bg-white/15 text-white hover:bg-white/25 hover:text-white"
           >
             <LogOut size={14} /> Sign out
-          </button>
+          </Button>
         </header>
       ) : (
         <header className="flex items-center justify-between border-b border-border bg-white px-6 py-3">
@@ -112,13 +114,15 @@ export default function ChangePasswordPage() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt="Rayalaseema News" style={{ height: 32, width: "auto" }} />
           </div>
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={() => signOut({ callbackUrl: "/login" })}
-            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-white px-3 py-1.5 text-sm font-medium text-foreground hover:bg-gray-50"
+            className="gap-1.5"
           >
             <LogOut size={14} /> Sign out
-          </button>
+          </Button>
         </header>
       )}
 
