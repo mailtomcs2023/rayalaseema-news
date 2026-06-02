@@ -14,6 +14,7 @@ import {
   contentCreateSchema,
 } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
+import { rehostDataUrlFields } from "@/lib/rehost-data-url";
 import { requireKyc } from "@/lib/kyc-guard";
 import { logAudit } from "@/lib/audit";
 import { sanitizeSlug } from "@/lib/slug";
@@ -195,7 +196,9 @@ export async function POST(req: NextRequest) {
   if (isAuthError(session)) return session;
   try {
     const authorId = session.user.id;
-    const rawBody = await req.json();
+    // Rehost any base64 data: image fields to a hosted URL before validation
+    // so a pasted/auto-fetched data URL doesn't trip the 2048-char URL cap.
+    const rawBody = await rehostDataUrlFields(await req.json());
 
     // Zod validation at the boundary - every field is shape-checked +
     // length-capped before we run any DB queries. Failures surface as
