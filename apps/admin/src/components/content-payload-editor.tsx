@@ -10,6 +10,7 @@
 
 import { useState } from "react";
 import { ImageUpload } from "@/components/image-upload";
+import { VideoUpload } from "@/components/video-upload";
 import { DatePicker } from "@/components/ui/date-picker";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 
@@ -28,11 +29,11 @@ export function ContentPayloadEditor({ type, payload, setPayload }: ContentPaylo
     // F2 - VIDEO subform. videoUrl + duration (sec) + optional thumbnail.
     return (
       <SectionBox title="Video details">
-        <Field label="Video URL">
-          <input type="url" value={(payload.videoUrl as string) || ""}
-            onChange={(e) => upd({ videoUrl: e.target.value })}
-            placeholder="https://youtube.com/watch?v=… or https://blob.azure.com/clip.mp4"
-            style={inpStyle} />
+        <Field label="Video (upload MP4/WebM, or paste a YouTube/hosted URL)">
+          <VideoUpload
+            value={(payload.videoUrl as string) || ""}
+            onChange={(v, secs) => upd(secs != null ? { videoUrl: v, duration: secs } : { videoUrl: v })}
+          />
         </Field>
         <Field label="Duration (seconds)">
           <input type="number" min="0" value={String(payload.duration ?? "")}
@@ -51,11 +52,11 @@ export function ContentPayloadEditor({ type, payload, setPayload }: ContentPaylo
     // F2 - REEL subform. Vertical short clip URL + duration.
     return (
       <SectionBox title="Reel details">
-        <Field label="Clip URL (vertical 9:16)">
-          <input type="url" value={(payload.clipUrl as string) || ""}
-            onChange={(e) => upd({ clipUrl: e.target.value })}
-            placeholder="https://blob.azure.com/reel.mp4"
-            style={inpStyle} />
+        <Field label="Clip (upload vertical 9:16 MP4/WebM, or paste a hosted URL)">
+          <VideoUpload
+            value={(payload.clipUrl as string) || ""}
+            onChange={(v, secs) => upd(secs != null ? { clipUrl: v, duration: secs } : { clipUrl: v })}
+          />
         </Field>
         <Field label="Duration (seconds)">
           <input type="number" min="0" value={String(payload.duration ?? "")}

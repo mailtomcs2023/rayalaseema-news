@@ -1,4 +1,10 @@
-import { BlobServiceClient } from "@azure/storage-blob";
+import {
+  BlobServiceClient,
+  StorageSharedKeyCredential,
+  generateBlobSASQueryParameters,
+  BlobSASPermissions,
+  SASProtocol,
+} from "@azure/storage-blob";
 import { processImageBuffer } from "./image-process";
 
 const CONN = process.env.AZURE_STORAGE_CONNECTION_STRING;
@@ -15,6 +21,48 @@ const EXT_BY_TYPE: Record<string, string> = {
 
 export function blobConfigured(): boolean {
   return !!CONN;
+}
+
+// Parse account name/key out of the connection string so we can mint a SAS.
+function parseConnString(conn: string): { accountName: string; accountKey: string; suffix: string } | null {
+  const map: Record<string, string> = {};
+  for (const part of conn.split(";")) {
+    const i = part.indexOf("=");
+    if (i > 0) map[part.slice(0, i).trim()] = part.slice(i + 1).trim();
+  }
+  if (!map.AccountName || !map.AccountKey) return null;
+  return { accountName: map.AccountName, accountKey: map.AccountKey, suffix: map.EndpointSuffix || "core.windows.net" };
+}
+
+// Mint a short-lived, write-only SAS so the browser can upload a video file
+// DIRECTLY to Azure Blob, bypassing the Next server's body/memory limits.
+// Returns the upload URL (with SAS) + the final public blob URL, or null if
+// blob storage isn't configured / the connection string lacks an account key.
+export function videoUploadSas(
+  ext: string,
+  contentType: string,
+): { uploadUrl: string; blobUrl: string } | null {
+  if (!CONN) return null;
+  const parsed = parseConnString(CONN);
+  if (!parsed) return null;
+  const { accountName, accountKey, suffix } = parsed;
+  const cred = new StorageSharedKeyCredential(accountName, accountKey);
+  const blobName = `videos/${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext}`;
+  const now = Date.now();
+  const sas = generateBlobSASQueryParameters(
+    {
+      containerName: CONTAINER,
+      blobName,
+      permissions: BlobSASPermissions.parse("cw"), // create + write only
+      startsOn: new Date(now - 60_000),
+      expiresOn: new Date(now + 15 * 60_000),
+      protocol: SASProtocol.Https,
+      contentType,
+    },
+    cred,
+  ).toString();
+  const base = `https://${accountName}.blob.${suffix}/${CONTAINER}/${blobName}`;
+  return { uploadUrl: `${base}?${sas}`, blobUrl: base };
 }
 
 /** Upload a raw buffer to Azure Blob, return its public URL. */
