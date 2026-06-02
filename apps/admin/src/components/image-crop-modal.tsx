@@ -28,6 +28,7 @@ export function ImageCropModal({ src, onConfirm, onClose }: ImageCropModalProps)
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
   const [aspect, setAspect] = useState<number | undefined>(16 / 9);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   // When image loads, pre-set a centered 90% crop at the chosen aspect.
   const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -64,16 +65,39 @@ export function ImageCropModal({ src, onConfirm, onClose }: ImageCropModalProps)
   };
 
   const applyCrop = async () => {
-    if (!imgRef.current || !completedCrop) {
-      // No crop drawn - return original
+    const img = imgRef.current;
+    if (!img || !completedCrop || completedCrop.width < 1 || completedCrop.height < 1) {
+      // No crop drawn - keep the original image untouched.
       onConfirm(src);
       return;
     }
     setSaving(true);
+    setError("");
     try {
-      const dataUrl = await drawCropToDataUrl(imgRef.current, completedCrop);
-      onConfirm(dataUrl);
-    } finally {
+      // Convert the on-screen (displayed) selection to NATURAL pixels so the
+      // server crops the full-resolution source, not the scaled-down preview.
+      const scaleX = img.naturalWidth / img.width;
+      const scaleY = img.naturalHeight / img.height;
+      const res = await fetch("/api/upload/crop", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          src,
+          x: completedCrop.x * scaleX,
+          y: completedCrop.y * scaleY,
+          width: completedCrop.width * scaleX,
+          height: completedCrop.height * scaleY,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.url) {
+        setError(data.error || `Crop failed (${res.status}). Please try again.`);
+        setSaving(false);
+        return;
+      }
+      onConfirm(data.url);
+    } catch (e) {
+      setError((e as Error)?.message || "Crop failed. Please try again.");
       setSaving(false);
     }
   };
@@ -130,6 +154,10 @@ export function ImageCropModal({ src, onConfirm, onClose }: ImageCropModalProps)
           </ReactCrop>
         </div>
 
+        {error && (
+          <p style={{ marginTop: 12, color: "#dc2626", fontSize: 13, fontWeight: 600 }}>{error}</p>
+        )}
+
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
           <button onClick={onClose}
             style={{ padding: "8px 16px", background: "#f3f4f6", color: "#374151", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
@@ -145,25 +173,3 @@ export function ImageCropModal({ src, onConfirm, onClose }: ImageCropModalProps)
   );
 }
 
-// Render the user's crop selection onto a canvas at native resolution and
-// export it as a JPEG data URL. The native canvas approach avoids needing
-// a server-side image worker - small images (<2MB) round-trip fine in the
-// browser.
-async function drawCropToDataUrl(img: HTMLImageElement, crop: PixelCrop): Promise<string> {
-  const scaleX = img.naturalWidth / img.width;
-  const scaleY = img.naturalHeight / img.height;
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.floor(crop.width * scaleX);
-  canvas.height = Math.floor(crop.height * scaleY);
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Canvas 2D context unavailable");
-  ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(
-    img,
-    crop.x * scaleX, crop.y * scaleY,
-    crop.width * scaleX, crop.height * scaleY,
-    0, 0,
-    canvas.width, canvas.height,
-  );
-  return canvas.toDataURL("image/jpeg", 0.92);
-}

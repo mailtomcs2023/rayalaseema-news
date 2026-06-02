@@ -1203,22 +1203,11 @@ export default function ContentEditorPage() {
         <ImageCropModal
           src={cropSrc}
           onClose={() => setCropSrc(null)}
-          onConfirm={async (dataUrl) => {
-            // Crop modal returns a data URL. If user skipped crop the data
-            // URL == the original Azure URL we passed in - bail out without
-            // re-uploading.
-            if (!dataUrl.startsWith("data:")) { setCropSrc(null); return; }
-            try {
-              const blob = await (await fetch(dataUrl)).blob();
-              const form = new FormData();
-              form.append("file", blob, "cropped.jpg");
-              const res = await fetch("/api/upload", { method: "POST", body: form });
-              const data = await res.json();
-              if (res.ok && data.url) setFeaturedImage(data.url);
-              else setError(data.error || "Upload failed");
-            } catch (e: any) {
-              setError(e.message || "Crop upload failed");
-            }
+          onConfirm={(url) => {
+            // Modal now crops + uploads server-side and returns the hosted
+            // URL (or the original URL unchanged if no crop was drawn). Just
+            // adopt it - no client-side re-upload needed.
+            if (url) setFeaturedImage(url);
             setCropSrc(null);
           }}
         />
