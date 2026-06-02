@@ -61,7 +61,7 @@ function districtItem(label: string, slug: string) {
   return {
     id: id(),
     label,
-    target: { type: "INTERNAL_URL", url: `/district/${slug}` },
+    target: { type: "INTERNAL_URL", url: `/${slug}` },
     mobileVariant: "show",
     children: [],
   };

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SearchBar } from "./search-bar";
 import { MarketTicker } from "./market-ticker";
-import { categoryHref } from "@/lib/category-href";
+import { categoryHref, normalizeSectionHref } from "@/lib/category-href";
 import { Button } from "@/components/ui/button";
 
 // Rayalaseema districts ARE the main nav - this is a Rayalaseema newspaper
@@ -111,7 +111,9 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
           const t = it.target;
           if (!t) return "#";
           if (t.type === "CATEGORY") return categoryHref(t.categorySlug);
-          if (t.type === "INTERNAL_URL") return t.url;
+          // INTERNAL_URL items persist legacy /category|/district paths; the
+          // sections now live at the bare slug, so normalize on render.
+          if (t.type === "INTERNAL_URL") return normalizeSectionHref(t.url);
           if (t.type === "EXTERNAL_URL") return t.url;
           if (t.type === "CONTENT" && t.contentSlugCache && t.contentTypeCache) {
             const prefix: Record<string, string> = {
@@ -127,7 +129,8 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
           for (const c of it.children) {
             const ct = c.target;
             const childHref = ct?.type === "CATEGORY" ? categoryHref(ct.categorySlug)
-              : ct?.type === "INTERNAL_URL" || ct?.type === "EXTERNAL_URL" ? ct.url
+              : ct?.type === "INTERNAL_URL" ? normalizeSectionHref(ct.url)
+              : ct?.type === "EXTERNAL_URL" ? ct.url
               : "#";
             drop.push({ name: c.label, slug: childHref });
           }

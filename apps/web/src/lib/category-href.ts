@@ -19,3 +19,12 @@ export function normalizeCategoryHref(href: string): string {
   const m = href.match(/^\/category\/([^/?#]+)(.*)$/);
   return m ? `/${m[1]}${m[2]}` : href;
 }
+
+// Like normalizeCategoryHref but also strips the /district/ prefix. Used for
+// INTERNAL_URL menu items, which the menu builder persists as /category/<slug>
+// or /district/<slug>; both now serve at the bare root slug. Leaves any other
+// internal/external URL untouched.
+export function normalizeSectionHref(href: string): string {
+  const m = href.match(/^\/(?:category|district)\/([^/?#]+)(.*)$/);
+  return m ? `/${m[1]}${m[2]}` : href;
+}
