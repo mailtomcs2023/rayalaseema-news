@@ -5,15 +5,50 @@ import { buildSlugFromTitle, sanitizeSlug } from "@/lib/slug";
 import { uploadImageFromUrl } from "@/lib/blob";
 
 const NEWSDATA_API_KEY = process.env.NEWSDATA_API_KEY;
+const PTI_CENTERCODE = process.env.PTI_CENTERCODE;
 
-// GET /api/fetch-news?provider=newsdata|googlenews&q=...
+// PTI subcategory tokens that are internal-only per the PTI API doc -
+// articles whose subcategory contains ONLY these are dropped.
+const PTI_NOISE_SUBCATS = new Set(["GEN", "ESPL", "DSB"]);
+
+// Map PTI's "Wednesday, Jan 24, 2024 12:11:22" timestamp to ISO. PTI runs
+// on IST (Asia/Kolkata) but the string carries no offset, so we append
+// +05:30 to keep downstream new Date() consumers honest.
+function parsePtiPublishedAt(raw: string): string {
+  if (!raw) return new Date().toISOString();
+  // Strip the leading day-name + comma; Date() can parse the rest.
+  const cleaned = raw.replace(/^[A-Za-z]+,\s*/, "").trim();
+  const d = new Date(`${cleaned} +05:30`);
+  return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+}
+
+// Strip HTML tags + collapse whitespace. Used to derive a plain-text
+// description from PTI's <p>-wrapped story body.
+function stripHtml(s: string): string {
+  return (s || "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// GET /api/fetch-news?provider=newsdata|googlenews|pti&q=...
 //
-// Two free providers shipped:
+// Three providers shipped:
 //   newsdata   - NewsData.io REST API. Requires NEWSDATA_API_KEY.
 //   googlenews - Google News RSS endpoint. No key required, no rate limit
 //                docs but treated as zero-trust public surface.
+//   pti        - PTI editorial wire. Requires PTI_CENTERCODE. PTI's API
+//                has no keyword search - we pull a time window and filter
+//                title/body for `q` after fetch. Optional `from`/`to`
+//                ISO timestamps; default is the last 24h.
 //
-// Both return the same shape: { articles: [{ externalId, title, description,
+// All return the same shape: { articles: [{ externalId, title, description,
 // imageUrl, sourceUrl, source, language, publishedAt, keywords }] }. POST
 // /api/fetch-news (further down this file) imports a result row as a draft.
 export async function GET(req: NextRequest) {
@@ -105,6 +140,84 @@ export async function GET(req: NextRequest) {
         } catch { /* timeout / network / parse - leave imageUrl null */ }
       }));
       return NextResponse.json({ total: items.length, articles: items, provider: "googlenews" });
+    }
+
+    if (provider === "pti") {
+      if (!PTI_CENTERCODE) return NextResponse.json({ error: "PTI_CENTERCODE not configured" }, { status: 503 });
+
+      // Time window. Default = last 24h. Caller may override with ISO
+      // timestamps via `from` and `to`. PTI expects "yyyy/MM/dd HH:mm:ss"
+      // in IST with no offset; we convert here.
+      const toIsoIst = (d: Date) => {
+        const ist = new Date(d.getTime() + (5 * 60 + 30) * 60 * 1000);
+        const p = (n: number, w = 2) => String(n).padStart(w, "0");
+        return `${ist.getUTCFullYear()}/${p(ist.getUTCMonth() + 1)}/${p(ist.getUTCDate())} ${p(ist.getUTCHours())}:${p(ist.getUTCMinutes())}:${p(ist.getUTCSeconds())}`;
+      };
+      const now = new Date();
+      const fromRaw = searchParams.get("from");
+      const toRaw = searchParams.get("to");
+      const fromDate = fromRaw ? new Date(fromRaw) : new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const toDate = toRaw ? new Date(toRaw) : now;
+      const fromTime = toIsoIst(fromDate);
+      const endTime = toIsoIst(toDate);
+
+      const url = `https://editorial.pti.in/ptiapi/webservice1.asmx/JsonFile1?centercode=${encodeURIComponent(PTI_CENTERCODE)}&FromTime=${encodeURIComponent(fromTime)}&EndTime=${encodeURIComponent(endTime)}`;
+      const res = await fetch(url, { headers: { Accept: "application/json" } });
+      if (!res.ok) return NextResponse.json({ error: `PTI ${res.status}` }, { status: 502 });
+
+      // PTI sometimes wraps the array in a parent object - handle both.
+      const raw = await res.json();
+      const list: any[] = Array.isArray(raw) ? raw : Array.isArray(raw?.d) ? raw.d : Array.isArray(raw?.results) ? raw.results : [];
+
+      const wantCategory = (searchParams.get("category") || "").toUpperCase();
+      const filterQ = query.trim().toLowerCase();
+      // Some keyword expressions ship "OR" - split on it so any term hits.
+      const qTokens = filterQ.length
+        ? filterQ.split(/\s+or\s+/).map((t) => t.trim()).filter(Boolean)
+        : [];
+
+      const items = list
+        .map((r: any) => {
+          const subcats = String(r.subcategory || "")
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean);
+          const meaningful = subcats.filter((s) => !PTI_NOISE_SUBCATS.has(s));
+          if (subcats.length > 0 && meaningful.length === 0) return null;
+          const storyHtml = String(r.story || "");
+          const text = stripHtml(storyHtml);
+          return {
+            externalId: String(r.FileName || ""),
+            title: String(r.Headline || r.slug || "").trim(),
+            description: text.slice(0, 240),
+            content: storyHtml,
+            imageUrl: null,
+            // PTI's `link` is the generic www.ptinews.com root - useless
+            // for dedup. Synthesize a unique pseudo-URL from FileName so
+            // the Content.sourceUrl unique index does its job.
+            sourceUrl: r.FileName ? `https://editorial.pti.in/pti/${encodeURIComponent(r.FileName)}` : "",
+            source: "PTI",
+            language: "en",
+            category: String(r.category || "general").toLowerCase(),
+            publishedAt: parsePtiPublishedAt(r.PublishedAt),
+            keywords: [
+              ...(r.Priority ? [String(r.Priority)] : []),
+              ...meaningful,
+            ],
+            byline: r.Byline || "",
+            edNote: r.EDNote || "",
+          };
+        })
+        .filter((x): x is NonNullable<typeof x> => !!x && !!x.title && !!x.externalId)
+        .filter((x) => !wantCategory || x.category.toUpperCase() === wantCategory)
+        .filter((x) => {
+          if (!qTokens.length) return true;
+          const hay = `${x.title} ${x.description}`.toLowerCase();
+          return qTokens.some((t) => hay.includes(t));
+        })
+        .slice(0, size);
+
+      return NextResponse.json({ total: items.length, articles: items, provider: "pti" });
     }
 
     // Default: NewsData.io

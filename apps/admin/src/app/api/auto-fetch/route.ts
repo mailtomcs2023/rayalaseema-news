@@ -1,22 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError } from "@/lib/api-utils";
-import { buildSlugFromTitle, uniqueSlug } from "@/lib/slug";
 import { uploadImageFromUrl } from "@/lib/blob";
 import { runPipeline } from "@/lib/ai/pipeline";
 import { AIContentFilterError } from "@/lib/ai/client";
-
-// Sentinel thrown by importOneArticle when Azure's content filter blocked
-// the article. The POST handler catches it to bump the per-category
-// `blocked` counter without polluting the success/failure paths.
-class ArticleBlockedByFilter extends Error {
-  readonly categories: string[];
-  constructor(categories: string[]) {
-    super(`blocked by AI content filter (${categories.join(", ") || "unknown"})`);
-    this.name = "ArticleBlockedByFilter";
-    this.categories = categories;
-  }
-}
+import {
+  ArticleBlockedByFilter,
+  RawArticle,
+  generateSlug,
+  importOneArticle,
+  loadImportPrelude,
+} from "@/lib/news-import";
 
 const NEWSDATA_KEY = process.env.NEWSDATA_API_KEY;
 const AZURE_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT || "https://rayalaseema-ai.openai.azure.com/";
@@ -115,125 +109,10 @@ RULES:
   }
 }
 
-// Generate URL slug from title - delegates to shared sanitizer + uniqueness helper.
-function generateSlug(title: string, existingSlugs: Set<string>): string {
-  const base = buildSlugFromTitle(title);
-  const final = uniqueSlug(base, existingSlugs);
-  existingSlugs.add(final);
-  return final;
-}
-
-// Import one article into Content. Shared by both the bulk path and the
-// curated "import these N articles" path. Returns true on success.
-async function importOneArticle(
-  article: RawArticle,
-  categoryId: string,
-  constituencyId: string | undefined,
-  existingSourceSet: Set<unknown>,
-  existingSlugs: Set<string>,
-  adminId: string,
-  forceReimport: boolean,
-): Promise<boolean> {
-  const content = article.content || article.description || article.title || "";
-  if (!article.title || content.length < 20) return false;
-
-  // Dedup. Skip (default) or hard-delete + recreate (forceReimport).
-  if (article.link && existingSourceSet.has(article.link)) {
-    if (!forceReimport) return false;
-    const existing = await prisma.content.findFirst({
-      where: { sourceUrl: article.link, deletedAt: { not: undefined } },
-      select: { id: true, slug: true },
-    });
-    if (existing) {
-      await prisma.content.delete({ where: { id: existing.id } });
-      existingSourceSet.delete(article.link);
-      if (existing.slug) existingSlugs.delete(existing.slug);
-    }
-  }
-
-  // Wire-stories now go through the Eenadu-grade 3-step pipeline (extract
-  // → compose → fact-check) instead of the old single-pass translate. The
-  // pipeline returns a pre-formed dek + body + summary so we don't need
-  // separate fields from the model.
-  const sourceForPipeline = `${article.title}\n\n${content}`;
-  let translated: { title: string; summary: string; body: string };
-  try {
-    const result = await runPipeline(sourceForPipeline);
-    // body_html_te already opens with <p class="dek"> per compose's HTML
-    // rule, so no extra prepend (was showing the dek twice in the editor).
-    translated = {
-      title: result.article.title_te || article.title,
-      summary: result.article.summary_te || content.substring(0, 200),
-      body: result.article.body_html_te,
-    };
-  } catch (e) {
-    // Azure Responsible AI blocked this article. Bail out hard - the
-    // fallback (raw English in <p>) is worse than nothing because it
-    // silently pollutes the review queue with un-translated rows and
-    // the editor has no signal the AI rejected the source.
-    if (e instanceof AIContentFilterError) {
-      console.warn("[auto-fetch] content filter blocked:", e.categories.join(", "));
-      throw new ArticleBlockedByFilter(e.categories);
-    }
-    // Other pipeline failures (rate limit, transient model error) →
-    // fall back to a minimal English-as-Telugu placeholder so the row at
-    // least lands in DRAFT and the editor can fix it manually.
-    console.error("[auto-fetch] pipeline failed:", e);
-    translated = { title: article.title, summary: content.substring(0, 200), body: `<p>${content}</p>` };
-  }
-  const slug = generateSlug(article.title, existingSlugs);
-  const hostedImage = article.image_url ? await uploadImageFromUrl(article.image_url) : null;
-
-  let finalSlug = slug;
-  let created = false;
-  for (let attempt = 0; attempt < 3 && !created; attempt++) {
-    try {
-      await prisma.content.create({
-        data: {
-          type: "ARTICLE",
-          title: translated.title,
-          slug: finalSlug,
-          summary: translated.summary,
-          body: translated.body,
-          categoryId,
-          authorId: adminId,
-          featuredImage: hostedImage,
-          sourceUrl: article.link || null,
-          status: "DRAFT",
-          featured: false,
-          language: "TELUGU",
-          publishedAt: null,
-          constituencyId: constituencyId || null,
-        },
-      });
-      created = true;
-    } catch (e: any) {
-      const msg = String(e?.message || "");
-      if (msg.includes("Unique constraint") && msg.includes("slug")) {
-        finalSlug = `${slug}-${Date.now()}-${attempt + 1}`;
-        continue;
-      }
-      if (msg.includes("Unique constraint") && msg.includes("sourceUrl")) {
-        return false;
-      }
-      throw e;
-    }
-  }
-  if (created && article.link) existingSourceSet.add(article.link);
-  return created;
-}
-
-// Shape coming back from NewsData.io - the subset we use.
-interface RawArticle {
-  article_id?: string;
-  title?: string;
-  description?: string;
-  content?: string;
-  image_url?: string | null;
-  link?: string;
-  source_id?: string;
-  pubDate?: string;
-}
+// importOneArticle, RawArticle, generateSlug, ArticleBlockedByFilter,
+// loadImportPrelude all live in @/lib/news-import - shared with the PTI
+// route so the Eenadu-grade pipeline + dedup + slug retries stay consistent
+// across every wire source.
 
 // Two-phase API. Phase 1 (action="preview") fetches NewsData and returns
 // articles with dedup flags without importing anything. Phase 2 (action=
@@ -275,32 +154,16 @@ export async function POST(req: NextRequest) {
     ? Object.keys(categoryQueries).filter((k) => requestedCategories.includes(k))
     : Object.keys(categoryQueries);
 
-  // Get admin user for author
-  const admin = await prisma.user.findFirst({ where: { role: "ADMIN" } });
-  if (!admin) return NextResponse.json({ error: "No admin user" }, { status: 500 });
-
-  // Existing slugs + source URLs across ALL Content rows including trashed.
-  // The DB unique indexes on (slug) and (sourceUrl) span every row regardless
-  // of soft-delete state, so dedup must too. The prisma client extension
-  // (packages/db/src/index.ts) auto-injects `deletedAt: null` on findMany,
-  // hiding trashed rows from the default query - we work around it by
-  // running a second findMany with an EXPLICIT deletedAt filter (any
-  // explicit deletedAt key in where bypasses the auto-inject) and merging.
-  const [activeItems, trashedItems] = await Promise.all([
-    prisma.content.findMany({ select: { slug: true, sourceUrl: true } }),
-    prisma.content.findMany({
-      where: { deletedAt: { not: null } },
-      select: { slug: true, sourceUrl: true },
-    }),
-  ]);
-  const existingItems = [...activeItems, ...trashedItems];
-  const existingSlugs = new Set(existingItems.map((a) => a.slug).filter(Boolean) as string[]);
-  const existingSourceSet = new Set(existingItems.map((a) => a.sourceUrl).filter(Boolean));
-
-  // Get category IDs
-  const dbCategories = await prisma.category.findMany();
-  const categoryMap: Record<string, string> = {};
-  dbCategories.forEach((c) => (categoryMap[c.slug] = c.id));
+  // Shared prelude - admin author, categorySlug→id map, dedup sets.
+  let admin: { id: string };
+  let categoryMap: Record<string, string>;
+  let existingSlugs: Set<string>;
+  let existingSourceSet: Set<unknown>;
+  try {
+    ({ admin, categoryMap, existingSlugs, existingSourceSet } = await loadImportPrelude());
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message || "Prelude load failed" }, { status: 500 });
+  }
 
   // Phase 1 - preview. Pull NewsData hits for each selected category and
   // return them WITHOUT importing. Each result is flagged `alreadyImported`
