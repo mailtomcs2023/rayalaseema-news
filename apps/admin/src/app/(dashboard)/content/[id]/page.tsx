@@ -114,9 +114,11 @@ export default function ContentEditorPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: featuredImage, op }),
       });
-      const data = await res.json();
+      // Tolerate non-JSON bodies (e.g. an nginx 502/504 HTML page) so the
+      // user sees a clear message instead of "Unexpected token '<'".
+      const data = await res.json().catch(() => ({} as any));
       if (!res.ok || !data.url) {
-        setError(data.error || `Enhance failed (${res.status})`);
+        setError(data.error || "The image tool is temporarily unavailable. Please try again in a moment.");
       } else {
         setFeaturedImage(data.url);
         setSuccess(`✨ '${op}' applied. Review before publishing.`);

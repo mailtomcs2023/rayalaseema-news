@@ -35,11 +35,8 @@ const ALLOWED_OPS = Object.keys(OP_PROMPTS);
 export async function POST(req: NextRequest) {
   const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR", "REPORTER"]);
   if (isAuthError(session)) return session;
-  if (!ENDPOINT || !KEY) {
-    return NextResponse.json({ error: "AZURE_IMAGES_ENDPOINT / AZURE_IMAGES_KEY not configured" }, { status: 503 });
-  }
-  if (!blobConfigured()) {
-    return NextResponse.json({ error: "AZURE_STORAGE_CONNECTION_STRING not configured" }, { status: 503 });
+  if (!ENDPOINT || !KEY || !blobConfigured()) {
+    return NextResponse.json({ error: "Image editing isn't set up yet. Please contact your administrator." }, { status: 503 });
   }
   try {
     const { url, op, customPrompt } = await req.json();
@@ -54,7 +51,7 @@ export async function POST(req: NextRequest) {
     // SSRF guard - same one /api/images/process uses.
     const safety = await isUrlSafeToFetch(url);
     if (!safety.safe) {
-      return NextResponse.json({ error: `Refusing to fetch: ${safety.reason}` }, { status: 400 });
+      return NextResponse.json({ error: "This image can't be used for editing. Please upload or choose a different image." }, { status: 400 });
     }
 
     // Download the source image into memory.
@@ -63,15 +60,15 @@ export async function POST(req: NextRequest) {
       signal: AbortSignal.timeout(15000),
     });
     if (!srcRes.ok) {
-      return NextResponse.json({ error: `Source fetch ${srcRes.status}` }, { status: 502 });
+      return NextResponse.json({ error: "Couldn't load the current image. Please re-upload it and try again." }, { status: 502 });
     }
     const ct = (srcRes.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
     if (!ct.startsWith("image/")) {
-      return NextResponse.json({ error: `Source returned non-image content-type "${ct}"` }, { status: 400 });
+      return NextResponse.json({ error: "The current file isn't a valid image. Please replace it with a JPG or PNG." }, { status: 400 });
     }
     const srcBuf = Buffer.from(await srcRes.arrayBuffer());
     if (srcBuf.length === 0 || srcBuf.length > 20 * 1024 * 1024) {
-      return NextResponse.json({ error: "Source image empty or >20MB" }, { status: 400 });
+      return NextResponse.json({ error: "This image is too large (max 20 MB). Please use a smaller image." }, { status: 400 });
     }
 
     const prompt = typeof customPrompt === "string" && customPrompt.length >= 10
@@ -93,19 +90,32 @@ export async function POST(req: NextRequest) {
         method: "POST",
         headers: { "api-key": KEY },
         body: form,
+        // gpt-image edits can be slow; cap below nginx's 180s proxy timeout so
+        // a stall returns JSON from here instead of an nginx 504 HTML page.
+        signal: AbortSignal.timeout(170000),
       },
     );
     if (!editRes.ok) {
       const body = await editRes.text();
       console.error("[images/enhance] Azure", editRes.status, body.slice(0, 500));
-      return NextResponse.json({
-        error: `Image edit failed (${editRes.status})`,
-        detail: body.slice(0, 300),
-      }, { status: 502 });
+      let code = "", azMsg = "";
+      try { const j = JSON.parse(body); code = j?.error?.code || ""; azMsg = j?.error?.message || ""; } catch {}
+      let friendly: string;
+      if (editRes.status === 429) {
+        const m = azMsg.match(/retry after (\d+) second/i);
+        friendly = `The image tool is busy right now. Please wait about ${m ? m[1] : "30"} seconds, then try again.`;
+      } else if (code === "moderation_blocked") {
+        friendly = "The AI couldn't edit this photo because its safety filter flagged it. Please try a different image.";
+      } else if (editRes.status === 400) {
+        friendly = "This photo couldn't be processed. Please try a different image.";
+      } else {
+        friendly = "The image tool had a problem. Please try again in a moment.";
+      }
+      return NextResponse.json({ error: friendly }, { status: editRes.status });
     }
     const data = await editRes.json();
     const b64 = data?.data?.[0]?.b64_json;
-    if (!b64) return NextResponse.json({ error: "No image returned by model" }, { status: 502 });
+    if (!b64) return NextResponse.json({ error: "The image tool didn't return a result. Please try again." }, { status: 502 });
 
     const rawBuf = Buffer.from(b64, "base64");
     const processed = await processImageBuffer(rawBuf);
@@ -113,6 +123,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ url: hosted, op: opKey, bytes: processed.buffer.length });
   } catch (e: any) {
     console.error("[images/enhance]", e);
-    return NextResponse.json({ error: e?.message || "Enhance failed" }, { status: 500 });
+    const timedOut = e?.name === "TimeoutError" || e?.name === "AbortError";
+    return NextResponse.json(
+      { error: timedOut
+          ? "The image edit took too long and was stopped. Please try again."
+          : "Couldn't reach the image tool. Please check your connection and try again." },
+      { status: timedOut ? 504 : 500 },
+    );
   }
 }
