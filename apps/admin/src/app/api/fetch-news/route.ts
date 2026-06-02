@@ -286,7 +286,27 @@ export async function POST(req: NextRequest) {
   if (isAuthError(session2)) return session2;
   try {
     const body = await req.json();
-    const { title, description, imageUrl, sourceUrl, categorySlug } = body;
+    const {
+      title,
+      description,
+      content: rawContent,
+      imageUrl,
+      sourceUrl,
+      source,
+      byline,
+      edNote,
+      categorySlug,
+    } = body as {
+      title?: string;
+      description?: string;
+      content?: string | null;
+      imageUrl?: string | null;
+      sourceUrl?: string | null;
+      source?: string | null;
+      byline?: string | null;
+      edNote?: string | null;
+      categorySlug?: string;
+    };
 
     if (!title) return NextResponse.json({ error: "Title required" }, { status: 400 });
 
@@ -316,16 +336,40 @@ export async function POST(req: NextRequest) {
     // Create slug from title - sanitized + timestamp for uniqueness
     const slug = sanitizeSlug(`${buildSlugFromTitle(title)}-${Date.now()}`);
 
+    // Build draft body. Prefer the full story HTML when the caller
+    // supplied it (PTI ships the story in the API response; NewsData
+    // sometimes too). Fall back to the short description otherwise.
+    // PTI's synthetic sourceUrl can't be opened by humans, so we skip
+    // the "Source: <a>" footer for PTI and surface byline / EdNote
+    // up top instead.
+    const isPti = source === "PTI";
+    const sourceLink = sourceUrl && !isPti
+      ? `\n<p><em>Source: <a href="${sourceUrl}">${sourceUrl}</a></em></p>`
+      : "";
+    const bylineLine = isPti && byline
+      ? `<p><em>PTI · By ${byline}</em></p>\n`
+      : "";
+    const edNoteLine = isPti && edNote
+      ? `<p style="background:#fef3c7;padding:8px;border-left:3px solid #f59e0b;"><strong>Editor's Note:</strong> ${edNote}</p>\n`
+      : "";
+    const bodyContent = (rawContent && rawContent.trim().length > 0)
+      ? `${bylineLine}${edNoteLine}${rawContent}${sourceLink}`
+      : `${bylineLine}${edNoteLine}<p>${description || ""}</p>${sourceLink}`;
+
     const content = await prisma.content.create({
       data: {
         type: "ARTICLE",
         title,
         slug,
         summary: description?.substring(0, 200) || null,
-        body: `<p>${description || ""}</p>\n<p><em>Source: <a href="${sourceUrl}">${sourceUrl}</a></em></p>`,
+        body: bodyContent,
         featuredImage: hostedImage,
         sourceUrl: sourceUrl || null,
-        language: "TELUGU",
+        // PTI ships English wire copy; mark accordingly so the editor
+        // sees the right language badge and the Telugu translation
+        // helper kicks in on edit. NewsData / Google News default to
+        // Telugu because that's the historical assumption.
+        language: isPti ? "ENGLISH" : "TELUGU",
         status: "DRAFT",
         authorId: admin?.id || "",
         categoryId,

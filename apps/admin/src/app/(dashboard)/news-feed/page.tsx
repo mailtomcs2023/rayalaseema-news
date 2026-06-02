@@ -14,6 +14,7 @@ interface NewsItem {
   externalId: string;
   title: string;
   description: string;
+  content?: string | null; // full story HTML (PTI ships this; NewsData sometimes)
   imageUrl: string | null;
   sourceUrl: string;
   source: string;
@@ -80,6 +81,7 @@ export default function NewsFeedPage() {
   const [error, setError] = useState("");
   const [autoImportStatus, setAutoImportStatus] = useState<string>("");
   const [autoImporting, setAutoImporting] = useState(false);
+  const [previewItem, setPreviewItem] = useState<NewsItem | null>(null);
   const { guard: kycGuard } = useKycGate();
 
   const fetchNews = useCallback(async (searchQuery?: string, providerOverride?: Provider) => {
@@ -165,8 +167,12 @@ export default function NewsFeedPage() {
         body: JSON.stringify({
           title: article.title,
           description: article.description,
+          content: article.content || null,
           imageUrl: article.imageUrl,
           sourceUrl: article.sourceUrl,
+          source: article.source,
+          byline: article.byline || null,
+          edNote: article.edNote || null,
         }),
       });
       const data = await res.json();
@@ -298,12 +304,22 @@ export default function NewsFeedPage() {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <h3 style={{ fontSize: 15, fontWeight: 700, color: "#111", marginBottom: 4 }}>{a.title}</h3>
                   <p style={{ fontSize: 12, color: "#4b5563", marginBottom: 6, lineHeight: 1.4 }}>{(a.description || "").slice(0, 240)}</p>
-                  <div style={{ fontSize: 11, color: "#9ca3af", display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  <div style={{ fontSize: 11, color: "#9ca3af", display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
                     <span><b>{a.source}</b></span>
                     {a.publishedAt && <span>{new Date(a.publishedAt).toLocaleString()}</span>}
                     {a.language && <span>{a.language}</span>}
                     {a.byline && <span>By {a.byline}</span>}
-                    <a href={a.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ color: "#2563eb" }}>Open source ↗</a>
+                    {a.ptiTopCategory && <span style={{ padding: "1px 6px", background: "#eef2ff", color: "#3730a3", borderRadius: 3, fontWeight: 600 }}>{a.ptiTopCategory}</span>}
+                    {a.ptiSubcategories?.map((s) => (
+                      <span key={s} style={{ padding: "1px 6px", background: "#f3f4f6", color: "#374151", borderRadius: 3, fontWeight: 600 }}>{s}</span>
+                    ))}
+                    {a.source === "PTI" ? (
+                      <button onClick={() => setPreviewItem(a)} style={{ background: "none", border: "none", color: "#2563eb", padding: 0, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>
+                        Preview full story ▾
+                      </button>
+                    ) : (
+                      <a href={a.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ color: "#2563eb" }}>Open source ↗</a>
+                    )}
                   </div>
                   {a.edNote && (
                     <div style={{ marginTop: 6, padding: "4px 8px", background: "#fef3c7", border: "1px solid #fcd34d", borderRadius: 4, fontSize: 11, color: "#92400e", display: "inline-block" }}>
@@ -334,6 +350,77 @@ export default function NewsFeedPage() {
           )}
         </div>
       </main>
+
+      {/* PTI preview modal. The synthetic sourceUrl can't be opened
+        (PTI portal is gated), so the editor reads the full story HTML
+        from the API response right here. Import button reuses the
+        same flow as the inline card button. */}
+      {previewItem && (
+        <div
+          onClick={() => setPreviewItem(null)}
+          style={{
+            position: "fixed", inset: 0, background: "rgba(17,24,39,0.6)",
+            display: "flex", alignItems: "flex-start", justifyContent: "center",
+            zIndex: 1000, padding: 24, overflowY: "auto",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#fff", borderRadius: 12, maxWidth: 820, width: "100%",
+              boxShadow: "0 20px 50px rgba(0,0,0,0.25)", overflow: "hidden",
+            }}
+          >
+            <div style={{ padding: "16px 22px", borderBottom: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                {previewItem.source} {previewItem.ptiTopCategory ? `· ${previewItem.ptiTopCategory}` : ""} {previewItem.ptiSubcategories?.length ? `· ${previewItem.ptiSubcategories.join(" / ")}` : ""}
+              </div>
+              <button onClick={() => setPreviewItem(null)} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#6b7280", lineHeight: 1 }}>×</button>
+            </div>
+            <div style={{ padding: "20px 22px" }}>
+              <h2 style={{ fontSize: 22, fontWeight: 800, color: "#111", marginBottom: 10, lineHeight: 1.3 }}>{previewItem.title}</h2>
+              <div style={{ fontSize: 12, color: "#6b7280", display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 14 }}>
+                {previewItem.publishedAt && <span>{new Date(previewItem.publishedAt).toLocaleString()}</span>}
+                {previewItem.byline && <span>By <b>{previewItem.byline}</b></span>}
+                {previewItem.keywords?.length ? <span>{previewItem.keywords.join(" / ")}</span> : null}
+              </div>
+              {previewItem.edNote && (
+                <div style={{ marginBottom: 14, padding: "8px 12px", background: "#fef3c7", border: "1px solid #fcd34d", borderRadius: 6, fontSize: 12, color: "#92400e" }}>
+                  <b>Editor's Note:</b> {previewItem.edNote}
+                </div>
+              )}
+              <div
+                style={{ fontSize: 14, lineHeight: 1.7, color: "#1f2937", maxHeight: "55vh", overflowY: "auto", paddingRight: 6 }}
+                dangerouslySetInnerHTML={{ __html: previewItem.content || `<p>${previewItem.description}</p>` }}
+              />
+            </div>
+            <div style={{ padding: "14px 22px", borderTop: "1px solid #e5e7eb", display: "flex", justifyContent: "flex-end", gap: 10, background: "#f9fafb" }}>
+              <button onClick={() => setPreviewItem(null)}
+                style={{ padding: "9px 16px", background: "#fff", color: "#374151", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                Close
+              </button>
+              {imported[previewItem.externalId] ? (
+                <button
+                  onClick={() => router.push(`/content/${imported[previewItem.externalId]}`)}
+                  style={{ padding: "9px 16px", background: "#10b981", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                  Open draft →
+                </button>
+              ) : (
+                <button
+                  onClick={kycGuard("import news", async () => {
+                    if (previewItem) {
+                      await importArticle(previewItem);
+                    }
+                  })}
+                  disabled={importing === previewItem.externalId}
+                  style={{ padding: "9px 16px", background: "#dc2626", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: importing === previewItem.externalId ? "not-allowed" : "pointer", opacity: importing === previewItem.externalId ? 0.5 : 1 }}>
+                  {importing === previewItem.externalId ? "Importing…" : "Import as draft"}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
