@@ -731,8 +731,8 @@ export default function ContentEditorPage() {
                     <Button
                       type="button"
                       size="sm"
-                      variant="outline"
                       onClick={() => setCropSrc(featuredImage)}
+                      className="bg-slate-700 text-white hover:bg-slate-800"
                     >
                       Crop
                     </Button>
@@ -748,12 +748,12 @@ export default function ContentEditorPage() {
                         key={b.op}
                         type="button"
                         size="sm"
-                        variant="outline"
                         onClick={() => enhanceImage(b.op)}
                         disabled={enhancing !== null}
                         title={`AI '${b.op}' - gpt-image-2, ~15s, ~$0.06`}
-                        className={enhancing && enhancing !== b.op ? "opacity-50" : ""}
+                        className={`gap-1 bg-violet-600 text-white hover:bg-violet-700 ${enhancing && enhancing !== b.op ? "opacity-50" : ""}`}
                       >
+                        <Sparkles className="h-3.5 w-3.5" />
                         {enhancing === b.op ? "Running…" : b.label}
                       </Button>
                     ))}
