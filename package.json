@@ -12,6 +12,7 @@
     "db:generate": "turbo db:generate",
     "db:push": "turbo db:push",
     "db:seed": "turbo db:seed",
+    "setup:local": "bun install && bun run db:push && cd packages/db && bunx tsx scripts/setup-local.ts",
     "clean": "turbo clean"
   },
   "devDependencies": {
