@@ -1,5 +1,8 @@
+"use client";
+
 import { articleHref } from "@/lib/article-href";
 import Link from "next/link";
+import { useState } from "react";
 
 interface BandArticle {
   id: string;
@@ -17,9 +20,19 @@ interface BandTrending {
   publishedAt?: string | null;
 }
 
+interface BandPanel {
+  // null lead = the filtered category is empty → render an "empty" state.
+  lead: BandArticle | null;
+  grid: BandArticle[];
+  trending: BandTrending[];
+}
+
 interface BandTab {
   label: string;
   href: string;
+  // When present, clicking the tab filters the band in place to this panel.
+  // When null, the tab degrades to a plain navigation link (legacy behaviour).
+  panel?: BandPanel | null;
 }
 
 interface BandMatch {
@@ -76,6 +89,14 @@ export function SectionBand({
   scores?: BandMatch[];
   cartoon?: BandCartoon | null;
 }) {
+  // null = show the band's own category (default). A number selects the tab
+  // panel at that index. Tabs without a panel stay links and never set this.
+  const [active, setActive] = useState<number | null>(null);
+  const activePanel = active != null ? tabs[active]?.panel : null;
+  const viewLead = activePanel ? activePanel.lead : lead;
+  const viewGrid = activePanel ? activePanel.grid : grid;
+  const viewTrending = activePanel ? activePanel.trending : trending;
+
   return (
     <section className="sb">
       <div className="sb-head">
@@ -83,25 +104,40 @@ export function SectionBand({
           {brand} <span aria-hidden="true">›</span>
         </Link>
         <nav className="sb-tabs">
-          {tabs.map((t) => (
-            <Link key={t.label} href={t.href}>{t.label}</Link>
-          ))}
+          {tabs.map((t, i) =>
+            t.panel ? (
+              <button
+                key={t.label}
+                type="button"
+                className={active === i ? "sb-tab sb-tab--active" : "sb-tab"}
+                aria-pressed={active === i}
+                // Click an active tab again to return to the default view.
+                onClick={() => setActive(active === i ? null : i)}
+              >
+                {t.label}
+              </button>
+            ) : (
+              <Link key={t.label} href={t.href}>{t.label}</Link>
+            ),
+          )}
         </nav>
       </div>
 
       <div className="sb-body">
         <div className="sb-main">
+          {viewLead ? (
+          <>
           <div className="sb-lead">
             <div className="sb-lead-text">
-              {lead.label && <span className="sb-kicker">{lead.label}</span>}
-              <Link href={articleHref(lead)} className="sb-lead-link">
-                <h3 className="sb-lead-title">{lead.title}</h3>
+              {viewLead.label && <span className="sb-kicker">{viewLead.label}</span>}
+              <Link href={articleHref(viewLead)} className="sb-lead-link">
+                <h3 className="sb-lead-title">{viewLead.title}</h3>
               </Link>
-              {lead.summary && <p className="sb-lead-dek">{lead.summary}</p>}
+              {viewLead.summary && <p className="sb-lead-dek">{viewLead.summary}</p>}
             </div>
-            <Link href={articleHref(lead)} className="sb-lead-img" aria-label={lead.title}>
-              {lead.featuredImage ? (
-                <img src={lead.featuredImage} alt={lead.title} loading="lazy" />
+            <Link href={articleHref(viewLead)} className="sb-lead-img" aria-label={viewLead.title}>
+              {viewLead.featuredImage ? (
+                <img src={viewLead.featuredImage} alt={viewLead.title} loading="lazy" />
               ) : (
                 <div className="sb-noimg">RE</div>
               )}
@@ -109,7 +145,7 @@ export function SectionBand({
           </div>
 
           <div className="sb-grid">
-            {grid.map((a) => (
+            {viewGrid.map((a) => (
               <Link key={a.id} href={articleHref(a)} className="sb-grid-item">
                 <div className="sb-grid-text">
                   {a.label && <span className="sb-kicker">{a.label}</span>}
@@ -125,6 +161,10 @@ export function SectionBand({
               </Link>
             ))}
           </div>
+          </>
+          ) : (
+            <div className="sb-empty">ఈ విభాగంలో వార్తలు త్వరలో…</div>
+          )}
         </div>
 
         <aside className="sb-rail">
@@ -162,7 +202,7 @@ export function SectionBand({
           <div className="sb-rail-head">
             {trendingLabel} <span aria-hidden="true">›</span>
           </div>
-          {trending.map((a, i) => (
+          {viewTrending.map((a, i) => (
             <Link key={a.id} href={articleHref(a)} className="sb-rail-item">
               <span className="sb-rail-num">{String(i + 1).padStart(2, "0")}</span>
               <div>
@@ -209,7 +249,7 @@ export function SectionBand({
         }
         .sb-brand span { color: var(--brand, #E01B1B); }
         .sb-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
-        .sb-tabs a {
+        .sb-tabs a, .sb-tabs .sb-tab {
           font-family: var(--font-telugu-body), sans-serif;
           font-size: 12px; font-weight: 700;
           color: var(--n-700, #374151);
@@ -217,11 +257,28 @@ export function SectionBand({
           padding: 4px 12px;
           border: 1px solid var(--n-200, #e5e7eb);
           border-radius: 999px;
+          background: transparent;
+          cursor: pointer;
+          line-height: 1.4;
         }
-        .sb-tabs a:hover { border-color: var(--brand, #E01B1B); color: var(--brand, #E01B1B); }
+        .sb-tabs a:hover, .sb-tabs .sb-tab:hover {
+          border-color: var(--brand, #E01B1B); color: var(--brand, #E01B1B);
+        }
+        .sb-tabs .sb-tab--active,
+        .sb-tabs .sb-tab--active:hover {
+          background: var(--brand, #E01B1B);
+          border-color: var(--brand, #E01B1B);
+          color: #fff;
+        }
 
         .sb-body { display: flex; gap: 24px; }
         .sb-main { flex: 1 1 auto; min-width: 0; }
+        .sb-empty {
+          font-family: var(--font-telugu-body), sans-serif;
+          font-size: 14px; font-weight: 600;
+          color: var(--n-500, #6b7280);
+          padding: 48px 8px; text-align: center;
+        }
         .sb-rail {
           flex: 0 0 260px;
           border-left: 1px solid var(--paper-edge, rgba(0,0,0,0.08));

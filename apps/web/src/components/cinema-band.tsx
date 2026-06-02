@@ -1,5 +1,8 @@
+"use client";
+
 import { articleHref } from "@/lib/article-href";
 import Link from "next/link";
+import { useState } from "react";
 
 interface CinemaArticle {
   id: string;
@@ -16,6 +19,20 @@ interface CinemaReview {
   slug: string;
   reviewerName?: string | null;
   rating?: number | null;
+}
+
+interface CinemaPanel {
+  // null lead = the filtered sub-genre is empty → render an "empty" state.
+  lead: CinemaArticle | null;
+  grid: CinemaArticle[];
+}
+
+interface CinemaTab {
+  label: string;
+  href: string;
+  // When present, the tab filters the band in place to this sub-genre.
+  // When null, it degrades to a plain link to the /cinema?t= page.
+  panel?: CinemaPanel | null;
 }
 
 // Render 5 stars from a 0-5 float (full / half / empty).
@@ -44,40 +61,60 @@ export function CinemaBand({
   lead,
   grid,
   reviews,
+  tabs = [],
 }: {
   lead: CinemaArticle;
   grid: CinemaArticle[];
   reviews: CinemaReview[];
+  tabs?: CinemaTab[];
 }) {
+  // null = default సినిమా view. A number selects a sub-genre tab panel.
+  const [active, setActive] = useState<number | null>(null);
+  const activePanel = active != null ? tabs[active]?.panel : null;
+  const viewLead = activePanel ? activePanel.lead : lead;
+  const viewGrid = activePanel ? activePanel.grid : grid;
+
   return (
     <section className="cb">
       {/* Branded header */}
       <div className="cb-head">
         <Link href="/cinema" className="cb-brand">సినిమా</Link>
         <nav className="cb-tabs">
-          <Link href="/cinema?t=tollywood">టాలీవుడ్</Link>
-          <Link href="/cinema?t=bollywood">బాలీవుడ్</Link>
-          <Link href="/cinema?t=hollywood">హాలీవుడ్</Link>
-          <Link href="/cinema?t=tv">టీవీ</Link>
-          <Link href="/cinema?t=reviews">రివ్యూలు</Link>
+          {tabs.map((t, i) =>
+            t.panel ? (
+              <button
+                key={t.label}
+                type="button"
+                className={active === i ? "cb-tab cb-tab--active" : "cb-tab"}
+                aria-pressed={active === i}
+                onClick={() => setActive(active === i ? null : i)}
+              >
+                {t.label}
+              </button>
+            ) : (
+              <Link key={t.label} href={t.href}>{t.label}</Link>
+            ),
+          )}
         </nav>
       </div>
 
       <div className="cb-body">
         {/* MAIN */}
         <div className="cb-main">
+          {viewLead ? (
+          <>
           {/* LEAD */}
           <div className="cb-lead">
             <div className="cb-lead-text">
-              {lead.label && <span className="cb-kicker">{lead.label}</span>}
-              <Link href={articleHref(lead)} className="cb-lead-link">
-                <h3 className="cb-lead-title">{lead.title}</h3>
+              {viewLead.label && <span className="cb-kicker">{viewLead.label}</span>}
+              <Link href={articleHref(viewLead)} className="cb-lead-link">
+                <h3 className="cb-lead-title">{viewLead.title}</h3>
               </Link>
-              {lead.summary && <p className="cb-lead-dek">{lead.summary}</p>}
+              {viewLead.summary && <p className="cb-lead-dek">{viewLead.summary}</p>}
             </div>
-            <Link href={articleHref(lead)} className="cb-lead-img" aria-label={lead.title}>
-              {lead.featuredImage ? (
-                <img src={lead.featuredImage} alt={lead.title} loading="lazy" />
+            <Link href={articleHref(viewLead)} className="cb-lead-img" aria-label={viewLead.title}>
+              {viewLead.featuredImage ? (
+                <img src={viewLead.featuredImage} alt={viewLead.title} loading="lazy" />
               ) : (
                 <div className="cb-noimg">RE</div>
               )}
@@ -86,7 +123,7 @@ export function CinemaBand({
 
           {/* 2x2 GRID */}
           <div className="cb-grid">
-            {grid.map((a) => (
+            {viewGrid.map((a) => (
               <Link key={a.id} href={articleHref(a)} className="cb-grid-item">
                 <div className="cb-grid-text">
                   {a.label && <span className="cb-kicker">{a.label}</span>}
@@ -102,6 +139,10 @@ export function CinemaBand({
               </Link>
             ))}
           </div>
+          </>
+          ) : (
+            <div className="cb-empty">ఈ విభాగంలో వార్తలు త్వరలో…</div>
+          )}
         </div>
 
         {/* REVIEW RAIL */}
@@ -148,7 +189,7 @@ export function CinemaBand({
           letter-spacing: 0.02em;
         }
         .cb-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
-        .cb-tabs a {
+        .cb-tabs a, .cb-tabs .cb-tab {
           font-family: var(--font-telugu-body), sans-serif;
           font-size: 12px;
           font-weight: 700;
@@ -157,12 +198,27 @@ export function CinemaBand({
           padding: 4px 12px;
           border: 1px solid rgba(255,255,255,0.5);
           border-radius: 999px;
+          background: transparent;
+          cursor: pointer;
+          line-height: 1.4;
           transition: background 0.15s ease;
         }
-        .cb-tabs a:hover { background: rgba(255,255,255,0.18); }
+        .cb-tabs a:hover, .cb-tabs .cb-tab:hover { background: rgba(255,255,255,0.18); }
+        .cb-tabs .cb-tab--active,
+        .cb-tabs .cb-tab--active:hover {
+          background: #fff;
+          color: var(--brand, #E01B1B);
+          border-color: #fff;
+        }
 
         .cb-body { display: flex; gap: 24px; padding: 16px 18px 18px; }
         .cb-main { flex: 1 1 auto; min-width: 0; }
+        .cb-empty {
+          font-family: var(--font-telugu-body), sans-serif;
+          font-size: 14px; font-weight: 600;
+          color: var(--n-500, #6b7280);
+          padding: 48px 8px; text-align: center;
+        }
         .cb-rail {
           flex: 0 0 250px;
           border-left: 1px solid var(--paper-edge, rgba(0,0,0,0.08));

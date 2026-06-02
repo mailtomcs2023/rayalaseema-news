@@ -106,8 +106,17 @@ jobs:
             bunx tsx scripts/seed-epaper-templates.ts
             echo "=== Seed e-paper v2 masters (#108: front/district/section) ==="
             bunx tsx scripts/seed-epaper-masters.ts
+            echo "=== Seed cinema/sports sub-genre categories (tollywood/bollywood/hollywood/tv/cricket/ipl) ==="
+            # Idempotent upsert. Creates tv + ipl (never seeded) and confirms the
+            # editor-added sub-genres so the homepage filter tabs resolve.
+            bunx tsx scripts/seed-subgenre-categories.ts
             echo "=== Seed page-builder templates (Spec #2: homepage + category + movie-reviews) ==="
             bunx tsx scripts/seed-templates.ts
+            echo "=== Patch SectionBand tabs: enable in-place filtering + fix AP/sports mis-links (idempotent) ==="
+            # seed-templates is skip-if-exists, so it can't repair already-seeded
+            # SectionBand tabs. This backfills each tab's categorySlug and fixes
+            # the politics AP tab (was → /category/politics). No-ops once correct.
+            bunx tsx scripts/patch-section-band-tabs.ts
             echo "=== Seed menus (Spec #3: header + footer + mobile) ==="
             bunx tsx scripts/seed-menus.ts
             echo "=== Patch HEADER/MOBILE menus: add రాశి ఫలాలు (/horoscope) if missing (idempotent) ==="

@@ -61,9 +61,12 @@ const DEFAULT_HOMEPAGE: Layout = {
         brand: "రాజకీయం",
         brandHref: "/category/politics",
         categorySlug: "politics",
+        // Tabs filter the band in place (categorySlug) and link to the full
+        // category page when JS is off. AP must point at andhra-pradesh, not
+        // politics, or it would just re-show the band's own category.
         tabs: [
-          { label: "ఆంధ్రప్రదేశ్", href: "/category/politics" },
-          { label: "జాతీయం", href: "/category/national" },
+          { label: "ఆంధ్రప్రదేశ్", href: "/category/andhra-pradesh", categorySlug: "andhra-pradesh" },
+          { label: "జాతీయం", href: "/category/national", categorySlug: "national" },
         ],
         leadCount: 1,
         gridCount: 4,
@@ -92,9 +95,10 @@ const DEFAULT_HOMEPAGE: Layout = {
         brand: "క్రీడలు",
         brandHref: "/category/sports",
         categorySlug: "sports",
+        // Filter the sports band in place by sub-category (cricket / ipl).
         tabs: [
-          { label: "క్రికెట్", href: "/category/sports" },
-          { label: "ఐపీఎల్", href: "/category/sports" },
+          { label: "క్రికెట్", href: "/category/cricket", categorySlug: "cricket" },
+          { label: "ఐపీఎల్", href: "/category/ipl", categorySlug: "ipl" },
         ],
         leadCount: 1,
         gridCount: 4,

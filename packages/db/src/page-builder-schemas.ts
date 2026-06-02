@@ -48,7 +48,15 @@ export const adBannerMidConfig = z
   .strict();
 
 export const sectionBandTab = z
-  .object({ label: z.string().min(1), href: z.string().min(1) })
+  .object({
+    label: z.string().min(1),
+    href: z.string().min(1),
+    // When set (or derivable from a `/category/<slug>` href), clicking the tab
+    // filters the band IN PLACE to this category's latest articles - no page
+    // navigation. If the resolved slug equals the band's own category the tab
+    // stays a plain link (nothing to filter). See fetchSectionBand + SectionBand.
+    categorySlug: z.string().optional(),
+  })
   .strict();
 
 export const sectionBandConfig = z

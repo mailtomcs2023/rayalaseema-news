@@ -190,51 +190,45 @@ export async function fetchAboveFold(
 
 // --- SectionBand ---
 
-export async function fetchSectionBand(
+// Pull the latest published articles for one category slug (primary OR
+// cross-listed). Shared by the band's default panel and each filter tab.
+function fetchBandCategoryArticles(slug: string) {
+  return prisma.content.findMany({
+    where: {
+      type: "ARTICLE",
+      status: "PUBLISHED",
+      // Match if either the PRIMARY category OR any of the cross-listed
+      // additionalCategories rows points at this slug. Lets a
+      // movie-review primary-categorized story also surface in
+      // /category/entertainment when the editor opted in.
+      OR: [
+        { category: { slug } },
+        { additionalCategories: { some: { category: { slug } } } },
+      ],
+    },
+    orderBy: { publishedAt: "desc" },
+    take: 30,
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      summary: true,
+      featuredImage: true,
+      publishedAt: true,
+      viewCount: true,
+      category: { select: { name: true } },
+    },
+  });
+}
+
+type BandArt = Awaited<ReturnType<typeof fetchBandCategoryArticles>>[number];
+
+// Slice a category's articles into the band's lead + grid + trending panel.
+function buildBandPanel(
+  arts: BandArt[],
   config: z.infer<typeof sectionBandConfig>,
-  ctx: PageContext,
 ) {
-  // Pass-through mode: when the config omits brand / brandHref / categorySlug
-  // the block reads them from the page context (Standard Category template).
-  const slug = config.categorySlug || ctx.categorySlug;
-  if (!slug) return null;
-
-  const [arts, cat] = await Promise.all([
-    prisma.content.findMany({
-      where: {
-        type: "ARTICLE",
-        status: "PUBLISHED",
-        // Match if either the PRIMARY category OR any of the cross-listed
-        // additionalCategories rows points at this slug. Lets a
-        // movie-review primary-categorized story also surface in
-        // /category/entertainment when the editor opted in.
-        OR: [
-          { category: { slug } },
-          { additionalCategories: { some: { category: { slug } } } },
-        ],
-      },
-      orderBy: { publishedAt: "desc" },
-      take: 30,
-      select: {
-        id: true,
-        title: true,
-        slug: true,
-        summary: true,
-        featuredImage: true,
-        publishedAt: true,
-        viewCount: true,
-        category: { select: { name: true } },
-      },
-    }),
-    config.brand ? Promise.resolve(null) : prisma.category.findUnique({ where: { slug }, select: { name: true } }),
-  ]);
-
-  const brand = config.brand || cat?.name || slug;
-  const brandHref = config.brandHref || `/category/${slug}`;
-
   const lead = arts[0] ? toBandArticle(arts[0]) : null;
-  if (!lead) return null;
-
   const grid = arts.slice(1, 1 + config.gridCount).map(toBandArticle);
   const trending = [...arts]
     .sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0))
@@ -245,6 +239,61 @@ export async function fetchSectionBand(
       slug: a.slug || "",
       publishedAt: a.publishedAt?.toISOString() || null,
     }));
+  return { lead, grid, trending };
+}
+
+// A tab filters the band to a category. The slug comes from the explicit
+// `categorySlug` field or is parsed from a `/category/<slug>` href.
+function tabCategorySlug(tab: { href: string; categorySlug?: string }): string | null {
+  if (tab.categorySlug) return tab.categorySlug;
+  const m = tab.href.match(/^\/category\/([^/?#]+)/);
+  return m ? m[1] : null;
+}
+
+export async function fetchSectionBand(
+  config: z.infer<typeof sectionBandConfig>,
+  ctx: PageContext,
+) {
+  // Pass-through mode: when the config omits brand / brandHref / categorySlug
+  // the block reads them from the page context (Standard Category template).
+  const slug = config.categorySlug || ctx.categorySlug;
+  if (!slug) return null;
+
+  // Every distinct category the band needs: its own + one per filter tab.
+  // A tab whose slug matches the band's own category has nothing to filter,
+  // so it stays a plain navigation link (no panel fetched).
+  const tabSlugs = config.tabs.map(tabCategorySlug);
+  const extraSlugs = Array.from(
+    new Set(tabSlugs.filter((s): s is string => Boolean(s) && s !== slug)),
+  );
+
+  const [defaultArts, cat, ...extraArts] = await Promise.all([
+    fetchBandCategoryArticles(slug),
+    config.brand ? Promise.resolve(null) : prisma.category.findUnique({ where: { slug }, select: { name: true } }),
+    ...extraSlugs.map((s) => fetchBandCategoryArticles(s)),
+  ]);
+
+  const brand = config.brand || cat?.name || slug;
+  const brandHref = config.brandHref || `/category/${slug}`;
+
+  const defaultPanel = buildBandPanel(defaultArts, config);
+  if (!defaultPanel.lead) return null;
+
+  // Map extra category slug → its fetched articles for tab-panel assembly.
+  const artsBySlug = new Map<string, BandArt[]>();
+  extraSlugs.forEach((s, i) => artsBySlug.set(s, extraArts[i]));
+
+  // A tab pointing at a *distinct* category becomes an in-place filter - even
+  // when that category is empty, so the band can show an "empty" state instead
+  // of navigating away (panel.lead === null signals empty to SectionBand). A
+  // tab whose slug matches the band's own category has nothing to filter, so it
+  // degrades to a plain link (panel: null).
+  const tabs = config.tabs.map((t, i) => {
+    const tslug = tabSlugs[i];
+    const isDistinct = Boolean(tslug) && tslug !== slug;
+    const panel = isDistinct ? buildBandPanel(artsBySlug.get(tslug!) ?? [], config) : null;
+    return { label: t.label, href: t.href, panel };
+  });
 
   let cartoon: { title: string; caption: string; image: string; date: string } | null = null;
   if (config.showCartoon) {
@@ -268,49 +317,76 @@ export async function fetchSectionBand(
   return {
     brand,
     brandHref,
-    tabs: config.tabs,
-    lead,
-    grid,
-    trending,
+    tabs,
+    lead: defaultPanel.lead,
+    grid: defaultPanel.grid,
+    trending: defaultPanel.trending,
     cartoon,
   };
 }
 
 // --- CinemaBand ---
 
+// Cinema sub-genre tabs → the category each one filters to. Mirrors the tabs
+// hardcoded in CinemaBand and the /cinema page. `href` is the no-JS / SEO
+// fallback target; `slug` drives the in-place filter panel.
+const CINEMA_TABS: { key: string; label: string; slug: string; href: string }[] = [
+  { key: "tollywood", label: "టాలీవుడ్", slug: "tollywood", href: "/cinema?t=tollywood" },
+  { key: "bollywood", label: "బాలీవుడ్", slug: "bollywood", href: "/cinema?t=bollywood" },
+  { key: "hollywood", label: "హాలీవుడ్", slug: "hollywood", href: "/cinema?t=hollywood" },
+  { key: "tv", label: "టీవీ", slug: "tv", href: "/cinema?t=tv" },
+  { key: "reviews", label: "రివ్యూలు", slug: "movie-reviews", href: "/cinema?t=reviews" },
+];
+
 export async function fetchCinemaBand(
   config: z.infer<typeof cinemaBandConfig>,
   _ctx: PageContext,
 ) {
-  const pool = await prisma.content.findMany({
-    where: {
-      type: "ARTICLE",
-      status: "PUBLISHED",
-      category: {
-        slug: config.includeMovieReviews
-          ? { in: ["entertainment", "movie-reviews"] }
-          : "entertainment",
+  const [pool, ...tabArts] = await Promise.all([
+    prisma.content.findMany({
+      where: {
+        type: "ARTICLE",
+        status: "PUBLISHED",
+        category: {
+          slug: config.includeMovieReviews
+            ? { in: ["entertainment", "movie-reviews"] }
+            : "entertainment",
+        },
       },
-    },
-    orderBy: { publishedAt: "desc" },
-    take: 30,
-    select: {
-      id: true,
-      title: true,
-      slug: true,
-      summary: true,
-      featuredImage: true,
-      payload: true,
-      category: { select: { name: true, slug: true } },
-    },
-  });
+      orderBy: { publishedAt: "desc" },
+      take: 30,
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        summary: true,
+        featuredImage: true,
+        payload: true,
+        category: { select: { name: true, slug: true } },
+      },
+    }),
+    ...CINEMA_TABS.map((t) => fetchBandCategoryArticles(t.slug)),
+  ]);
   if (!pool[0]) return null;
 
   const reviewsSrc = pool.filter((c) => c.category?.slug === "movie-reviews");
 
+  // Each tab is an in-place filter panel (lead + grid). When its category is
+  // empty, panel.lead is null - CinemaBand shows an "empty" state in place
+  // rather than navigating away.
+  const tabs = CINEMA_TABS.map((t, i) => {
+    const arts = tabArts[i];
+    const panel = {
+      lead: arts[0] ? toBandArticle(arts[0]) : null,
+      grid: arts.slice(1, 1 + config.gridCount).map(toBandArticle),
+    };
+    return { label: t.label, href: t.href, panel };
+  });
+
   return {
     lead: toBandArticle(pool[0]),
     grid: pool.slice(1, 1 + config.gridCount).map(toBandArticle),
+    tabs,
     reviews: reviewsSrc.slice(0, config.reviewsCount).map((c) => {
       const p = (c.payload as Record<string, unknown> | null) || {};
       return {
