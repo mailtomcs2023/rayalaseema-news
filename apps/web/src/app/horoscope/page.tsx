@@ -38,10 +38,11 @@ export default function HoroscopePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/horoscope").then((r) => r.json()),
-      fetch("/api/panchangam").then((r) => r.json()),
-    ]).then(([h, p]) => { setData(h); setPanchangam(p); setLoading(false); }).catch(() => setLoading(false));
+    // Independent fetches: render the rashis as soon as the fast, DB-backed
+    // horoscope returns - do NOT block the page on the slower panchangam
+    // (which still calls the credit-less Prokerala and can be slow/empty).
+    fetch("/api/horoscope").then((r) => r.json()).then(setData).catch(() => {}).finally(() => setLoading(false));
+    fetch("/api/panchangam").then((r) => r.json()).then(setPanchangam).catch(() => {});
 
     const saved = localStorage.getItem("my-rashi");
     if (saved) setSelected(saved);
@@ -137,7 +138,7 @@ export default function HoroscopePage() {
             {panchangam && (
               <>
                 {/* Today's Panchangam */}
-                {panchangam.today && (
+                {(panchangam.today?.tithi || panchangam.today?.teluguMonth || panchangam.today?.nakshatra) && (
                 <div style={{ background: "#fff", borderRadius: 10, overflow: "hidden", marginBottom: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
                   <div style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", padding: "10px 14px", color: "#fff" }}>
                     <h3 style={{ fontSize: 15, fontWeight: 900 }}>నేటి పంచాంగం</h3>
