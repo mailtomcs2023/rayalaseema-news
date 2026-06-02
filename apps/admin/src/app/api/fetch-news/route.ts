@@ -11,6 +11,19 @@ const PTI_CENTERCODE = process.env.PTI_CENTERCODE;
 // articles whose subcategory contains ONLY these are dropped.
 const PTI_NOISE_SUBCATS = new Set(["GEN", "ESPL", "DSB"]);
 
+// PTI vocabulary, used to disambiguate the `category` query param. If a
+// caller sends ?category=CRI we filter by subcategory token; if they
+// send ?category=BUSINESS we filter by top-level category. Both are
+// case-insensitive on the wire.
+const PTI_TOP_CATEGORIES = new Set([
+  "NATIONAL", "NATION", "BUSINESS", "SPORTS",
+  "FOREIGN", "INTERNATIONAL", "INDIA",
+]);
+const PTI_SUBCATEGORIES = new Set([
+  "NAT", "INT", "SPO", "CRI", "COM", "ECO",
+  "LGL", "ENT", "NRG", "ERG", "WRG", "SRG",
+]);
+
 // Map PTI's "Wednesday, Jan 24, 2024 12:11:22" timestamp to ISO. PTI runs
 // on IST (Asia/Kolkata) but the string carries no offset, so we append
 // +05:30 to keep downstream new Date() consumers honest.
@@ -169,11 +182,24 @@ export async function GET(req: NextRequest) {
       const raw = await res.json();
       const list: any[] = Array.isArray(raw) ? raw : Array.isArray(raw?.d) ? raw.d : Array.isArray(raw?.results) ? raw.results : [];
 
-      const wantCategory = (searchParams.get("category") || "").toUpperCase();
-      const filterQ = query.trim().toLowerCase();
-      // Some keyword expressions ship "OR" - split on it so any term hits.
-      const qTokens = filterQ.length
-        ? filterQ.split(/\s+or\s+/).map((t) => t.trim()).filter(Boolean)
+      // category param accepts either a top-level PTI category (BUSINESS,
+      // SPORTS, NATIONAL, ...) or a finer-grained subcategory token (CRI,
+      // LGL, ENT, NRG/ERG/WRG/SRG, ...). We disambiguate against the
+      // known-vocabulary sets so the UI can mix both in one dropdown.
+      const filterVal = (searchParams.get("category") || "").trim().toUpperCase();
+      let wantTopCat = "";
+      let wantSubcat = "";
+      if (filterVal) {
+        if (PTI_SUBCATEGORIES.has(filterVal)) wantSubcat = filterVal;
+        else if (PTI_TOP_CATEGORIES.has(filterVal)) wantTopCat = filterVal;
+        else wantTopCat = filterVal; // unknown - treat as top-level, lets PTI add new categories without code changes
+      }
+      // `q` post-filter. Caller sends explicit q to narrow; we honour it
+      // as token OR-match against title + description. PTI's API has no
+      // server-side q so this happens client-side.
+      const rawQ = (searchParams.get("q") || "").trim().toLowerCase();
+      const qTokens = rawQ.length
+        ? rawQ.split(/\s+or\s+/).map((t) => t.trim()).filter(Boolean)
         : [];
 
       const items = list
@@ -181,7 +207,8 @@ export async function GET(req: NextRequest) {
           const subcats = String(r.subcategory || "")
             .trim()
             .split(/\s+/)
-            .filter(Boolean);
+            .filter(Boolean)
+            .map((s) => s.toUpperCase());
           const meaningful = subcats.filter((s) => !PTI_NOISE_SUBCATS.has(s));
           if (subcats.length > 0 && meaningful.length === 0) return null;
           const storyHtml = String(r.story || "");
@@ -199,6 +226,8 @@ export async function GET(req: NextRequest) {
             source: "PTI",
             language: "en",
             category: String(r.category || "general").toLowerCase(),
+            ptiTopCategory: String(r.category || "").toUpperCase(),
+            ptiSubcategories: meaningful,
             publishedAt: parsePtiPublishedAt(r.PublishedAt),
             keywords: [
               ...(r.Priority ? [String(r.Priority)] : []),
@@ -209,7 +238,8 @@ export async function GET(req: NextRequest) {
           };
         })
         .filter((x): x is NonNullable<typeof x> => !!x && !!x.title && !!x.externalId)
-        .filter((x) => !wantCategory || x.category.toUpperCase() === wantCategory)
+        .filter((x) => !wantTopCat || x.ptiTopCategory === wantTopCat)
+        .filter((x) => !wantSubcat || x.ptiSubcategories.includes(wantSubcat))
         .filter((x) => {
           if (!qTokens.length) return true;
           const hay = `${x.title} ${x.description}`.toLowerCase();

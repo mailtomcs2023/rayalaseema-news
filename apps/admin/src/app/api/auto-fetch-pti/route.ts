@@ -35,6 +35,19 @@ const PTI_CENTERCODE = process.env.PTI_CENTERCODE;
 // article whose subcategory list contains ONLY these.
 const NOISE_SUBCATS = new Set(["GEN", "ESPL", "DSB"]);
 
+// PTI vocabulary - mirrors the fetch-news route. Caller's
+// ptiCategories[] may contain either top-level category names
+// (BUSINESS, SPORTS, ...) or subcategory tokens (CRI, LGL, NRG, ...).
+// We bucket each entry by membership.
+const KNOWN_TOP_CATS = new Set([
+  "NATIONAL", "NATION", "BUSINESS", "SPORTS",
+  "FOREIGN", "INTERNATIONAL", "INDIA",
+]);
+const KNOWN_SUBCATS = new Set([
+  "NAT", "INT", "SPO", "CRI", "COM", "ECO",
+  "LGL", "ENT", "NRG", "ERG", "WRG", "SRG",
+]);
+
 // Map PTI subcategory token → our internal Content.category slug. First
 // recognised token wins. Unknown tokens fall through; the article gets
 // bucketed by PTI top-level `category` instead.
@@ -121,8 +134,20 @@ export async function POST(req: NextRequest) {
   const fromDate = body.from ? new Date(body.from) : new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const toDate = body.to ? new Date(body.to) : now;
   const limit = Math.min(Math.max(body.limit || 25, 1), 100);
-  const wantSet = new Set((body.ptiCategories || []).map((c) => c.toUpperCase()));
   const forceReimport = !!body.forceReimport;
+
+  // Split the caller's allowlist into top-level vs subcategory buckets.
+  // An empty allowlist means "all PTI stories in window".
+  const wantTopCats = new Set<string>();
+  const wantSubcats = new Set<string>();
+  for (const raw of body.ptiCategories || []) {
+    const v = String(raw || "").toUpperCase().trim();
+    if (!v) continue;
+    if (KNOWN_SUBCATS.has(v)) wantSubcats.add(v);
+    else if (KNOWN_TOP_CATS.has(v)) wantTopCats.add(v);
+    else wantTopCats.add(v); // unknown - default to top-level so the route stays open to new PTI categories
+  }
+  const hasFilter = wantTopCats.size > 0 || wantSubcats.size > 0;
 
   // Pull PTI window.
   const url = `https://editorial.pti.in/ptiapi/webservice1.asmx/JsonFile1?centercode=${encodeURIComponent(PTI_CENTERCODE)}&FromTime=${encodeURIComponent(toPtiTimeString(fromDate))}&EndTime=${encodeURIComponent(toPtiTimeString(toDate))}`;
@@ -141,11 +166,19 @@ export async function POST(req: NextRequest) {
   // Filter noise + optional category allowlist; cap at limit.
   const filtered: Array<{ pti: any; slug: string }> = [];
   for (const r of list) {
-    const subcats = String(r.subcategory || "").trim().split(/\s+/).filter(Boolean);
+    const subcats = String(r.subcategory || "")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((s) => s.toUpperCase());
     const meaningful = subcats.filter((s) => !NOISE_SUBCATS.has(s));
     if (subcats.length > 0 && meaningful.length === 0) continue;
     const topCat = String(r.category || "").toUpperCase();
-    if (wantSet.size > 0 && !wantSet.has(topCat)) continue;
+    if (hasFilter) {
+      const topHit = wantTopCats.size > 0 && wantTopCats.has(topCat);
+      const subHit = wantSubcats.size > 0 && meaningful.some((s) => wantSubcats.has(s));
+      if (!topHit && !subHit) continue;
+    }
     if (!r.Headline || !r.story || !r.FileName) continue;
     filtered.push({ pti: r, slug: mapPtiToInternalSlug(r.category, r.subcategory) });
     if (filtered.length >= limit) break;

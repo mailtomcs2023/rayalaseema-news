@@ -4,7 +4,7 @@
 // AI translation / editing.
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
 import { WithTooltip } from "@/components/ui/tooltip";
@@ -24,15 +24,38 @@ interface NewsItem {
   // PTI-only - other providers leave these undefined.
   byline?: string;
   edNote?: string;
+  ptiTopCategory?: string;
+  ptiSubcategories?: string[];
 }
 
+// Default keyword set for NewsData / Google News. PTI gets a blank
+// search by default - its wire copy doesn't use district names, so any
+// post-fetch filter on these kills every result.
+const DEFAULT_QUERY = "Rayalaseema OR Kurnool OR Anantapur OR Kadapa OR Tirupati";
+
+// Categories shown when the PTI tab is active. Each entry's value is
+// sent to the API as ?category=...; the backend disambiguates between
+// PTI top-level categories (BUSINESS, SPORTS, ...) and subcategory
+// tokens (CRI, LGL, ENT, NRG/ERG/WRG/SRG, ...) by membership.
 const PTI_CATEGORIES = [
   { value: "", label: "All categories" },
-  { value: "NATIONAL", label: "National" },
+  { value: "NATIONAL", label: "National (top)" },
+  { value: "NAT", label: "National (subcat)" },
   { value: "BUSINESS", label: "Business" },
+  { value: "COM", label: "Commerce" },
+  { value: "ECO", label: "Economy" },
   { value: "SPORTS", label: "Sports" },
+  { value: "SPO", label: "Sports (subcat)" },
+  { value: "CRI", label: "Cricket" },
   { value: "FOREIGN", label: "Foreign" },
   { value: "INTERNATIONAL", label: "International" },
+  { value: "INT", label: "International (subcat)" },
+  { value: "LGL", label: "Legal" },
+  { value: "ENT", label: "Entertainment / Lifestyle" },
+  { value: "NRG", label: "Regional - North" },
+  { value: "ERG", label: "Regional - East" },
+  { value: "WRG", label: "Regional - West" },
+  { value: "SRG", label: "Regional - South" },
   { value: "INDIA", label: "India" },
 ];
 
@@ -48,7 +71,7 @@ export default function NewsFeedPage() {
   const router = useRouter();
   const [articles, setArticles] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [query, setQuery] = useState("Rayalaseema OR Kurnool OR Anantapur OR Kadapa OR Tirupati");
+  const [query, setQuery] = useState(DEFAULT_QUERY);
   const [language, setLanguage] = useState("te,en");
   const [provider, setProvider] = useState<Provider>("newsdata");
   const [ptiCategory, setPtiCategory] = useState("");
@@ -60,7 +83,10 @@ export default function NewsFeedPage() {
   const { guard: kycGuard } = useKycGate();
 
   const fetchNews = useCallback(async (searchQuery?: string, providerOverride?: Provider) => {
-    const q = (typeof searchQuery === "string" ? searchQuery : "") || query;
+    // Honour an explicit empty string from the caller (e.g. the PTI tab
+    // click). Only fall back to the current state query when searchQuery
+    // is omitted entirely.
+    const q = typeof searchQuery === "string" ? searchQuery : query;
     const p = providerOverride || provider;
     // PTI tab still works with an empty query - it pulls the last 24h
     // window and lets the admin browse without keyword pre-filtering.
@@ -68,7 +94,8 @@ export default function NewsFeedPage() {
     setLoading(true);
     setError("");
     try {
-      let url = `/api/fetch-news?provider=${p}&q=${encodeURIComponent(q)}&size=15`;
+      let url = `/api/fetch-news?provider=${p}&size=15`;
+      if (q.trim()) url += `&q=${encodeURIComponent(q)}`;
       if (p === "pti") {
         if (ptiCategory) url += `&category=${encodeURIComponent(ptiCategory)}`;
       } else {
@@ -81,7 +108,11 @@ export default function NewsFeedPage() {
         setArticles([]);
       } else {
         setArticles(data.articles || []);
-        if ((data.articles || []).length === 0) setError("No results. Try different keywords or switch provider.");
+        if ((data.articles || []).length === 0) {
+          setError(p === "pti"
+            ? "PTI returned 0 stories in the last 24h window for this filter. Try All categories, widen the time window, or check trial centercode coverage."
+            : "No results. Try different keywords or switch provider.");
+        }
       }
     } catch (e: any) {
       setError(e.message || "Failed to fetch news");
@@ -115,6 +146,15 @@ export default function NewsFeedPage() {
   }, [ptiCategory, autoImporting]);
 
   useEffect(() => { fetchNews("Rayalaseema OR Kurnool", "newsdata"); }, []);
+
+  // PTI category dropdown changes refetch immediately - no submit
+  // needed. Skipped on first render and on non-PTI providers.
+  const isFirstPtiRender = useRef(true);
+  useEffect(() => {
+    if (provider !== "pti") { isFirstPtiRender.current = true; return; }
+    if (isFirstPtiRender.current) { isFirstPtiRender.current = false; return; }
+    fetchNews(undefined, "pti");
+  }, [ptiCategory, provider, fetchNews]);
 
   const importArticle = async (article: NewsItem) => {
     setImporting(article.externalId);
@@ -158,7 +198,23 @@ export default function NewsFeedPage() {
           {PROVIDERS.map((p) => (
             <WithTooltip key={p.value} text={p.note}>
               <button
-                onClick={() => { setProvider(p.value); setAutoImportStatus(""); fetchNews(undefined, p.value); }}
+                onClick={() => {
+                  setProvider(p.value);
+                  setAutoImportStatus("");
+                  // PTI wire copy doesn't include district names - the
+                  // default Rayalaseema/Kurnool/... search filter would
+                  // kill every result. Clear when entering PTI; restore
+                  // the district default when leaving back to a keyword-
+                  // search provider.
+                  let nextQuery = query;
+                  if (p.value === "pti") {
+                    nextQuery = query === DEFAULT_QUERY ? "" : query;
+                  } else if (provider === "pti" && query === "") {
+                    nextQuery = DEFAULT_QUERY;
+                  }
+                  setQuery(nextQuery);
+                  fetchNews(nextQuery, p.value);
+                }}
                 style={{
                   padding: "6px 14px",
                   background: provider === p.value ? "#111827" : "#fff",
