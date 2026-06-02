@@ -149,8 +149,8 @@ export default function ContentListPage() {
 
   // Role gate for the Delete action - mirrors /api/content/[id] DELETE rules:
   //   ADMIN: anything
-  //   REPORTER: own rows + DRAFT/SUBMITTED only
-  //   SUB_EDITOR / EDITOR: DRAFT/SUBMITTED only
+  //   REPORTER / SUB_EDITOR / EDITOR: their OWN rows, DRAFT/SUBMITTED only.
+  //     Once an article is IN_REVIEW or published, only an admin can delete it.
   // Server is the authority; this just keeps the chrome honest so users don't
   // see a button that always errors.
   const { data: session } = useSession();
@@ -158,10 +158,8 @@ export default function ContentListPage() {
   const currentUserId = (session?.user as any)?.id as string | undefined;
   const canDelete = useCallback((row: ContentRow): boolean => {
     if (role === "ADMIN") return true;
-    if (role === "REPORTER") {
-      return row.authorId === currentUserId && (row.status === "DRAFT" || row.status === "SUBMITTED");
-    }
-    return row.status === "DRAFT" || row.status === "SUBMITTED";
+    // Every non-admin can only delete their OWN unpublished work.
+    return row.authorId === currentUserId && (row.status === "DRAFT" || row.status === "SUBMITTED");
   }, [role, currentUserId]);
 
   // ─── data + filter state (server-driven) ────────────────────────────────

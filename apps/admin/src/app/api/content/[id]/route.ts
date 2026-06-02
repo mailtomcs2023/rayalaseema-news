@@ -450,23 +450,21 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     const role = session.user.role;
-    if (role === "REPORTER") {
-      if (existing.authorId !== session.user.id) return NextResponse.json({ error: "Not found" }, { status: 404 });
-      if (existing.status !== "DRAFT" && existing.status !== "SUBMITTED") {
-        return NextResponse.json({ error: "Reporters can only delete drafts or submissions" }, { status: 403 });
+    if (role !== "ADMIN") {
+      // Non-admins (REPORTER / SUB_EDITOR / EDITOR) can delete only their OWN
+      // articles, and only before review starts (DRAFT / SUBMITTED). Once an
+      // article is IN_REVIEW or further along, payments + review/audit history
+      // are tied to it, so only an ADMIN can remove it - and only an ADMIN can
+      // ever delete someone else's article.
+      if (existing.authorId !== session.user.id) {
+        return NextResponse.json({ error: "You can only delete your own articles." }, { status: 403 });
       }
-    } else if (role === "EDITOR" || role === "SUB_EDITOR") {
-      // Sub-editor + Editor can delete only DRAFT / SUBMITTED rows. Once an
-      // article is IN_REVIEW (or further along), payments + audit history
-      // are tied to it - only ADMIN can take it out of the system.
       if (existing.status !== "DRAFT" && existing.status !== "SUBMITTED") {
         return NextResponse.json(
-          { error: `Article is ${existing.status} - only an admin can delete it from this point` },
+          { error: `Article is ${existing.status} - only an admin can delete it from this point.` },
           { status: 403 },
         );
       }
-    } else if (role !== "ADMIN") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     if (purge) {
