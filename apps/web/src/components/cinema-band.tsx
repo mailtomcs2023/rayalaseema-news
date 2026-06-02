@@ -3,6 +3,7 @@
 import { articleHref } from "@/lib/article-href";
 import Link from "next/link";
 import { useState } from "react";
+import { BandEmpty } from "@/components/band-empty";
 
 interface CinemaArticle {
   id: string;
@@ -141,7 +142,7 @@ export function CinemaBand({
           </div>
           </>
           ) : (
-            <div className="cb-empty">ఈ విభాగంలో వార్తలు త్వరలో…</div>
+            <BandEmpty />
           )}
         </div>
 
@@ -234,12 +235,6 @@ export function CinemaBand({
 
         .cb-body { display: flex; gap: 24px; padding: 16px 18px 18px; }
         .cb-main { flex: 1 1 auto; min-width: 0; }
-        .cb-empty {
-          font-family: var(--font-telugu-body), sans-serif;
-          font-size: 14px; font-weight: 600;
-          color: var(--n-500, #6b7280);
-          padding: 48px 8px; text-align: center;
-        }
         .cb-rail {
           flex: 0 0 250px;
           border-left: 1px solid var(--paper-edge, rgba(0,0,0,0.08));

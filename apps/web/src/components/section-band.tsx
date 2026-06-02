@@ -3,6 +3,7 @@
 import { articleHref } from "@/lib/article-href";
 import Link from "next/link";
 import { useState } from "react";
+import { BandEmpty } from "@/components/band-empty";
 
 interface BandArticle {
   id: string;
@@ -163,7 +164,7 @@ export function SectionBand({
           </div>
           </>
           ) : (
-            <div className="sb-empty">ఈ విభాగంలో వార్తలు త్వరలో…</div>
+            <BandEmpty />
           )}
         </div>
 
@@ -295,12 +296,6 @@ export function SectionBand({
 
         .sb-body { display: flex; gap: 24px; }
         .sb-main { flex: 1 1 auto; min-width: 0; }
-        .sb-empty {
-          font-family: var(--font-telugu-body), sans-serif;
-          font-size: 14px; font-weight: 600;
-          color: var(--n-500, #6b7280);
-          padding: 48px 8px; text-align: center;
-        }
         .sb-rail {
           flex: 0 0 260px;
           border-left: 1px solid var(--paper-edge, rgba(0,0,0,0.08));
@@ -404,11 +399,11 @@ export function SectionBand({
         }
         .sb-rail-item:last-child { border-bottom: none; }
         .sb-rail-num {
-          font-family: Georgia, serif;
-          font-style: italic;
-          font-size: 22px; font-weight: 700;
+          font-family: var(--font-telugu-heading), sans-serif;
+          font-size: 23px; font-weight: 800;
           color: var(--brand, #E01B1B);
           line-height: 1; flex-shrink: 0;
+          font-variant-numeric: tabular-nums;
         }
         .sb-rail-title {
           font-family: var(--font-telugu-heading), serif;

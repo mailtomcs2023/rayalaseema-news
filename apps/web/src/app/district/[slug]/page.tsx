@@ -277,7 +277,7 @@ export default async function DistrictPage({ params }: { params: Promise<{ slug:
                 href={articleHref(t)}
                 style={{ display: "flex", gap: 10, padding: "11px 0", borderBottom: "1px dotted rgba(0,0,0,0.18)", textDecoration: "none" }}
               >
-                <span style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 22, fontWeight: 700, color: "var(--brand, #E01B1B)", lineHeight: 1, flexShrink: 0 }}>
+                <span style={{ fontFamily: "var(--font-telugu-heading), sans-serif", fontSize: 23, fontWeight: 800, color: "var(--brand, #E01B1B)", lineHeight: 1, flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <h4 style={{ fontFamily: "var(--font-telugu-heading), serif", fontSize: 14, fontWeight: 700, lineHeight: 1.35, color: "var(--n-900, #111827)", margin: 0 }}>
