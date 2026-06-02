@@ -188,20 +188,29 @@ export function CinemaBand({
           text-decoration: none;
           letter-spacing: 0.02em;
         }
-        .cb-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+        .cb-tabs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
         .cb-tabs a, .cb-tabs .cb-tab {
+          -webkit-appearance: none;
+          appearance: none;
+          box-sizing: border-box;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 30px;
           font-family: var(--font-telugu-body), sans-serif;
-          font-size: 12px;
+          font-size: 13px;
           font-weight: 700;
           color: #fff;
           text-decoration: none;
-          padding: 4px 12px;
-          border: 1px solid rgba(255,255,255,0.5);
+          padding: 3px 14px;
+          margin: 0;
+          border: 1px solid rgba(255,255,255,0.55);
           border-radius: 999px;
           background: transparent;
           cursor: pointer;
-          line-height: 1.4;
-          transition: background 0.15s ease;
+          line-height: 1;
+          white-space: nowrap;
+          transition: background 0.15s ease, color 0.15s ease;
         }
         .cb-tabs a:hover, .cb-tabs .cb-tab:hover { background: rgba(255,255,255,0.18); }
         .cb-tabs .cb-tab--active,

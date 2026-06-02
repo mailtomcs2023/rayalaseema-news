@@ -248,18 +248,28 @@ export function SectionBand({
           text-decoration: none;
         }
         .sb-brand span { color: var(--brand, #E01B1B); }
-        .sb-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+        .sb-tabs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
         .sb-tabs a, .sb-tabs .sb-tab {
+          -webkit-appearance: none;
+          appearance: none;
+          box-sizing: border-box;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 30px;
           font-family: var(--font-telugu-body), sans-serif;
-          font-size: 12px; font-weight: 700;
+          font-size: 13px; font-weight: 700;
           color: var(--n-700, #374151);
           text-decoration: none;
-          padding: 4px 12px;
+          padding: 3px 14px;
+          margin: 0;
           border: 1px solid var(--n-200, #e5e7eb);
           border-radius: 999px;
           background: transparent;
           cursor: pointer;
-          line-height: 1.4;
+          line-height: 1;
+          white-space: nowrap;
+          transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
         }
         .sb-tabs a:hover, .sb-tabs .sb-tab:hover {
           border-color: var(--brand, #E01B1B); color: var(--brand, #E01B1B);
