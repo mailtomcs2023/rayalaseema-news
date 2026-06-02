@@ -279,7 +279,7 @@ ${fullText}`,
       rewrite: `Rewrite this as a standard Telugu newspaper article. Clean, professional Telugu:\n\n${fullText}`,
       editorial: `Write a Rayalaseema-style editorial/opinion piece about this topic. Use dialect words in headlines and quotes only:\n\n${fullText}`,
       dialect: `Add slight Rayalaseema dialect flavor to this article. Only change headlines and quotes, keep body in standard Telugu:\n\n${fullText}`,
-      summarize: `Summarize in exactly 60 words in Telugu. Only return the summary, no HTML:\n\n${fullText}`,
+      summarize: `Summarize this in Telugu in about 60 words (2-3 complete sentences). Always finish the last sentence - never stop mid-sentence or mid-word. Return only the summary, no HTML:\n\n${fullText}`,
       headline: `Suggest 5 catchy Telugu headlines for this article. Return as numbered list:\n\n${fullText}`,
       // Telugu (or any-language) headline → short SEO-friendly English URL slug.
       // 3-5 words, hyphenated, ASCII only. Used by the article editor to fill

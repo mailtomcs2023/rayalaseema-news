@@ -264,13 +264,23 @@ export default function ContentEditorPage() {
           // Translate / editorial - full body rewrite.
           const h2 = data.result.match(/<h2[^>]*>(.*?)<\/h2>/);
           if (h2) setTitle(h2[1].replace(/<[^>]+>/g, "").trim());
-          const p = data.result.match(/<p[^>]*>(.*?)<\/p>/);
-          if (p) {
-            const first = p[1].replace(/<[^>]+>/g, "").trim();
-            if (first.length > 20) setSummary(first.substring(0, 200));
-          }
           setBody(data.result);
           editorRef.current?.setContent(data.result);
+          // Generate a proper AI summary (complete sentences, ~60 words) from
+          // the rewritten article instead of chopping its lead paragraph - so
+          // the Summary box never ends mid-sentence.
+          try {
+            const plain = data.result.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+            const sres = await fetch("/api/ai/rewrite", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ text: plain, action: "summarize" }),
+            });
+            const sdata = await sres.json();
+            if (sdata.result) setSummary(String(sdata.result).replace(/<[^>]+>/g, "").trim());
+          } catch {
+            /* keep existing summary if the follow-up summarize call fails */
+          }
           setSuccess(`Done. Tokens used: ${data.tokens?.total_tokens || data.tokens?.total || 0}`);
         }
       }
