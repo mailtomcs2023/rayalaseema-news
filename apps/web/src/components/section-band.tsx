@@ -272,7 +272,10 @@ export function SectionBand({
           font-size: 13px; font-weight: 700;
           color: var(--n-600, #4b5563);
           text-decoration: none;
-          padding: 4px 15px;
+          /* Asymmetric vertical padding nudges the label down ~3px to optically
+             center it - Noto Sans Telugu reserves large descent space, so a
+             symmetric box leaves the visible glyphs sitting high. */
+          padding: 8px 15px 2px;
           margin: 0;
           border: none;
           border-radius: 6px;
