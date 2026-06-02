@@ -178,6 +178,9 @@ jobs:
             # key encrypt() throws and the save 500s. 32-byte base64 - rotate
             # via the GitHub secret, never commit a real value.
             KYC_ENCRYPTION_KEY="${{ secrets.KYC_ENCRYPTION_KEY }}"
+            # Bearer secret for the cron endpoints (/api/cron/horoscope,
+            # /api/cron/fetch-precious-metals). Without it those routes 503.
+            CRON_SECRET="${{ secrets.CRON_SECRET }}"
             ENV
 
             echo "=== Build apps ==="
