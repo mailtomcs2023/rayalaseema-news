@@ -10,7 +10,7 @@
 //   - everything else: network-only (don't cache article HTML - readers want
 //     fresh news on reconnect).
 
-const VERSION = "v1";
+const VERSION = "v2-2026-06-02-news-rebrand";
 const SHELL_CACHE = `re-shell-${VERSION}`;
 const MEDIA_CACHE = `re-media-${VERSION}`;
 const STATIC_CACHE = `re-static-${VERSION}`;
