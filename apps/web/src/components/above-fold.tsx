@@ -230,14 +230,13 @@ export function AboveFold({
           cursor: pointer;
           transition: background 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
         }
-        .af-nav:hover { background: var(--brand-dark, #B91414); }
-        .af-nav:active { transform: translateY(-50%) scale(0.94); }
+        .af-nav:not([aria-disabled="true"]):hover { background: var(--brand-dark, #B91414); }
+        .af-nav:not([aria-disabled="true"]):active { transform: translateY(-50%) scale(0.94); }
         .af-nav-prev { left: 8px; }
         .af-nav-next { right: 8px; }
-        .af-nav:disabled {
+        .af-nav[aria-disabled="true"] {
           opacity: 0.35;
-          cursor: default;
-          pointer-events: none;
+          cursor: not-allowed;
         }
 
         /* Slide counter pill (current / total), top-right of the hero. */

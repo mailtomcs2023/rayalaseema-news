@@ -111,8 +111,11 @@ export function FeaturedCarousel({ items }: { items: FeaturedArticle[] }) {
         type="button"
         className="af-nav af-nav-prev"
         aria-label="మునుపటి స్లైడ్"
-        disabled={atStart}
-        onClick={() => swiperRef.current?.slidePrev()}
+        // aria-disabled (not the native `disabled` attr) so the dimmed arrow
+        // still captures hover - shows the not-allowed cursor and blocks the
+        // article link beneath. onClick is guarded to a no-op at the boundary.
+        aria-disabled={atStart}
+        onClick={() => { if (!atStart) swiperRef.current?.slidePrev(); }}
       >
         <ChevronLeft size={22} strokeWidth={2.75} aria-hidden="true" />
       </button>
@@ -120,8 +123,8 @@ export function FeaturedCarousel({ items }: { items: FeaturedArticle[] }) {
         type="button"
         className="af-nav af-nav-next"
         aria-label="తదుపరి స్లైడ్"
-        disabled={atEnd}
-        onClick={() => swiperRef.current?.slideNext()}
+        aria-disabled={atEnd}
+        onClick={() => { if (!atEnd) swiperRef.current?.slideNext(); }}
       >
         <ChevronRight size={22} strokeWidth={2.75} aria-hidden="true" />
       </button>
