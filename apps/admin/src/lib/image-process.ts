@@ -18,7 +18,7 @@ export interface ProcessOpts {
 export async function processImageBuffer(
   input: Buffer,
   opts: ProcessOpts = {},
-): Promise<{ buffer: Buffer; contentType: string; ext: string }> {
+): Promise<{ buffer: Buffer; contentType: string; ext: string; origWidth: number; origHeight: number }> {
   const maxWidth = opts.maxWidth ?? 1600;
   const quality = opts.quality ?? 85;
 
@@ -51,9 +51,13 @@ export async function processImageBuffer(
   });
 
   const buffer = await pipeline.toBuffer();
+  // Original (pre-resize) dimensions - callers use these to flag low-res
+  // images that will look blurry when shown large.
+  const origWidth = meta.width ?? 0;
+  const origHeight = meta.height ?? 0;
   return hasAlpha
-    ? { buffer, contentType: "image/png", ext: "png" }
-    : { buffer, contentType: "image/jpeg", ext: "jpg" };
+    ? { buffer, contentType: "image/png", ext: "png", origWidth, origHeight }
+    : { buffer, contentType: "image/jpeg", ext: "jpg", origWidth, origHeight };
 }
 
 // Spec #4 E1 (#220) - multi-aspect image pipeline.

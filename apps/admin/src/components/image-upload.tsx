@@ -48,6 +48,7 @@ export function ImageUpload({ value, onChange, onSearchClick, uploadOnly = false
       const data = await res.json();
       if (data.url) {
         onChange(data.url);
+        if (data.warning) toast.warning(data.warning, { duration: 8000 });
       } else {
         toast.error(data.error || "Upload failed");
       }

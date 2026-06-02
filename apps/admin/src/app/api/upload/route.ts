@@ -39,19 +39,31 @@ export async function POST(req: NextRequest) {
     let outBuf: Buffer = inBuf;
     let outCt: string = file.type;
     let outExt: string = EXT_BY_TYPE[file.type];
+    let origWidth = 0;
     if (file.type !== "image/gif") {
       try {
         const p = await processImageBuffer(inBuf);
         outBuf = p.buffer;
         outCt = p.contentType;
         outExt = p.ext;
+        origWidth = p.origWidth;
       } catch (e) {
         console.warn("[upload] processImageBuffer failed, uploading raw:", e);
       }
     }
     const url = await uploadBuffer(outBuf, outExt, outCt);
 
-    return NextResponse.json({ url, size: outBuf.length });
+    // Low-resolution warning (don't block) - a small image looks blurry shown
+    // large. 800px is the floor for a featured/hero image.
+    const lowRes = origWidth > 0 && origWidth < 800;
+    return NextResponse.json({
+      url,
+      size: outBuf.length,
+      width: origWidth,
+      ...(lowRes
+        ? { warning: `This image is only ${origWidth}px wide and may look blurry when published. Use an image at least 800px wide, or click Upscale to enlarge it.` }
+        : {}),
+    });
   } catch (error) {
     return apiError(error);
   }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError } from "@/lib/api-utils";
-import { uploadImageFromUrl } from "@/lib/blob";
+import { uploadImageFromUrlWithMeta } from "@/lib/blob";
 import { runPipeline } from "@/lib/ai/pipeline";
 import { AIContentFilterError } from "@/lib/ai/client";
 import {
@@ -359,7 +359,11 @@ export async function POST(req: NextRequest) {
         // Re-host source image on Azure Blob (publishers block hotlinking).
         // Image is OPTIONAL - articles without one still import; admin can
         // attach a stock image later via the editor's image-search modal.
-        const hostedImage = article.image_url ? await uploadImageFromUrl(article.image_url) : null;
+        // Skip tiny thumbnails as the hero - they look blurry shown large.
+        // Import without a hero rather than publish a blurry one (>=800px, or
+        // unknown width when sharp couldn't measure it).
+        const heroImg = article.image_url ? await uploadImageFromUrlWithMeta(article.image_url) : null;
+        const hostedImage = heroImg && (heroImg.width === 0 || heroImg.width >= 800) ? heroImg.url : null;
 
         // Create Content row (Spec #1 #109). DRAFT so editors can review.
         //

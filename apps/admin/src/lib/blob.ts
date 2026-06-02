@@ -34,10 +34,16 @@ export async function uploadBuffer(buffer: Buffer, ext: string, contentType: str
  * Returns the blob URL, or null if the source can't be fetched (403/hotlink-blocked/timeout).
  * Use this on every ingested news image so RE never hotlinks publisher images.
  */
-export async function uploadImageFromUrl(srcUrl: string | null | undefined): Promise<string | null> {
+// Like uploadImageFromUrl but also returns the source image's original
+// dimensions, so callers can skip tiny thumbnails (which look blurry when
+// shown large). width/height are 0 when unknown (already-hosted blob, or a
+// raw-format fallback sharp couldn't read) - callers treat 0 as "don't flag".
+export async function uploadImageFromUrlWithMeta(
+  srcUrl: string | null | undefined,
+): Promise<{ url: string; width: number; height: number } | null> {
   if (!srcUrl || !CONN) return null;
   // Already an RE blob - don't re-host
-  if (srcUrl.includes(".blob.core.windows.net/")) return srcUrl;
+  if (srcUrl.includes(".blob.core.windows.net/")) return { url: srcUrl, width: 0, height: 0 };
 
   try {
     const res = await fetch(srcUrl, {
@@ -59,15 +65,21 @@ export async function uploadImageFromUrl(srcUrl: string | null | undefined): Pro
     // to 1600px wide, JPEG q85 (PNG if source had alpha).
     try {
       const processed = await processImageBuffer(buffer);
-      return await uploadBuffer(processed.buffer, processed.ext, processed.contentType);
+      const url = await uploadBuffer(processed.buffer, processed.ext, processed.contentType);
+      return { url, width: processed.origWidth, height: processed.origHeight };
     } catch (e) {
       // If sharp chokes on the format (rare - animated GIF, exotic AVIF),
       // fall back to uploading the original bytes. Better a clean republish
       // than a 404 on the public site.
       console.warn("[uploadImageFromUrl] processImageBuffer failed, uploading raw:", e);
-      return await uploadBuffer(buffer, EXT_BY_TYPE[ct] || "jpg", ct);
+      const url = await uploadBuffer(buffer, EXT_BY_TYPE[ct] || "jpg", ct);
+      return { url, width: 0, height: 0 };
     }
   } catch {
     return null;
   }
+}
+
+export async function uploadImageFromUrl(srcUrl: string | null | undefined): Promise<string | null> {
+  return (await uploadImageFromUrlWithMeta(srcUrl))?.url ?? null;
 }

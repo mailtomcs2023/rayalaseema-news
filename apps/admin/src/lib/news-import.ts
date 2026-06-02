@@ -10,7 +10,7 @@
 
 import { prisma } from "@rayalaseema/db";
 import { buildSlugFromTitle, uniqueSlug } from "./slug";
-import { uploadImageFromUrl } from "./blob";
+import { uploadImageFromUrlWithMeta } from "./blob";
 import { runPipeline } from "./ai/pipeline";
 import { AIContentFilterError } from "./ai/client";
 
@@ -104,7 +104,9 @@ export async function importOneArticle(
     translated = { title: article.title, summary: content.substring(0, 200), body: `<p>${content}</p>` };
   }
   const slug = generateSlug(article.title, existingSlugs);
-  const hostedImage = article.image_url ? await uploadImageFromUrl(article.image_url) : null;
+  // Skip tiny thumbnails as the hero - they look blurry shown large.
+  const heroImg = article.image_url ? await uploadImageFromUrlWithMeta(article.image_url) : null;
+  const hostedImage = heroImg && (heroImg.width === 0 || heroImg.width >= 800) ? heroImg.url : null;
 
   let finalSlug = slug;
   let created = false;
