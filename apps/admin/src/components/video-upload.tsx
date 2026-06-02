@@ -182,29 +182,33 @@ export function VideoUpload({ value, onChange }: Props) {
         </div>
       )}
 
-      {/* Paste-URL row (YouTube / already-hosted video). */}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Link2 size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/70" />
-          <Input
-            type="url"
-            value={urlDraft}
-            onChange={(e) => setUrlDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                applyUrl();
-              }
-            }}
-            placeholder="…or paste a video URL (YouTube / hosted)"
-            className="h-9 bg-white pl-8"
-            disabled={uploading}
-          />
+      {/* Paste-URL row (YouTube / already-hosted video). Only in the empty
+          state - once a video is set the single action is Remove, matching the
+          image-OR-video, one-medium rule (no implicit "add a second video"). */}
+      {!value && (
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Link2 size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/70" />
+            <Input
+              type="url"
+              value={urlDraft}
+              onChange={(e) => setUrlDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  applyUrl();
+                }
+              }}
+              placeholder="…or paste a video URL (YouTube / hosted)"
+              className="h-9 bg-white pl-8"
+              disabled={uploading}
+            />
+          </div>
+          <Button type="button" size="sm" variant="outline" onClick={applyUrl} disabled={!urlDraft.trim() || uploading}>
+            Use URL
+          </Button>
         </div>
-        <Button type="button" size="sm" variant="outline" onClick={applyUrl} disabled={!urlDraft.trim() || uploading}>
-          Use URL
-        </Button>
-      </div>
+      )}
 
       <input
         ref={fileRef}
