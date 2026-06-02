@@ -129,12 +129,18 @@ export async function fetchAboveFold(
   });
 
   const filtered = pool.filter((c) => c.category && !exclude.has(c.category.slug));
-  const leadSrc = filtered.find((c) => c.featured) || filtered[0] || null;
-  if (!leadSrc) return null;
+  // Hero carousel: all editor-"featured" stories, newest-first (pool is
+  // ordered publishedAt desc), capped. Fall back to the single newest article
+  // when nothing is featured, so the hero is never empty.
+  const FEATURED_MAX = 6;
+  let featuredSrc = filtered.filter((c) => c.featured).slice(0, FEATURED_MAX);
+  if (featuredSrc.length === 0 && filtered[0]) featuredSrc = [filtered[0]];
+  if (featuredSrc.length === 0) return null;
 
-  const lead = toAFArticle(leadSrc);
+  const featured = featuredSrc.map(toAFArticle);
+  const featuredIds = new Set(featuredSrc.map((c) => c.id));
   const latest = filtered
-    .filter((c) => c.id !== leadSrc.id)
+    .filter((c) => !featuredIds.has(c.id))
     .slice(0, config.latestCount)
     .map(toAFArticle);
 
@@ -173,7 +179,7 @@ export async function fetchAboveFold(
   });
 
   return {
-    lead,
+    featured,
     districts: districtArticles
       .filter((d) => d.articles.length > 0)
       .sort((a, b) => b.articles.length - a.articles.length),

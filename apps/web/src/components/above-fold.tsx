@@ -1,6 +1,7 @@
 import { articleHref } from "@/lib/article-href";
 import Link from "next/link";
 import Image from "next/image";
+import { FeaturedCarousel } from "@/components/featured-carousel";
 
 interface AFArticle {
   id: string;
@@ -42,12 +43,12 @@ function timeAgo(iso?: string | null): string {
  *  - RAIL: breaking news pinned on top + latest news below
  */
 export function AboveFold({
-  lead,
+  featured,
   districts,
   breaking,
   latest,
 }: {
-  lead: AFArticle;
+  featured: AFArticle[];
   districts: AFDistrict[];
   breaking: AFBreaking[];
   latest: AFArticle[];
@@ -57,35 +58,9 @@ export function AboveFold({
       <div className="af-body">
         {/* MAIN - lead + district grid */}
         <div className="af-main">
-          {/* LEAD */}
-          <div className="af-lead">
-            <Link href={articleHref(lead)} className="af-lead-img" aria-label={lead.title}>
-              {lead.featuredImage ? (
-                // Homepage hero - `priority` because this drives LCP. The
-                // existing .af-lead-img img CSS rule handles object-fit +
-                // aspect-ratio so we just pass intrinsic-ratio hints here.
-                <Image
-                  src={lead.featuredImage}
-                  alt={lead.title}
-                  width={1200}
-                  height={750}
-                  sizes="(max-width: 768px) 100vw, 680px"
-                  priority
-                />
-              ) : (
-                <div className="af-noimg">RE</div>
-              )}
-            </Link>
-            <div className="af-lead-text">
-              <Link href={`/category/${lead.category.slug}`} className="af-cat">
-                {lead.category.name}
-              </Link>
-              <Link href={articleHref(lead)} className="af-lead-link">
-                <h2 className="af-lead-title">{lead.title}</h2>
-              </Link>
-              {lead.summary && <p className="af-lead-dek">{lead.summary}</p>}
-            </div>
-          </div>
+          {/* HERO - manual carousel of editor-featured stories. Renders a
+              plain single hero when only one story is featured. */}
+          <FeaturedCarousel items={featured} />
 
           {/* DISTRICT GRID - 2x4, local-first */}
           <div className="af-dist-head">
@@ -224,6 +199,42 @@ export function AboveFold({
           line-height: 1.6;
           color: var(--n-600, #4b5563);
           margin: 0;
+        }
+
+        /* HERO CAROUSEL (Swiper, manual nav). The carousel wrapper owns the
+           bottom rule so slides don't each draw one; arrows + dots themed to
+           brand red; dots sit in normal flow below the slide (no overlap). */
+        .af-carousel {
+          position: relative;
+          padding-bottom: 16px;
+          border-bottom: 2px solid var(--n-900, #111827);
+        }
+        .af-carousel .af-lead { border-bottom: none; padding-bottom: 0; }
+        .af-carousel .swiper-button-prev,
+        .af-carousel .swiper-button-next {
+          color: #fff;
+          background: rgba(224, 27, 27, 0.92);
+          width: 34px;
+          height: 34px;
+          border-radius: 999px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+        }
+        .af-carousel .swiper-button-prev::after,
+        .af-carousel .swiper-button-next::after {
+          font-size: 14px;
+          font-weight: 800;
+        }
+        .af-carousel .swiper-pagination {
+          position: static;
+          margin-top: 10px;
+        }
+        .af-carousel .swiper-pagination-bullet {
+          background: var(--n-400, #9ca3af);
+          opacity: 0.6;
+        }
+        .af-carousel .swiper-pagination-bullet-active {
+          background: var(--brand, #E01B1B);
+          opacity: 1;
         }
 
         /* DISTRICT GRID */
