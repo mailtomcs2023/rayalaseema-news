@@ -9,7 +9,7 @@ import { PushNotifications } from "@/components/push-notifications";
 import { DistrictPicker } from "@/components/district-picker";
 import { SWRegister } from "@/components/sw-register";
 import "./globals.css";
-import { Geist, Noto_Sans_Telugu, Noto_Serif_Telugu, Mandali } from "next/font/google";
+import { Geist, Noto_Sans_Telugu, Anek_Telugu, Mandali } from "next/font/google";
 import { cn } from "@/lib/utils";
 
 // Spec #4 E5 (#224) - fonts via next/font/google. Self-hosts the woff2
@@ -26,10 +26,14 @@ const notoTelugu = Noto_Sans_Telugu({
   weight: ["400", "500", "600", "700", "800", "900"],
   display: "swap",
 });
-const notoSerifTelugu = Noto_Serif_Telugu({
+// Headline font (#229). Anek Telugu - modern, clean sans-serif with a wide
+// weight range, used for headlines via --font-telugu-heading. Replaced
+// Noto Serif Telugu (2026-06-02). Anek's weight axis tops out at 800; the
+// 900-weight headline sizes (telugu-2xl/3xl) fall back to 800.
+const anekTelugu = Anek_Telugu({
   subsets: ["telugu", "latin"],
   variable: "--font-telugu-heading",
-  weight: ["400", "500", "600", "700", "800", "900"],
+  weight: ["400", "500", "600", "700", "800"],
   display: "swap",
 });
 const mandali = Mandali({
@@ -128,7 +132,7 @@ export default async function RootLayout({
     },
   });
   return (
-    <html lang="te" className={cn("font-sans", geist.variable, notoTelugu.variable, notoSerifTelugu.variable, mandali.variable)} suppressHydrationWarning>
+    <html lang="te" className={cn("font-sans", geist.variable, notoTelugu.variable, anekTelugu.variable, mandali.variable)} suppressHydrationWarning>
       <head>
         {bingVerify && <meta name="msvalidate.01" content={bingVerify} />}
         {/* JSON-LD structured data - search-engine metadata. Uses

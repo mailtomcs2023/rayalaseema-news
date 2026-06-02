@@ -154,7 +154,7 @@
   --color-accent-700: #b45309;
 
   --font-telugu:  "Mandali", "Noto Sans Telugu", "NTR", sans-serif;
-  --font-heading: "Noto Serif Telugu", "Mandali", serif;
+  --font-heading: "Anek Telugu", "Mandali", sans-serif;
   --font-body:    "Mandali", "Noto Sans Telugu", "NTR", sans-serif;
 }
 
@@ -233,7 +233,7 @@
 
   /* ---------- FONTS ---------- */
   --font-telugu-body: "Noto Sans Telugu", sans-serif;
-  --font-telugu-heading: "Noto Serif Telugu", "Noto Sans Telugu", serif;
+  --font-telugu-heading: "Anek Telugu", "Noto Sans Telugu", sans-serif;
   --font-latin: "Noto Sans Telugu", "Helvetica Neue", Arial, sans-serif;
 
   /* ====== LEGACY ALIASES (kept for backward compat - gradually drop) ====== */
@@ -298,7 +298,7 @@
     font-weight: 600 !important;
     letter-spacing: 0.02em !important;
   }
-  /* Headings - serif (Noto Serif Telugu) for editorial gravity, sitewide */
+  /* Headings - Anek Telugu (modern sans) for headline clarity, sitewide */
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-telugu-heading) !important;
   }
