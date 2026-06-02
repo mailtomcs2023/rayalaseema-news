@@ -6,7 +6,7 @@
 // Content). This file is intentionally separate from apps/web/src/lib/db-queries.ts
 // so the page-builder layer can evolve independently from the legacy callers.
 
-import { prisma } from "@rayalaseema/db";
+import { prisma, AdPosition } from "@rayalaseema/db";
 import type { PageContext } from "./types";
 import type {
   aboveFoldConfig,
@@ -71,9 +71,17 @@ function toBandArticle(c: {
 
 // --- Ads ---
 
+// Positions the DB column (Prisma AdPosition enum) actually accepts. The
+// page-builder Zod schema allows a value the enum doesn't yet have
+// (HEADER_LEADERBOARD), so guard here: an unknown position returns no ads
+// rather than throwing a Prisma validation error that 500s the whole page.
+// Auto-heals if the value is later added to the enum.
+const VALID_AD_POSITIONS = new Set<string>(Object.values(AdPosition));
+
 export async function fetchAds(position: string) {
+  if (!VALID_AD_POSITIONS.has(position)) return [];
   const ads = await prisma.ad.findMany({
-    where: { active: true, position: position as never },
+    where: { active: true, position: position as AdPosition },
     orderBy: { createdAt: "desc" },
   });
   return ads.map((a) => ({
