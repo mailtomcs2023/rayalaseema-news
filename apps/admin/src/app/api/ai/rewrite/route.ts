@@ -65,8 +65,18 @@ async function scrapeSource(url: string): Promise<{ text: string; ogImage: strin
       return { text: "", ogImage: null, ogTitle: null };
     }
 
+    // Use a real browser User-Agent + Accept headers. Many publishers return
+    // an empty shell (or block) bot-identifying UAs. This won't bypass
+    // IP-level blocks (e.g. eenadu refuses datacenter IPs outright - use the
+    // manual "paste text in body + translate" path for those), but it lets
+    // the many sites that only gate on UA scrape correctly.
     const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; RayalaseemaNews/1.0)" },
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9,te;q=0.8",
+      },
       signal: AbortSignal.timeout(10000),
     });
     const html = await res.text();
