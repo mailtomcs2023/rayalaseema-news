@@ -22,34 +22,20 @@ const rashiColors = [
   "#2563eb", "#be185d", "#ea580c", "#4338ca", "#0d9488", "#6366f1",
 ];
 
-const rashiSymbols = ["\u2648", "\u2649", "\u264A", "\u264B", "\u264C", "\u264D", "\u264E", "\u264F", "\u2650", "\u2651", "\u2652", "\u2653"];
-
-const rashiDateRanges = [
-  { id: "mesha", s: [3, 21], e: [4, 19] }, { id: "vrushabha", s: [4, 20], e: [5, 20] },
-  { id: "mithuna", s: [5, 21], e: [6, 20] }, { id: "karkataka", s: [6, 21], e: [7, 22] },
-  { id: "simha", s: [7, 23], e: [8, 22] }, { id: "kanya", s: [8, 23], e: [9, 22] },
-  { id: "tula", s: [9, 23], e: [10, 22] }, { id: "vrushchika", s: [10, 23], e: [11, 21] },
-  { id: "dhanu", s: [11, 22], e: [12, 21] }, { id: "makara", s: [12, 22], e: [1, 19] },
-  { id: "kumbha", s: [1, 20], e: [2, 18] }, { id: "meena", s: [2, 19], e: [3, 20] },
+// Real zodiac artwork (self-hosted OpenMoji color SVGs in /public/rashis),
+// in the same order as data.rashis (mesha \u2026 meena). Swap these files to use
+// custom rashi art without touching the component.
+const rashiImages = [
+  "/rashis/mesha.svg", "/rashis/vrushabha.svg", "/rashis/mithuna.svg", "/rashis/karkataka.svg",
+  "/rashis/simha.svg", "/rashis/kanya.svg", "/rashis/tula.svg", "/rashis/vrushchika.svg",
+  "/rashis/dhanu.svg", "/rashis/makara.svg", "/rashis/kumbha.svg", "/rashis/meena.svg",
 ];
-
-function getRashiFromDate(m: number, d: number): string {
-  for (const r of rashiDateRanges) {
-    if (r.s[0] <= r.e[0]) {
-      if ((m === r.s[0] && d >= r.s[1]) || (m === r.e[0] && d <= r.e[1])) return r.id;
-    } else {
-      if ((m === r.s[0] && d >= r.s[1]) || (m === r.e[0] && d <= r.e[1])) return r.id;
-    }
-  }
-  return "mesha";
-}
 
 export default function HoroscopePage() {
   const [data, setData] = useState<{ rashis: Rashi[]; date: string } | null>(null);
   const [panchangam, setPanchangam] = useState<Panchangam | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [birthDate, setBirthDate] = useState("");
 
   useEffect(() => {
     Promise.all([
@@ -79,21 +65,6 @@ export default function HoroscopePage() {
         <div style={{ display: "flex", gap: 16 }} className="horoscope-layout">
           {/* ===== LEFT: Horoscope Main ===== */}
           <div style={{ flex: 1, minWidth: 0 }}>
-            {/* Birth date picker */}
-            {!selected && !loading && (
-              <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: 16, marginBottom: 16, textAlign: "center" }}>
-                <p style={{ fontSize: 14, fontWeight: 700, color: "#333", marginBottom: 8 }}>మీ రాశి తెలియదా? పుట్టిన తేదీ ఎంచుకోండి</p>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                  <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)}
-                    style={{ padding: "8px 12px", border: "1px solid #ddd", borderRadius: 6, fontSize: 13 }} />
-                  <button onClick={() => { if (birthDate) { const d = new Date(birthDate); saveRashi(getRashiFromDate(d.getMonth() + 1, d.getDate())); } }}
-                    disabled={!birthDate} style={{ padding: "8px 16px", background: birthDate ? "var(--color-brand)" : "#e5e7eb", color: birthDate ? "#fff" : "#999", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: birthDate ? "pointer" : "default" }}>
-                    రాశి కనుగొనండి
-                  </button>
-                </div>
-              </div>
-            )}
-
             {/* Rashi selector grid */}
             {!loading && data?.rashis && (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 6, marginBottom: 16 }}>
@@ -104,7 +75,7 @@ export default function HoroscopePage() {
                     display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
                     boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
                   }}>
-                    <span style={{ fontSize: 26, lineHeight: 1 }}>{rashiSymbols[i]}</span>
+                    <img src={rashiImages[i]} alt={r.name} width={34} height={34} loading="lazy" style={{ display: "block" }} />
                     <span style={{ fontSize: 12, fontWeight: 800, color: selected === r.id ? rashiColors[i] : "#333" }}>{r.name}</span>
                     <span style={{ fontSize: 9, color: "#999" }}>{r.nameEn}</span>
                   </button>
@@ -116,7 +87,7 @@ export default function HoroscopePage() {
             {selectedRashi && (
               <div style={{ background: "#fff", borderRadius: 10, padding: 20, marginBottom: 16, borderLeft: `4px solid ${rashiColors[selectedIdx]}`, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                  <span style={{ fontSize: 36, lineHeight: 1 }}>{rashiSymbols[selectedIdx]}</span>
+                  <img src={rashiImages[selectedIdx]} alt={selectedRashi.name} width={46} height={46} style={{ display: "block" }} />
                   <div style={{ flex: 1 }}>
                     <h2 style={{ fontSize: 20, fontWeight: 900, color: rashiColors[selectedIdx] }}>{selectedRashi.name}</h2>
                     <p style={{ fontSize: 11, color: "#888" }}>{selectedRashi.nameEn} | {selectedRashi.dates}</p>
@@ -147,7 +118,7 @@ export default function HoroscopePage() {
                   transition: "box-shadow 0.15s",
                 }} className="hover:shadow-md">
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                    <span style={{ fontSize: 24 }}>{rashiSymbols[i]}</span>
+                    <img src={rashiImages[i]} alt={r.name} width={30} height={30} loading="lazy" style={{ display: "block" }} />
                     <div>
                       <h3 style={{ fontSize: 14, fontWeight: 800, color: rashiColors[i] }}>{r.name}</h3>
                       <p style={{ fontSize: 10, color: "#888" }}>{r.nameEn}</p>
@@ -175,16 +146,16 @@ export default function HoroscopePage() {
                   <div style={{ padding: 12 }}>
                     {[
                       { l: "తెలుగు మాసం", v: panchangam.today.teluguMonth },
-                      { l: "తిథి", v: `${panchangam.today.tithi} (${panchangam.today.paksha})` },
+                      { l: "తిథి", v: panchangam.today.tithi ? `${panchangam.today.tithi}${panchangam.today.paksha ? ` (${panchangam.today.paksha})` : ""}` : "" },
                       { l: "నక్షత్రం", v: panchangam.today.nakshatra },
                       { l: "యోగం", v: panchangam.today.yoga },
                       { l: "కరణం", v: panchangam.today.karana },
-                      { l: "సూర్యోదయం / అస్తమయం", v: `${panchangam.today.sunrise} / ${panchangam.today.sunset}` },
+                      { l: "సూర్యోదయం / అస్తమయం", v: (panchangam.today.sunrise || panchangam.today.sunset) ? `${panchangam.today.sunrise ?? "—"} / ${panchangam.today.sunset ?? "—"}` : "" },
                       { l: "రాహు కాలం", v: panchangam.today.rahuKalam },
                     ].map((item, i) => (
                       <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: i < 6 ? "1px solid #f5f5f5" : "none" }}>
                         <span style={{ fontSize: 12, color: "#888" }}>{item.l}</span>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "#222", textAlign: "right", maxWidth: "55%" }}>{item.v}</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#222", textAlign: "right", maxWidth: "55%" }}>{item.v || "—"}</span>
                       </div>
                     ))}
                   </div>
