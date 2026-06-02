@@ -67,6 +67,24 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ items, total: items.length, hasMore: false, nextCursor: null });
     }
 
+    // Safety-net cleanup: soft-delete never-touched placeholder drafts
+    // ("New Content" picks abandoned >1h ago) so they don't accumulate.
+    // Fire-and-forget + gated to the default first-page list so it doesn't
+    // run on every keystroke / pagination request.
+    if (page === 1 && !cursor && !search) {
+      prisma.content.updateMany({
+        where: {
+          status: "DRAFT",
+          title: { startsWith: "Untitled " },
+          featuredImage: null,
+          deletedAt: null,
+          createdAt: { lt: new Date(Date.now() - 60 * 60 * 1000) },
+          OR: [{ body: null }, { body: "" }],
+        },
+        data: { deletedAt: new Date() },
+      }).catch(() => {});
+    }
+
     const where: any = {};
     if (search) {
       where.OR = [

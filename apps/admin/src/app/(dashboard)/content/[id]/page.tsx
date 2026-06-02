@@ -91,6 +91,11 @@ export default function ContentEditorPage() {
   const [deskId, setDeskId] = useState("");
   const [constituencyId, setConstituencyId] = useState("");
   const [status, setStatus] = useState("DRAFT");
+  // Discard-on-leave bookkeeping: was this row an untouched "Untitled"
+  // placeholder at load, and is it still un-edited? Refs so the unmount
+  // cleanup reads live values without re-subscribing.
+  const loadedAsPlaceholderRef = useRef(false);
+  const isDirtyRef = useRef(false);
   const [featured, setFeatured] = useState(false);
   const [language, setLanguage] = useState("TELUGU");
   const [tagsInput, setTagsInput] = useState("");
@@ -396,8 +401,22 @@ export default function ContentEditorPage() {
         reviewerName: initialReviewerName,
         typedPayload: initialTypedPayload,
       });
+      loadedAsPlaceholderRef.current =
+        (row.title || "").startsWith("Untitled ") && (row.status || "DRAFT") === "DRAFT";
       setLoading(false);
     });
+  }, [contentId]);
+
+  // Discard a never-touched placeholder draft when the editor is abandoned
+  // ("New Content -> pick type -> back") so empty "Untitled" rows don't pile
+  // up. keepalive lets the request survive the unmount/navigation; the server
+  // re-checks pristine + ownership before deleting anything.
+  useEffect(() => {
+    return () => {
+      if (loadedAsPlaceholderRef.current && !isDirtyRef.current) {
+        fetch(`/api/content/${contentId}/discard-draft`, { method: "POST", keepalive: true }).catch(() => {});
+      }
+    };
   }, [contentId]);
 
   const buildPayload = () => {
@@ -558,6 +577,7 @@ export default function ContentEditorPage() {
     typedPayload: type !== "ARTICLE" ? typedPayload : {},
   });
   const isDirty = initialSnapshotRef.current !== null && currentSnapshot !== initialSnapshotRef.current;
+  isDirtyRef.current = isDirty;
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f3f4f6" }}>
