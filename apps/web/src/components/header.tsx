@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { SearchBar } from "./search-bar";
 import { MarketTicker } from "./market-ticker";
 import { categoryHref } from "@/lib/category-href";
+import { Button } from "@/components/ui/button";
 
 // Rayalaseema districts ARE the main nav - this is a Rayalaseema newspaper
 const mainNavItems = [
@@ -257,36 +258,43 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
           {/* Center: spacer (desktop only) */}
           <div className="hidden lg:block flex-1" />
 
-          {/* Right: Tabs + E-Paper (desktop) - monochrome icons, brand-tinted */}
+          {/* Right: Tabs + E-Paper (desktop). shadcn Button (asChild on links). */}
           <div className="hidden lg:flex flex-col items-end gap-1.5 shrink-0">
-            {/* Top row: Latest & Search tabs - fixed h-8 + inline-flex centering
-                so the differently-sized SVG icons and the Telugu text all sit
-                on the same visual midline. */}
-            <div className="flex h-8 overflow-hidden" style={{ border: "1px solid var(--paper-edge)", borderRadius: "var(--r-md)" }}>
-              <Link href="/" className="inline-flex h-full items-center justify-center gap-1.5 px-3 leading-none" style={{ fontSize: "var(--t-xs)", fontWeight: "var(--w-emp)" as any, color: "var(--n-700)", background: "var(--n-0)", borderRight: "1px solid var(--paper-edge)", transition: "background var(--dur-fast) var(--ease)" }}>
-                <svg className="block size-3.5 shrink-0" fill="none" stroke="var(--brand)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                <span className="leading-none">తాజా వార్తలు</span>
-              </Link>
-              <Link href="/search" className="inline-flex h-full items-center justify-center gap-1.5 px-3 leading-none" style={{ fontSize: "var(--t-xs)", fontWeight: "var(--w-emp)" as any, color: "var(--n-700)", background: "var(--n-0)", borderRight: "1px solid var(--paper-edge)", transition: "background var(--dur-fast) var(--ease)" }}>
-                <svg className="block size-3.5 shrink-0" fill="none" stroke="var(--n-500)" strokeWidth="1.8" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-                <span className="leading-none">వెతకండి</span>
-              </Link>
-              <Link href="/" className="inline-flex h-full items-center justify-center gap-1.5 px-3 leading-none" style={{ fontSize: "var(--t-xs)", fontWeight: "var(--w-head)" as any, color: "var(--brand-dark)", background: "var(--brand-soft)" }}>
-                <span className="animate-pulse block shrink-0" style={{ width: 6, height: 6, background: "var(--brand)", borderRadius: "var(--r-pill)" }} />
-                <span className="leading-none">బ్రేకింగ్</span>
-              </Link>
+            {/* Top row: Latest / Search / Breaking */}
+            <div className="flex gap-1.5">
+              <Button asChild variant="outline" size="sm">
+                <Link href="/">
+                  <svg className="block size-3.5 shrink-0" fill="none" stroke="var(--brand)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                  తాజా వార్తలు
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="sm">
+                <Link href="/search">
+                  <svg className="block size-3.5 shrink-0" fill="none" stroke="var(--n-500)" strokeWidth="1.8" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                  వెతకండి
+                </Link>
+              </Button>
+              <Button asChild variant="ghost" size="sm" className="text-[var(--brand-dark)] bg-[var(--brand-soft)] hover:bg-[var(--brand-soft)] hover:text-[var(--brand-dark)]">
+                <Link href="/">
+                  <span className="animate-pulse block shrink-0" style={{ width: 6, height: 6, background: "var(--brand)", borderRadius: "var(--r-pill)" }} />
+                  బ్రేకింగ్
+                </Link>
+              </Button>
             </div>
             {/* Bottom row: E-Paper + Google News Follow */}
-            <div className="flex h-8" style={{ gap: "var(--sp-2)" }}>
-              <Link href="/epaper" className="group inline-flex h-full items-center justify-center gap-2 px-3 leading-none" style={{ background: "var(--brand)", color: "var(--brand-on)", borderRadius: "var(--r-md)", boxShadow: "var(--shadow-sm)", transition: "background var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease)" }}>
-                <svg className="block size-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2"/></svg>
-                <span className="leading-none" style={{ fontSize: "var(--t-xs)", fontWeight: "var(--w-head)" as any, letterSpacing: "0.06em" }}>E-PAPER</span>
-              </Link>
-              <a href="https://news.google.com/publications/CAAqBwgKMIGwlgswrOWEAw?hl=te&gl=IN&ceid=IN:te" target="_blank" rel="noopener noreferrer"
-                className="inline-flex h-full items-center justify-center gap-2 px-3 leading-none" style={{ background: "var(--n-0)", border: "1px solid var(--paper-edge)", borderRadius: "var(--r-md)", transition: "border-color var(--dur-fast) var(--ease)" }}>
-                <svg className="block size-3.5 shrink-0" viewBox="0 0 24 24"><path d="M22.077 12c0-5.523-4.477-10-10-10S2.077 6.477 2.077 12s4.477 10 10 10 10-4.477 10-10z" fill="#4285F4"/><path d="M22.077 12c0-5.523-4.477-10-10-10" fill="#EA4335"/><path d="M2.077 12c0 5.523 4.477 10 10 10" fill="#34A853"/><path d="M2.077 12c0-5.523 4.477-10 10-10" fill="#FBBC05"/><path d="M12.077 7v10" stroke="#fff" strokeWidth="2"/><path d="M7.077 12h10" stroke="#fff" strokeWidth="2"/></svg>
-                <span className="leading-none" style={{ fontSize: "var(--t-xs)", fontWeight: "var(--w-emp)" as any, color: "var(--n-700)" }}>Follow</span>
-              </a>
+            <div className="flex gap-1.5">
+              <Button asChild variant="default" size="sm" className="tracking-[0.06em]">
+                <Link href="/epaper">
+                  <svg className="block size-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2"/></svg>
+                  E-PAPER
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="sm">
+                <a href="https://news.google.com/publications/CAAqBwgKMIGwlgswrOWEAw?hl=te&gl=IN&ceid=IN:te" target="_blank" rel="noopener noreferrer">
+                  <svg className="block size-3.5 shrink-0" viewBox="0 0 24 24"><path d="M22.077 12c0-5.523-4.477-10-10-10S2.077 6.477 2.077 12s4.477 10 10 10 10-4.477 10-10z" fill="#4285F4"/><path d="M22.077 12c0-5.523-4.477-10-10-10" fill="#EA4335"/><path d="M2.077 12c0 5.523 4.477 10 10 10" fill="#34A853"/><path d="M2.077 12c0-5.523 4.477-10 10-10" fill="#FBBC05"/><path d="M12.077 7v10" stroke="#fff" strokeWidth="2"/><path d="M7.077 12h10" stroke="#fff" strokeWidth="2"/></svg>
+                  Follow
+                </a>
+              </Button>
             </div>
           </div>
 
