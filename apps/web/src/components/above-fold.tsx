@@ -234,8 +234,7 @@ export function AboveFold({
         .af-nav:active { transform: translateY(-50%) scale(0.94); }
         .af-nav-prev { left: 8px; }
         .af-nav-next { right: 8px; }
-        /* Swiper adds this class to the bound el at the first/last slide. */
-        .af-nav.swiper-button-disabled {
+        .af-nav:disabled {
           opacity: 0.35;
           cursor: default;
           pointer-events: none;
@@ -263,17 +262,29 @@ export function AboveFold({
         }
         .af-carousel-count-sep { opacity: 0.6; margin: 0 1px; }
 
-        .af-carousel .swiper-pagination {
-          position: static;
-          margin-top: 10px;
+        /* Custom dots - server-rendered (in HTML from first paint, no flash)
+           and in normal flow so they reserve their own height (no layout
+           shift when the page settles). */
+        .af-dots {
+          display: flex;
+          justify-content: center;
+          gap: 7px;
+          margin-top: 12px;
         }
-        .af-carousel .swiper-pagination-bullet {
-          background: var(--n-400, #9ca3af);
-          opacity: 0.6;
+        .af-dot {
+          width: 8px;
+          height: 8px;
+          padding: 0;
+          border: none;
+          border-radius: 999px;
+          background: var(--n-300, #d1d5db);
+          cursor: pointer;
+          transition: background 0.15s ease, transform 0.15s ease;
         }
-        .af-carousel .swiper-pagination-bullet-active {
+        .af-dot:hover { background: var(--n-400, #9ca3af); }
+        .af-dot-active {
           background: var(--brand, #E01B1B);
-          opacity: 1;
+          transform: scale(1.25);
         }
 
         /* DISTRICT GRID */
