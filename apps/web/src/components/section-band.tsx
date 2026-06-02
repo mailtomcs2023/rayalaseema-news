@@ -248,7 +248,18 @@ export function SectionBand({
           text-decoration: none;
         }
         .sb-brand span { color: var(--brand, #E01B1B); }
-        .sb-tabs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        /* Segmented-control tabs: a light track holding pill segments; the
+           active segment is a white pill (lifted with a subtle shadow) with
+           brand-red text. */
+        .sb-tabs {
+          display: inline-flex;
+          align-items: center;
+          gap: 2px;
+          background: var(--n-100, #f3f4f6);
+          border-radius: 9px;
+          padding: 3px;
+          flex-wrap: wrap;
+        }
         .sb-tabs a, .sb-tabs .sb-tab {
           -webkit-appearance: none;
           appearance: none;
@@ -256,29 +267,27 @@ export function SectionBand({
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          min-height: 30px;
+          min-height: 28px;
           font-family: var(--font-telugu-body), sans-serif;
           font-size: 13px; font-weight: 700;
-          color: var(--n-700, #374151);
+          color: var(--n-600, #4b5563);
           text-decoration: none;
-          padding: 3px 14px;
+          padding: 4px 15px;
           margin: 0;
-          border: 1px solid var(--n-200, #e5e7eb);
-          border-radius: 999px;
+          border: none;
+          border-radius: 6px;
           background: transparent;
           cursor: pointer;
           line-height: 1;
           white-space: nowrap;
-          transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+          transition: background 0.15s ease, color 0.15s ease;
         }
-        .sb-tabs a:hover, .sb-tabs .sb-tab:hover {
-          border-color: var(--brand, #E01B1B); color: var(--brand, #E01B1B);
-        }
+        .sb-tabs a:hover, .sb-tabs .sb-tab:hover { color: var(--brand, #E01B1B); }
         .sb-tabs .sb-tab--active,
         .sb-tabs .sb-tab--active:hover {
-          background: var(--brand, #E01B1B);
-          border-color: var(--brand, #E01B1B);
-          color: #fff;
+          background: #fff;
+          color: var(--brand, #E01B1B);
+          box-shadow: 0 1px 2px rgba(0,0,0,0.14);
         }
 
         .sb-body { display: flex; gap: 24px; }

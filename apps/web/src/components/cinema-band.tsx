@@ -188,7 +188,17 @@ export function CinemaBand({
           text-decoration: none;
           letter-spacing: 0.02em;
         }
-        .cb-tabs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        /* Segmented-control tabs: a translucent track holding pill segments;
+           the active segment is a solid white pill with brand-red text. */
+        .cb-tabs {
+          display: inline-flex;
+          align-items: center;
+          gap: 2px;
+          background: rgba(255,255,255,0.16);
+          border-radius: 9px;
+          padding: 3px;
+          flex-wrap: wrap;
+        }
         .cb-tabs a, .cb-tabs .cb-tab {
           -webkit-appearance: none;
           appearance: none;
@@ -196,28 +206,27 @@ export function CinemaBand({
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          min-height: 30px;
+          min-height: 28px;
           font-family: var(--font-telugu-body), sans-serif;
           font-size: 13px;
           font-weight: 700;
           color: #fff;
           text-decoration: none;
-          padding: 3px 14px;
+          padding: 4px 15px;
           margin: 0;
-          border: 1px solid rgba(255,255,255,0.55);
-          border-radius: 999px;
+          border: none;
+          border-radius: 6px;
           background: transparent;
           cursor: pointer;
           line-height: 1;
           white-space: nowrap;
           transition: background 0.15s ease, color 0.15s ease;
         }
-        .cb-tabs a:hover, .cb-tabs .cb-tab:hover { background: rgba(255,255,255,0.18); }
+        .cb-tabs a:hover, .cb-tabs .cb-tab:hover { background: rgba(255,255,255,0.12); }
         .cb-tabs .cb-tab--active,
         .cb-tabs .cb-tab--active:hover {
           background: #fff;
           color: var(--brand, #E01B1B);
-          border-color: #fff;
         }
 
         .cb-body { display: flex; gap: 24px; padding: 16px 18px 18px; }
