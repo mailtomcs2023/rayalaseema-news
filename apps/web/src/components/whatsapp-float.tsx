@@ -26,9 +26,9 @@ export function WhatsAppFloat() {
         style={{
           position: "fixed", bottom: 80, right: 20, zIndex: 9998,
           width: 56, height: 56, borderRadius: "50%",
-          background: "#25D366", color: "#fff",
+          background: "var(--brand, #E01B1B)", color: "#fff",
           display: "flex", alignItems: "center", justifyContent: "center",
-          boxShadow: "0 4px 20px rgba(37,211,102,0.4)",
+          boxShadow: "0 4px 20px rgba(224,27,27,0.35)",
           transition: "transform 0.2s",
         }}
         className="hover:scale-110"
