@@ -136,7 +136,7 @@ export function VideoUpload({ value, onChange }: Props) {
               fileRef.current?.click();
             }
           }}
-          className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed border-slate-300 bg-muted/30 px-6 py-6 text-center hover:border-red-300"
+          className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed border-slate-300 bg-muted/30 px-6 py-8 text-center hover:border-red-300"
         >
           {uploading ? (
             <>
@@ -148,9 +148,13 @@ export function VideoUpload({ value, onChange }: Props) {
             </>
           ) : (
             <>
-              <Upload size={18} className="text-muted-foreground" />
-              <p className="text-sm font-semibold">
-                Upload a video, or <span className="text-red-600">browse</span>
+              {/* Circled icon + py-8 matches ImageUpload so the dropzone keeps
+                  the same height when the editor toggles Image <-> Video. */}
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-background shadow-sm">
+                <Upload size={18} className="text-muted-foreground" />
+              </div>
+              <p className="text-sm font-semibold text-foreground">
+                Upload a video, or <span className="text-red-600 underline-offset-2 hover:underline">browse</span>
               </p>
               <p className="text-[11px] text-muted-foreground">MP4 or WebM · max {MAX_MB}MB</p>
             </>
