@@ -10,9 +10,11 @@
 // (`priority`); the rest lazy-load. Falls back to a plain hero (no Swiper
 // chrome/JS) when there is only one featured story.
 
+import { useRef, useState } from "react";
 import { articleHref } from "@/lib/article-href";
 import Link from "next/link";
 import Image from "next/image";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination, Keyboard, A11y } from "swiper/modules";
 import "swiper/css";
@@ -60,15 +62,36 @@ function Slide({ article, priority }: { article: FeaturedArticle; priority?: boo
 }
 
 export function FeaturedCarousel({ items }: { items: FeaturedArticle[] }) {
+  // Hooks first (Rules of Hooks) - called every render regardless of count.
+  const prevRef = useRef<HTMLButtonElement>(null);
+  const nextRef = useRef<HTMLButtonElement>(null);
+  const [active, setActive] = useState(0);
+
   if (items.length === 0) return null;
   // One story → plain hero, no carousel chrome or Swiper JS.
   if (items.length === 1) return <Slide article={items[0]} priority />;
 
   return (
     <div className="af-carousel">
+      {/* Slide counter (current / total) so readers know more stories exist. */}
+      <span className="af-carousel-count">
+        {active + 1}<span className="af-carousel-count-sep">/</span>{items.length}
+      </span>
+
       <Swiper
         modules={[Navigation, Pagination, Keyboard, A11y]}
-        navigation
+        // Custom lucide arrow buttons (rendered below). Wiring the refs in
+        // onBeforeInit avoids the first-render-null gotcha and keeps the arrows
+        // as real server-rendered SVGs - no glyph-font flash on load.
+        navigation={{ prevEl: prevRef.current, nextEl: nextRef.current }}
+        onBeforeInit={(swiper) => {
+          const nav = swiper.params.navigation;
+          if (nav && typeof nav !== "boolean") {
+            nav.prevEl = prevRef.current;
+            nav.nextEl = nextRef.current;
+          }
+        }}
+        onSlideChange={(swiper) => setActive(swiper.activeIndex)}
         pagination={{ clickable: true }}
         keyboard={{ enabled: true }}
         slidesPerView={1}
@@ -81,6 +104,13 @@ export function FeaturedCarousel({ items }: { items: FeaturedArticle[] }) {
           </SwiperSlide>
         ))}
       </Swiper>
+
+      <button ref={prevRef} type="button" className="af-nav af-nav-prev" aria-label="మునుపటి స్లైడ్">
+        <ChevronLeft size={22} strokeWidth={2.75} aria-hidden="true" />
+      </button>
+      <button ref={nextRef} type="button" className="af-nav af-nav-next" aria-label="తదుపరి స్లైడ్">
+        <ChevronRight size={22} strokeWidth={2.75} aria-hidden="true" />
+      </button>
     </div>
   );
 }

@@ -210,20 +210,59 @@ export function AboveFold({
           border-bottom: 2px solid var(--n-900, #111827);
         }
         .af-carousel .af-lead { border-bottom: none; padding-bottom: 0; }
-        .af-carousel .swiper-button-prev,
-        .af-carousel .swiper-button-next {
-          color: #fff;
-          background: rgba(224, 27, 27, 0.92);
-          width: 34px;
-          height: 34px;
+
+        /* Custom lucide arrow buttons (SVG ships in SSR HTML - no flash). */
+        .af-nav {
+          position: absolute;
+          top: 38%;
+          transform: translateY(-50%);
+          z-index: 3;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 38px;
+          height: 38px;
+          border: none;
           border-radius: 999px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+          color: #fff;
+          background: var(--brand, #E01B1B);
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.28);
+          cursor: pointer;
+          transition: background 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
         }
-        .af-carousel .swiper-button-prev::after,
-        .af-carousel .swiper-button-next::after {
-          font-size: 14px;
-          font-weight: 800;
+        .af-nav:hover { background: var(--brand-dark, #B91414); }
+        .af-nav:active { transform: translateY(-50%) scale(0.94); }
+        .af-nav-prev { left: 8px; }
+        .af-nav-next { right: 8px; }
+        /* Swiper adds this class to the bound el at the first/last slide. */
+        .af-nav.swiper-button-disabled {
+          opacity: 0.35;
+          cursor: default;
+          pointer-events: none;
         }
+
+        /* Slide counter pill (current / total), top-right of the hero. */
+        .af-carousel-count {
+          position: absolute;
+          top: 10px;
+          right: 10px;
+          z-index: 3;
+          display: inline-flex;
+          align-items: center;
+          gap: 3px;
+          padding: 3px 10px;
+          border-radius: 999px;
+          background: rgba(17, 24, 39, 0.78);
+          color: #fff;
+          font-family: var(--font-telugu-body), sans-serif;
+          font-size: 12px;
+          font-weight: 700;
+          line-height: 1;
+          letter-spacing: 0.02em;
+          backdrop-filter: blur(2px);
+        }
+        .af-carousel-count-sep { opacity: 0.6; margin: 0 1px; }
+
         .af-carousel .swiper-pagination {
           position: static;
           margin-top: 10px;
