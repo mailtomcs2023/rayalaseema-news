@@ -107,6 +107,20 @@ const nextAuth = NextAuth({
           token.mustChangePassword = fresh.mustChangePassword;
           token.kycStatus = fresh.reporterProfile?.kycStatus ?? null;
         }
+      } else if (token.id && token.role !== "ADMIN" && token.kycStatus !== "VERIFIED") {
+        // Self-heal: while the user isn't VERIFIED yet, re-read kycStatus from
+        // the DB on every token use (server auth() AND the client session
+        // fetch). This makes an admin's KYC approval reflect on the user's
+        // next request - a plain page refresh or nav - without a re-login or
+        // an explicit session.update(). It's cheap and self-limiting: the
+        // query only runs while the user is pending, and stops for good once
+        // kycStatus reads VERIFIED (cached on the token). ADMINs are exempt
+        // from the KYC gate, so we skip the lookup for them entirely.
+        const fresh = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { reporterProfile: { select: { kycStatus: true } } },
+        });
+        token.kycStatus = fresh?.reporterProfile?.kycStatus ?? null;
       }
       return token;
     },
