@@ -291,7 +291,11 @@ export default function ContentEditorPage() {
           } catch {
             /* keep existing summary if the follow-up summarize call fails */
           }
-          setSuccess(`Done. Tokens used: ${data.tokens?.total_tokens || data.tokens?.total || 0}`);
+          setSuccess(
+            data.fromBrief
+              ? "Draft written from your brief — please verify all facts (names, dates, quotes) before publishing."
+              : `Done. Tokens used: ${data.tokens?.total_tokens || data.tokens?.total || 0}`,
+          );
         }
       }
     } catch (e: any) {
@@ -874,6 +878,9 @@ export default function ContentEditorPage() {
                     {aiLoading === "editorial" ? "Writing…" : "Editorial style"}
                   </Button>
                 </div>
+                <p className="text-[11px] text-muted-foreground">
+                  No source URL? Type a short brief or idea in the Body, then click తెలుగులో రాయండి — the AI expands it into a draft for you to verify.
+                </p>
               </div>
             )}
 

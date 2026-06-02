@@ -225,10 +225,61 @@ export async function POST(req: NextRequest) {
         .split(/\s+/)
         .filter(Boolean).length;
       if (meaningfulWords < 40) {
+        // A SOURCE URL we couldn't read is the dangerous case - the model would
+        // fabricate a plausible-but-fake news article from the URL slug. Refuse
+        // that, loudly.
+        if (sourceUrl) {
+          return NextResponse.json({
+            error: "Couldn't read that source - the site blocks our server (common for eenadu, paywalled, or JavaScript pages). To avoid publishing a fabricated article, copy the article TEXT and paste it into the Body, then click తెలుగులో రాయండి.",
+            code: "no_source_content",
+          }, { status: 422 });
+        }
+        // No source URL: the editor TYPED a short brief / idea directly. That's
+        // intentional, editor-directed authoring - NOT a silent fabrication from
+        // a broken scrape - so proceed: expand the brief into a Telugu DRAFT the
+        // editor then verifies. Returns the same {result} shape as translate, so
+        // the client's translate handler (h2 -> title, body, auto-summary) just
+        // works.
+        if (action === "translate" && (text || "").trim()) {
+          const briefRes = await fetch(
+            `${ENDPOINT}openai/deployments/${DEPLOYMENT}/chat/completions?api-version=${API_VERSION}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "api-key": KEY },
+              body: JSON.stringify({
+                messages: [
+                  { role: "system", content: NEWS_PROMPT },
+                  {
+                    role: "user",
+                    content: `You are writing from a Telugu news editor's short brief / idea. Expand it into a complete, publishable Telugu newspaper article: an <h2> headline, an opening <p class="dek"> standfirst, then well-structured <p> body paragraphs.
+
+STRICT RULES:
+- Write ONLY in Telugu script (transliterate proper nouns, do not translate them).
+- Do NOT invent specific unverifiable facts: no fake quotes, no fabricated statistics, no made-up names, dates or places beyond what the brief states. Where specifics are unknown, stay general and attribute nothing that was not given.
+- This is a DRAFT for the editor to verify and finish.
+
+EDITOR'S BRIEF:
+${text}`,
+                  },
+                ],
+                max_completion_tokens: 2000,
+                temperature: 0.4,
+              }),
+            },
+          );
+          const briefData = await briefRes.json();
+          if (briefData.error) {
+            return NextResponse.json({ error: briefData.error.message }, { status: 500 });
+          }
+          return NextResponse.json({
+            result: briefData.choices?.[0]?.message?.content || "",
+            tokens: briefData.usage || {},
+            model: briefData.model,
+            fromBrief: true,
+          });
+        }
         return NextResponse.json({
-          error: sourceUrl
-            ? "Couldn't read that source - the site blocks our server (common for eenadu, paywalled, or JavaScript pages). To avoid publishing a fabricated article, copy the article TEXT and paste it into the Body, then click తెలుగులో రాయండి."
-            : "Not enough source text to work from. Paste the article TEXT into the Body, then click తెలుగులో రాయండి.",
+          error: "Not enough source text to work from. Type a short brief in the Body (the AI will expand it into a draft), or paste the full article TEXT, then click తెలుగులో రాయండి.",
           code: "no_source_content",
         }, { status: 422 });
       }
