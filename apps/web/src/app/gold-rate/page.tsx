@@ -9,6 +9,7 @@
 import type { Metadata } from "next";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { TodayGoldRate } from "@/components/today-gold-rate";
 import { prisma } from "@rayalaseema/db";
 import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 
@@ -78,6 +79,11 @@ export default async function GoldRatePage() {
         <p style={{ fontSize: 14, color: "#888", marginBottom: 24 }}>
           ఈరోజు బంగారం, వెండి ధరలు · Updated {rows[0]?.date.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) || "-"}
         </p>
+
+        {/* Andhra Pradesh "Today's Gold Rate" card (Lalithaa Jewellery feed). */}
+        <div style={{ marginBottom: 28 }}>
+          <TodayGoldRate />
+        </div>
 
         {byCity.size === 0 ? (
           <p style={{ fontSize: 14, color: "#888", padding: 24, textAlign: "center", background: "#fff", borderRadius: 8 }}>

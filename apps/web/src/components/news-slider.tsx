@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { articleHref } from "@/lib/article-href";
+import { categoryHref } from "@/lib/category-href";
 
 interface SliderItem {
   id: string;
@@ -90,7 +91,7 @@ export function NewsSlider({ items }: { items: SliderItem[] }) {
 
         {/* Text overlay */}
         <div className="news-slider-text">
-          <Link href={`/category/${item.category.slug}`}>
+          <Link href={categoryHref(item.category.slug)}>
             <span className="news-slider-cat" style={{ background: item.category.color || "var(--color-brand)" }}>
               {item.category.name}
             </span>

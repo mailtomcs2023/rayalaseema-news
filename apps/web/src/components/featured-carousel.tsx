@@ -12,6 +12,7 @@
 
 import { useRef, useState } from "react";
 import { articleHref } from "@/lib/article-href";
+import { categoryHref } from "@/lib/category-href";
 import Link from "next/link";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -48,7 +49,7 @@ function Slide({ article, priority }: { article: FeaturedArticle; priority?: boo
         )}
       </Link>
       <div className="af-lead-text">
-        <Link href={`/category/${article.category.slug}`} className="af-cat">
+        <Link href={categoryHref(article.category.slug)} className="af-cat">
           {article.category.name}
         </Link>
         <Link href={articleHref(article)} className="af-lead-link">

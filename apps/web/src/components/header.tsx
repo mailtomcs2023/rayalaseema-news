@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SearchBar } from "./search-bar";
 import { MarketTicker } from "./market-ticker";
+import { categoryHref } from "@/lib/category-href";
 
 // Rayalaseema districts ARE the main nav - this is a Rayalaseema newspaper
 const mainNavItems = [
@@ -17,38 +18,38 @@ const mainNavItems = [
   { name: "తిరుపతి", slug: "/district/tirupati" },
   { name: "అన్నమయ్య", slug: "/district/annamayya" },
   { name: "చిత్తూరు", slug: "/district/chittoor" },
-  { name: "క్రీడలు", slug: "/category/sports" },
-  { name: "సినిమా", slug: "/category/entertainment" },
+  { name: "క్రీడలు", slug: "/sports" },
+  { name: "సినిమా", slug: "/entertainment" },
   { name: "రాశి ఫలాలు", slug: "/horoscope" },
   { name: "మరిన్ని ❯", slug: "#", isDropdown: true },
 ];
 
 // These go in the "మరిన్ని" dropdown
 const dropdownItems = [
-  { name: "ఆంధ్రప్రదేశ్", slug: "/category/andhra-pradesh" },
-  { name: "తెలంగాణ", slug: "/category/telangana" },
-  { name: "జాతీయం", slug: "/category/national" },
-  { name: "అంతర్జాతీయం", slug: "/category/international" },
-  { name: "బిజినెస్", slug: "/category/business" },
-  { name: "టెక్నాలజీ", slug: "/category/technology" },
-  { name: "సినిమా రివ్యూలు", slug: "/category/movie-reviews" },
-  { name: "పరీక్షా ఫలితాలు", slug: "/category/exam-results" },
-  { name: "ఉద్యోగాలు", slug: "/category/jobs" },
-  { name: "వ్యవసాయం", slug: "/category/agriculture" },
-  { name: "విద్య", slug: "/category/education" },
-  { name: "ఆరోగ్యం", slug: "/category/health" },
-  { name: "భక్తి", slug: "/category/devotional" },
-  { name: "నేరాలు", slug: "/category/crime" },
-  { name: "నవ్యసీమ", slug: "/category/navyaseema" },
-  { name: "NRI వార్తలు", slug: "/category/nri" },
-  { name: "వాతావరణం", slug: "/category/weather" },
-  { name: "రియల్ ఎస్టేట్", slug: "/category/real-estate" },
-  { name: "ఫీచర్ పేజీలు", slug: "/category/features" },
-  { name: "సంపాదకీయం", slug: "/category/editorial" },
-  { name: "పాఠకుల లేఖలు", slug: "/category/reader-letters" },
-  { name: "రాయలసీమ రుచులు", slug: "/category/rayalaseema-ruchulu" },
-  { name: "ఎట్టెట 😄", slug: "/category/yetteta" },
-  { name: "పజిల్స్", slug: "/category/puzzles" },
+  { name: "ఆంధ్రప్రదేశ్", slug: "/andhra-pradesh" },
+  { name: "తెలంగాణ", slug: "/telangana" },
+  { name: "జాతీయం", slug: "/national" },
+  { name: "అంతర్జాతీయం", slug: "/international" },
+  { name: "బిజినెస్", slug: "/business" },
+  { name: "టెక్నాలజీ", slug: "/technology" },
+  { name: "సినిమా రివ్యూలు", slug: "/movie-reviews" },
+  { name: "పరీక్షా ఫలితాలు", slug: "/exam-results" },
+  { name: "ఉద్యోగాలు", slug: "/jobs" },
+  { name: "వ్యవసాయం", slug: "/agriculture" },
+  { name: "విద్య", slug: "/education" },
+  { name: "ఆరోగ్యం", slug: "/health" },
+  { name: "భక్తి", slug: "/devotional" },
+  { name: "నేరాలు", slug: "/crime" },
+  { name: "నవ్యసీమ", slug: "/navyaseema" },
+  { name: "NRI వార్తలు", slug: "/nri" },
+  { name: "వాతావరణం", slug: "/weather" },
+  { name: "రియల్ ఎస్టేట్", slug: "/real-estate" },
+  { name: "ఫీచర్ పేజీలు", slug: "/features" },
+  { name: "సంపాదకీయం", slug: "/editorial" },
+  { name: "పాఠకుల లేఖలు", slug: "/reader-letters" },
+  { name: "రాయలసీమ రుచులు", slug: "/rayalaseema-ruchulu" },
+  { name: "ఎట్టెట 😄", slug: "/yetteta" },
+  { name: "పజిల్స్", slug: "/puzzles" },
 ];
 
 interface HeaderProps {
@@ -108,7 +109,7 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
         const href = (() => {
           const t = it.target;
           if (!t) return "#";
-          if (t.type === "CATEGORY") return `/category/${t.categorySlug}`;
+          if (t.type === "CATEGORY") return categoryHref(t.categorySlug);
           if (t.type === "INTERNAL_URL") return t.url;
           if (t.type === "EXTERNAL_URL") return t.url;
           if (t.type === "CONTENT" && t.contentSlugCache && t.contentTypeCache) {
@@ -124,7 +125,7 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
           hasDropdown = true;
           for (const c of it.children) {
             const ct = c.target;
-            const childHref = ct?.type === "CATEGORY" ? `/category/${ct.categorySlug}`
+            const childHref = ct?.type === "CATEGORY" ? categoryHref(ct.categorySlug)
               : ct?.type === "INTERNAL_URL" || ct?.type === "EXTERNAL_URL" ? ct.url
               : "#";
             drop.push({ name: c.label, slug: childHref });

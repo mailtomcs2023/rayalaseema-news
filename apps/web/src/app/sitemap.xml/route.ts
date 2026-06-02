@@ -71,7 +71,9 @@ export async function GET() {
     urls.push(`  <url><loc>${siteUrl}/tag/${t.slug}</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>`);
   }
   for (const c of categories) {
-    urls.push(`  <url><loc>${siteUrl}/category/${c.slug}</loc><changefreq>hourly</changefreq><priority>0.7</priority></url>`);
+    // Categories serve at the bare root slug (/business); old /category/<slug>
+    // 301s here via next.config redirects().
+    urls.push(`  <url><loc>${siteUrl}/${c.slug}</loc><changefreq>hourly</changefreq><priority>0.7</priority></url>`);
   }
   for (const a of authors) {
     urls.push(`  <url><loc>${siteUrl}/author/${a.publicProfileSlug}</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>`);

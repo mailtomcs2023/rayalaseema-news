@@ -88,7 +88,7 @@ export function DistrictNews({ articles }: { articles: DistrictArticle[] }) {
       </div>
 
       <a
-        href="/category/district-news"
+        href="/district-news"
         className="block text-center text-sm text-primary-500 font-medium mt-3 hover:underline"
       >
         మరిన్ని జిల్లా వార్తలు →

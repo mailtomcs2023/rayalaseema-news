@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Badge } from "@rayalaseema/ui";
 import { articleHref } from "@/lib/article-href";
+import { categoryHref } from "@/lib/category-href";
 
 interface Article {
   id: string;
@@ -171,7 +172,7 @@ export function CategorySection({ category, articles, layout = "grid" }: Categor
           <span className="text-sm text-gray-400 font-medium">{category.nameEn}</span>
         </div>
         <Link
-          href={`/category/${category.slug}`}
+          href={categoryHref(category.slug)}
           className="text-sm font-medium hover:underline transition-colors"
           style={{ color: category.color }}
         >

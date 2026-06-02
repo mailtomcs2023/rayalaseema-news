@@ -65,7 +65,7 @@ export default async function ExamResultsPage({ params }: { params: Params }) {
   const breadcrumbLd = buildBreadcrumbListSchema({
     items: [
       { name: "Home", url: SITE_URL },
-      { name: "Results", url: `${SITE_URL}/category/exam-results` },
+      { name: "Results", url: `${SITE_URL}/exam-results` },
       { name: content.title },
     ],
   });

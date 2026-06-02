@@ -14,6 +14,7 @@ import { ShareBar } from "@/components/share-bar";
 import { DialectGlosser } from "@/components/dialect-glosser";
 import { injectInlineByline, formatRelativeTelugu } from "@/lib/byline";
 import { sanitizeArticleHtml } from "@/lib/sanitize";
+import { categoryHref } from "@/lib/category-href";
 import { articleHref } from "@/lib/article-href";
 import { buildNewsArticleSchema, buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 import type { LocationChain, AuthorRef, PublisherConfig } from "@rayalaseema/seo-schema";
@@ -135,7 +136,7 @@ export function ArticleView({ article, related, trending, siteUrl }: Props) {
   const breadcrumbLd = buildBreadcrumbListSchema({
     items: [
       { name: "Home", url: siteUrl },
-      { name: article.category.name, url: `${siteUrl}/category/${article.category.slug}` },
+      { name: article.category.name, url: `${siteUrl}${categoryHref(article.category.slug)}` },
       { name: article.title },
     ],
   });
@@ -155,7 +156,7 @@ export function ArticleView({ article, related, trending, siteUrl }: Props) {
         <nav style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#888", marginBottom: 16 }}>
           <Link href="/" style={{ color: "#888", textDecoration: "none" }}>Home</Link>
           <span>/</span>
-          <Link href={`/category/${article.category.slug}`} style={{ color: "#888", textDecoration: "none" }}>{article.category.name}</Link>
+          <Link href={categoryHref(article.category.slug)} style={{ color: "#888", textDecoration: "none" }}>{article.category.name}</Link>
           <span>/</span>
           <span style={{ color: "#555" }}>{article.title.substring(0, 40)}...</span>
         </nav>

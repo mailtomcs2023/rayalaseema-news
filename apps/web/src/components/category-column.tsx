@@ -1,4 +1,5 @@
 import { articleHref } from "@/lib/article-href";
+import { categoryHref } from "@/lib/category-href";
 import Link from "next/link";
 
 interface ColArticle {
@@ -26,7 +27,7 @@ export function CategoryColumn({
 }) {
   return (
     <div className="cc">
-      <Link href={`/category/${slug}`} className="cc-head">
+      <Link href={categoryHref(slug)} className="cc-head">
         {title} <span aria-hidden="true">›</span>
       </Link>
 

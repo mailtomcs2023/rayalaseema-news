@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
+import { getApGoldRates } from "@/lib/lalithaa-rates";
 
 // Force this handler to be re-discovered by Turbopack after stale routing
 // state; touch this comment if /api/tickers ever 404s in dev.
@@ -55,7 +56,24 @@ async function getMandiPrices() {
 async function getBullionPrices() {
   const OZ_TO_GRAM = 31.1035;
 
-  // Method 0: PreciousMetalRate DB rows (editor-entered, per Rayalaseema city).
+  // Method 0 (primary): Lalithaa Jewellery's Andhra Pradesh feed - the exact
+  // per-gram retail rates (Gold 22KT, Silver, Platinum) shown on their site.
+  // Used with permission; cached 30 min by lib/lalithaa-rates. Falls through
+  // to the editor/DB cascade below if their API is unreachable.
+  try {
+    const ap = await getApGoldRates();
+    if (ap) {
+      return [
+        { name: "బంగారం 22K", nameEn: "Gold 22KT", price: Math.round(ap.goldPerGram), unit: "గ్రాము", change: 0 },
+        { name: "వెండి", nameEn: "Silver", price: Math.round(ap.silverPerGram), unit: "గ్రాము", change: 0 },
+        { name: "ప్లాటినం", nameEn: "Platinum", price: Math.round(ap.platinumPerGram), unit: "గ్రాము", change: 0 },
+      ];
+    }
+  } catch {
+    // fall through to the DB / spot cascade below
+  }
+
+  // Method 1: PreciousMetalRate DB rows (editor-entered, per Rayalaseema city).
   // The /gold-rate page reads from this same table; surfacing the same rows
   // in the strip keeps the two views in sync. Only the freshest row per
   // (city, metal, purity) within the current 24h window is shown so stale

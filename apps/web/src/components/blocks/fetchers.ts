@@ -8,6 +8,7 @@
 
 import { prisma, AdPosition } from "@rayalaseema/db";
 import type { PageContext } from "./types";
+import { categoryHref, normalizeCategoryHref } from "@/lib/category-href";
 import type {
   aboveFoldConfig,
   adBannerMidConfig,
@@ -282,7 +283,9 @@ export async function fetchSectionBand(
   ]);
 
   const brand = config.brand || cat?.name || slug;
-  const brandHref = config.brandHref || `/category/${slug}`;
+  // brandHref may be persisted as a legacy "/category/<slug>" in the DB config;
+  // normalize it (and tab hrefs below) to the bare slug.
+  const brandHref = config.brandHref ? normalizeCategoryHref(config.brandHref) : categoryHref(slug);
 
   const defaultPanel = buildBandPanel(defaultArts, config);
   if (!defaultPanel.lead) return null;
@@ -300,7 +303,7 @@ export async function fetchSectionBand(
     const tslug = tabSlugs[i];
     const isDistinct = Boolean(tslug) && tslug !== slug;
     const panel = isDistinct ? buildBandPanel(artsBySlug.get(tslug!) ?? [], config) : null;
-    return { label: t.label, href: t.href, panel };
+    return { label: t.label, href: normalizeCategoryHref(t.href), panel };
   });
 
   let cartoon: { title: string; caption: string; image: string; date: string } | null = null;

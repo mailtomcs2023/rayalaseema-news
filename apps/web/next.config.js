@@ -71,6 +71,15 @@ const nextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
+  async redirects() {
+    // Categories moved from /category/<slug> to bare root slugs (Eenadu-style:
+    // /business, /sports). Permanent (308) redirect preserves SEO equity for
+    // every already-indexed /category/* URL. RSS lives at /rss/category/* and
+    // is unaffected (different prefix).
+    return [
+      { source: "/category/:slug", destination: "/:slug", permanent: true },
+    ];
+  },
 };
 
 module.exports = nextConfig;

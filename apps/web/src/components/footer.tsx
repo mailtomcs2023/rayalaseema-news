@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { categoryHref } from "@/lib/category-href";
 
 interface FooterProps {
   config?: Record<string, string>;
@@ -119,7 +120,7 @@ export function Footer({ config: initialConfig = {} }: FooterProps) {
               ].map((cat) => (
                 <li key={cat.slug}>
                   <Link
-                    href={`/category/${cat.slug}`}
+                    href={categoryHref(cat.slug)}
                     className="hover:text-white transition-colors font-telugu"
                   >
                     {cat.name}

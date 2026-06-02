@@ -99,12 +99,12 @@ const tips = [
 ];
 
 const relatedPages = [
-  { name: "వ్యవసాయం", nameEn: "Agriculture", slug: "/category/agriculture", icon: "\u{1F33E}", desc: "పంటలు, ధరలు, మార్కెట్ సమాచారం" },
-  { name: "ఆరోగ్యం", nameEn: "Health", slug: "/category/health", icon: "\u{1F3E5}", desc: "వైద్య సలహాలు, ఆసుపత్రి వార్తలు" },
-  { name: "క్రీడలు", nameEn: "Sports", slug: "/category/sports", icon: "\u26BD", desc: "క్రీడా వార్తలు, ఫలితాలు" },
-  { name: "విద్య", nameEn: "Education", slug: "/category/education", icon: "\u{1F393}", desc: "పరీక్షలు, ఫలితాలు, స్కాలర్‌షిప్‌లు" },
-  { name: "రాశి ఫలాలు", nameEn: "Horoscope", slug: "/category/rasi-phalalu", icon: "\u2B50", desc: "నేటి రాశి ఫలాలు" },
-  { name: "NRI వార్తలు", nameEn: "NRI News", slug: "/category/nri", icon: "\u{1F30D}", desc: "ప్రవాస భారతీయుల వార్తలు" },
+  { name: "వ్యవసాయం", nameEn: "Agriculture", slug: "/agriculture", icon: "\u{1F33E}", desc: "పంటలు, ధరలు, మార్కెట్ సమాచారం" },
+  { name: "ఆరోగ్యం", nameEn: "Health", slug: "/health", icon: "\u{1F3E5}", desc: "వైద్య సలహాలు, ఆసుపత్రి వార్తలు" },
+  { name: "క్రీడలు", nameEn: "Sports", slug: "/sports", icon: "\u26BD", desc: "క్రీడా వార్తలు, ఫలితాలు" },
+  { name: "విద్య", nameEn: "Education", slug: "/education", icon: "\u{1F393}", desc: "పరీక్షలు, ఫలితాలు, స్కాలర్‌షిప్‌లు" },
+  { name: "రాశి ఫలాలు", nameEn: "Horoscope", slug: "/rasi-phalalu", icon: "\u2B50", desc: "నేటి రాశి ఫలాలు" },
+  { name: "NRI వార్తలు", nameEn: "NRI News", slug: "/nri", icon: "\u{1F30D}", desc: "ప్రవాస భారతీయుల వార్తలు" },
 ];
 
 export default function WeatherPage() {
