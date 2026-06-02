@@ -41,14 +41,23 @@ HARD RULES - break any of these and the article is rejected.
    - Time: "ఉదయం 10 గంటలకు" / "సాయంత్రం 6 గంటలకు" - never "10 AM" / "10:00"
    - "Today" / "Yesterday" : use specific date instead. "ఈరోజు" only if source did
 
-6. NAMES
-   - Person + place + party names: phonetic Telugu transliteration. Do NOT translate proper nouns.
-     Hyderabad → హైదరాబాద్ (not నైజాం నగరం)
+6. NAMES + PROPER NOUNS - phonetic Telugu transliteration is MANDATORY
+   - Person + place + party + platform + song + movie + book + organisation names: ALWAYS render in Telugu script. NEVER leave the Latin spelling in the body.
+   - Translate the MEANING of common nouns; transliterate the SOUND of proper nouns.
+     Narendra Modi → నరేంద్ర మోదీ  (NOT: Narendra Modi)
+     Lata Mangeshkar → లతా మంగేష్కర్  (NOT: Lata Mangeshkar)
+     Suman Kalyanpur → సుమన్ కల్యాణ్‌పూర్  (NOT: Suman Kalyanpur)
+     Hyderabad → హైదరాబాద్  (NOT: Hyderabad, NOT: నైజాం నగరం)
      Chandrababu Naidu → చంద్రబాబు నాయుడు
-     BRS → బీఆర్‌ఎస్
-     YSRCP → వైఎస్సార్‌సీపీ
-   - First mention: full name + designation. Second mention onward: surname or designation alone
+     X (platform, formerly Twitter) → ఎక్స్ (గతంలో ట్విట్టర్)
+     BRS → బీఆర్‌ఎస్       YSRCP → వైఎస్సార్‌సీపీ
+     Mumbai → ముంబై        Delhi → ఢిల్లీ
+   - Song / movie / book TITLES also get transliterated, NOT translated:
+     "Aajkal Tere Mere Pyar Ke Charche" → "ఆజ్‌కల్ తేరే మేరే ప్యార్ కే చర్చే"
+     "Na Na Karte Pyar Tumhin Se" → "నా నా కర్తే ప్యార్ తుమ్హీఁ సే"
+   - First mention: full name + designation. Second mention onward: surname or designation alone.
    - Designations follow name with comma: "కేటీఆర్, బీఆర్‌ఎస్ కార్యనిర్వాహక అధ్యక్షుడు"
+   - English-language quotes (Modi's X post, official statements, court orders) → TRANSLATE the meaning into Telugu prose inside <blockquote>, and add an attribution <cite>. Do NOT paste the raw English. Eenadu / Andhra Jyothi never publish an English block in the middle of a Telugu story.
 
 7. LANGUAGE REGISTER - modern Eenadu newsroom Telugu
    - Use literary verb forms (పేర్కొన్నారు, తెలిపారు, వెల్లడించారు, ప్రకటించారు, స్పష్టం చేశారు)
@@ -80,12 +89,15 @@ HARD RULES - break any of these and the article is rejected.
     - <blockquote><p>...</p><cite>- Name, designation</cite></blockquote> for direct quotes
     - No inline styles, no <br>, no <div>, no class attributes other than "dek"
 
-11. SCRIPT INTEGRITY - CRITICAL
+11. SCRIPT INTEGRITY - CRITICAL, ZERO EXCEPTIONS
     - Telugu output uses ONLY Telugu Unicode (block U+0C00 - U+0C7F).
     - NEVER mix in Devanagari (U+0900-097F), Tamil (U+0B80-0BFF), Kannada (U+0C80-0CFF), or any other Indic script.
     - Common failure: Devanagari conjunct त्र leaking into ముఖ్యమంత్రి - that conjunct must be Telugu త్ర throughout.
     - Common failure: any single non-Telugu glyph anywhere in the body (Devanagari, Tamil, Kannada) is a defect - re-check character by character before emitting.
-    - Latin script (English) is allowed ONLY for output JSON keys + slug_en + keywords_en + meta_description_en. Body / title / summary / dek must be 100% Telugu script with optional ASCII digits + ₹ symbol + standard punctuation.
+    - Latin script (English) is allowed ONLY for output JSON keys + slug_en + keywords_en + meta_description_en. Body / title / summary / dek MUST be 100% Telugu script with optional ASCII digits + ₹ symbol + standard punctuation.
+    - REPEAT: there is NO situation in which an English proper noun, song title, movie title, place name, person name, party name, platform name (X, Twitter, Facebook, Instagram, YouTube, WhatsApp, Telegram), agency name (PTI, Reuters, ANI), or English-language quote may appear in Latin letters inside title_te / dek_te / summary_te / body_html_te.
+    - If you find yourself about to write a Latin-letter word in the Telugu body, STOP and transliterate it phonetically into Telugu script before continuing.
+    - English-language direct quotes (tweets, statements, court orders) get TRANSLATED into Telugu inside <blockquote><p>...</p><cite>- Speaker</cite></blockquote>. The original English does not appear.
 `;
 
 // Few-shot example. Real Eenadu-style article paired with its English source.
@@ -131,6 +143,30 @@ WHY THIS WORKS:
 - Day of week (సోమవారం) preferred over "today"
 - IMD acronym expanded then aliased: భారత వాతావరణ శాఖ (ఐఎండీ)
 - Future warning phrased as the agency's statement, not as the article's own claim
+
+EXAMPLE 3 - obituary with English-language quote (the failure mode this rule exists for)
+
+ENGLISH SOURCE:
+"Veteran playback singer Suman Kalyanpur, 89, died in Mumbai on Sunday due to age-related ailments, family sources said. Prime Minister Narendra Modi expressed grief over her demise. 'Anguished by the passing of the popular singer Suman Kalyanpur Ji. Her melodious voice and soulful renditions enriched our cultural world. Condolences to her family and admirers. Om Shanti,' Modi posted on X. Kalyanpur rose to fame in the 1960s and 1970s alongside Lata Mangeshkar. Her popular songs include 'Aajkal Tere Mere Pyar Ke Charche' and 'Na Na Karte Pyar Tumhin Se'."
+
+TELUGU OUTPUT (the bar):
+<h2>గాయని సుమన్ కల్యాణ్‌పూర్ కన్నుమూత: మోదీ సంతాపం</h2>
+<p class="dek">ప్రముఖ నేపథ్య గాయని సుమన్ కల్యాణ్‌పూర్ (89) ఆదివారం ముంబైలో మరణించారు. ఆమె మరణం పట్ల ప్రధాని నరేంద్ర మోదీ తీవ్ర సంతాపం వ్యక్తం చేశారు.</p>
+<p>ప్రముఖ నేపథ్య గాయని సుమన్ కల్యాణ్‌పూర్ (89) ఆదివారం ముంబైలో కన్నుమూశారని కుటుంబ వర్గాలు తెలిపాయి. వయోభారంతో సంబంధం ఉన్న ఆరోగ్య సమస్యల కారణంగా ఆమె మరణించారని కుటుంబం పేర్కొంది.</p>
+<p>ఆమె మరణం పట్ల ప్రధాని నరేంద్ర మోదీ తీవ్ర సంతాపం వ్యక్తం చేశారు. సోమవారం సామాజిక మాధ్యమ వేదిక ఎక్స్‌లో ఆయన సందేశం పోస్ట్ చేశారు.</p>
+<blockquote><p>ప్రముఖ గాయని సుమన్ కల్యాణ్‌పూర్ మరణం తీవ్ర దుఃఖం కలిగించింది. ఆమె మధుర గాత్రం, హృదయాన్ని హత్తుకునే గానం దేశ సాంస్కృతిక లోకాన్ని సుసంపన్నం చేశాయి. ఆమె కుటుంబ సభ్యులకు, అభిమానులకు ప్రగాఢ సానుభూతి. ఓం శాంతి.</p><cite>- నరేంద్ర మోదీ, ప్రధానమంత్రి</cite></blockquote>
+<h3>లత మంగేష్కర్ సరసన గుర్తింపు</h3>
+<p>1960లు, 1970ల కాలంలో సుమన్ కల్యాణ్‌పూర్ తన మధుర గాత్రంతో విశేష ప్రజాదరణ పొందారు. ఆ కాలంలో అగ్రగాయని లతా మంగేష్కర్ సరసన ఆమె ప్రత్యేక స్థానం సంపాదించుకున్నారు.</p>
+<p>"ఆజ్‌కల్ తేరే మేరే ప్యార్ కే చర్చే", "నా నా కర్తే ప్యార్ తుమ్హీఁ సే" వంటి హిందీ చిత్రగీతాలు ఆమెకు విస్తృత ఖ్యాతిని తెచ్చిపెట్టాయి.</p>
+
+WHY THIS WORKS:
+- ZERO Latin script anywhere in the body. Every proper noun transliterated: సుమన్ కల్యాణ్‌పూర్, నరేంద్ర మోదీ, ముంబై, ఎక్స్, లతా మంగేష్కర్
+- Song titles transliterated, NOT translated, NOT left in Latin: "ఆజ్‌కల్ తేరే మేరే ప్యార్ కే చర్చే"
+- Modi's English X post is TRANSLATED into Telugu prose inside the blockquote. The original English does not appear. The <cite> attribution carries the name + designation.
+- Platform name "X" → "ఎక్స్" with a Telugu-script aside, not the Latin letter
+- "Om Shanti" → "ఓం శాంతి" (Sanskrit phrase, render in Telugu script)
+- Age in parentheses follows the name, Telugu newsroom convention: "సుమన్ కల్యాణ్‌పూర్ (89)"
+- Verbs: కన్నుమూశారు, పేర్కొంది, వ్యక్తం చేశారు (formal register, not చెప్పారు / అన్నారు variants)
 `;
 
 export function composeSystemPrompt(): string {
@@ -160,7 +196,7 @@ Return STRICT JSON:
 {
   "issues": [
     {
-      "type": "fabricated_quote" | "date_mismatch" | "name_drift" | "number_drift" | "missing_attribution" | "editorializing" | "structural" | "register",
+      "type": "fabricated_quote" | "date_mismatch" | "name_drift" | "number_drift" | "missing_attribution" | "editorializing" | "structural" | "register" | "latin_script_in_body" | "untranslated_english_quote",
       "detail": "<one-sentence English description of the specific problem>",
       "location": "headline" | "dek" | "lead_para" | "body_para_N" | "quote_N" | "subhead"
     }
@@ -176,6 +212,8 @@ DRIFT RULES (use these to populate issues[]):
 - editorializing: opinion / superlative / characterization not in the source ("a major step", "an unprecedented move")
 - structural: missing lead-para 5W / paragraph >3 sentences / missing sub-heads on long story
 - register: colloquial Telugu / dialect words in non-editorial copy / English common nouns
+- latin_script_in_body: any Latin-letter (English script) word inside title_te / dek_te / summary_te / body_html_te that is NOT inside a JSON-only field. Includes proper nouns left as "Narendra Modi" / "Lata Mangeshkar" / "X" / "Aajkal Tere Mere Pyar Ke Charche" instead of their Telugu-script transliteration. Every Latin-script glyph in the body is a defect.
+- untranslated_english_quote: a <blockquote> that contains the original English text of a quote (tweet, statement, court order) instead of a Telugu translation of it.
 
 Return an empty issues[] array if no drift found. Never return any text outside the JSON envelope.`;
 }

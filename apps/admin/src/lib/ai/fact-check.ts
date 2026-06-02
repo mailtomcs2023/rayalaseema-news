@@ -18,7 +18,9 @@ export type FactCheckIssueType =
   | "missing_attribution"
   | "editorializing"
   | "structural"
-  | "register";
+  | "register"
+  | "latin_script_in_body"
+  | "untranslated_english_quote";
 
 export interface FactCheckIssue {
   type: FactCheckIssueType;
