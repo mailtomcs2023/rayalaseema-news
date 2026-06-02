@@ -119,14 +119,18 @@ export function ImageUpload({ value, onChange, onSearchClick, uploadOnly = false
             </div>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-md border border-border bg-muted">
+          <div className="flex justify-center overflow-hidden rounded-md border border-border bg-muted">
+            {/* object-contain (not cover) + natural ratio so the preview shows
+                EXACTLY what was cropped/uploaded. The old aspect-[16/9] cover
+                forced every image into a 16:9 box, which made a free / square
+                crop look like it had been re-cropped to 16:9 on save. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={value}
               alt="Preview"
               onError={() => { setImgError(true); onValidChange?.(false); }}
               onLoad={() => { setImgError(false); onValidChange?.(true); }}
-              className="block aspect-[16/9] w-full object-cover"
+              className="block max-h-[440px] w-full object-contain"
             />
           </div>
         )}

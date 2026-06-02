@@ -5,7 +5,7 @@
 "use client";
 
 import { useRef, useState, useCallback } from "react";
-import ReactCrop, { type Crop, type PixelCrop, centerCrop, makeAspectCrop } from "react-image-crop";
+import ReactCrop, { type Crop, type PixelCrop, centerCrop, makeAspectCrop, convertToPixelCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 
 export interface ImageCropModalProps {
@@ -39,17 +39,27 @@ export function ImageCropModal({ src, onConfirm, onClose }: ImageCropModalProps)
         height,
       );
       setCrop(c);
+      // Seed completedCrop too, so Apply works even if the user never drags
+      // (otherwise applyCrop sees no completedCrop and returns the original).
+      setCompletedCrop(convertToPixelCrop(c, width, height));
     }
   }, [aspect]);
 
-  // Pick a new aspect - re-center the crop at that aspect.
+  // Pick a new aspect - re-center the crop at that aspect. Crucially also sync
+  // completedCrop: programmatic setCrop does NOT fire ReactCrop's onComplete,
+  // so without this, clicking a ratio then Apply (without re-dragging) would
+  // save the PREVIOUS selection's ratio. Free mode clears both - the user then
+  // draws their own selection.
   const setAspectAndRecenter = (a?: number) => {
     setAspect(a);
     if (imgRef.current && a) {
       const { width, height } = imgRef.current;
-      setCrop(centerCrop(makeAspectCrop({ unit: "%", width: 90 }, a, width, height), width, height));
+      const c = centerCrop(makeAspectCrop({ unit: "%", width: 90 }, a, width, height), width, height);
+      setCrop(c);
+      setCompletedCrop(convertToPixelCrop(c, width, height));
     } else {
       setCrop(undefined);
+      setCompletedCrop(undefined);
     }
   };
 
