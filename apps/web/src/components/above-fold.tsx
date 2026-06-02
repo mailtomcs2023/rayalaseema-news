@@ -249,7 +249,10 @@ export function AboveFold({
           display: inline-flex;
           align-items: center;
           gap: 3px;
-          padding: 3px 10px;
+          /* Asymmetric vertical padding (5px top / 2px bottom) optically
+             centers the digits - Noto Sans Telugu's large descent reserve
+             otherwise leaves them sitting high in the pill. */
+          padding: 5px 10px 2px;
           border-radius: 999px;
           background: rgba(17, 24, 39, 0.78);
           color: #fff;
