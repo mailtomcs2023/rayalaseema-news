@@ -15,6 +15,10 @@ import { ContentType } from "@prisma/client";
 export const articlePayloadSchema = z.object({
   rating: z.number().min(0).max(5).optional(),
   reviewerName: z.string().trim().min(1).max(100).optional(),
+  // Optional featured VIDEO (YouTube/hosted/Blob URL). When set, the public
+  // article hero plays this instead of showing featuredImage - the editor
+  // enforces image-OR-video (never both), so this is a true alternative hero.
+  featuredVideo: z.string().trim().max(2048).optional(),
 }).strict();
 
 // VIDEO - YouTube / hosted player. Duration in seconds.

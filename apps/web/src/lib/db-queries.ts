@@ -40,6 +40,9 @@ function projectArticle<T extends { payload?: unknown }>(row: T) {
     reviewerName: typeof p.reviewerName === "string" ? p.reviewerName : null,
     // Old Article column moved into payload by the Spec #1 migration.
     imageCaption: typeof p.imageCaption === "string" ? p.imageCaption : null,
+    // Optional featured video - when set the article hero plays it instead of
+    // the image (editor enforces one-or-the-other).
+    featuredVideo: typeof p.featuredVideo === "string" ? p.featuredVideo : null,
   };
 }
 

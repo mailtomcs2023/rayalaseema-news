@@ -19,6 +19,14 @@ import { articleHref } from "@/lib/article-href";
 import { buildNewsArticleSchema, buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 import type { LocationChain, AuthorRef, PublisherConfig } from "@rayalaseema/seo-schema";
 
+// Convert a YouTube watch / share / shorts URL into its privacy-friendly embed
+// URL. Returns null for non-YouTube URLs (hosted MP4 / Azure Blob), which fall
+// through to a native <video> player.
+function ytEmbed(url: string): string | null {
+  const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|v\/)|youtu\.be\/)([\w-]{11})/);
+  return m ? `https://www.youtube-nocookie.com/embed/${m[1]}` : null;
+}
+
 // Loose type - matches the projected shape returned by
 // getArticleBySlug + getTrendingArticles + getArticlesByCategory in db-queries.
 // Components never read every field; we accept anything that has the keys we
@@ -30,6 +38,7 @@ type ArticleLike = {
   summary: string | null;
   body: string | null;
   featuredImage: string | null;
+  featuredVideo?: string | null;
   imageCaption?: string | null;
   publishedAt: Date | null;
   updatedAt: Date | null;
@@ -201,7 +210,38 @@ export function ArticleView({ article, related, trending, siteUrl }: Props) {
               deskName={article.desk?.name ?? null}
             />
 
-            {article.featuredImage && (
+            {/* Featured media hero: a video (YouTube embed or hosted MP4)
+                REPLACES the image when set - the editor enforces image-OR-video,
+                never both. Falls back to the image, then to nothing. */}
+            {article.featuredVideo ? (
+              <div style={{ marginTop: 20 }}>
+                {ytEmbed(article.featuredVideo) ? (
+                  // 16:9 responsive iframe wrapper.
+                  <div style={{ position: "relative", paddingBottom: "56.25%", height: 0, borderRadius: 8, overflow: "hidden", background: "#000" }}>
+                    <iframe
+                      src={ytEmbed(article.featuredVideo)!}
+                      title={article.title}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                      loading="lazy"
+                      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
+                    />
+                  </div>
+                ) : (
+                  // Hosted MP4 / Azure Blob - native player. No caption track:
+                  // user-supplied news clips don't ship VTT files.
+                  // eslint-disable-next-line jsx-a11y/media-has-caption
+                  <video
+                    src={article.featuredVideo}
+                    controls
+                    playsInline
+                    preload="metadata"
+                    style={{ width: "100%", borderRadius: 8, maxHeight: 500, background: "#000" }}
+                  />
+                )}
+                {article.imageCaption && <p style={{ fontSize: 12, color: "#888", marginTop: 6, fontStyle: "italic" }}>{article.imageCaption}</p>}
+              </div>
+            ) : article.featuredImage ? (
               <div style={{ marginTop: 20 }}>
                 {/* next/image - AVIF/WebP negotiated automatically, responsive
                     variants generated based on `sizes`. width/height are
@@ -219,7 +259,7 @@ export function ArticleView({ article, related, trending, siteUrl }: Props) {
                 />
                 {article.imageCaption && <p style={{ fontSize: 12, color: "#888", marginTop: 6, fontStyle: "italic" }}>{article.imageCaption}</p>}
               </div>
-            )}
+            ) : null}
 
             <div
               className="article-body"

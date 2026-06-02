@@ -16,6 +16,7 @@ import { useSession } from "next-auth/react";
 import { buildSlugFromTitle, isPlaceholderSlug, sanitizeSlug } from "@/lib/slug";
 import { RichEditor, type RichEditorRef } from "@/components/rich-editor";
 import { ImageUpload } from "@/components/image-upload";
+import { VideoUpload } from "@/components/video-upload";
 import { ContentPayloadEditor } from "@/components/content-payload-editor";
 import { ImageSearchModal } from "@/components/image-search-modal";
 import { ImageCropModal } from "@/components/image-crop-modal";
@@ -83,6 +84,11 @@ export default function ContentEditorPage() {
   const [summary, setSummary] = useState("");
   const [body, setBody] = useState("");
   const [featuredImage, setFeaturedImage] = useState("");
+  // Featured VIDEO (ARTICLE only) - an alternative hero to the image. The
+  // editor enforces image-OR-video (toggling clears the other), so the saved
+  // row only ever carries one hero medium. Stored on the article payload.
+  const [featuredVideo, setFeaturedVideo] = useState("");
+  const [mediaMode, setMediaMode] = useState<"image" | "video">("image");
   const [categoryId, setCategoryId] = useState("");
   // Multi-category cross-listing - IDs of categories this row should ALSO
   // appear under (primary stays in categoryId). Editor renders a chip list
@@ -387,10 +393,13 @@ export default function ContentEditorPage() {
       const isArticle = row.type === "ARTICLE";
       const initialRating = isArticle && typeof payload.rating === "number" ? String(payload.rating) : "";
       const initialReviewerName = isArticle ? (payload.reviewerName || "") : "";
+      const initialFeaturedVideo = isArticle ? ((payload.featuredVideo as string) || "") : "";
       const initialTypedPayload = !isArticle ? (payload as Record<string, unknown>) : {};
       if (isArticle) {
         setRating(initialRating);
         setReviewerName(initialReviewerName);
+        setFeaturedVideo(initialFeaturedVideo);
+        setMediaMode(initialFeaturedVideo ? "video" : "image");
       } else {
         setTypedPayload(initialTypedPayload);
       }
@@ -414,6 +423,7 @@ export default function ContentEditorPage() {
         tagsInput: initialTags,
         rating: initialRating,
         reviewerName: initialReviewerName,
+        featuredVideo: initialFeaturedVideo,
         typedPayload: initialTypedPayload,
       });
       loadedAsPlaceholderRef.current =
@@ -442,6 +452,9 @@ export default function ContentEditorPage() {
         if (Number.isFinite(n)) p.rating = n;
       }
       if (reviewerName.trim()) p.reviewerName = reviewerName.trim();
+      // Featured video only persists in "video" mode - guards against a stale
+      // URL lingering in payload after the editor switched back to an image.
+      if (mediaMode === "video" && featuredVideo.trim()) p.featuredVideo = featuredVideo.trim();
       return Object.keys(p).length > 0 ? p : null;
     }
     // Strip empty top-level fields so the Zod .strict() schemas don't trip on
@@ -589,6 +602,7 @@ export default function ContentEditorPage() {
     tagsInput,
     rating: type === "ARTICLE" ? rating : "",
     reviewerName: type === "ARTICLE" ? reviewerName : "",
+    featuredVideo: type === "ARTICLE" ? featuredVideo : "",
     typedPayload: type !== "ARTICLE" ? typedPayload : {},
   });
   const isDirty = initialSnapshotRef.current !== null && currentSnapshot !== initialSnapshotRef.current;
@@ -640,7 +654,42 @@ export default function ContentEditorPage() {
                   first thing the editor sees and confirms before scrolling down
                   to title/body. */}
               <div className="space-y-2">
-                <Label>Featured image</Label>
+                <div className="flex items-center justify-between">
+                  <Label>{type === "ARTICLE" ? "Featured media" : "Featured image"}</Label>
+                  {/* ARTICLE hero is image OR video, never both - the toggle
+                      clears the other side so only one medium is ever saved. */}
+                  {type === "ARTICLE" && (
+                    <div className="inline-flex rounded-md border border-border p-0.5">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={mediaMode === "image" ? "default" : "ghost"}
+                        className="h-7 px-3"
+                        onClick={() => { setMediaMode("image"); setFeaturedVideo(""); }}
+                      >
+                        Image
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={mediaMode === "video" ? "default" : "ghost"}
+                        className="h-7 px-3"
+                        onClick={() => { setMediaMode("video"); setFeaturedImage(""); }}
+                      >
+                        Video
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                {type === "ARTICLE" && mediaMode === "video" ? (
+                  <>
+                    <VideoUpload value={featuredVideo} onChange={(v) => setFeaturedVideo(v)} />
+                    <p className="text-xs text-muted-foreground">
+                      Paste a YouTube link or upload an MP4/WebM. The video plays as the article hero — no separate image is used.
+                    </p>
+                  </>
+                ) : (
+                <>
                 <ImageUpload
                   value={featuredImage}
                   onChange={setFeaturedImage}
@@ -682,6 +731,8 @@ export default function ContentEditorPage() {
                       </Button>
                     ))}
                   </div>
+                )}
+                </>
                 )}
               </div>
 
