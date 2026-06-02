@@ -185,10 +185,14 @@ export default async function RootLayout({
             navigations and respect Next's loading strategies (and don't
             trip React 19's "raw <script> in component" warning). */}
         {adsenseId && (
+          // beforeInteractive places the snippet in <head> on the SSR page.
+          // AdSense's verification crawler reads the raw HTML and expects the
+          // tag in <head>. afterInteractive worked for ad delivery but failed
+          // ownership verification because the script was inserted client-side.
           <Script
             id="adsense"
             async
-            strategy="afterInteractive"
+            strategy="beforeInteractive"
             src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseId}`}
             crossOrigin="anonymous"
           />
