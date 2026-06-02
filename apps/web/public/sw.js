@@ -51,7 +51,7 @@ self.addEventListener("fetch", (event) => {
   const isEpaperShell = url.origin === self.location.origin && /^\/epaper(\/|$)/.test(url.pathname);
   const isEpaperMedia =
     /\.(pdf|png|jpg|jpeg|webp)(\?|$)/.test(url.pathname) &&
-    (url.hostname.includes("blob.core.windows.net") || url.hostname.includes("rayalaseemaexpress"));
+    (url.hostname.includes("blob.core.windows.net") || url.hostname.includes("rayalaseemanews"));
   const isStatic = /^\/(icon|apple-icon|logo|manifest)/.test(url.pathname);
 
   if (isEpaperShell) {

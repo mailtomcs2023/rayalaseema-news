@@ -19,7 +19,6 @@ import { prisma } from "@rayalaseema/db";
 const COMMON_TYPOS: Record<string, string> = {
   // English-style spaces around punctuation that copy-paste from Word tends
   // to produce - Telugu typography expects tight punctuation.
-  "ఎక్‌ప్రెస్": "ఎక్స్‌ప్రెస్",
   "నాయుడు ": "నాయుడు ",
   "శ్రీశైలం": "శ్రీశైలం",
   "హిందుపురం": "హిందూపురం",

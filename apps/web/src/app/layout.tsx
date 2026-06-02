@@ -47,12 +47,12 @@ export const metadata: Metadata = {
   // Spec #4 brand disambiguation - title carries " News" suffix so Google
   // doesn't collapse our brand into the Indian Railways train of the same
   // name. See ~/.claude/.../memory/project_brand_disambiguation.md.
-  title: "Rayalaseema News News | రాయలసీమ న్యూస్ వార్తలు",
+  title: "Rayalaseema News | రాయలసీమ న్యూస్ వార్తలు",
   description:
     "Telugu news portal covering the Rayalaseema region of Andhra Pradesh. Hyper-local news from Kurnool, Nandyal, Anantapuramu, Sri Sathya Sai, YSR-Kadapa, Annamayya, Tirupati, and Chittoor.",
   manifest: "/manifest.json",
   keywords: [
-    "Rayalaseema News News",
+    "Rayalaseema News",
     "Rayalaseema news",
     "రాయలసీమ న్యూస్ వార్తలు",
     "Telugu news portal",
@@ -65,7 +65,7 @@ export const metadata: Metadata = {
     "Nandyal news",
   ],
   openGraph: {
-    title: "Rayalaseema News News | రాయలసీమ న్యూస్ వార్తలు",
+    title: "Rayalaseema News | రాయలసీమ న్యూస్ వార్తలు",
     description: "Telugu news portal for the Rayalaseema region of Andhra Pradesh.",
     type: "website",
     locale: "te_IN",
@@ -100,12 +100,11 @@ export default async function RootLayout({
   const orgLd = buildNewsMediaOrganizationSchema({
     publisher: {
       siteUrl,
-      // Spec #4 brand disambiguation (2026-05-27) - "Rayalaseema News" is
-      // also Indian Railways train 12793/12794. We brand the publication as
-      // "Rayalaseema News News" so search engines + AI engines see a
-      // distinct entity from the train. alternateName preserves the legacy
-      // brand for users typing the shorter form.
-      publicationName: "Rayalaseema News News",
+      // Spec #4 brand disambiguation (2026-05-27) - the legacy brand
+      // "Rayalaseema Express" collided with Indian Railways train 12793/12794
+      // ("Rayalaseema Express"). We brand the publication as "Rayalaseema News"
+      // so search engines + AI engines see a distinct entity from the train.
+      publicationName: "Rayalaseema News",
       publicationNameTe: "రాయలసీమ న్యూస్ - వార్తలు",
       logoUrl: `${siteUrl}/logo.png`,
     },

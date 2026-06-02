@@ -22,6 +22,7 @@
 // over a secure channel).
 
 import { useEffect, useState } from "react";
+import { Copy, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -72,6 +73,16 @@ export function PasswordResetDialog({
   const generate = () => {
     setPassword(makeStrongPassword());
     setError("");
+  };
+
+  const copyToClipboard = async () => {
+    if (!password) return;
+    try {
+      await navigator.clipboard.writeText(password);
+      toast.success("Password copied");
+    } catch {
+      toast.error("Couldn't access clipboard");
+    }
   };
 
   const submit = async () => {
@@ -150,11 +161,17 @@ export function PasswordResetDialog({
                 <div className="space-y-4">
                   <div>
                     <Label className="text-xs" htmlFor="rp-password">New password</Label>
-                    <div className="mt-1 flex gap-2">
+                    {/* Icons live INSIDE the input's bordered area (matches
+                        the reference design). The input gets extra right
+                        padding (pr-20) so the typed text never collides
+                        with the floating icons; the buttons sit absolute,
+                        vertically centered, ghost-styled so they read as
+                        controls without competing with the input border. */}
+                    <div className="relative mt-1">
                       <Input
                         id="rp-password"
                         type="text"
-                        placeholder="Type or click Generate"
+                        placeholder="Min 8 characters"
                         value={password}
                         onChange={(e) => { setPassword(e.target.value); setError(""); }}
                         autoComplete="new-password"
@@ -162,10 +179,34 @@ export function PasswordResetDialog({
                         autoCorrect="off"
                         spellCheck={false}
                         disabled={busy}
+                        className="pr-20"
                       />
-                      <Button type="button" variant="outline" onClick={generate} disabled={busy}>
-                        Generate
-                      </Button>
+                      <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center gap-0.5">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={copyToClipboard}
+                          disabled={busy || !password}
+                          aria-label="Copy password"
+                          title="Copy password"
+                          className="h-7 w-7"
+                        >
+                          <Copy className="h-3.5 w-3.5" aria-hidden />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={generate}
+                          disabled={busy}
+                          aria-label="Generate strong password"
+                          title="Generate strong password"
+                          className="h-7 w-7"
+                        >
+                          <Sparkles className="h-3.5 w-3.5" aria-hidden />
+                        </Button>
+                      </div>
                     </div>
                     <p className="mt-1 text-[11px] text-muted-foreground">
                       Leave blank to let the system generate one for you.

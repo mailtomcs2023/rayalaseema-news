@@ -3,6 +3,7 @@ import { prisma, userCreateSchema } from "@rayalaseema/db";
 import { hash } from "bcryptjs";
 import { requireCan, isAuthError, apiError, zodErrorResponse } from "@/lib/api-utils";
 import { normalizeEmail } from "@/lib/email";
+import { generateUniqueUserCode } from "@/lib/user-code";
 
 // GET /api/users[?role=…&cursor=…&limit=…&page=…&includeTotal=1]
 //
@@ -52,7 +53,7 @@ export async function GET(req: NextRequest) {
     const orderBy = [{ createdAt: "desc" as const }, { id: "desc" as const }];
     const select = {
       id: true, email: true, name: true, role: true, active: true, phone: true,
-      createdAt: true, mustChangePassword: true,
+      userCode: true, createdAt: true, mustChangePassword: true,
       _count: { select: { contents: true } },
       assignedCategories: { include: { category: { select: { id: true, name: true, nameEn: true } } } },
       reporterProfile: {
@@ -126,6 +127,11 @@ export async function POST(req: NextRequest) {
 
     const passwordHash = await hash(b.password, 12);
 
+    // Branded login code (`RN<RoleLetter><5 digits>`) generated alongside
+    // the email. Users can sign in with EITHER identifier. The role letter
+    // makes the code self-describing - see lib/user-code.ts.
+    const userCode = await generateUniqueUserCode(role);
+
     // Wrap User + category assignments + ReporterProfile in a single
     // transaction so partial failures don't leave orphan rows:
     //   - User created, profile create fails → orphan User
@@ -136,6 +142,7 @@ export async function POST(req: NextRequest) {
         data: {
           email: cleanEmail, name: b.name, passwordHash,
           role: role as any, bio: b.bio, phone: b.phone,
+          userCode,
           // Force-change-on-first-login flag: admin-set when creating an
           // account with a temporary password the user should rotate.
           mustChangePassword: !!b.mustChangePassword,
@@ -168,7 +175,10 @@ export async function POST(req: NextRequest) {
       return created;
     });
 
-    return NextResponse.json({ id: user.id, email: user.email, name: user.name, role: user.role }, { status: 201 });
+    return NextResponse.json(
+      { id: user.id, email: user.email, name: user.name, role: user.role, userCode: user.userCode },
+      { status: 201 },
+    );
   } catch (error) {
     return apiError(error);
   }

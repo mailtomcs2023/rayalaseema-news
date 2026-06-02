@@ -58,8 +58,8 @@ interface Article {
   // Editor → Sub-editor return-with-feedback note. Present on SUBMITTED rows
   // that the Editor bounced from IN_REVIEW via "Return to SE".
   editorNote?: string | null;
-  category: { name: string; nameEn: string; color: string };
-  author: { name: string };
+  category: { name: string; nameEn: string; color: string } | null;
+  author: { name: string } | null;
   // Stage 2 - auto-assigned sub-editor (null = pool / unassigned).
   assignedReviewer?: { id: string; name: string } | null;
 }
@@ -383,12 +383,12 @@ export default function ReviewPage() {
   // Unique categories + reporters in current data, used by the filter dropdowns.
   const uniqueCategories = useMemo(() => {
     const m = new Map<string, string>();
-    for (const a of articles) m.set(a.category.nameEn, a.category.name);
+    for (const a of articles) if (a.category) m.set(a.category.nameEn, a.category.name);
     return Array.from(m.entries()).map(([value, label]) => ({ value, label }));
   }, [articles]);
 
   const uniqueReporters = useMemo(() => {
-    return Array.from(new Set(articles.map((a) => a.author.name))).map((n) => ({ value: n, label: n }));
+    return Array.from(new Set(articles.map((a) => a.author?.name).filter(Boolean) as string[])).map((n) => ({ value: n, label: n }));
   }, [articles]);
 
   const columns = useMemo<ColumnDef<Article>[]>(
@@ -459,6 +459,7 @@ export default function ReviewPage() {
         header: "Category",
         cell: ({ row }) => {
           const c = row.original.category;
+          if (!c) return <span style={{ fontSize: 11, color: "#aaa" }}>—</span>;
           return (
             <span
               style={{
@@ -476,7 +477,7 @@ export default function ReviewPage() {
         },
         filterFn: (row, _id, value) => {
           if (!value) return true;
-          return row.original.category.nameEn === value;
+          return row.original.category?.nameEn === value;
         },
       },
       {
@@ -484,11 +485,11 @@ export default function ReviewPage() {
         id: "author",
         header: "Reporter",
         cell: ({ row }) => (
-          <span style={{ fontSize: 12, color: "#555" }}>{row.original.author.name}</span>
+          <span style={{ fontSize: 12, color: "#555" }}>{row.original.author?.name ?? "—"}</span>
         ),
         filterFn: (row, _id, value) => {
           if (!value) return true;
-          return row.original.author.name === value;
+          return row.original.author?.name === value;
         },
       },
       {

@@ -60,6 +60,10 @@ export const userUpdateSchema = z.object({
   active: z.boolean().optional(),
   mustChangePassword: z.boolean().optional(),
   categoryIds: z.array(cuid).max(CATEGORY_IDS_MAX).optional(),
+  // Opt-in flag from the Edit User dialog: when set, mint a fresh login
+  // code matching the (possibly new) role. Never auto-fires on role change
+  // alone - admin must explicitly check the box.
+  regenerateCode: z.boolean().optional(),
 }).strict();
 
 // ---------- /api/reporters ----------

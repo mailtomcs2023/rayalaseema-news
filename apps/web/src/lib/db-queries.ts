@@ -377,7 +377,7 @@ async function espnGetCurrentMatches(): Promise<CricketMatch[] | null> {
       {
         signal: AbortSignal.timeout(6000),
         next: { revalidate: 60 },
-        headers: { "User-Agent": "RayalaseemaExpress/1.0 (+web)" },
+        headers: { "User-Agent": "RayalaseemaNews/1.0 (+web)" },
       },
     );
     if (!res.ok) return null;

@@ -6,9 +6,12 @@ export async function GET() {
   const session = await requireAuth();
   if (isAuthError(session)) return session;
   try {
+    // Returns BOTH active and inactive so the admin /mandi page can render
+    // the Active / Inactive / All tabs against one fetch. Public consumers
+    // (web /api/mandi, /api/tickers) filter by active themselves.
     const prices = await prisma.mandiPrice.findMany({
       orderBy: [{ date: "desc" }, { commodity: "asc" }],
-      take: 50,
+      take: 250,
     });
     return NextResponse.json(prices);
   } catch (error) {

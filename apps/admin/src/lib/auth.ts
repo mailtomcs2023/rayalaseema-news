@@ -1,9 +1,19 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import type { NextAuthResult } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@rayalaseema/db";
 import { compare } from "bcryptjs";
 import { normalizeEmail } from "./email";
+import { normalizeCode } from "./user-code";
+
+// Distinct sign-in failure for "account exists but is deactivated". Lets
+// the client toast a help message ("contact admin") instead of the generic
+// "Invalid credentials" - otherwise a deactivated user wastes time
+// re-entering passwords they remember correctly. The `code` property is
+// what NextAuth v5 surfaces back to the client (signIn result + URL).
+class AccountDeactivatedError extends CredentialsSignin {
+  code = "account_deactivated";
+}
 
 interface ExtendedUser {
   id: string;
@@ -19,29 +29,46 @@ const nextAuth = NextAuth({
   providers: [
     Credentials({
       name: "credentials",
+      // `email` retained as the field name for backwards compatibility with
+      // anything that still posts {email, password}; the value can be EITHER
+      // an email address OR a 6-digit user code. We auto-detect by shape.
       credentials: {
-        email: { label: "Email", type: "email" },
+        email: { label: "Email or 6-digit code", type: "text" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        // Lookup by the canonical form so signing in with "Foo@Gmail.com"
-        // finds the row stored as "foo@gmail.com". Without this, casing-
-        // mismatch on login would 401 the user even though the account exists.
+        const identifier = String(credentials.email).trim();
+        // `normalizeCode` strips the optional dash and uppercases the
+        // alphabetic prefix, returning the stored form ("RNA12345") if the
+        // input matches the code shape, else null.
+        const code = normalizeCode(identifier);
+
+        // Single Prisma call per branch. We do NOT chain "try email, then
+        // try code" - the input either matches the code shape or it
+        // doesn't, and email lookups never produce ambiguity with the
+        // RN-prefix code.
         const user = await prisma.user.findUnique({
-          where: { email: normalizeEmail(credentials.email) },
+          where: code ? { userCode: code } : { email: normalizeEmail(identifier) },
           include: { reporterProfile: { select: { kycStatus: true } } },
         });
 
-        if (!user || !user.active) return null;
+        // Unknown user → fall through to the generic "invalid credentials"
+        // path (returning null). We don't leak whether the email/code exists.
+        if (!user) return null;
 
-        const isValid = await compare(
-          credentials.password as string,
-          user.passwordHash
-        );
-
+        // Password verified BEFORE the deactivated-account check so we
+        // don't tell a random attacker whether a deactivated account
+        // exists. Only after they prove they're the legitimate owner
+        // (correct password) do we surface the helpful "account is
+        // deactivated, contact admin" message.
+        const isValid = await compare(credentials.password as string, user.passwordHash);
         if (!isValid) return null;
+
+        if (!user.active) {
+          throw new AccountDeactivatedError();
+        }
 
         return {
           id: user.id,

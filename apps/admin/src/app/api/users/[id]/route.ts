@@ -5,6 +5,7 @@ import { requireAuth, isAuthError, apiError, zodErrorResponse } from "@/lib/api-
 import { redistributeReviewerArticles } from "@/lib/reviewer-assignment";
 import { normalizeEmail } from "@/lib/email";
 import { isProtectedUser } from "@/lib/protected-users";
+import { generateUniqueUserCode } from "@/lib/user-code";
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAuth(["ADMIN"]);
@@ -57,6 +58,19 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       prior?.role === "SUB_EDITOR" &&
       prior.active === true &&
       data.active === false;
+
+    // Login-code regeneration is OPT-IN, not automatic. The Edit User
+    // dialog surfaces a checkbox under the Role field only when the role
+    // has been changed; if admin ticks it, this flag arrives true and we
+    // mint a code matching the new (or unchanged) role. Without the
+    // flag, role changes leave the code as-is - the admin can re-share
+    // the old code or hit "Regenerate login code" from the row menu
+    // later. Either way, mid-edit code changes never happen behind the
+    // admin's back.
+    if (b.regenerateCode === true) {
+      const effectiveRole = (data.role as string | undefined) ?? prior?.role ?? "USER";
+      data.userCode = await generateUniqueUserCode(effectiveRole);
+    }
 
     // Atomic write: user.update + category-assignment replace all happen in
     // one transaction so a mid-loop FK failure can't leave the user with

@@ -96,7 +96,7 @@ This file is the source of truth for "why we made the calls we made". When the s
 6. **Playwright smoke test** - hits 50 random old URLs, asserts 301 → 200 on new URL with matching content.
 7. **Rollback escape hatch** - env flag `URL_PATTERN=legacy|new` keeps old routes alive for 30 days post-cutover. Removed in cleanup phase.
 
-**Reference:** Google supports 301 chains and re-indexes within weeks; the documented worst case is a 4–12 week ranking dip while signals re-consolidate on the new URLs. The baseline ranking is so weak (23 clicks in 10 days - see [project_seo_baseline.md](../../../C:/Users/reddygs/.claude/projects/d--Rayalaseema-express/memory/project_seo_baseline.md)) that the risk is acceptable.
+**Reference:** Google supports 301 chains and re-indexes within weeks; the documented worst case is a 4–12 week ranking dip while signals re-consolidate on the new URLs. The baseline ranking is so weak (23 clicks in 10 days - see [project_seo_baseline.md](../../../C:/Users/reddygs/.claude/projects/d--Rayalaseema-news/memory/project_seo_baseline.md)) that the risk is acceptable.
 
 ---
 
@@ -168,7 +168,7 @@ This file is the source of truth for "why we made the calls we made". When the s
 
 **Snapshot (2026-05-26, screenshot from Daisy):**
 
-- Property: `rayalaseemaexpress.com` (verified, owned by `rsepress2026@gmail.com`)
+- Property: `rayalaseemanews.com` (verified, owned by `rsepress2026@gmail.com`)
 - Reported indexed: 34 - but per Daisy, this number includes earlier dummy/test content that has since been removed. Real-content baseline is effectively zero.
 - Clicks last 10 days: 23.
 - Breadcrumbs enhancement is ON - confirms current BreadcrumbList JSON-LD is being read correctly.
@@ -176,13 +176,13 @@ This file is the source of truth for "why we made the calls we made". When the s
 
 **Implication:** This is a **fresh launch**, not an optimization pass. Spec phases should be sequenced to maximise first-time discovery of the 331+ legitimate articles rather than tuning existing rankings. Tier-0 outcome: 80%+ of real articles indexed within 90 days.
 
-See [`project_seo_baseline.md`](../../../C:/Users/reddygs/.claude/projects/d--Rayalaseema-express/memory/project_seo_baseline.md) for the persistent memory note.
+See [`project_seo_baseline.md`](../../../C:/Users/reddygs/.claude/projects/d--Rayalaseema-news/memory/project_seo_baseline.md) for the persistent memory note.
 
 ---
 
 ## 11. Strategic framing - foundation over per-article (Daisy, 2026-05-26)
 
-Late-breaking strategic reframe from Daisy: "today news, tomorrow's waste paper." SEO effort for Rayalaseema Express must go into the **durable foundation layer that compounds over time**, NOT into optimizing individual ephemeral news articles like they were service pages.
+Late-breaking strategic reframe from Daisy: "today news, tomorrow's waste paper." SEO effort for Rayalaseema News must go into the **durable foundation layer that compounds over time**, NOT into optimizing individual ephemeral news articles like they were service pages.
 
 **Implications for the spec:**
 
@@ -192,7 +192,7 @@ Late-breaking strategic reframe from Daisy: "today news, tomorrow's waste paper.
 - **Internal-linking automation** stays in scope but reframes from "ranking play" to "indexing aid" - helps Google discover orphan articles via the hub layer.
 - **NER location detection** stays in scope as **tagging infrastructure feeding the hubs**, not as per-article optimization.
 
-Reference: this matches the Eenadu / Sakshi pattern - individual article URLs barely rank long-term; their CATEGORY + LOCATION hubs rank for everything. See [`feedback_seo_strategy.md`](../../../C:/Users/reddygs/.claude/projects/d--Rayalaseema-express/memory/feedback_seo_strategy.md) for the persistent memory note.
+Reference: this matches the Eenadu / Sakshi pattern - individual article URLs barely rank long-term; their CATEGORY + LOCATION hubs rank for everything. See [`feedback_seo_strategy.md`](../../../C:/Users/reddygs/.claude/projects/d--Rayalaseema-news/memory/feedback_seo_strategy.md) for the persistent memory note.
 
 ---
 

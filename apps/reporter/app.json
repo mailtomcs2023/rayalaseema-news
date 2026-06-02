@@ -15,14 +15,14 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.rayalaseemaexpress.reporter"
+      "bundleIdentifier": "com.rayalaseemanews.reporter"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon-512.png",
         "backgroundColor": "#FF2C2C"
       },
-      "package": "com.rayalaseemaexpress.reporter",
+      "package": "com.rayalaseemanews.reporter",
       "edgeToEdgeEnabled": true,
       "permissions": [
         "android.permission.CAMERA",

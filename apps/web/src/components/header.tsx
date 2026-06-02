@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SearchBar } from "./search-bar";
+import { MarketTicker } from "./market-ticker";
 
 // Rayalaseema districts ARE the main nav - this is a Rayalaseema newspaper
 const mainNavItems = [
@@ -53,9 +54,14 @@ const dropdownItems = [
 interface HeaderProps {
   config?: Record<string, string>;
   breakingNews?: { id: string; text: string }[];
+  // Optional pre-rendered live-data strip. Pages that pass <MarketTickerServer />
+  // here get a server-rendered bar with zero client-side flash; pages that
+  // omit it fall back to the legacy <MarketTicker /> below (data fetched in
+  // useEffect, ~300ms empty-bar moment on refresh).
+  tickerSlot?: React.ReactNode;
 }
 
-export function Header({ config: initialConfig = {}, breakingNews: initialBreaking = [] }: HeaderProps) {
+export function Header({ config: initialConfig = {}, breakingNews: initialBreaking = [], tickerSlot }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -205,6 +211,13 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
           </button>
         </div>
       </div>
+
+      {/* Live data ticker - slim row directly under BREAKING. Pulls gold +
+          silver + forex + mandi + cricket from /api/tickers. Pages that
+          pass `tickerSlot={<MarketTickerServer />}` get the bar rendered
+          server-side (zero flash); others fall back to the client variant
+          which fetches in useEffect. */}
+      {tickerSlot ?? <MarketTicker />}
 
       {/* Search panel - slow reveal via framer-motion, shadcn Input inside */}
       <SearchBar open={searchOpen} onClose={() => setSearchOpen(false)} />

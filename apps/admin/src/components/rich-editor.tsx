@@ -169,20 +169,7 @@ export const RichEditor = React.forwardRef<RichEditorRef, { content: string; onC
 
   return (
     <div style={{ borderRadius: 12, overflow: "hidden", background: "#fff", boxShadow: "0 1px 8px rgba(0,0,0,0.06)", border: "1px solid #e5e7eb" }}>
-      {/* Language toggle - compact */}
-      <div style={{ padding: "6px 12px", background: "#111827", display: "flex", alignItems: "center", gap: 8 }}>
-        <button onClick={() => setInputMode("telugu")} style={{ padding: "4px 12px", borderRadius: 5, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: inputMode === "telugu" ? "#FF2C2C" : "#374151", color: inputMode === "telugu" ? "#fff" : "#9ca3af" }}>
-          EN → తెలుగు
-        </button>
-        <button onClick={() => setInputMode("english")} style={{ padding: "4px 12px", borderRadius: 5, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: inputMode === "english" ? "#FF2C2C" : "#374151", color: inputMode === "english" ? "#fff" : "#9ca3af" }}>
-          English
-        </button>
-        <span style={{ fontSize: 11, color: "#555", marginLeft: "auto" }}>
-          {inputMode === "telugu" ? "Type English → Space → Telugu" : "English mode"}
-        </span>
-      </div>
-
-      {/* Toolbar - clean, single row */}
+      {/* Toolbar - clean, single row (language toggle lives at the far right) */}
       <div style={{ borderBottom: "1px solid #eee", padding: "4px 8px", display: "flex", gap: 1, background: "#fafafa", flexWrap: "wrap" }}>
         <T on={editor.isActive("bold")} fn={() => editor.chain().focus().toggleBold().run()}><b>B</b></T>
         <T on={editor.isActive("italic")} fn={() => editor.chain().focus().toggleItalic().run()}><i>I</i></T>
@@ -249,6 +236,30 @@ export const RichEditor = React.forwardRef<RichEditorRef, { content: string; onC
         <T on={false} fn={() => editor.chain().focus().redo().run()}>
           <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 10H11a5 5 0 00-5 5 5 5 0 005 5h10" strokeLinecap="round"/><path d="M17 6l4 4-4 4" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </T>
+        {/* Language toggle - moved here from the old dark top bar. Sits at
+            the far right of the toolbar via marginLeft:auto; wraps to a new
+            line on narrow viewports along with the rest of the toolbar. */}
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 10, color: "#888", fontWeight: 500 }}>
+            {inputMode === "telugu" ? "Type EN → Space → తె" : "EN mode"}
+          </span>
+          <div style={{ display: "flex", alignItems: "center", border: "1px solid #e5e7eb", borderRadius: 999, padding: 2, background: "#fff" }}>
+            <button
+              onClick={() => setInputMode("telugu")}
+              title="English typing auto-converts to Telugu on space/enter"
+              style={{ padding: "2px 10px", borderRadius: 999, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700, background: inputMode === "telugu" ? "#FF2C2C" : "transparent", color: inputMode === "telugu" ? "#fff" : "#666" }}
+            >
+              EN → తె
+            </button>
+            <button
+              onClick={() => setInputMode("english")}
+              title="Type as-is, no transliteration"
+              style={{ padding: "2px 10px", borderRadius: 999, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700, background: inputMode === "english" ? "#111827" : "transparent", color: inputMode === "english" ? "#fff" : "#666" }}
+            >
+              EN
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Link panel - only shows when link button is clicked */}

@@ -65,7 +65,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const mandal = await resolveMandal(p);
   if (!mandal) return { title: "Not found" };
   return {
-    title: `${mandal.name} (${mandal.nameEn}) | Rayalaseema News News`,
+    title: `${mandal.name} (${mandal.nameEn}) | Rayalaseema News`,
     description: `${mandal.name} మండలం నుండి తాజా వార్తలు. News from ${mandal.nameEn} mandal in ${mandal.constituency.district.nameEn} district.`,
     alternates: { canonical: `${SITE_URL}/${p.district}/${p.constituency}/mandal/${p.slug}` },
     openGraph: {

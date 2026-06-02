@@ -6,6 +6,8 @@ import { ReporterShell } from "@/components/reporter/reporter-shell";
 import { KycBanner } from "@/components/reporter/kyc-banner";
 import { SignOutButton } from "@/components/reporter/sign-out-button";
 import { ShieldCheck } from "lucide-react";
+import { formatUserCode } from "@/lib/user-code";
+import { UserCodeChip } from "@/components/user-code-chip";
 
 // Reporter Profile - mirrors the Expo ProfileScreen.
 // Avatar hero • role + KYC pills • optional KYC rejection box •
@@ -39,6 +41,7 @@ export default async function ReporterProfilePage() {
       email: true,
       phone: true,
       avatar: true,
+      userCode: true,
       reporterProfile: {
         select: {
           kycStatus: true,
@@ -163,6 +166,10 @@ export default async function ReporterProfilePage() {
               {kycPill.label}
             </span>
           </div>
+
+          {data.userCode ? (
+            <UserCodeChip code={formatUserCode(data.userCode)} raw={data.userCode} />
+          ) : null}
 
           {/* KYC rejection note, mirrors the kycRejectBox in the Expo screen. */}
           {kycStatus === "REJECTED" && p?.kycRejectionNote ? (

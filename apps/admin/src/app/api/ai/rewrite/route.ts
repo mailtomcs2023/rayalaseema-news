@@ -66,7 +66,7 @@ async function scrapeSource(url: string): Promise<{ text: string; ogImage: strin
     }
 
     const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; RayalaseemaExpress/1.0)" },
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; RayalaseemaNews/1.0)" },
       signal: AbortSignal.timeout(10000),
     });
     const html = await res.text();

@@ -52,10 +52,10 @@ interface BuildArgs {
   policies?: EditorialPolicies;
   /**
    * Optional `disambiguatingDescription` for the org. Useful when the brand
-   * name collides with another well-known entity - e.g. "Rayalaseema News"
-   * is also Indian Railways train 12793/12794, and we use this field to tell
-   * Google + AI engines we are a separate entity (the news publication, not
-   * the train).
+   * name collides with another well-known entity - e.g. the legacy brand
+   * "Rayalaseema Express" shared its name with Indian Railways train
+   * 12793/12794, and we use this field to tell Google + AI engines we are a
+   * separate entity (the news publication, not the train).
    */
   disambiguatingDescription?: string;
 }

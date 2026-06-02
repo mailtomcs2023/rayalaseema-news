@@ -1,9 +1,9 @@
 # SEO Rayalaseema (Spec #4)
 
-Foundation-first SEO for `rayalaseemaexpress.com`. Targets page-1 Google ranking for every Rayalaseema **constituency, town, and mandal** query within 12–18 months. The strategic bet: ranking lives in the geo-hierarchy hub layer (1500+ durable URLs), not in optimizing individual ephemeral news articles.
+Foundation-first SEO for `rayalaseemanews.com`. Targets page-1 Google ranking for every Rayalaseema **constituency, town, and mandal** query within 12–18 months. The strategic bet: ranking lives in the geo-hierarchy hub layer (1500+ durable URLs), not in optimizing individual ephemeral news articles.
 
 Research notes: [`2026-05-26-seo-research.md`](./2026-05-26-seo-research.md)
-Strategic framing: [`feedback_seo_strategy.md`](../../../C:/Users/reddygs/.claude/projects/d--Rayalaseema-express/memory/feedback_seo_strategy.md)
+Strategic framing: [`feedback_seo_strategy.md`](../../../C:/Users/reddygs/.claude/projects/d--Rayalaseema-news/memory/feedback_seo_strategy.md)
 
 ## TL;DR
 
@@ -236,7 +236,7 @@ model SiteConfig {
 - [ ] **C3**: `/corrections-policy` - how to request a correction, timeline, public log link.
 - [ ] **C4**: `/editorial-standards` - fact-checking, attribution, off-the-record, embargo handling.
 - [ ] **C5**: `/diversity-policy` - coverage diversity, hiring diversity, sources diversity.
-- [ ] **C6**: `/mission` - what Rayalaseema Express is and isn't.
+- [ ] **C6**: `/mission` - what Rayalaseema News is and isn't.
 - [ ] **C7**: `/feedback-policy` - how readers reach the editorial team, response SLAs.
 - [ ] **C8**: `/ownership` - publishing entity, funding sources, related properties. (Currently Medha Hosting OPC Pvt Ltd or separate entity? Confirm at issue time.)
 - [ ] **C9**: Footer - site-wide consistent links to all 12 trust pages + sitemap-index.
@@ -311,7 +311,7 @@ model SiteConfig {
 ## Done
 
 All ~45 sub-issue checkboxes closed + epic body updated with:
-- Final GSC indexed-pages count for REAL articles (excluding any residual dummy pages - see [`project_seo_baseline.md`](../../../C:/Users/reddygs/.claude/projects/d--Rayalaseema-express/memory/project_seo_baseline.md)).
+- Final GSC indexed-pages count for REAL articles (excluding any residual dummy pages - see [`project_seo_baseline.md`](../../../C:/Users/reddygs/.claude/projects/d--Rayalaseema-news/memory/project_seo_baseline.md)).
 - 30-day post-cutover ranking-curve screenshot.
 - Lighthouse scores for top 10 page types.
 - Schema validation report.

@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   });
   if (!content) return { title: "Exam results not found" };
   return {
-    title: `${content.title} | Rayalaseema News News`,
+    title: `${content.title} | Rayalaseema News`,
     description: content.summary || content.title,
     alternates: { canonical: `${SITE_URL}/results/${examyear}` },
     openGraph: {
@@ -91,7 +91,7 @@ export default async function ExamResultsPage({ params }: { params: Params }) {
     },
     publisher: {
       siteUrl: SITE_URL,
-      publicationName: "Rayalaseema News News",
+      publicationName: "Rayalaseema News",
       publicationNameTe: "రాయలసీమ న్యూస్ - వార్తలు",
       logoUrl: `${SITE_URL}/logo.png`,
     },

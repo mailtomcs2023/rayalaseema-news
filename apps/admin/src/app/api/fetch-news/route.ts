@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
       const hl = language.startsWith("te") ? "te" : "en-IN";
       const ceid = language.startsWith("te") ? "IN:te" : "IN:en";
       const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=${hl}&gl=IN&ceid=${ceid}`;
-      const res = await fetch(url, { headers: { "User-Agent": "RayalaseemaExpress/1.0 (+admin)" } });
+      const res = await fetch(url, { headers: { "User-Agent": "RayalaseemaNews/1.0 (+admin)" } });
       if (!res.ok) return NextResponse.json({ error: `Google News ${res.status}` }, { status: 502 });
       const xml = await res.text();
 
@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
           const t = setTimeout(() => ctrl.abort(), 4000);
           const r = await fetch(item.sourceUrl, {
             redirect: "follow",
-            headers: { "User-Agent": "Mozilla/5.0 (compatible; RayalaseemaExpress/1.0)" },
+            headers: { "User-Agent": "Mozilla/5.0 (compatible; RayalaseemaNews/1.0)" },
             signal: ctrl.signal,
           });
           clearTimeout(t);

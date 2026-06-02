@@ -41,6 +41,7 @@ import {
 import { z } from "zod";
 import { toast } from "sonner";
 import { isProtectedUser } from "@/lib/protected-users";
+import { roleLetter } from "@/lib/user-code-format";
 import Link from "next/link";
 import {
   useCallback,
@@ -121,6 +122,7 @@ interface User {
   role: "ADMIN" | "EDITOR" | "SUB_EDITOR" | "REPORTER" | "USER";
   active: boolean;
   phone: string | null;
+  userCode: string | null;
   createdAt: string;
   _count: { contents: number };
   // Pre-fill in the edit dialog when role is SUB_EDITOR / EDITOR. The
@@ -148,6 +150,7 @@ interface UserRow {
   active: boolean;
   articles: number;
   joinedAt: string;
+  userCode: string | null;
   // Reporter-specific projections (empty / null for non-reporter rows).
   phone: string;
   district: string;
@@ -166,6 +169,7 @@ function toRow(u: User): UserRow {
     active: u.active,
     articles: u._count?.contents ?? 0,
     joinedAt: u.createdAt,
+    userCode: u.userCode ?? null,
     phone: u.phone ?? "",
     district: u.reporterProfile?.primaryDistrict ?? "",
     kycStatus: u.reporterProfile?.kycStatus ?? "",
@@ -284,6 +288,15 @@ export default function UsersPage() {
   // that case). The dialog components fetch their own data.
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [resettingUser, setResettingUser] = useState<{ id: string; name: string; email: string; reporterProfileId: string | null } | null>(null);
+  // Modal showing "this user is deactivated" details. Triggered from the
+  // red Inactive button next to the name. Lets the admin see context + hit
+  // Reactivate without digging into the row menu.
+  const [viewingInactive, setViewingInactive] = useState<UserRow | null>(null);
+  // Confirmation dialog for the Deactivate row action. Activate stays a
+  // one-tap toggle (benign); deactivation goes through this dialog so the
+  // admin sees what changes for the user before committing.
+  const [confirmDeactivate, setConfirmDeactivate] = useState<UserRow | null>(null);
+  const [deactivateLoading, setDeactivateLoading] = useState(false);
   const openReview = useCallback((row: UserRow) => setReviewingId(row.id), []);
   const openResetPassword = useCallback((row: UserRow) => setResettingUser({
     id: row.id,
@@ -343,22 +356,44 @@ export default function UsersPage() {
       {
         accessorKey: "name",
         header: "Name",
-        size: 160,
+        size: 180,
         enableHiding: false,
         filterFn: userSearchFilter,
-        cell: ({ row }) => (
-          <div className="flex items-center gap-2">
-            <span className="font-medium">{row.getValue("name")}</span>
-            {!row.original.active && (
-              <Badge
-                variant="outline"
-                className="border-slate-300 bg-slate-100 text-[10px] font-semibold uppercase tracking-wide text-slate-600"
-              >
-                Inactive
-              </Badge>
-            )}
-          </div>
-        ),
+        cell: ({ row }) => {
+          const code = row.original.userCode;
+          // Stored "RNA12345" → display "RNA-12345" right under the name.
+          // Acts as a quick visual identity tag (role letter + number) so
+          // an admin sharing the code doesn't need to scan to a separate
+          // column.
+          const codeDisplay = code && code.length === 8 ? `${code.slice(0, 3)}-${code.slice(3)}` : code;
+          return (
+            <div className="min-w-0">
+              <div className="truncate font-medium">{row.getValue("name")}</div>
+              {(codeDisplay || !row.original.active) && (
+                <div className="mt-0.5 flex items-center gap-2">
+                  {codeDisplay ? (
+                    <span
+                      className="font-mono text-[11px] tracking-wider text-muted-foreground"
+                      title="Login code"
+                    >
+                      {codeDisplay}
+                    </span>
+                  ) : null}
+                  {!row.original.active && (
+                    <button
+                      type="button"
+                      onClick={() => setViewingInactive(row.original)}
+                      title="View deactivation details"
+                      className="cursor-pointer bg-transparent p-0 text-[11px] font-semibold uppercase tracking-wide text-red-600 hover:text-red-700 hover:underline focus:outline-none focus-visible:underline"
+                    >
+                      Inactive
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "email",
@@ -564,8 +599,10 @@ export default function UsersPage() {
   // Toggle a single user's `active` flag via the PUT endpoint. Distinct from
   // Delete (which is a permanent DB remove) - Deactivate keeps the row but
   // blocks sign-in and pulls the user out of review pools.
-  const handleToggleActive = async (row: UserRow) => {
-    const nextActive = !row.active;
+  // The actual API call. Used by both the direct Activate path and the
+  // confirmed Deactivate path; the toggle direction is decided by the
+  // caller via `nextActive` so this stays single-purpose.
+  const setActiveStatus = async (row: UserRow, nextActive: boolean) => {
     try {
       const res = await fetch(`/api/users/${row.id}`, {
         method: "PUT",
@@ -575,12 +612,36 @@ export default function UsersPage() {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         toast.error(data.error || `Failed (HTTP ${res.status})`);
-        return;
+        return false;
       }
       toast.success(`${row.name} ${nextActive ? "activated" : "deactivated"}.`);
       load();
+      return true;
     } catch (e) {
       toast.error((e as Error)?.message || "Toggle failed. Please try again.");
+      return false;
+    }
+  };
+
+  // Row menu entry point. Activating is harmless - one tap, no dialog.
+  // Deactivating routes through the confirm AlertDialog rendered below
+  // so the admin can read what the user will see before committing.
+  const handleToggleActive = (row: UserRow) => {
+    if (row.active) {
+      setConfirmDeactivate(row);
+    } else {
+      setActiveStatus(row, true);
+    }
+  };
+
+  const performDeactivate = async () => {
+    if (!confirmDeactivate) return;
+    setDeactivateLoading(true);
+    try {
+      const ok = await setActiveStatus(confirmDeactivate, false);
+      if (ok) setConfirmDeactivate(null);
+    } finally {
+      setDeactivateLoading(false);
     }
   };
 
@@ -944,6 +1005,95 @@ export default function UsersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Deactivate confirmation. Mirrors the exact message the user will
+          see on their next sign-in attempt so the admin can preview it
+          before clicking through. */}
+      <AlertDialog
+        open={!!confirmDeactivate}
+        onOpenChange={(v) => !v && !deactivateLoading && setConfirmDeactivate(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deactivate {confirmDeactivate?.name}?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>
+                  This account will be deactivated immediately. Their content and audit trail stay intact, but they can no longer sign in.
+                </p>
+                <div className="rounded-md border border-red-200 bg-red-50/70 p-2.5 text-xs text-red-900">
+                  <p className="font-semibold uppercase tracking-wide text-red-700">User will see</p>
+                  <p className="mt-1 italic">
+                    &ldquo;Your account has been deactivated. Contact your admin to re-activate the account.&rdquo;
+                  </p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Reverse at any time via the row menu (Activate).
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deactivateLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={performDeactivate}
+              disabled={deactivateLoading}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deactivateLoading ? "Deactivating..." : "Deactivate"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Inactive-state detail modal. Opens from the red Inactive button
+          next to the user's name. Read-only context + a one-click Reactivate
+          shortcut so the admin doesn't have to find the row menu first. */}
+      <AlertDialog
+        open={!!viewingInactive}
+        onOpenChange={(v) => !v && setViewingInactive(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Account is deactivated</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <div className="rounded-md border bg-muted/40 px-3 py-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">User</p>
+                  <p className="text-sm font-semibold text-foreground">{viewingInactive?.name}</p>
+                  <p className="text-xs text-muted-foreground">{viewingInactive?.email}</p>
+                  {viewingInactive?.userCode ? (
+                    <p className="mt-1 font-mono text-xs tracking-wider text-muted-foreground">
+                      {viewingInactive.userCode.length === 8
+                        ? `${viewingInactive.userCode.slice(0, 3)}-${viewingInactive.userCode.slice(3)}`
+                        : viewingInactive.userCode}
+                    </p>
+                  ) : null}
+                </div>
+                <p className="text-sm">
+                  This account cannot sign in. The user sees a &ldquo;Your account has been deactivated&rdquo; message when they try.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Reactivate to restore sign-in immediately. Content and audit trail are preserved either way.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Close</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (!viewingInactive) return;
+                const ok = await setActiveStatus(viewingInactive, true);
+                if (ok) setViewingInactive(null);
+              }}
+              className="bg-emerald-600 text-white hover:bg-emerald-600/90"
+            >
+              Reactivate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -1021,8 +1171,17 @@ function RowActions({
         {/* Deactivate / Activate - soft action. Flips User.active so the
             user can no longer sign in (and is pulled out of review pools)
             but their authored content + audit trail stay intact. Allowed
-            on protected seed accounts (deactivate is reversible). */}
-        <DropdownMenuItem onSelect={() => onToggleActive(row)}>
+            on protected seed accounts (deactivate is reversible). Coloured
+            destructive only on the Deactivate path - Activate is benign
+            and inherits the default text colour. */}
+        <DropdownMenuItem
+          onSelect={() => onToggleActive(row)}
+          className={
+            row.active
+              ? "text-destructive focus:text-destructive"
+              : "text-emerald-700 focus:text-emerald-700"
+          }
+        >
           {row.active ? "Deactivate" : "Activate"}
         </DropdownMenuItem>
         {/* Delete is hidden entirely for the four canonical seed accounts.
@@ -1115,6 +1274,18 @@ function UserFormDialog({
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<User["role"]>(user?.role ?? "REPORTER");
   const [active, setActive] = useState<boolean>(user?.active ?? true);
+  // Snapshot the role at dialog open time. Compared against `role` on every
+  // render to decide whether to surface the "Regenerate login code" checkbox.
+  // Only meaningful in edit mode - new users always get a fresh code anyway.
+  const originalRole = user?.role ?? null;
+  const [regenerateCode, setRegenerateCode] = useState(false);
+  const roleChanged = mode === "edit" && originalRole !== null && role !== originalRole;
+  // Auto-uncheck if the admin changes role then reverts back - otherwise a
+  // stale "true" would silently regenerate on save without a checkbox to
+  // surface it.
+  useEffect(() => {
+    if (!roleChanged && regenerateCode) setRegenerateCode(false);
+  }, [roleChanged, regenerateCode]);
   // Default to forcing change on first login for new accounts - admin types
   // a temporary password and the user picks their own next time in. Editing
   // an existing user mirrors whatever the row currently has.
@@ -1198,6 +1369,10 @@ function UserFormDialog({
       };
       if (parsed.data.password) body.password = parsed.data.password;
       if (needsCategories) body.categoryIds = parsed.data.categoryIds;
+      // Only send the regen flag in edit mode AND only when the admin
+      // actually toggled the checkbox. The create flow always mints a
+      // fresh code server-side, so this field has no meaning there.
+      if (mode === "edit" && roleChanged && regenerateCode) body.regenerateCode = true;
       const res = await fetch(path, {
         method,
         headers: { "Content-Type": "application/json" },
@@ -1360,6 +1535,42 @@ function UserFormDialog({
               {role === "SUB_EDITOR" && "Reviews articles in assigned categories. Cannot approve or publish."}
               {role === "REPORTER" && "Writes own articles. Uses the reporter mobile/web app, not this admin."}
             </p>
+
+            {/* Regenerate-code opt-in. Only appears when the role has been
+                changed from the original - otherwise the code is fine as-is
+                and we don't want to nudge admins into invalidating it. Stays
+                unchecked by default; admin must tick to commit. */}
+            {roleChanged && (
+              <label className="flex cursor-pointer items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-2.5 mt-2">
+                <Checkbox
+                  id="u-regen-code"
+                  checked={regenerateCode}
+                  onCheckedChange={(v) => setRegenerateCode(!!v)}
+                  className="mt-0.5"
+                />
+                <div className="space-y-0.5 text-xs">
+                  <span className="block font-semibold text-amber-900">
+                    Regenerate login code to match new role
+                  </span>
+                  <span className="block text-amber-800/80">
+                    Current code{" "}
+                    {user?.userCode ? (
+                      <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px]">
+                        {user.userCode.length === 8
+                          ? `${user.userCode.slice(0, 3)}-${user.userCode.slice(3)}`
+                          : user.userCode}
+                      </code>
+                    ) : (
+                      "(none)"
+                    )}{" "}
+                    will be replaced with a new <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px]">
+                      RN{roleLetter(role)}-•••••
+                    </code>{" "}
+                    code. The old one stops working immediately on save.
+                  </span>
+                </div>
+              </label>
+            )}
           </div>
 
           {/* Categories - MultiSelect dropdown with search, select-all/clear,

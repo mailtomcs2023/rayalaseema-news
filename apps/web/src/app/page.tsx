@@ -7,6 +7,7 @@
 import { cookies } from "next/headers";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { MarketTickerServer } from "@/components/market-ticker-server";
 import { TemplateRenderer } from "@/components/blocks/template-renderer";
 import { getSiteConfig } from "@/lib/db-queries";
 import { prisma } from "@rayalaseema/db";
@@ -28,7 +29,11 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <Header config={config} breakingNews={breakingNews} />
+      <Header
+        config={config}
+        breakingNews={breakingNews}
+        tickerSlot={<MarketTickerServer />}
+      />
       <main style={{ maxWidth: 1280, margin: "0 auto", padding: "2px 8px 0" }}>
         <TemplateRenderer urlPath="/" ctx={{ districtSlug: myDistrictSlug }} />
       </main>

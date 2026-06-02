@@ -31,6 +31,12 @@ model User {
   bio           String?
   phone         String?
   active        Boolean   @default(true)
+  // Public 6-digit login code, mintable instead of (or alongside) the email.
+  // Stored as a string so leading zeros are preserved ("041729"). Nullable
+  // until the next deploy's backfill script runs over legacy rows. After
+  // that everyone has one; new accounts get one in the same transaction as
+  // the user create.
+  userCode      String?   @unique
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -909,25 +915,49 @@ model MandiPrice {
 // ============ POLLS ============
 
 model Poll {
-  id        String       @id @default(cuid())
-  question  String
-  active    Boolean      @default(true)
-  options   PollOption[]
-  createdAt DateTime     @default(now())
-  expiresAt DateTime?
+  id            String       @id @default(cuid())
+  question      String
+  active        Boolean      @default(true)
+  // WhatsApp-style polls can either be single-answer (radios) or
+  // multi-answer (checkboxes). False keeps existing single-choice behaviour
+  // so any pre-flag rows continue to act as before.
+  allowMultiple Boolean      @default(false)
+  options       PollOption[]
+  voteLog       PollVote[]
+  createdAt     DateTime     @default(now())
+  expiresAt     DateTime?
 
   @@map("polls")
 }
 
 model PollOption {
-  id     String @id @default(cuid())
-  pollId String
-  poll   Poll   @relation(fields: [pollId], references: [id], onDelete: Cascade)
-  text   String
-  votes  Int    @default(0)
+  id      String     @id @default(cuid())
+  pollId  String
+  poll    Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  text    String
+  votes   Int        @default(0)
+  voteLog PollVote[]
 
   @@index([pollId])
   @@map("poll_options")
+}
+
+// One row per (voter, option) so we can prevent re-voting when the user
+// clears localStorage. voterKey is sha256(ip + ua) - good enough for an
+// anonymous public site; we accept that a household behind one NAT shares
+// a voterKey, which matches the "one vote per device" feel of WhatsApp.
+model PollVote {
+  id        String     @id @default(cuid())
+  pollId    String
+  poll      Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  optionId  String
+  option    PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  voterKey  String
+  createdAt DateTime   @default(now())
+
+  @@unique([pollId, optionId, voterKey])
+  @@index([pollId, voterKey])
+  @@map("poll_votes")
 }
 
 // ============ JOURNALIST PROFILE & KYC ============

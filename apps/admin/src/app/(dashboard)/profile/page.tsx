@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@rayalaseema/db";
 import { decryptProfileFields } from "@/lib/crypto/kyc";
+import { formatUserCode } from "@/lib/user-code";
+import { UserCodeChip } from "@/components/user-code-chip";
 import {
   ShieldCheck,
   Mail,
@@ -81,6 +83,7 @@ export default async function ProfilePage() {
       bio: true,
       role: true,
       active: true,
+      userCode: true,
       createdAt: true,
       twitterHandle: true,
       linkedinUrl: true,
@@ -310,6 +313,9 @@ export default async function ProfilePage() {
               {kycPill.label}
             </span>
           </div>
+          {data.userCode ? (
+            <UserCodeChip code={formatUserCode(data.userCode)} raw={data.userCode} />
+          ) : null}
           <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 8 }}>
             Member since {memberSince}
           </p>

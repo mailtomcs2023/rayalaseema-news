@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
 
     // Download the source image into memory.
     const srcRes = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; RayalaseemaExpress/1.0)" },
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; RayalaseemaNews/1.0)" },
       signal: AbortSignal.timeout(15000),
     });
     if (!srcRes.ok) {

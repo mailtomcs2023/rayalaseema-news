@@ -17,7 +17,7 @@ export const revalidate = 600;
 const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
 
 export const metadata: Metadata = {
-  title: "Devotional news - Tirumala, Tirupati, AP temples | Rayalaseema News News",
+  title: "Devotional news - Tirumala, Tirupati, AP temples | Rayalaseema News",
   description:
     "TTD news, seva booking updates, festival schedules, and devotional stories from across Andhra Pradesh's temple towns. Tirumala, Tirupati, Srisailam, Kanipakam and more.",
   alternates: { canonical: `${SITE_URL}/devotional` },

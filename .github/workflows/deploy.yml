@@ -66,6 +66,13 @@ jobs:
 
             bunx prisma db push --skip-generate --accept-data-loss
 
+            echo "=== Backfill 6-digit userCode for any user without one ==="
+            # Idempotent: skips users that already have a code. Generated codes
+            # avoid weak/sequential patterns (000000, 123456, etc.). Required
+            # after the userCode column was added so existing accounts can
+            # log in by code, not just email.
+            bunx tsx scripts/backfill-user-codes.ts
+
             echo "=== Rebuild constituencies (idempotent: inserts missing ACs + remaps old) ==="
             bunx tsx scripts/rebuild-constituencies.ts
             bunx tsx scripts/remap-constituencies.ts

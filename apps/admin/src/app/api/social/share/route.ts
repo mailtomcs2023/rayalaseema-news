@@ -68,7 +68,7 @@ async function postTwitter(article: any) {
 
   // OAuth 1.0a signing
   const url = "https://api.twitter.com/2/tweets";
-  const tweetText = `${article.title}\n\n${article.summary?.slice(0, 150) || ""}\n\n${SITE_URL}/article/${article.slug}\n\n#రాయలసీమ #RayalaseemaExpress #${article.categoryNameEn?.replace(/\s/g, "") || "News"}`;
+  const tweetText = `${article.title}\n\n${article.summary?.slice(0, 150) || ""}\n\n${SITE_URL}/article/${article.slug}\n\n#రాయలసీమ #RayalaseemaNews #${article.categoryNameEn?.replace(/\s/g, "") || "News"}`;
 
   const oauthParams = getOAuthParams(apiKey, accessToken);
   const signature = generateOAuthSignature("POST", url, oauthParams, apiSecret, accessSecret);
@@ -91,7 +91,7 @@ async function postFacebook(article: any) {
   const pageId = cfg(_config, "facebook_page_id", "FACEBOOK_PAGE_ID");
   if (!pageToken || !pageId) throw new Error("Facebook not configured");
 
-  const message = `📰 ${article.title}\n\n${article.summary || ""}\n\n#రాయలసీమ #RayalaseemaExpress`;
+  const message = `📰 ${article.title}\n\n${article.summary || ""}\n\n#రాయలసీమ #RayalaseemaNews`;
   const link = `${SITE_URL}/article/${article.slug}`;
 
   const res = await fetch(`https://graph.facebook.com/v19.0/${pageId}/feed`, {
@@ -144,7 +144,7 @@ async function postInstagram(article: any) {
   if (!article.featuredImage) throw new Error("Instagram requires an image");
 
   // Step 1: Create media container
-  const caption = `📰 ${article.title}\n\n${article.summary || ""}\n\n🔗 Link in bio\n\n#రాయలసీమ #RayalaseemaExpress #TeluguNews #${article.categoryNameEn?.replace(/\s/g, "") || "News"}`;
+  const caption = `📰 ${article.title}\n\n${article.summary || ""}\n\n🔗 Link in bio\n\n#రాయలసీమ #RayalaseemaNews #TeluguNews #${article.categoryNameEn?.replace(/\s/g, "") || "News"}`;
 
   const createRes = await fetch(`https://graph.facebook.com/v19.0/${igAccountId}/media`, {
     method: "POST",

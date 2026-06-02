@@ -190,7 +190,7 @@ This is a known disambiguation problem - see `memory/project_brand_disambiguatio
 
 ## Memory notes (persistent context across sessions)
 
-`~/.claude/projects/d--Rayalaseema-express/memory/` - Daisy's auto-memory store. Relevant files:
+`~/.claude/projects/d--Rayalaseema-news/memory/` - Daisy's auto-memory store. Relevant files:
 - `project_seo_credentials.md` - `rsepress2026@gmail.com` owns new accounts
 - `project_seo_baseline.md` - GSC starting state
 - `feedback_seo_strategy.md` - foundation-over-per-article + AMP-is-dead

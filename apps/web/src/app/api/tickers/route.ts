@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 
+// Force this handler to be re-discovered by Turbopack after stale routing
+// state; touch this comment if /api/tickers ever 404s in dev.
 // Cache 5 min
 let cache: any = null;
 let cacheTime = 0;
@@ -37,8 +39,12 @@ async function getMandiPrices() {
   } catch { return []; }
 }
 
-// ====== BULLION: Gold & Silver - live free source first, then fallbacks ======
+// ====== BULLION: Gold & Silver ======
 // Source cascade:
+//   0. PreciousMetalRate DB rows entered by editors via /precious-metals
+//      admin page. When rows exist for the current 24h window, the strip
+//      shows per-city rates ("Kurnool 24K", "Tirupati 22K"...). Editors
+//      reflect local jeweller prices that pure spot APIs cannot.
 //   1. goldprice.org public JSON - no key, no signup, updates ~every 60s.
 //      Same endpoint that powers goldprice.org's homepage widget. Returns
 //      gold + silver per troy ounce in INR; we convert oz → gram.
@@ -49,6 +55,43 @@ async function getMandiPrices() {
 async function getBullionPrices() {
   const OZ_TO_GRAM = 31.1035;
 
+  // Method 0: PreciousMetalRate DB rows (editor-entered, per Rayalaseema city).
+  // The /gold-rate page reads from this same table; surfacing the same rows
+  // in the strip keeps the two views in sync. Only the freshest row per
+  // (city, metal, purity) within the current 24h window is shown so stale
+  // entries from days ago don't pollute the strip.
+  try {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const rows = await prisma.preciousMetalRate.findMany({
+      where: { active: true, date: { gte: since } },
+      orderBy: [{ city: "asc" }, { metal: "asc" }, { purity: "asc" }, { date: "desc" }],
+    });
+    if (rows.length > 0) {
+      // Dedupe: keep only the newest row per (city, metal, purity).
+      const seen = new Set<string>();
+      const latest: typeof rows = [];
+      for (const r of rows) {
+        const key = `${r.city}|${r.metal}|${r.purity ?? ""}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        latest.push(r);
+      }
+      return latest.map((r) => {
+        const cityLabel = r.cityTe || r.city;
+        const metalLabel = r.metal === "GOLD" ? (r.purity ? `బంగారం ${r.purity}` : "బంగారం") : "వెండి";
+        return {
+          name: `${cityLabel} ${metalLabel}`,
+          nameEn: `${r.city} ${r.metal === "GOLD" ? `Gold ${r.purity ?? ""}` : "Silver"}`.trim(),
+          price: Math.round(r.pricePerGram),
+          unit: "గ్రాము",
+          change: 0,
+        };
+      });
+    }
+  } catch {
+    // DB unavailable - fall through to external API cascade below.
+  }
+
   // Method 1: goldprice.org - free, live, no key. Updates ~every 60s.
   // Returns { items: [{ xauPrice, xagPrice, pcXau, pcXag, ... }] } where
   // xauPrice / xagPrice are INR per troy ounce.
@@ -58,7 +101,7 @@ async function getBullionPrices() {
       // 5-min cache matches the outer ticker cache; goldprice.org gets at
       // most one hit per cache window regardless of homepage traffic.
       next: { revalidate: 300 },
-      headers: { "User-Agent": "RayalaseemaExpress/1.0 (+admin)" },
+      headers: { "User-Agent": "RayalaseemaNews/1.0 (+admin)" },
     });
     if (res.ok) {
       const data = await res.json();
@@ -75,16 +118,19 @@ async function getBullionPrices() {
     }
   } catch {}
 
-  // Method 2: GoldAPI.io demo key (fallback)
+  // Method 2: GoldAPI.io (fallback). Requires GOLDAPI_KEY env var; the
+  // previously-shipped "goldapi-demo" placeholder is no longer accepted.
   try {
+    const goldApiKey = process.env.GOLDAPI_KEY;
+    if (!goldApiKey) throw new Error("no GOLDAPI_KEY");
     const [goldRes, silverRes] = await Promise.all([
       fetch("https://www.goldapi.io/api/XAU/INR", {
-        headers: { "x-access-token": "goldapi-demo" },
+        headers: { "x-access-token": goldApiKey },
         signal: AbortSignal.timeout(5000),
         next: { revalidate: 300 },
       }),
       fetch("https://www.goldapi.io/api/XAG/INR", {
-        headers: { "x-access-token": "goldapi-demo" },
+        headers: { "x-access-token": goldApiKey },
         signal: AbortSignal.timeout(5000),
         next: { revalidate: 300 },
       }),
@@ -162,6 +208,10 @@ async function getForexRates() {
 //   3. cricbuzz-cricket on RapidAPI demo - final fallback.
 async function getCricketScores() {
   // Method 1: ESPN Cricinfo unofficial JSON - free, live, no auth.
+  // Returns LIVE matches when available; falls back to upcoming/recent
+  // entries so the strip can render "Next: IND vs AUS, today 7pm" when no
+  // match is currently in progress. The isLive flag lets the consumer
+  // style differently (pulse dot vs static "Next:" prefix).
   try {
     const res = await fetch(
       "https://hs-consumer-api.espncricinfo.com/v1/pages/matches/current?lang=en&latest=true",
@@ -170,14 +220,12 @@ async function getCricketScores() {
         // 60s revalidate - cricket score changes faster than gold price,
         // but more than once a minute is rude to a free endpoint.
         next: { revalidate: 60 },
-        headers: { "User-Agent": "RayalaseemaExpress/1.0 (+admin)" },
+        headers: { "User-Agent": "RayalaseemaNews/1.0 (+admin)" },
       },
     );
     if (res.ok) {
       const data = await res.json();
       const matches: any[] = Array.isArray(data?.matches) ? data.matches : [];
-      // Filter to live matches first; if none, fall back to the most recent
-      // / upcoming entries the page itself surfaces.
       const live = matches.filter((m) => m?.state === "LIVE" || m?.statusType === "LIVE");
       const pool = live.length > 0 ? live : matches;
       if (pool.length > 0) {
@@ -193,10 +241,12 @@ async function getCricketScores() {
               wickets: Number(t?.score?.wickets ?? 0),
               overs: Number(t?.score?.overs ?? 0),
             }));
+          const isLive = m?.state === "LIVE" || m?.statusType === "LIVE";
           return {
             id: String(m?.objectId || m?.id || `${t1}-${t2}`),
             name: m?.title || `${t1} vs ${t2}`,
-            status: m?.statusText || m?.status || "Live",
+            status: m?.statusText || m?.status || (isLive ? "Live" : "Upcoming"),
+            isLive,
             venue: m?.ground?.longName || m?.ground?.name || "",
             matchType: m?.format || "",
             teams: [t1, t2],

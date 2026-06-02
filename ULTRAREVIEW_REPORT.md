@@ -1,8 +1,8 @@
 # Ultra Review Report
 
-**Project:** rayalaseema-express (రాయలసీమ ఎక్స్ప్రెస్)
+**Project:** rayalaseema-news (రాయలసీమ న్యూస్)
 **Date:** 2026-05-15
-**Path:** D:\Rayalaseema express
+**Path:** D:\Rayalaseema news
 **Stack:** TypeScript, Next.js 16.2, React 19, React Native/Expo, Prisma 6.4, PostgreSQL, Redis, NextAuth 5.0-beta.25
 
 ## Summary

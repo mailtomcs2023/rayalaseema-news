@@ -28,21 +28,21 @@ const DEMO_ROLES = [
   { key: "reporter",  label: "Reporter",   email: "reporter@rayalaseemanews.com",  password: "reporter123",  accent: "#16a34a", Icon: Newspaper      },
 ] as const;
 
-// Client-side validation rules for the sign-in form. We deliberately don't
-// enforce password complexity here - admins set passwords for other users
-// directly, and the user signing in just needs to match what's already
-// hashed in the DB. We do require:
-//   email     - non-empty, normalized lowercase, valid RFC-style address
-//   password  - non-empty, sane length cap so we don't ship megabytes to the
-//               server on a paste accident
+// Identifier can be either an email address OR the user's branded login
+// code (`RN<RoleLetter><5 digits>`, with or without the display dash -
+// e.g. "RNA-12345" or "rna12345"). The server auto-detects on submit;
+// here we just need a loose shape check.
+const IDENTIFIER_RE = /^(?:RN[AESRU]-?\d{5}|[^\s@]+@[^\s@]+\.[^\s@]+)$/i;
+
 const loginSchema = z.object({
-  email: z
+  identifier: z
     .string()
     .trim()
-    .min(1, "Email is required")
-    .max(254, "Email is too long")
-    .toLowerCase()
-    .email("Enter a valid email address"),
+    .min(1, "Email or code is required")
+    .max(254, "Identifier is too long")
+    .refine((v) => IDENTIFIER_RE.test(v), {
+      message: "Enter a valid email address or login code (e.g. RNA-12345)",
+    }),
   password: z
     .string()
     .min(1, "Password is required")
@@ -52,7 +52,9 @@ const loginSchema = z.object({
 type FieldErrors = Partial<Record<keyof z.infer<typeof loginSchema>, string>>;
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
+  // `identifier` holds the email-or-code value. Kept on a single field so
+  // the user types one thing and we route the lookup server-side.
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -65,26 +67,33 @@ export default function LoginPage() {
   };
 
   // Shared sign-in path used by both the form submit and the demo-role
-  // cards. Centralising it means the demo buttons skip Zod (their values
-  // are hardcoded + known-good) but still hit the same NextAuth + redirect
-  // logic as a normal login.
-  const signInWith = async (emailVal: string, passwordVal: string) => {
+  // cards. The Credentials provider's field is still named `email` for
+  // backwards compatibility - it accepts either an email address or a
+  // 6-digit user code as the identifier.
+  const signInWith = async (identifierVal: string, passwordVal: string) => {
     setLoading(true);
     try {
       const result = await signIn("credentials", {
-        email: emailVal,
+        email: identifierVal,
         password: passwordVal,
         redirect: false,
         callbackUrl: "/",
       });
 
       if (result?.error) {
-        // Auth failed (wrong password, inactive account, etc.). Surface
-        // as a red toast - short and dismissable, doesn't push the form
-        // down or persist between attempts.
-        toast.error("Invalid email or password", {
-          description: "Double-check your credentials and try again.",
-        });
+        // NextAuth v5 surfaces our AccountDeactivatedError's `code` here
+        // so we can swap the toast for an actionable "contact admin"
+        // message instead of the generic credential-mismatch one.
+        if (result.code === "account_deactivated") {
+          toast.error("Your account has been deactivated", {
+            description: "Contact your admin to re-activate the account.",
+            duration: 8000,
+          });
+        } else {
+          toast.error("Invalid credentials", {
+            description: "Double-check your email or code and try again.",
+          });
+        }
         setLoading(false);
       } else if (result?.ok) {
         // Middleware redirects to role-appropriate landing on the next page
@@ -107,23 +116,23 @@ export default function LoginPage() {
     // never reaches the network call when invalid. Auth failures surface
     // as toasts (handled in signInWith) so the inline error space stays
     // dedicated to field-specific feedback.
-    const parsed = loginSchema.safeParse({ email, password });
+    const parsed = loginSchema.safeParse({ identifier, password });
     if (!parsed.success) {
       const flat = parsed.error.flatten().fieldErrors;
       setFieldErrors({
-        email: flat.email?.[0],
+        identifier: flat.identifier?.[0],
         password: flat.password?.[0],
       });
       return;
     }
     setFieldErrors({});
-    await signInWith(parsed.data.email, parsed.data.password);
+    await signInWith(parsed.data.identifier, parsed.data.password);
   };
 
   // Click handler for a demo-role card. Mirrors the form fields so the user
   // sees which account they're being signed in as, then submits.
   const handleDemoLogin = async (role: (typeof DEMO_ROLES)[number]) => {
-    setEmail(role.email);
+    setIdentifier(role.email);
     setPassword(role.password);
     setFieldErrors({});
     await signInWith(role.email, role.password);
@@ -146,19 +155,23 @@ export default function LoginPage() {
               auth failures (wrong password, etc.) surface as sonner toasts. */}
           <form onSubmit={handleSubmit} noValidate className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="identifier">Email or login code</Label>
               <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => { setEmail(e.target.value); clearFieldError("email"); }}
-                placeholder="Enter admin email id"
-                autoComplete="email"
-                aria-invalid={!!fieldErrors.email}
-                aria-describedby={fieldErrors.email ? "email-error" : undefined}
+                id="identifier"
+                // `text` (not `email`) so the branded code passes the
+                // browser's built-in type=email validator. autoComplete is
+                // "username" to cover both shapes for password managers.
+                type="text"
+                inputMode="text"
+                value={identifier}
+                onChange={(e) => { setIdentifier(e.target.value); clearFieldError("identifier"); }}
+                placeholder="you@example.com  or  RNA-12345"
+                autoComplete="username"
+                aria-invalid={!!fieldErrors.identifier}
+                aria-describedby={fieldErrors.identifier ? "identifier-error" : undefined}
               />
-              {fieldErrors.email ? (
-                <p id="email-error" className="text-xs text-destructive">{fieldErrors.email}</p>
+              {fieldErrors.identifier ? (
+                <p id="identifier-error" className="text-xs text-destructive">{fieldErrors.identifier}</p>
               ) : null}
             </div>
 
