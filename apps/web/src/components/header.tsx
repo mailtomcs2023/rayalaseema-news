@@ -252,7 +252,7 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
               <p className="text-[15px] font-bold text-gray-900 leading-tight" style={{ fontFamily: "var(--font-telugu-heading)" }}>
                 {new Date().toLocaleDateString("te-IN", { weekday: "long" })}
               </p>
-              <p className="text-[13px] font-medium text-gray-600 leading-tight mt-0.5" style={{ fontFamily: "var(--font-telugu-body)" }}>
+              <p className="text-[13px] font-semibold text-gray-600 leading-tight mt-0.5" style={{ fontFamily: "var(--font-telugu-body)" }}>
                 {new Date().toLocaleDateString("te-IN", { day: "numeric", month: "long", year: "numeric" })}
               </p>
             </div>
