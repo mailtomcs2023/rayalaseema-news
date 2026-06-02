@@ -247,11 +247,12 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
             </Link>
             {/* Noto Sans Telugu (not Mandali): Mandali ships only weight 400, so
                 font-bold faux-bolds it and the weekday looks uneven. */}
-            <div className="hidden md:block border-l border-gray-200 pl-4" style={{ fontFamily: "var(--font-telugu-body)" }}>
-              <p className="text-[15px] font-bold text-gray-900 leading-tight">
+            <div className="hidden md:block border-l border-gray-200 pl-4">
+              {/* Day = heading font (Anek Telugu); date = body font (Noto Sans Telugu). */}
+              <p className="text-[15px] font-bold text-gray-900 leading-tight" style={{ fontFamily: "var(--font-telugu-heading)" }}>
                 {new Date().toLocaleDateString("te-IN", { weekday: "long" })}
               </p>
-              <p className="text-[13px] font-medium text-gray-600 leading-tight mt-0.5">
+              <p className="text-[13px] font-medium text-gray-600 leading-tight mt-0.5" style={{ fontFamily: "var(--font-telugu-body)" }}>
                 {new Date().toLocaleDateString("te-IN", { day: "numeric", month: "long", year: "numeric" })}
               </p>
             </div>
