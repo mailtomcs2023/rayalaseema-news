@@ -188,6 +188,11 @@ jobs:
 
             echo "=== Build apps ==="
             export NODE_OPTIONS="--max-old-space-size=3072"
+            # Clear any stale .next first - a killed/timed-out build leaves a
+            # Turbopack lock ("previous build didn't exit cleanly") that fails
+            # every subsequent build. .next is gitignored so reset --hard won't
+            # clear it; do it explicitly for a clean, reliable build.
+            rm -rf apps/web/.next apps/admin/.next
             cd apps/web && bun run build && cd ../..
             cd apps/admin && bun run build && cd ../..
 
