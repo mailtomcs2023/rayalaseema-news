@@ -64,9 +64,22 @@ export function ImageUpload({ value, onChange, onSearchClick, uploadOnly = false
     if (file?.type.startsWith("image/")) uploadFile(file);
   };
 
-  const applyUrl = () => {
+  const applyUrl = async () => {
     const trimmed = urlDraft.trim();
     if (!trimmed) return;
+    // A pasted base64 data: URL is huge (tens of KB) and would blow the
+    // 2048-char URL cap on save. Rehost it through /api/upload - the same
+    // path a file upload takes - and store the returned hosted URL instead.
+    if (trimmed.startsWith("data:")) {
+      setUrlDraft("");
+      try {
+        const blob = await (await fetch(trimmed)).blob();
+        await uploadFile(new File([blob], "pasted-image", { type: blob.type || "image/jpeg" }));
+      } catch {
+        toast.error("Couldn't read that pasted image");
+      }
+      return;
+    }
     onChange(trimmed);
     setUrlDraft("");
   };

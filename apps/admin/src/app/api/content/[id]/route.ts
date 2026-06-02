@@ -10,6 +10,7 @@ import {
   contentUpdateSchema,
 } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
+import { rehostDataUrlFields } from "@/lib/rehost-data-url";
 import { requireKyc } from "@/lib/kyc-guard";
 import { logAudit, diffSummary } from "@/lib/audit";
 import { buildSlugFromTitle, isPlaceholderSlug, sanitizeSlug } from "@/lib/slug";
@@ -98,7 +99,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (isAuthError(session)) return session;
   try {
     const { id } = await params;
-    const rawBody = await req.json();
+    // Rehost any base64 data: image fields to a hosted URL before validation
+    // so a pasted/auto-fetched data URL doesn't trip the 2048-char URL cap.
+    const rawBody = await rehostDataUrlFields(await req.json());
 
     // Zod validation at the boundary. Every field is shape-checked +
     // length-capped before any DB query runs; bad payloads return 400 with
