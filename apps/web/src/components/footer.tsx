@@ -84,7 +84,7 @@ export function Footer({ config: initialConfig = {} }: FooterProps) {
               ].map((d) => (
                 <li key={d.slug}>
                   <Link
-                    href={`/district/${d.slug}`}
+                    href={`/${d.slug}`}
                     className="hover:text-white transition-colors font-telugu"
                   >
                     {d.name}

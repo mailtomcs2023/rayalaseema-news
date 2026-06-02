@@ -162,7 +162,7 @@ export default function WeatherPage() {
             {weatherData.map((w) => {
               const info = weatherCodes[w.weatherCode] || weatherCodes[0];
               return (
-                <Link key={w.nameEn} href={`/district/${w.slug}`} style={{ textDecoration: "none" }}>
+                <Link key={w.nameEn} href={`/${w.slug}`} style={{ textDecoration: "none" }}>
                   <div style={{ background: "#fff", borderRadius: 12, padding: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", transition: "box-shadow 0.15s, transform 0.15s" }} className="hover:shadow-lg hover:-translate-y-0.5">
                     {/* District name + icon */}
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>

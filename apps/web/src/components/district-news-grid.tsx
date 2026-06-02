@@ -53,7 +53,7 @@ export function DistrictNewsGrid({ districts }: { districts: DistrictNews[] }) {
       {/* === MY DISTRICT: Featured big section === */}
       {myData && myData.articles.length > 0 && (
         <div className="my-district-featured">
-          <Link href={`/district/${myData.district.slug}`} style={{ textDecoration: "none", color: "#fff" }}>
+          <Link href={`/${myData.district.slug}`} style={{ textDecoration: "none", color: "#fff" }}>
             <div className="my-district-header">
               <span style={{ color: "#fff" }}>★ {myData.district.name} వార్తలు</span>
               <span style={{ fontSize: 11, color: "rgba(255,255,255,0.8)" }}>మీ జిల్లా &rarr;</span>
@@ -92,7 +92,7 @@ export function DistrictNewsGrid({ districts }: { districts: DistrictNews[] }) {
                   </div>
                 </Link>
               ))}
-              <Link href={`/district/${myData.district.slug}`} className="my-district-more">
+              <Link href={`/${myData.district.slug}`} className="my-district-more">
                 {myData.district.name} వార్తలు అన్నీ చూడండి &rarr;
               </Link>
             </div>
@@ -108,7 +108,7 @@ export function DistrictNewsGrid({ districts }: { districts: DistrictNews[] }) {
 
           return (
             <div key={district.slug} className="district-news-card">
-              <Link href={`/district/${district.slug}`} style={{ textDecoration: "none" }}>
+              <Link href={`/${district.slug}`} style={{ textDecoration: "none" }}>
                 <div className="district-news-header">
                   <span className="district-news-name">{district.name}</span>
                   <svg width="12" height="12" fill="none" stroke="var(--color-brand)" strokeWidth="2" viewBox="0 0 24 24" style={{ opacity: 0.5 }}><path d="M9 5l7 7-7 7"/></svg>

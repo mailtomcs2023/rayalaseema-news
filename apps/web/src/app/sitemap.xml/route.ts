@@ -59,8 +59,8 @@ export async function GET() {
   const urls: string[] = [];
   urls.push(`  <url><loc>${siteUrl}</loc><lastmod>${now}</lastmod><changefreq>always</changefreq><priority>1.0</priority></url>`);
   for (const d of districts) {
+    // Districts serve at the bare root slug (/kurnool); /district/<slug> 301s here.
     urls.push(`  <url><loc>${siteUrl}/${d.slug}</loc><changefreq>hourly</changefreq><priority>0.9</priority></url>`);
-    urls.push(`  <url><loc>${siteUrl}/district/${d.slug}</loc><changefreq>hourly</changefreq><priority>0.9</priority></url>`);
   }
   for (const c of constituencies) {
     // Future hub URL (Phase F1/F2 may migrate /constituency/<slug> to

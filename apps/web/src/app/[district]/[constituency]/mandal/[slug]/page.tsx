@@ -145,7 +145,7 @@ export default async function MandalPage({ params }: { params: Params }) {
   const breadcrumbLd = buildBreadcrumbListSchema({
     items: [
       { name: "Home", url: SITE_URL },
-      { name: mandal.constituency.district.name, url: `${SITE_URL}/district/${p.district}` },
+      { name: mandal.constituency.district.name, url: `${SITE_URL}/${p.district}` },
       { name: mandal.constituency.name, url: `${SITE_URL}/constituency/${p.constituency}` },
       { name: mandal.name },
     ],
@@ -159,7 +159,7 @@ export default async function MandalPage({ params }: { params: Params }) {
         <nav style={{ fontSize: 13, color: "#888", marginBottom: 12 }}>
           <Link href="/" style={{ color: "#888", textDecoration: "none" }}>Home</Link>
           <span> / </span>
-          <Link href={`/district/${p.district}`} style={{ color: "#888", textDecoration: "none" }}>{mandal.constituency.district.name}</Link>
+          <Link href={`/${p.district}`} style={{ color: "#888", textDecoration: "none" }}>{mandal.constituency.district.name}</Link>
           <span> / </span>
           <Link href={`/constituency/${p.constituency}`} style={{ color: "#888", textDecoration: "none" }}>{mandal.constituency.name}</Link>
           <span> / </span>

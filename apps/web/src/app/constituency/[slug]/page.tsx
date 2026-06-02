@@ -71,7 +71,7 @@ export default async function ConstituencyPage({ params }: { params: Promise<{ s
   const breadcrumbLd = buildBreadcrumbListSchema({
     items: [
       { name: "Home", url: siteUrl },
-      { name: constituency.district.name, url: `${siteUrl}/district/${constituency.district.slug}` },
+      { name: constituency.district.name, url: `${siteUrl}/${constituency.district.slug}` },
       { name: constituency.name },
     ],
   });
@@ -87,7 +87,7 @@ export default async function ConstituencyPage({ params }: { params: Promise<{ s
           <nav style={{ fontSize: 13, color: "#888", marginBottom: 8 }}>
             <Link href="/" style={{ color: "#888", textDecoration: "none" }}>Home</Link>
             <span> / </span>
-            <Link href={`/district/${constituency.district.slug}`} style={{ color: "#888", textDecoration: "none" }}>{constituency.district.name}</Link>
+            <Link href={`/${constituency.district.slug}`} style={{ color: "#888", textDecoration: "none" }}>{constituency.district.name}</Link>
             <span> / </span>
             <span style={{ color: "#333" }}>{constituency.name}</span>
           </nav>
@@ -136,7 +136,7 @@ export default async function ConstituencyPage({ params }: { params: Promise<{ s
           <div style={{ textAlign: "center", padding: 60, background: "#fff", borderRadius: 10, border: "1px solid #eee" }}>
             <p style={{ fontSize: 18, fontWeight: 700, color: "#333" }}>{constituency.name} వార్తలు త్వరలో...</p>
             <p style={{ fontSize: 14, color: "#888", marginTop: 8 }}>No articles tagged to this constituency yet. Articles will appear here when reporters tag them to this location.</p>
-            <Link href={`/district/${constituency.district.slug}`} style={{ display: "inline-block", marginTop: 16, padding: "10px 24px", background: "var(--color-brand)", color: "#fff", borderRadius: 8, fontWeight: 700, textDecoration: "none" }}>
+            <Link href={`/${constituency.district.slug}`} style={{ display: "inline-block", marginTop: 16, padding: "10px 24px", background: "var(--color-brand)", color: "#fff", borderRadius: 8, fontWeight: 700, textDecoration: "none" }}>
               Back to {constituency.district.name}
             </Link>
           </div>

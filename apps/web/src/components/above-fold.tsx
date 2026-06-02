@@ -71,7 +71,7 @@ export function AboveFold({
               const top = d.articles[0];
               return (
                 <div key={d.slug} className="af-dist-cell">
-                  <Link href={`/district/${d.slug}`} className="af-dist-name">
+                  <Link href={`/${d.slug}`} className="af-dist-name">
                     {d.name}
                   </Link>
                   {top ? (

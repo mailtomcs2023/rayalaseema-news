@@ -78,6 +78,10 @@ const nextConfig = {
     // is unaffected (different prefix).
     return [
       { source: "/category/:slug", destination: "/:slug", permanent: true },
+      // Districts also moved to bare root slugs (/kurnool). The :slug pattern is
+      // single-segment, so article permalinks /[district]/[constituency]/...
+      // (multi-segment) are unaffected.
+      { source: "/district/:slug", destination: "/:slug", permanent: true },
     ];
   },
 };
