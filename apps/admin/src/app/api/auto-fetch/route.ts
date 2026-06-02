@@ -120,7 +120,7 @@ RULES:
 // Backward-compat: old shape { categories, forceReimport? } still works and
 // behaves like "fetch + auto-import everything" - the modal's bulk mode.
 export async function POST(req: NextRequest) {
-  const session = await requireAuth(["ADMIN"]); if (isAuthError(session)) return session;
+  const session = await requireAuth(["ADMIN", "EDITOR", "SUB_EDITOR"]); if (isAuthError(session)) return session;
   if (!NEWSDATA_KEY) return NextResponse.json({ error: "NEWSDATA_API_KEY not configured" }, { status: 503 });
   const body = await req.json().catch(() => ({}));
   const {
