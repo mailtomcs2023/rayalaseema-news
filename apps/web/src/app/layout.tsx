@@ -48,31 +48,53 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  // Spec #4 brand disambiguation - title carries " News" suffix so Google
-  // doesn't collapse our brand into the Indian Railways train of the same
-  // name. See ~/.claude/.../memory/project_brand_disambiguation.md.
-  title: "Rayalaseema News | రాయలసీమ న్యూస్ వార్తలు",
+  // Title leads with the highest-volume English head term ("Telugu News")
+  // then brand, then Telugu phrase. Google truncates around 60 chars on
+  // SERP but indexes the full title.
+  // metadata.title.template lets inner pages set just the page title and
+  // Next.js will append " | Rayalaseema News" automatically.
+  title: {
+    default: "Telugu News Today - Rayalaseema News | రాయలసీమ తాజా వార్తలు",
+    template: "%s | Rayalaseema News",
+  },
   description:
-    "Telugu news portal covering the Rayalaseema region of Andhra Pradesh. Hyper-local news from Kurnool, Nandyal, Anantapuramu, Sri Sathya Sai, YSR-Kadapa, Annamayya, Tirupati, and Chittoor.",
+    "Latest Telugu news from Andhra Pradesh's Rayalaseema region — Kurnool, Nandyal, Anantapur, Sri Sathya Sai, Kadapa, Annamayya, Tirupati, Chittoor. Politics, sports, cinema, weather, mandi prices, gold rates, devotional. తాజా రాయలసీమ వార్తలు, రాజకీయాలు, క్రీడలు, సినిమా.",
   manifest: "/manifest.json",
   keywords: [
+    "telugu news",
+    "telugu news today",
+    "telugu news latest",
+    "breaking news telugu",
+    "andhra pradesh news",
+    "ap news today",
+    "తెలుగు వార్తలు",
+    "తాజా వార్తలు",
+    "ఆంధ్రప్రదేశ్ వార్తలు",
     "Rayalaseema News",
-    "Rayalaseema news",
-    "రాయలసీమ న్యూస్ వార్తలు",
-    "Telugu news portal",
-    "Telugu news Andhra Pradesh",
+    "rayalaseema news telugu",
+    "రాయలసీమ వార్తలు",
+    "రాయలసీమ న్యూస్",
     "Kurnool news",
+    "Nandyal news",
     "Anantapur news",
+    "Sri Sathya Sai news",
     "Kadapa news",
+    "Annamayya news",
     "Tirupati news",
     "Chittoor news",
-    "Nandyal news",
+    "కర్నూలు వార్తలు",
+    "తిరుపతి వార్తలు",
+    "కడప వార్తలు",
+    "anantapur gold rate today",
+    "kurnool weather today",
+    "tirupati darshan tickets",
   ],
   openGraph: {
-    title: "Rayalaseema News | రాయలసీమ న్యూస్ వార్తలు",
-    description: "Telugu news portal for the Rayalaseema region of Andhra Pradesh.",
+    title: "Telugu News Today - Rayalaseema News | రాయలసీమ తాజా వార్తలు",
+    description: "Latest Telugu news from the Rayalaseema region — Kurnool, Anantapur, Kadapa, Tirupati, Chittoor.",
     type: "website",
     locale: "te_IN",
+    siteName: "Rayalaseema News",
   },
 };
 

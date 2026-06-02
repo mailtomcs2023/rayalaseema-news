@@ -14,11 +14,27 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const district = await prisma.district.findUnique({ where: { slug } });
   if (!district) return { title: "District not found" };
   const siteUrl = process.env.SITE_URL || "https://rayalaseemanews.com";
+  // Head term "${nameEn} news" leads (search volume target), Telugu mirror
+  // for native readers, brand suffix appended by layout.tsx title.template.
+  const title = `${district.nameEn} News Today - ${district.name} తాజా వార్తలు`;
+  const description = `${district.nameEn} (${district.name}) జిల్లా నుండి తాజా వార్తలు, రాజకీయాలు, క్రీడలు, వాతావరణం, ధరలు. Latest ${district.nameEn} news in Telugu from Rayalaseema News.`;
   return {
-    title: `${district.name} (${district.nameEn}) | రాయలసీమ న్యూస్`,
-    description: `${district.name} జిల్లా నుండి తాజా వార్తలు, విశ్లేషణలు`,
+    title,
+    description,
+    keywords: [
+      `${district.nameEn} news`,
+      `${district.nameEn} news today`,
+      `${district.nameEn} latest news`,
+      `${district.name} వార్తలు`,
+      `${district.name} తాజా వార్తలు`,
+      `${district.nameEn} politics`,
+      `${district.nameEn} weather`,
+      `${district.nameEn} ${district.name} news`,
+      "rayalaseema news",
+      "telugu news",
+    ],
     alternates: { canonical: `${siteUrl}/district/${slug}` },
-    openGraph: { title: district.name, url: `${siteUrl}/district/${slug}`, type: "website", locale: "te_IN" },
+    openGraph: { title, description, url: `${siteUrl}/district/${slug}`, type: "website", locale: "te_IN", siteName: "Rayalaseema News" },
   };
 }
 

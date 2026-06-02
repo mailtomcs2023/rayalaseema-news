@@ -64,15 +64,29 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const p = await params;
   const mandal = await resolveMandal(p);
   if (!mandal) return { title: "Not found" };
+  const title = `${mandal.nameEn} Mandal News - ${mandal.name} వార్తలు`;
+  const description = `${mandal.nameEn} (${mandal.name}) మండలం నుండి తాజా వార్తలు. Local news from ${mandal.nameEn} mandal, ${mandal.constituency.nameEn} constituency, ${mandal.constituency.district.nameEn} district. Hyper-local hyperlocal news, politics, civic updates from Rayalaseema News.`;
   return {
-    title: `${mandal.name} (${mandal.nameEn}) | Rayalaseema News`,
-    description: `${mandal.name} మండలం నుండి తాజా వార్తలు. News from ${mandal.nameEn} mandal in ${mandal.constituency.district.nameEn} district.`,
+    title,
+    description,
+    keywords: [
+      `${mandal.nameEn} news`,
+      `${mandal.nameEn} mandal`,
+      `${mandal.name} మండలం`,
+      `${mandal.name} వార్తలు`,
+      `${mandal.constituency.nameEn} ${mandal.nameEn}`,
+      `${mandal.constituency.district.nameEn} ${mandal.nameEn}`,
+      `${mandal.nameEn} latest news`,
+      "rayalaseema news",
+    ],
     alternates: { canonical: `${SITE_URL}/${p.district}/${p.constituency}/mandal/${p.slug}` },
     openGraph: {
-      title: `${mandal.name} | రాయలసీమ న్యూస్`,
+      title,
+      description,
       url: `${SITE_URL}/${p.district}/${p.constituency}/mandal/${p.slug}`,
       type: "website",
       locale: "te_IN",
+      siteName: "Rayalaseema News",
     },
   };
 }

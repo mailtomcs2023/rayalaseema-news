@@ -1,10 +1,48 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { prisma } from "@rayalaseema/db";
 import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 import { articleHref } from "@/lib/article-href";
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const constituency = await prisma.constituency.findUnique({
+    where: { slug },
+    include: { district: true },
+  });
+  if (!constituency) return { title: "Constituency not found" };
+  const siteUrl = process.env.SITE_URL || "https://rayalaseemanews.com";
+  const title = `${constituency.nameEn} Constituency News - ${constituency.name} వార్తలు`;
+  const description = `${constituency.nameEn} (${constituency.name}) నియోజకవర్గం నుండి తాజా వార్తలు, రాజకీయాలు, MLA, అభివృద్ధి కార్యక్రమాలు. ${constituency.district.nameEn} district. Latest political + civic news from Rayalaseema News.`;
+  return {
+    title,
+    description,
+    keywords: [
+      `${constituency.nameEn} constituency`,
+      `${constituency.nameEn} news`,
+      `${constituency.nameEn} MLA`,
+      `${constituency.nameEn} election`,
+      `${constituency.name} నియోజకవర్గం`,
+      `${constituency.name} వార్తలు`,
+      `${constituency.district.nameEn} ${constituency.nameEn}`,
+      `${constituency.district.nameEn} news`,
+      "rayalaseema news",
+      "andhra pradesh politics",
+    ],
+    alternates: { canonical: `${siteUrl}/constituency/${slug}` },
+    openGraph: {
+      title,
+      description,
+      url: `${siteUrl}/constituency/${slug}`,
+      type: "website",
+      locale: "te_IN",
+      siteName: "Rayalaseema News",
+    },
+  };
+}
 
 export default async function ConstituencyPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
