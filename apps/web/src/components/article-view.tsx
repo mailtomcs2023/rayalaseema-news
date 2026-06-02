@@ -11,7 +11,6 @@ import { TTSButton } from "@/components/tts-button";
 import { CommentsSection } from "@/components/comments-section";
 import { ScrollShareNudge } from "@/components/scroll-share-nudge";
 import { ShareBar } from "@/components/share-bar";
-import { PaywallModal } from "@/components/paywall-modal";
 import { DialectGlosser } from "@/components/dialect-glosser";
 import { injectInlineByline, formatRelativeTelugu } from "@/lib/byline";
 import { sanitizeArticleHtml } from "@/lib/sanitize";
@@ -141,9 +140,8 @@ export function ArticleView({ article, related, trending, siteUrl }: Props) {
     ],
   });
 
-  // Headline-only fallback for ScrollShareNudge / PaywallModal which need a
-  // stable identifier across the migration. They take the canonical slug
-  // (Content.slug) not the full URL.
+  // ScrollShareNudge takes the canonical slug (Content.slug) not the
+  // full URL, so cache it once here.
   const slug = article.slug || "";
 
   return (
@@ -272,7 +270,6 @@ export function ArticleView({ article, related, trending, siteUrl }: Props) {
 
             <CommentsSection articleId={article.id} />
           </article>
-          <PaywallModal articleSlug={slug} />
           <DialectGlosser />
 
           <aside className="article-sidebar" style={{ width: 320, flexShrink: 0 }}>
