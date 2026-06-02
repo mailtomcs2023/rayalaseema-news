@@ -7,7 +7,7 @@ import { Footer } from "@/components/footer";
 
 interface Rashi {
   id: string; name: string; nameEn: string; symbol: string; icon: string; dates: string;
-  prediction: string; predictionEn?: string;
+  prediction: string; predictionEn?: string; weeklyPrediction?: string;
 }
 
 interface Panchangam {
@@ -126,7 +126,14 @@ export default function HoroscopePage() {
                     మార్చు
                   </button>
                 </div>
-                <p style={{ fontSize: 16, lineHeight: 2, color: "#222" }}>{selectedRashi.prediction}</p>
+                <h3 style={{ fontSize: 13, fontWeight: 800, color: "#888", margin: "0 0 4px" }}>ఈ రోజు</h3>
+                <p style={{ fontSize: 16, lineHeight: 2, color: "#222" }}>{selectedRashi.prediction || "త్వరలో…"}</p>
+                {selectedRashi.weeklyPrediction && (
+                  <>
+                    <h3 style={{ fontSize: 13, fontWeight: 800, color: "#888", margin: "16px 0 4px" }}>ఈ వారం</h3>
+                    <p style={{ fontSize: 15, lineHeight: 1.9, color: "#333" }}>{selectedRashi.weeklyPrediction}</p>
+                  </>
+                )}
               </div>
             )}
 
