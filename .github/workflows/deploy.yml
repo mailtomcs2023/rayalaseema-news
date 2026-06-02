@@ -19,7 +19,10 @@ jobs:
           username: azureuser
           key: ${{ secrets.VM_SSH_KEY }}
           script_stop: true
-          command_timeout: 10m
+          # 30m (was 10m): the OSM mandal-geocoding backfill is rate-limited at
+          # 1.5s/req and now runs over ~250 mandals, pushing the full deploy
+          # past 10m. Bumped so the build + PM2 restart aren't cut off.
+          command_timeout: 30m
           script: |
             set -e
             export PATH="$HOME/.bun/bin:$PATH"
