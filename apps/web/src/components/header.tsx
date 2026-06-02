@@ -262,19 +262,19 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
           <div className="hidden lg:flex flex-col items-end gap-1.5 shrink-0">
             {/* Top row: Latest / Search / Breaking */}
             <div className="flex gap-1.5">
-              <Button asChild variant="outline" size="sm">
+              <Button asChild variant="outline" size="sm" className="leading-none">
                 <Link href="/">
                   <svg className="block size-3.5 shrink-0" fill="none" stroke="var(--brand)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                   తాజా వార్తలు
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="sm">
+              <Button asChild variant="outline" size="sm" className="leading-none">
                 <Link href="/search">
                   <svg className="block size-3.5 shrink-0" fill="none" stroke="var(--n-500)" strokeWidth="1.8" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
                   వెతకండి
                 </Link>
               </Button>
-              <Button asChild variant="ghost" size="sm" className="text-[var(--brand-dark)] bg-[var(--brand-soft)] hover:bg-[var(--brand-soft)] hover:text-[var(--brand-dark)]">
+              <Button asChild variant="ghost" size="sm" className="leading-none text-[var(--brand-dark)] bg-[var(--brand-soft)] hover:bg-[var(--brand-soft)] hover:text-[var(--brand-dark)]">
                 <Link href="/">
                   <span className="animate-pulse block shrink-0" style={{ width: 6, height: 6, background: "var(--brand)", borderRadius: "var(--r-pill)" }} />
                   బ్రేకింగ్
@@ -283,13 +283,13 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
             </div>
             {/* Bottom row: E-Paper + Google News Follow */}
             <div className="flex gap-1.5">
-              <Button asChild variant="default" size="sm" className="tracking-[0.06em]">
+              <Button asChild variant="default" size="sm" className="leading-none tracking-[0.06em]">
                 <Link href="/epaper">
                   <svg className="block size-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2"/></svg>
                   E-PAPER
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="sm">
+              <Button asChild variant="outline" size="sm" className="leading-none">
                 <a href="https://news.google.com/publications/CAAqBwgKMIGwlgswrOWEAw?hl=te&gl=IN&ceid=IN:te" target="_blank" rel="noopener noreferrer">
                   <svg className="block size-3.5 shrink-0" viewBox="0 0 24 24"><path d="M22.077 12c0-5.523-4.477-10-10-10S2.077 6.477 2.077 12s4.477 10 10 10 10-4.477 10-10z" fill="#4285F4"/><path d="M22.077 12c0-5.523-4.477-10-10-10" fill="#EA4335"/><path d="M2.077 12c0 5.523 4.477 10 10 10" fill="#34A853"/><path d="M2.077 12c0-5.523 4.477-10 10-10" fill="#FBBC05"/><path d="M12.077 7v10" stroke="#fff" strokeWidth="2"/><path d="M7.077 12h10" stroke="#fff" strokeWidth="2"/></svg>
                   Follow
