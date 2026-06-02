@@ -491,6 +491,29 @@ export default function ContentEditorPage() {
 
     const finalStatus = newStatus || status;
 
+    // Required-field gate for ARTICLEs leaving draft (Submit / Publish). Drafts
+    // stay savable while incomplete so editors keep work-in-progress; the red
+    // asterisks in the form signal what's needed before submit/publish.
+    // Featured media is satisfied by EITHER an image or a video (one-medium
+    // rule), so an article is never blocked for having a video instead of an
+    // image.
+    if (type === "ARTICLE" && (finalStatus === "SUBMITTED" || finalStatus === "PUBLISHED")) {
+      const bodyText = (body || "").replace(/<[^>]+>/g, "").trim();
+      const missing: string[] = [];
+      if (!title.trim()) missing.push("Title");
+      if (!slug.trim()) missing.push("Slug");
+      if (!(summary || "").trim()) missing.push("Summary");
+      if (!bodyText) missing.push("Body");
+      if (!featuredImage.trim() && !featuredVideo.trim()) missing.push("Featured media (image or video)");
+      if (missing.length) {
+        setError(
+          `Can't ${finalStatus === "PUBLISHED" ? "publish" : "submit"} yet — please fill: ${missing.join(", ")}.`,
+        );
+        setSaving(false);
+        return;
+      }
+    }
+
     // `type` is intentionally omitted - content type isn't updatable after
     // creation, and the PUT schema (.strict()) rejects unknown fields. The
     // `type === "ARTICLE"` check below still uses the local state variable
@@ -659,7 +682,7 @@ export default function ContentEditorPage() {
                   to title/body. */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label>{type === "ARTICLE" ? "Featured media" : "Featured image"}</Label>
+                  <Label>{type === "ARTICLE" ? "Featured media" : "Featured image"}{type === "ARTICLE" && <span className="text-red-500"> *</span>}</Label>
                   {/* ARTICLE hero is image OR video, never both - the toggle
                       clears the other side so only one medium is ever saved. */}
                   {type === "ARTICLE" && (
@@ -743,7 +766,7 @@ export default function ContentEditorPage() {
               {/* Common */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
-                  <Label htmlFor="title-input">Title *</Label>
+                  <Label htmlFor="title-input">Title <span className="text-red-500">*</span></Label>
                   {type === "ARTICLE" && (
                     <Popover open={headlineOpen} onOpenChange={setHeadlineOpen}>
                       <PopoverAnchor asChild>
@@ -798,7 +821,7 @@ export default function ContentEditorPage() {
                   so they can override for SEO. */}
               {role !== "REPORTER" && (
                 <div className="space-y-1.5">
-                  <Label htmlFor="slug-input">Slug</Label>
+                  <Label htmlFor="slug-input">Slug{type !== "BREAKING_NEWS" && <span className="text-red-500"> *</span>}</Label>
                   <Input
                     id="slug-input"
                     value={slug}
@@ -816,7 +839,7 @@ export default function ContentEditorPage() {
 
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
-                  <Label htmlFor="summary-input">Summary</Label>
+                  <Label htmlFor="summary-input">Summary{type === "ARTICLE" && <span className="text-red-500"> *</span>}</Label>
                   {type === "ARTICLE" && (
                     <Button
                       type="button"
@@ -888,7 +911,7 @@ export default function ContentEditorPage() {
             {type === "ARTICLE" && (
               <>
                 <div className="space-y-1.5">
-                  <Label>Body</Label>
+                  <Label>Body <span className="text-red-500">*</span></Label>
                   <RichEditor ref={editorRef} content={body} onChange={setBody} />
                 </div>
                 {/* Rating + reviewer-byline are movie-review-only inputs. The
