@@ -1517,6 +1517,7 @@ model ContentLocation {
 enum PreciousMetal {
   GOLD
   SILVER
+  PLATINUM
 }
 
 model PreciousMetalRate {

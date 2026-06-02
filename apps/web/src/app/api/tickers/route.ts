@@ -78,10 +78,19 @@ async function getBullionPrices() {
       }
       return latest.map((r) => {
         const cityLabel = r.cityTe || r.city;
-        const metalLabel = r.metal === "GOLD" ? (r.purity ? `బంగారం ${r.purity}` : "బంగారం") : "వెండి";
+        const metalLabel =
+          r.metal === "GOLD"
+            ? r.purity
+              ? `బంగారం ${r.purity}`
+              : "బంగారం"
+            : r.metal === "PLATINUM"
+              ? "ప్లాటినం"
+              : "వెండి";
+        const metalEn =
+          r.metal === "GOLD" ? `Gold ${r.purity ?? ""}` : r.metal === "PLATINUM" ? "Platinum" : "Silver";
         return {
           name: `${cityLabel} ${metalLabel}`,
-          nameEn: `${r.city} ${r.metal === "GOLD" ? `Gold ${r.purity ?? ""}` : "Silver"}`.trim(),
+          nameEn: `${r.city} ${metalEn}`.trim(),
           price: Math.round(r.pricePerGram),
           unit: "గ్రాము",
           change: 0,

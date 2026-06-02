@@ -21,7 +21,7 @@ interface PreciousRate {
   id: string;
   city: string;
   cityTe: string | null;
-  metal: "GOLD" | "SILVER";
+  metal: "GOLD" | "SILVER" | "PLATINUM";
   purity: string | null;
   pricePerGram: number;
   unit: string;
@@ -45,11 +45,12 @@ const cities = [
   { en: "Nellore", te: "నెల్లూరు" },
 ];
 
-type MetalKey = "GOLD_24K" | "GOLD_22K" | "SILVER";
-const metalOptions: { key: MetalKey; label: string; metal: "GOLD" | "SILVER"; purity: string | null }[] = [
+type MetalKey = "GOLD_24K" | "GOLD_22K" | "SILVER" | "PLATINUM";
+const metalOptions: { key: MetalKey; label: string; metal: "GOLD" | "SILVER" | "PLATINUM"; purity: string | null }[] = [
   { key: "GOLD_24K", label: "Gold 24K (per gram)", metal: "GOLD", purity: "24K" },
   { key: "GOLD_22K", label: "Gold 22K (per gram)", metal: "GOLD", purity: "22K" },
   { key: "SILVER", label: "Silver (per gram)", metal: "SILVER", purity: null },
+  { key: "PLATINUM", label: "Platinum (per gram)", metal: "PLATINUM", purity: null },
 ];
 
 export default function PreciousMetalsPage() {

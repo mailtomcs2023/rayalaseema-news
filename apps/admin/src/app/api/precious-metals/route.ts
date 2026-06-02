@@ -32,8 +32,8 @@ export async function POST(req: NextRequest) {
     if (!b.city || typeof b.city !== "string") {
       return NextResponse.json({ error: "City is required" }, { status: 400 });
     }
-    if (b.metal !== "GOLD" && b.metal !== "SILVER") {
-      return NextResponse.json({ error: "Metal must be GOLD or SILVER" }, { status: 400 });
+    if (b.metal !== "GOLD" && b.metal !== "SILVER" && b.metal !== "PLATINUM") {
+      return NextResponse.json({ error: "Metal must be GOLD, SILVER or PLATINUM" }, { status: 400 });
     }
     const price = Number(b.pricePerGram);
     if (!Number.isFinite(price) || price <= 0) {
