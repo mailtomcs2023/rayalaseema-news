@@ -28,19 +28,31 @@ function renderCricketLine(m: CricketMatch) {
 }
 
 export function MarketTickerView({ data }: { data: TickerData | null }) {
-  if (!data) return null;
-  const cricketMatches = Array.isArray(data.cricket) ? data.cricket : [];
+  // Always render the bar (and its <style>) so the page reserves this strip's
+  // height even before data arrives. The client <MarketTicker> fetches in a
+  // useEffect (~300ms after hydration); returning null until then made the bar
+  // pop in and shove the page down (layout shift) on every non-home page.
+  // While loading/empty we render an invisible placeholder row sized like the
+  // populated bar, so the data fills in with no jump.
+  const cricketMatches = data && Array.isArray(data.cricket) ? data.cricket : [];
   const hasAny =
-    data.mandi.length > 0 ||
-    data.bullion.length > 0 ||
-    data.forex.length > 0 ||
-    cricketMatches.length > 0;
-  if (!hasAny) return null;
+    !!data &&
+    (data.mandi.length > 0 ||
+      data.bullion.length > 0 ||
+      data.forex.length > 0 ||
+      cricketMatches.length > 0);
 
   return (
-    <div className="market-ticker-bar">
+    <div className="market-ticker-bar" aria-hidden={hasAny ? undefined : true}>
       <div className="market-ticker-scroll">
         <div className="market-ticker-content">
+          {!hasAny && (
+            <span className="ticker-section-label" style={{ visibility: "hidden" }}>
+              &nbsp;
+            </span>
+          )}
+          {hasAny && data && (
+            <>
           {cricketMatches.length > 0 && (
             <>
               <span className="ticker-section-label" style={{ background: "#16a34a" }}>
@@ -120,6 +132,8 @@ export function MarketTickerView({ data }: { data: TickerData | null }) {
                   )}
                 </span>
               ))}
+            </>
+          )}
             </>
           )}
         </div>
