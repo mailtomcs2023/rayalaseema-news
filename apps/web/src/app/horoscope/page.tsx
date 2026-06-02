@@ -166,6 +166,7 @@ export default function HoroscopePage() {
             {panchangam && (
               <>
                 {/* Today's Panchangam */}
+                {panchangam.today && (
                 <div style={{ background: "#fff", borderRadius: 10, overflow: "hidden", marginBottom: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
                   <div style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", padding: "10px 14px", color: "#fff" }}>
                     <h3 style={{ fontSize: 15, fontWeight: 900 }}>నేటి పంచాంగం</h3>
@@ -188,6 +189,7 @@ export default function HoroscopePage() {
                     ))}
                   </div>
                 </div>
+                )}
 
                 {/* Festivals */}
                 <div style={{ background: "#fff", borderRadius: 10, overflow: "hidden", marginBottom: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
@@ -196,8 +198,8 @@ export default function HoroscopePage() {
                     <p style={{ fontSize: 11, opacity: 0.85 }}>{panchangam.monthName}</p>
                   </div>
                   <div style={{ padding: 10 }}>
-                    {panchangam.festivals.thisMonth.length > 0 ? panchangam.festivals.thisMonth.map((f, i) => (
-                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: i < panchangam.festivals.thisMonth.length - 1 ? "1px solid #f5f5f5" : "none" }}>
+                    {(panchangam.festivals?.thisMonth?.length ?? 0) > 0 ? (panchangam.festivals?.thisMonth ?? []).map((f, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: i < (panchangam.festivals?.thisMonth?.length ?? 0) - 1 ? "1px solid #f5f5f5" : "none" }}>
                         <span style={{
                           width: 30, height: 30, borderRadius: 6, flexShrink: 0,
                           background: f.type === "festival" ? "#fef3c7" : "#dbeafe",
@@ -220,7 +222,7 @@ export default function HoroscopePage() {
                     <p style={{ fontSize: 11, opacity: 0.85 }}>{panchangam.monthName}</p>
                   </div>
                   <div style={{ padding: 10 }}>
-                    {panchangam.muhurthams.slice(0, 4).map((m, i) => (
+                    {(panchangam.muhurthams || []).slice(0, 4).map((m, i) => (
                       <div key={i} style={{ marginBottom: 10 }}>
                         <p style={{ fontSize: 12, fontWeight: 800, color: "#111", marginBottom: 4 }}>{m.icon} {m.name}</p>
                         <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
