@@ -104,6 +104,10 @@ export default function ContentEditorPage() {
   // After picking from search OR pasting a URL, hand the (already EXIF-
   // stripped, RE-stamped) image to the crop modal so the user can frame it.
   const [cropSrc, setCropSrc] = useState<string | null>(null);
+  // True only when the featured image actually loads. Crop / AI image tools
+  // hide unless there's a real, loaded image (a broken/non-image URL has
+  // nothing to operate on).
+  const [imageLoaded, setImageLoaded] = useState(false);
   // Per-operation AI enhance state (loading flag + last error). Result
   // URL replaces featuredImage in place.
   const [enhancing, setEnhancing] = useState<string | null>(null);
@@ -641,10 +645,12 @@ export default function ContentEditorPage() {
                   value={featuredImage}
                   onChange={setFeaturedImage}
                   onSearchClick={() => setImageSearchOpen(true)}
+                  onValidChange={setImageLoaded}
                 />
-                {/* Crop opens the crop modal so the editor can reframe before
-                    publishing. Disabled until an image is set. */}
-                {featuredImage && (
+                {/* Crop + AI image tools only appear once a real image has
+                    actually loaded - a broken/non-image URL has nothing to
+                    crop or enhance. */}
+                {featuredImage && imageLoaded && (
                   <div className="flex flex-wrap items-center gap-2">
                     <Button
                       type="button"

@@ -19,9 +19,13 @@ interface Props {
   // KYC documents where the user must actually upload the file (a URL to
   // an externally-hosted image isn't verifiable proof). Defaults to false.
   uploadOnly?: boolean;
+  // Reports whether the current value is a valid, loaded image (false while
+  // empty, pending, or broken). Lets the parent hide image-edit actions
+  // (crop / AI enhance) when there's no real image to operate on.
+  onValidChange?: (valid: boolean) => void;
 }
 
-export function ImageUpload({ value, onChange, onSearchClick, uploadOnly = false }: Props) {
+export function ImageUpload({ value, onChange, onSearchClick, uploadOnly = false, onValidChange }: Props) {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   // URL field stays inline + always visible - editors paste image URLs often
@@ -36,6 +40,10 @@ export function ImageUpload({ value, onChange, onSearchClick, uploadOnly = false
   // fresh chance to load.
   useEffect(() => {
     setImgError(false);
+    // Newly-set (or empty) value isn't confirmed valid until the <img> below
+    // fires onLoad; re-validated on load/error. Empty = not valid.
+    onValidChange?.(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -116,7 +124,8 @@ export function ImageUpload({ value, onChange, onSearchClick, uploadOnly = false
             <img
               src={value}
               alt="Preview"
-              onError={() => setImgError(true)}
+              onError={() => { setImgError(true); onValidChange?.(false); }}
+              onLoad={() => { setImgError(false); onValidChange?.(true); }}
               className="block aspect-[16/9] w-full object-cover"
             />
           </div>
