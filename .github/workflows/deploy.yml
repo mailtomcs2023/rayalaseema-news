@@ -110,6 +110,11 @@ jobs:
             bunx tsx scripts/seed-templates.ts
             echo "=== Seed menus (Spec #3: header + footer + mobile) ==="
             bunx tsx scripts/seed-menus.ts
+            echo "=== Patch HEADER/MOBILE menus: add రాశి ఫలాలు (/horoscope) if missing (idempotent) ==="
+            # seed-menus is skip-if-exists, so it can't add horoscope to the
+            # already-seeded menus. This patches the existing rows to match the
+            # hardcoded header fallback. No-ops once the item is present.
+            bunx tsx scripts/patch-header-horoscope.ts
             echo "=== Seed category tag suggestions (chip row under Tags input) ==="
             # Idempotent: re-running upserts Tag rows + skips existing
             # CategoryTagSuggestion links. Editor work - to add tags for a

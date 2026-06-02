@@ -67,9 +67,20 @@ function districtItem(label: string, slug: string) {
   };
 }
 
+function internalItem(label: string, url: string) {
+  return {
+    id: id(),
+    label,
+    target: { type: "INTERNAL_URL", url },
+    mobileVariant: "show",
+    children: [],
+  };
+}
+
 const HEADER_ITEMS = [
   ...HEADER_TOP_DISTRICTS.map((d) => districtItem(d.label, d.slug)),
   ...HEADER_TOP_SECTIONS.map((s) => catItem(s.label, s.slug)),
+  internalItem("రాశి ఫలాలు", "/horoscope"),
   {
     id: id(),
     label: "మరిన్ని",
@@ -119,6 +130,7 @@ const FOOTER_ITEMS = [
 const MOBILE_ITEMS = [
   ...HEADER_TOP_DISTRICTS.map((d) => districtItem(d.label, d.slug)),
   ...HEADER_TOP_SECTIONS.map((s) => catItem(s.label, s.slug)),
+  internalItem("రాశి ఫలాలు", "/horoscope"),
   ...HEADER_DROPDOWN.map((c) => catItem(c.label, c.slug)),
 ];
 
