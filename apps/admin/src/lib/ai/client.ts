@@ -170,17 +170,29 @@ export async function chatJsonWithRetry<T = unknown>(
     const maxTokens = budgets[i];
     const result = await chat({ ...baseOpts, maxTokens, responseFormatJson: true });
     lastContent = result.content;
+    const isLast = i === budgets.length - 1;
     if (result.finishReason === "length") {
-      const isLast = i === budgets.length - 1;
       if (isLast) break;
       console.warn(
         `[ai] response truncated at maxTokens=${maxTokens}, retrying with ${budgets[i + 1]}`,
       );
       continue;
     }
-    return parseJsonEnvelope<T>(result.content);
+    try {
+      return parseJsonEnvelope<T>(result.content);
+    } catch (e) {
+      // Malformed JSON ("Unterminated string in JSON", etc.) is usually a
+      // silent truncation the API reported as finish_reason="stop" rather than
+      // "length". Retry with a larger budget before giving up, instead of
+      // throwing a SyntaxError that 500s the caller.
+      if (isLast) break;
+      console.warn(
+        `[ai] JSON parse failed at maxTokens=${maxTokens} (${(e as Error).message}); retrying with ${budgets[i + 1]}`,
+      );
+      continue;
+    }
   }
-  console.error("[ai] output truncated at every budget; tail:", lastContent.slice(-300));
+  console.error("[ai] output truncated/unparseable at every budget; tail:", lastContent.slice(-300));
   throw new AITruncationError(budgets);
 }
 

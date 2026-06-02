@@ -239,13 +239,8 @@ export async function POST(req: NextRequest) {
         });
       } catch (e: any) {
         console.error("[ai/rewrite] pipeline failed:", e);
-        if (e instanceof AITruncationError) {
-          return NextResponse.json({
-            error: `This article is too long for the AI to process in one pass (output exceeded ${e.attemptedMaxTokens} tokens at every retry). Please trim the source to under ~2000 words and try again, or split it into two stories.`,
-            code: "ai_truncated",
-            attemptedMaxTokens: e.attemptedMaxTokens,
-          }, { status: 413 });
-        }
+        // Content-filter blocks aren't recoverable - the same source would be
+        // blocked again - so surface that one explicitly (no fallback).
         if (e instanceof AIContentFilterError) {
           return NextResponse.json({
             error: `Azure's content filter blocked the ${e.stage} (${e.categories.join(", ") || "unknown"}). The article likely contains material flagged by the safety policy - edit the source and retry, or use the dialect/translate modes which do not run the full pipeline.`,
@@ -253,6 +248,49 @@ export async function POST(req: NextRequest) {
             stage: e.stage,
             categories: e.categories,
           }, { status: 422 });
+        }
+        // The structured pipeline failed (truncation / malformed JSON / etc.).
+        // Fall back to the lenient single-shot translate so the editor still
+        // gets a usable article instead of a hard error.
+        try {
+          const fbRes = await fetch(
+            `${ENDPOINT}openai/deployments/${DEPLOYMENT}/chat/completions?api-version=${API_VERSION}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "api-key": KEY },
+              body: JSON.stringify({
+                messages: [
+                  { role: "system", content: NEWS_PROMPT },
+                  { role: "user", content: `Translate this news to standard Telugu. Write a complete newspaper article with a headline and paragraphs. Keep names of people, places and parties exactly as written (in Telugu script). Do not invent facts or quotes.\n\nSOURCE:\n${fullText}` },
+                ],
+                max_completion_tokens: 2000,
+                temperature: 0.3,
+              }),
+            },
+          );
+          const fbData = await fbRes.json();
+          const html: string = fbData.choices?.[0]?.message?.content || "";
+          if (html) {
+            const h2 = html.match(/<h2[^>]*>(.*?)<\/h2>/);
+            return NextResponse.json({
+              title: (h2 ? h2[1].replace(/<[^>]+>/g, "").trim() : scrapedOgTitle) || "",
+              body: html,
+              summary: "",
+              ogImage: scrapedOgImage,
+              fallback: true,
+              note: "Structured import couldn't complete (article too long for one pass) - used a simple translation instead. Please review carefully before publishing.",
+            });
+          }
+        } catch (fbErr) {
+          console.error("[ai/rewrite] translate fallback failed:", fbErr);
+        }
+        // Fallback also failed - surface the original error.
+        if (e instanceof AITruncationError) {
+          return NextResponse.json({
+            error: `This article is too long for the AI to process in one pass (output exceeded ${e.attemptedMaxTokens} tokens at every retry). Please trim the source to under ~2000 words and try again, or split it into two stories.`,
+            code: "ai_truncated",
+            attemptedMaxTokens: e.attemptedMaxTokens,
+          }, { status: 413 });
         }
         return NextResponse.json({ error: e?.message || "Pipeline failed" }, { status: 500 });
       }

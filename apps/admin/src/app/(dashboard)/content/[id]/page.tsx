@@ -326,7 +326,8 @@ export default function ContentEditorPage() {
       setSourceUrl(pasteUrl.trim());
       setPasteUrl("");
       const kw = Array.isArray(data.keywords) && data.keywords.length ? ` Keywords: ${data.keywords.join(", ")}.` : "";
-      setSuccess(`Fetched + translated.${kw} Review + Save Draft when ready.`);
+      const note = data.fallback && data.note ? `⚠ ${data.note} ` : "";
+      setSuccess(`${note}Fetched + translated.${kw} Review + Save Draft when ready.`);
     } catch (e: any) {
       setError(e.message || "Fetch failed");
     }
