@@ -183,6 +183,7 @@ export async function POST(req: NextRequest) {
 
     // Scrape source URL for full content + og:image.
     let fullText = text || "";
+    let hasScrapedContent = false;
     let scrapedOgImage: string | null = null;
     let scrapedOgTitle: string | null = null;
     if (sourceUrl) {
@@ -203,19 +204,32 @@ export async function POST(req: NextRequest) {
       }
       if (scraped.text.length > 100) {
         fullText = `SOURCE ARTICLE:\n${scraped.text}\n\nDESCRIPTION:\n${text}`;
+        hasScrapedContent = true;
       }
     }
 
-    // Sparse-source guard. If the combined text is under ~150 words, the
-    // model has nothing real to translate and will pad with empty
-    // attribution loops ("అధికారిక వర్గాలు తెలిపాయి…"). Refuse so the
-    // editor knows the scrape failed instead of getting fluff to publish.
-    if (action === "full-import") {
-      const wordCount = fullText.trim().split(/\s+/).filter(Boolean).length;
-      if (wordCount < 150) {
+    // No-real-source guard. Article-building actions (full-import + translate)
+    // must NOT run on empty content: if the scrape failed (the site blocks our
+    // server - eenadu / paywalled / JS) and the editor only supplied a URL or a
+    // few words, the model FABRICATES a plausible-but-fake article from the URL
+    // slug (the exact bug: body+translate "generated" a Chandrababu story the
+    // server never actually read). Refuse and point them to paste the real
+    // text. Real pasted article text (>= ~40 words) still translates normally;
+    // scrapable sites still work because hasScrapedContent is true.
+    if ((action === "full-import" || action === "translate") && !hasScrapedContent) {
+      const meaningfulWords = (text || "")
+        .replace(/https?:\/\/\S+/g, " ")
+        .replace(/\b(?:Title|Summary|Body)\s*:/gi, " ")
+        .replace(/<[^>]+>/g, " ")
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean).length;
+      if (meaningfulWords < 40) {
         return NextResponse.json({
-          error: `Source content too thin (${wordCount} words). The scraper couldn't extract a full article body - likely the page is paywalled, requires JavaScript, or this is a listing page. Paste the article TEXT directly into the body field, then run తెలుగులో రాయండి.`,
-          wordCount,
+          error: sourceUrl
+            ? "Couldn't read that source - the site blocks our server (common for eenadu, paywalled, or JavaScript pages). To avoid publishing a fabricated article, copy the article TEXT and paste it into the Body, then click తెలుగులో రాయండి."
+            : "Not enough source text to work from. Paste the article TEXT into the Body, then click తెలుగులో రాయండి.",
+          code: "no_source_content",
         }, { status: 422 });
       }
     }
