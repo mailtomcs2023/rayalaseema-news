@@ -15,6 +15,15 @@ import { Input } from "@/components/ui/input";
 const ALLOWED = ["video/mp4", "video/webm"];
 const MAX_MB = 100;
 
+// YouTube watch / share / shorts URL -> privacy-friendly embed URL. Returns
+// null for anything else (hosted MP4 / Azure Blob / CDN), which previews via a
+// native <video>. Mirrors the public article hero so the preview matches what
+// readers see.
+function ytEmbed(url: string): string | null {
+  const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|v\/)|youtu\.be\/)([\w-]{11})/);
+  return m ? `https://www.youtube-nocookie.com/embed/${m[1]}` : null;
+}
+
 interface Props {
   value: string;
   // durationSeconds is supplied when the source is an uploaded file (read from
@@ -103,18 +112,29 @@ export function VideoUpload({ value, onChange }: Props) {
     setUrlDraft("");
   };
 
-  const isPlayable = /\.(mp4|webm)(\?|$)/i.test(value) || value.includes(".blob.core.windows.net/");
-
   return (
     <div className="space-y-2">
       {value ? (
         <div className="space-y-2">
-          {isPlayable ? (
-            // eslint-disable-next-line jsx-a11y/media-has-caption
-            <video src={value} controls className="max-h-64 w-full rounded-md border bg-black" />
+          {ytEmbed(value) ? (
+            // YouTube link -> 16:9 embed preview (same player readers get).
+            <div className="relative w-full overflow-hidden rounded-md border bg-black" style={{ paddingBottom: "56.25%" }}>
+              <iframe
+                src={ytEmbed(value)!}
+                title="Video preview"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="absolute inset-0 h-full w-full border-0"
+              />
+            </div>
           ) : (
-            <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground break-all">{value}</div>
+            // Any other URL (hosted MP4/WebM, Azure Blob, CDN) -> native player.
+            // eslint-disable-next-line jsx-a11y/media-has-caption
+            <video src={value} controls preload="metadata" className="max-h-64 w-full rounded-md border bg-black" />
           )}
+          {/* Show the source URL too - blob URLs are opaque, and it confirms a
+              pasted link resolved to what the user expected. */}
+          <p className="truncate text-[11px] text-muted-foreground" title={value}>{value}</p>
           <Button
             type="button"
             size="sm"
