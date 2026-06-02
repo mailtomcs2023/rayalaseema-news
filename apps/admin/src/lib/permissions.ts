@@ -11,7 +11,7 @@
 // `manage` is shorthand for "all CRUD on this resource"; use it sparingly
 // (admin-only ops). Prefer narrow verbs.
 
-import type { Role } from "@prisma/client";
+import type { Role, ArticleStatus } from "@prisma/client";
 
 // Named permission → which roles are allowed.
 // IMPORTANT: list roles explicitly. Do NOT add hierarchy/inheritance code -
@@ -66,4 +66,38 @@ export type Permission = keyof typeof PERMISSIONS;
 export function roleCan(role: Role | undefined | null, permission: Permission): boolean {
   if (!role) return false;
   return (PERMISSIONS[permission] as readonly Role[]).includes(role);
+}
+
+// ----- Content workflow: which status can a role move content INTO -----
+// Single source of truth for both the editor's status dropdown (UI) and the
+// content API (server gate). Each status maps to the permission required to
+// set it:
+//   DRAFT/SUBMITTED → authoring (everyone)
+//   IN_REVIEW/APPROVED/REJECTED → review stage (Sub-Editor+)
+//   SCHEDULED/PUBLISHED/ARCHIVED → publishing (Editor/Admin)
+export const STATUS_PERMISSION = {
+  DRAFT:     "content.update.own",
+  SUBMITTED: "content.update.own",
+  IN_REVIEW: "content.review",
+  APPROVED:  "content.approve",
+  REJECTED:  "content.reject",
+  SCHEDULED: "content.publish",
+  PUBLISHED: "content.publish",
+  ARCHIVED:  "content.publish",
+} as const satisfies Record<ArticleStatus, Permission>;
+
+// Canonical workflow order (used to render the dropdown).
+export const ARTICLE_STATUSES = [
+  "DRAFT", "SUBMITTED", "IN_REVIEW", "APPROVED",
+  "SCHEDULED", "PUBLISHED", "REJECTED", "ARCHIVED",
+] as const satisfies readonly ArticleStatus[];
+
+// Can this role move content INTO this status?
+export function canSetStatus(role: Role | undefined | null, status: ArticleStatus): boolean {
+  return roleCan(role, STATUS_PERMISSION[status]);
+}
+
+// The statuses this role is allowed to set (for the editor dropdown).
+export function allowedStatuses(role: Role | undefined | null): ArticleStatus[] {
+  return ARTICLE_STATUSES.filter((s) => canSetStatus(role, s));
 }

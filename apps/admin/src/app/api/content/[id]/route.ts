@@ -10,6 +10,7 @@ import {
   contentUpdateSchema,
 } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
+import { canSetStatus } from "@/lib/permissions";
 import { rehostDataUrlFields } from "@/lib/rehost-data-url";
 import { requireKyc } from "@/lib/kyc-guard";
 import { logAudit, diffSummary } from "@/lib/audit";
@@ -272,6 +273,18 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       if (!effectiveScheduled || new Date(effectiveScheduled).getTime() <= Date.now()) {
         return NextResponse.json({ error: "SCHEDULED status requires a future scheduledAt date" }, { status: 400 });
       }
+    }
+
+    // Workflow role gate (authoritative). A role may only move content INTO a
+    // status it's permitted to set (see STATUS_PERMISSION in permissions.ts):
+    // Reporter → DRAFT/SUBMITTED; Sub-Editor → + IN_REVIEW/APPROVED/REJECTED;
+    // Editor/Admin → SCHEDULED/PUBLISHED/ARCHIVED. The editor dropdown mirrors
+    // this, but this is the gate that actually blocks a crafted request.
+    if (data.status && data.status !== current.status && !canSetStatus(session.user.role, data.status)) {
+      return NextResponse.json(
+        { error: "Your role can't move this content to that status." },
+        { status: 403 },
+      );
     }
 
     // PIB approval gate - same logic as articles. Flagged + not approved → block publish.

@@ -14,6 +14,8 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { buildSlugFromTitle, isPlaceholderSlug, sanitizeSlug } from "@/lib/slug";
+import { canSetStatus, ARTICLE_STATUSES } from "@/lib/permissions";
+import type { Role } from "@prisma/client";
 import { RichEditor, type RichEditorRef } from "@/components/rich-editor";
 import { ImageUpload } from "@/components/image-upload";
 import { VideoUpload } from "@/components/video-upload";
@@ -62,12 +64,10 @@ export default function ContentEditorPage() {
   const params = useParams();
   const contentId = params.id as string;
 
-  // Role gate - only EDITOR/ADMIN can move content into PUBLISHED / SCHEDULED /
-  // APPROVED. Sub-editor + reporter see Save Draft only, and the Status
-  // dropdown hides the gated values so they can't bypass via the select.
+  // Role drives which Status values the dropdown offers (see canSetStatus /
+  // permissions.ts). The server PUT enforces the same rule authoritatively.
   const { data: session } = useSession();
   const role = (session?.user as any)?.role || "REPORTER";
-  const canPublish = ["EDITOR", "ADMIN"].includes(role);
 
   const [type, setType] = useState<string>("ARTICLE");
   const [categories, setCategories] = useState<Category[]>([]);
@@ -980,17 +980,19 @@ export default function ContentEditorPage() {
             <Section title="Publishing">
               <div className="space-y-1.5">
                 <Label htmlFor="status-select">Status</Label>
-                {/* APPROVED / SCHEDULED / PUBLISHED hidden for non-publishers so
-                    a sub-editor can't bypass the editorial workflow by picking
-                    them from the dropdown + clicking Save. The server-side PUT
-                    is the authoritative gate; this just keeps the UI honest. */}
+                {/* Options driven by permissions.ts (canSetStatus): Reporters
+                    get DRAFT/SUBMITTED; Sub-Editors add IN_REVIEW/APPROVED/
+                    REJECTED; Editors/Admins get SCHEDULED/PUBLISHED/ARCHIVED.
+                    The current status is always shown so existing content
+                    displays even if this role couldn't set it. The server PUT
+                    enforces the same rule (authoritative gate). */}
                 <SearchableSelect
                   id="status-select"
                   value={status}
                   onValueChange={setStatus}
                   searchPlaceholder="Filter status…"
-                  options={(["DRAFT", "SUBMITTED", "IN_REVIEW", "APPROVED", "SCHEDULED", "PUBLISHED", "REJECTED", "ARCHIVED"] as const)
-                    .filter((s) => canPublish || !["APPROVED", "SCHEDULED", "PUBLISHED"].includes(s))
+                  options={ARTICLE_STATUSES
+                    .filter((s) => canSetStatus(role as Role, s) || s === status)
                     .map((s) => ({ value: s, label: s }))}
                 />
               </div>
