@@ -571,13 +571,12 @@ export default function ContentEditorPage() {
 
     const finalStatus = newStatus || status;
 
-    // Required-field gate for ARTICLEs leaving draft (Submit / Publish). Drafts
-    // stay savable while incomplete so editors keep work-in-progress; the red
-    // asterisks in the form signal what's needed before submit/publish.
-    // Featured media is satisfied by EITHER an image or a video (one-medium
-    // rule), so an article is never blocked for having a video instead of an
-    // image.
-    if (type === "ARTICLE" && (finalStatus === "SUBMITTED" || finalStatus === "PUBLISHED")) {
+    // Required-field gate for ARTICLEs - enforced on EVERY save: an article
+    // can't be created or saved without all of these. The red asterisks in the
+    // form mark them. Featured media is satisfied by EITHER an image or a video
+    // (one-medium rule), so an article is never blocked for having a video
+    // instead of an image.
+    if (type === "ARTICLE") {
       const parsed = articleSubmitSchema.safeParse({
         title,
         slug,
@@ -607,7 +606,7 @@ export default function ContentEditorPage() {
         }
         const n = Object.keys(errs).length;
         toast.error(
-          `Please fix ${n} field${n > 1 ? "s" : ""} before ${finalStatus === "PUBLISHED" ? "publishing" : "submitting"}.`,
+          `Please fill ${n} required field${n > 1 ? "s" : ""} before saving.`,
         );
         setSaving(false);
         return;
