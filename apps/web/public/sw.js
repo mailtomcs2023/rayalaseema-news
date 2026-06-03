@@ -10,7 +10,7 @@
 //   - everything else: network-only (don't cache article HTML - readers want
 //     fresh news on reconnect).
 
-const VERSION = "v3-2026-06-03-logo-vector";
+const VERSION = "v4-2026-06-03-logo-5to1";
 const SHELL_CACHE = `re-shell-${VERSION}`;
 const MEDIA_CACHE = `re-media-${VERSION}`;
 const STATIC_CACHE = `re-static-${VERSION}`;
