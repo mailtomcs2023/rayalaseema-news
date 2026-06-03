@@ -77,6 +77,13 @@ export function AboveFold({
                   {top ? (
                     <>
                       <Link href={articleHref(top)} className="af-dist-lead">
+                        {top.featuredImage ? (
+                          <img src={top.featuredImage} alt="" className="af-dist-thumb" loading="lazy" />
+                        ) : (
+                          <div className="af-dist-thumb af-dist-fallback">
+                            <img src="/logo-icon.png" alt="" className="af-dist-fallback-img" loading="lazy" />
+                          </div>
+                        )}
                         <h3>{top.title}</h3>
                       </Link>
                       {d.articles.slice(1, 3).map((a) => (
@@ -325,7 +332,40 @@ export function AboveFold({
           text-decoration: none;
           margin-bottom: 6px;
         }
-        .af-dist-lead { text-decoration: none; }
+        .af-dist-lead { text-decoration: none; display: block; }
+        .af-dist-thumb {
+          display: block;
+          width: 100%;
+          aspect-ratio: 16/10;
+          object-fit: cover;
+          border-radius: 4px;
+          margin-bottom: 6px;
+          background: var(--n-100, #f3f4f6);
+          transition: transform 0.25s ease;
+        }
+        .af-dist-lead:hover .af-dist-thumb { transform: scale(1.02); }
+        /* Logo fallback when article has no featuredImage — soft gradient,
+           subtle inset shadow, square brand icon at low opacity. */
+        .af-dist-fallback {
+          background: linear-gradient(135deg, #f8f9fa 0%, #eef0f2 60%, #e5e7eb 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), inset 0 -1px 2px rgba(0,0,0,0.05);
+        }
+        .af-dist-fallback-img {
+          width: 40%;
+          max-width: 60px;
+          height: auto;
+          opacity: 0.55;
+          filter: grayscale(15%) drop-shadow(0 1px 2px rgba(0,0,0,0.1));
+          transition: opacity 0.18s, transform 0.18s;
+        }
+        .af-dist-lead:hover .af-dist-fallback-img {
+          opacity: 0.78;
+          transform: scale(1.04);
+        }
         .af-dist-lead h3 {
           font-family: var(--font-telugu-heading), serif;
           font-size: 14px;
