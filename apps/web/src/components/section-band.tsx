@@ -340,11 +340,13 @@ export function SectionBand({
           flex: 1 1 58%;
           display: block; overflow: hidden;
           border-radius: 4px;
-          background: var(--n-100, #f3f4f6);
+          /* Dark letterbox so the FULL image shows (no crop), matching the
+             article page. object-fit:contain leaves bars - fill them black. */
+          background: #000;
         }
         .sb-lead-img img {
           width: 100%; aspect-ratio: 16/10;
-          object-fit: cover; display: block;
+          object-fit: contain; display: block;
           transition: transform 0.4s ease;
         }
         .sb-lead-img:hover img { transform: scale(1.03); }
