@@ -69,7 +69,28 @@ const nextConfig = {
     ],
   },
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    // The page-builder template editor lives on the admin subdomain and
+    // iframes the live preview from THIS (web) origin: admin.rayalaseemanews.com
+    // framing rayalaseemanews.com is cross-origin, so a blanket
+    // X-Frame-Options: SAMEORIGIN blocks it (blank frame). For the preview
+    // route only, drop X-Frame-Options and use CSP frame-ancestors (the modern,
+    // multi-origin replacement) to allow the admin editor - prod + local dev.
+    // Every other route keeps SAMEORIGIN unchanged.
+    const previewHeaders = [
+      ...securityHeaders.filter((h) => h.key !== "X-Frame-Options"),
+      {
+        key: "Content-Security-Policy",
+        value:
+          "frame-ancestors 'self' https://admin.rayalaseemanews.com http://localhost:3001",
+      },
+    ];
+    return [
+      { source: "/page-builder/preview/:path*", headers: previewHeaders },
+      // Negative lookahead so this blanket rule does NOT also match the preview
+      // route above (otherwise both header sets would apply and the SAMEORIGIN
+      // here would re-block the iframe).
+      { source: "/((?!page-builder/preview).*)", headers: securityHeaders },
+    ];
   },
   async redirects() {
     // Categories moved from /category/<slug> to bare root slugs (Eenadu-style:
