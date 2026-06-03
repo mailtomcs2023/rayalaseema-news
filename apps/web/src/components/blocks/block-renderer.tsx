@@ -58,16 +58,61 @@ function CompositeError({ id, message }: { id: string; message: string }) {
   );
 }
 
+// Editor-only stand-in for a block that renders nothing (no ad configured,
+// no articles match, unknown type). On the live site these blocks are simply
+// omitted; in the page-builder preview that's indistinguishable from a broken
+// editor, so we draw a labelled, selectable box (keeps data-block-id so the
+// outline ↔ canvas selection bridge still works).
+function PreviewPlaceholder({
+  id,
+  type,
+  cls,
+  note,
+}: {
+  id: string;
+  type: string;
+  cls: string;
+  note?: string;
+}) {
+  return (
+    <div
+      data-block-id={id}
+      data-block-type={type}
+      className={cls}
+      style={{
+        border: "1px dashed #cbd5e1",
+        background: "#f8fafc",
+        color: "#64748b",
+        borderRadius: 6,
+        padding: "14px 16px",
+        margin: "6px 0",
+        fontSize: 13,
+        textAlign: "center",
+      }}
+    >
+      <strong style={{ color: "#475569" }}>{type}</strong>
+      <div style={{ fontSize: 11, marginTop: 3, lineHeight: 1.5 }}>
+        {note ||
+          "Empty in the editor — this block fills with live data (ads / articles) on the published site."}
+      </div>
+    </div>
+  );
+}
+
 export async function BlockRenderer({
   block,
   ctx,
   composites,
   visited,
+  preview = false,
 }: {
   block: Block;
   ctx: PageContext;
   composites?: CompositeMap;
   visited?: ReadonlySet<string>;
+  // True only inside the page-builder editor preview (draft render). When set,
+  // blocks that would render nothing show a placeholder instead of vanishing.
+  preview?: boolean;
 }): Promise<React.ReactElement | null> {
   if (block.type === "Composite") {
     const compositeId = block.compositeId;
@@ -119,23 +164,43 @@ export async function BlockRenderer({
             ctx={ctx}
             composites={composites}
             visited={nextVisited}
+            preview={preview}
           />
         ))}
       </div>
     );
   }
 
-  if (!isBuiltinBlockType(block.type)) return null;
+  const cls = variantClass(block.mobileVariant);
+
+  if (!isBuiltinBlockType(block.type)) {
+    return preview
+      ? <PreviewPlaceholder id={block.id} type={block.type} cls={cls} note="Unknown block type — nothing to render." />
+      : null;
+  }
 
   const entry = REGISTRY[block.type];
   const data = await entry.fetcher(block.config as Record<string, unknown>, ctx);
 
-  if (entry.hideWhenEmpty ? entry.hideWhenEmpty(data) : data === null) {
-    return null;
+  const emptyLive = entry.hideWhenEmpty ? entry.hideWhenEmpty(data) : data === null;
+  // Ad blocks don't return null when their DB-ad list is empty - they fall
+  // back to an AdSense unit, which renders nothing inside the editor iframe.
+  // Treat empty ads as "empty" FOR THE PREVIEW PLACEHOLDER ONLY; the live
+  // render path is untouched (AdSense fallback still runs when !preview).
+  const emptyAds =
+    !!data &&
+    Array.isArray((data as { ads?: unknown[] }).ads) &&
+    (data as { ads: unknown[] }).ads.length === 0;
+
+  // Live site: omit empty blocks exactly as before.
+  if (emptyLive && !preview) return null;
+  // Editor preview: show a labelled placeholder so the operator can see and
+  // select the block even when it has no content/ad in this context.
+  if (preview && (emptyLive || emptyAds)) {
+    return <PreviewPlaceholder id={block.id} type={block.type} cls={cls} />;
   }
 
   const Component = entry.component;
-  const cls = variantClass(block.mobileVariant);
   const rendered = <Component {...(data || {})} />;
 
   return (

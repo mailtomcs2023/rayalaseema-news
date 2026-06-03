@@ -113,7 +113,7 @@ export async function TemplateRenderer({
   const resolved = await Promise.all(
     parsed.data.blocks.map(async (block) => {
       try {
-        const el = await BlockRenderer({ block, ctx: pageCtx, composites });
+        const el = await BlockRenderer({ block, ctx: pageCtx, composites, preview: draft });
         return el;
       } catch (err) {
         console.error(`[TemplateRenderer] block ${block.id} (${block.type}) crashed:`, err);
