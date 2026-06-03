@@ -796,9 +796,12 @@ export default function ContentListPage() {
             </div>
           </div>
 
-          {/* Table */}
+          {/* Table - overflow-x-auto so the fixed-width table SCROLLS inside
+              this box on narrow screens instead of forcing the whole page wider
+              than the viewport (which clipped the right columns + the toolbar's
+              "New Content" button). */}
           <div
-            className="overflow-hidden rounded-md border bg-background"
+            className="overflow-x-auto rounded-md border bg-background"
             style={{ opacity: loading ? 0.6 : 1 }}
           >
             <Table className="table-fixed">
