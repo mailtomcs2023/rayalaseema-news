@@ -11,6 +11,12 @@
 import { prisma, AdPosition } from "@rayalaseema/db";
 import { sanitizeAdHtml } from "./sanitize";
 
+// Positions the Ad.position enum actually accepts. A component or page-builder
+// block may ask for a position the DB enum doesn't yet have - guard so an
+// unknown value returns no ads instead of throwing a Prisma validation error
+// that crashes the page. Auto-heals once the value is added to the enum.
+const VALID_AD_POSITIONS = new Set<string>(Object.values(AdPosition));
+
 // Run admin-supplied ad markup through the sanitizer at the data layer so the
 // client component can stop worrying about XSS. Centralising this also means
 // any new caller that surfaces an Ad row is automatically safe.
@@ -535,7 +541,7 @@ export async function getAdsByPosition(position: string) {
   // makes Prisma throw PrismaClientValidationError and crash the entire page.
   // Treat an unknown position as "no house ads" - the slot's AdSense fallback
   // still renders. This makes the whole class of position typos non-fatal.
-  if (!(Object.values(AdPosition) as string[]).includes(position)) {
+  if (!VALID_AD_POSITIONS.has(position)) {
     return [];
   }
   const rows = await prisma.ad.findMany({

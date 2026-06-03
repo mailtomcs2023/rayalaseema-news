@@ -846,12 +846,14 @@ model Mandal {
 enum AdPosition {
   HEADER_LEFT
   HEADER_RIGHT
+  HEADER_LEADERBOARD   // full-width strip under the masthead (page-builder block)
   BANNER_MID
   SIDEBAR_SQUARE
   SIDEBAR_TALL
   LEADERBOARD
   IN_FEED
   VERTICAL_STRIP
+  MOBILE_ANCHOR        // sticky bottom-of-viewport ad on mobile (MobileAnchorSlot)
 }
 
 model Ad {
