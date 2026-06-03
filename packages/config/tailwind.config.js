@@ -33,9 +33,9 @@ module.exports = {
         },
       },
       fontFamily: {
-        telugu: ['"Mandali"', '"Noto Sans Telugu"', '"NTR"', "sans-serif"],
-        heading: ['"Noto Serif Telugu"', '"Mandali"', "serif"],
-        body: ['"Mandali"', '"Noto Sans Telugu"', '"NTR"', "sans-serif"],
+        telugu: ['"Noto Sans Telugu"', '"NTR"', "sans-serif"],
+        heading: ['"Anek Telugu"', '"Noto Sans Telugu"', "sans-serif"],
+        body: ['"Noto Sans Telugu"', '"NTR"', "sans-serif"],
       },
       fontSize: {
         "telugu-sm": ["0.875rem", { lineHeight: "1.7", fontWeight: "500" }],

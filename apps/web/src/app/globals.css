@@ -153,9 +153,9 @@
   --color-accent-500: #f59e0b;
   --color-accent-700: #b45309;
 
-  --font-telugu:  "Mandali", "Noto Sans Telugu", "NTR", sans-serif;
-  --font-heading: "Anek Telugu", "Mandali", sans-serif;
-  --font-body:    "Mandali", "Noto Sans Telugu", "NTR", sans-serif;
+  --font-telugu:  var(--font-noto-telugu), "Noto Sans Telugu", sans-serif;
+  --font-heading: var(--font-anek-telugu), "Noto Sans Telugu", sans-serif;
+  --font-body:    var(--font-noto-telugu), "Noto Sans Telugu", sans-serif;
 }
 
 /* ====== DESIGN TOKENS - single source of truth ====== */
@@ -232,8 +232,10 @@
   --dur-slow: 400ms;
 
   /* ---------- FONTS ---------- */
-  --font-telugu-body: "Noto Sans Telugu", sans-serif;
-  --font-telugu-heading: "Anek Telugu", "Noto Sans Telugu", sans-serif;
+  /* Map the semantic tokens onto the next/font self-hosted families (set on
+     <html> via layout.tsx). Literal names are graceful fallbacks only. */
+  --font-telugu-body: var(--font-noto-telugu), "Noto Sans Telugu", sans-serif;
+  --font-telugu-heading: var(--font-anek-telugu), "Noto Sans Telugu", sans-serif;
   --font-latin: "Noto Sans Telugu", "Helvetica Neue", Arial, sans-serif;
 
   /* ====== LEGACY ALIASES (kept for backward compat - gradually drop) ====== */

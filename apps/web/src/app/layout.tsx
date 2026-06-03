@@ -9,7 +9,7 @@ import { PushNotifications } from "@/components/push-notifications";
 import { DistrictPicker } from "@/components/district-picker";
 import { SWRegister } from "@/components/sw-register";
 import "./globals.css";
-import { Geist, Noto_Sans_Telugu, Anek_Telugu, Mandali } from "next/font/google";
+import { Geist, Noto_Sans_Telugu, Anek_Telugu } from "next/font/google";
 import { cn } from "@/lib/utils";
 
 // Spec #4 E5 (#224) - fonts via next/font/google. Self-hosts the woff2
@@ -20,9 +20,15 @@ import { cn } from "@/lib/utils";
 // Replaces the <link href="fonts.googleapis.com/..."> tag previously in
 // <head>.
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
+// Body font - Noto Sans Telugu. Exposed under a DEDICATED variable name
+// (--font-noto-telugu, not --font-telugu-body) so the next/font self-hosted
+// family is the single source of truth; globals.css then maps the semantic
+// --font-telugu-body token onto it. (Previously both next/font AND globals.css
+// defined --font-telugu-body, and the literal-string version silently shadowed
+// the real self-hosted font.)
 const notoTelugu = Noto_Sans_Telugu({
   subsets: ["telugu", "latin"],
-  variable: "--font-telugu-body",
+  variable: "--font-noto-telugu",
   weight: ["400", "500", "600", "700", "800", "900"],
   display: "swap",
 });
@@ -32,14 +38,8 @@ const notoTelugu = Noto_Sans_Telugu({
 // 900-weight headline sizes (telugu-2xl/3xl) fall back to 800.
 const anekTelugu = Anek_Telugu({
   subsets: ["telugu", "latin"],
-  variable: "--font-telugu-heading",
+  variable: "--font-anek-telugu",
   weight: ["400", "500", "600", "700", "800"],
-  display: "swap",
-});
-const mandali = Mandali({
-  subsets: ["telugu", "latin"],
-  variable: "--font-mandali",
-  weight: ["400"],
   display: "swap",
 });
 
@@ -154,7 +154,7 @@ export default async function RootLayout({
     },
   });
   return (
-    <html lang="te" className={cn("font-sans", geist.variable, notoTelugu.variable, anekTelugu.variable, mandali.variable)} suppressHydrationWarning>
+    <html lang="te" className={cn("font-sans", geist.variable, notoTelugu.variable, anekTelugu.variable)} suppressHydrationWarning>
       <head>
         {bingVerify && <meta name="msvalidate.01" content={bingVerify} />}
         {/* JSON-LD structured data - search-engine metadata. Uses

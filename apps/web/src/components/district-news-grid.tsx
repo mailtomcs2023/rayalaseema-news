@@ -151,7 +151,7 @@ export function DistrictNewsGrid({ districts }: { districts: DistrictNews[] }) {
       <style>{`
         /* === MY DISTRICT FEATURED === */
         .my-district-featured, .district-news-grid {
-          font-family: "Noto Sans Telugu", "Mandali", sans-serif;
+          font-family: var(--font-telugu-body);
         }
         .my-district-featured {
           background: #fff;
