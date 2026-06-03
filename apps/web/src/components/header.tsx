@@ -61,9 +61,13 @@ interface HeaderProps {
   // omit it fall back to the legacy <MarketTicker /> below (data fetched in
   // useEffect, ~300ms empty-bar moment on refresh).
   tickerSlot?: React.ReactNode;
+  // Pre-rendered masthead ad (server component MastheadAdSlot). When
+  // provided, replaces the inline AdSense fallback below so DB ads (admin-
+  // created at /ads with position=LEADERBOARD) take priority over AdSense.
+  mastheadAdSlot?: React.ReactNode;
 }
 
-export function Header({ config: initialConfig = {}, breakingNews: initialBreaking = [], tickerSlot }: HeaderProps) {
+export function Header({ config: initialConfig = {}, breakingNews: initialBreaking = [], tickerSlot, mastheadAdSlot }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -266,24 +270,17 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
             </div>
           </div>
 
-          {/* Center: Header AdSense slot (728x90 leaderboard, Eenadu-style).
-              Reads slot ID from SiteConfig; falls back to a labelled empty
-              placeholder so the masthead grid stays aligned pre-AdSense approval. */}
+          {/* Center: Masthead ad slot. Pre-rendered MastheadAdSlot is
+              passed from the server page — it fetches a DB Ad at position
+              LEADERBOARD first, falls back to AdSense, then to a striped
+              placeholder. Header itself is client-rendered, so the slot
+              has to be sent in via prop. */}
           <div className="hidden lg:flex flex-1 items-center justify-center min-w-0">
-            <div className="masthead-ad-slot">
-              {config.google_adsense_id && config.adsense_slot_header ? (
-                <ins
-                  className="adsbygoogle"
-                  style={{ display: "block", width: 728, height: 90 }}
-                  data-ad-client={config.google_adsense_id}
-                  data-ad-slot={config.adsense_slot_header}
-                  data-ad-format="horizontal"
-                  data-full-width-responsive="false"
-                />
-              ) : (
+            {mastheadAdSlot ?? (
+              <div className="masthead-ad-slot">
                 <span className="masthead-ad-placeholder">Advertisement</span>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Right: 3 stacked icon-tiles, Eenadu masthead style. Latest +
