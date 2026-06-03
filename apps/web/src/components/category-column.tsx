@@ -1,6 +1,7 @@
 import { articleHref } from "@/lib/article-href";
 import { categoryHref } from "@/lib/category-href";
 import Link from "next/link";
+import { Children } from "react";
 
 interface ColArticle {
   id: string;
@@ -133,8 +134,12 @@ export function CategoryColumn({
 
 /** Two CategoryColumns side by side with a vertical divider - the IE 2-up unit. */
 export function CategoryPair({ children }: { children: React.ReactNode }) {
+  // A lone column would otherwise stretch full-width because auto-fit collapses
+  // empty tracks - cap it so a single configured (or single non-empty) category
+  // renders as a normal half-width card instead of full bleed.
+  const single = Children.count(children) === 1;
   return (
-    <div className="cp">
+    <div className={single ? "cp cp--single" : "cp"}>
       {children}
       <style>{`
         /* N-across responsive grid: 4 category cards fit in a row on desktop;
@@ -149,6 +154,12 @@ export function CategoryPair({ children }: { children: React.ReactNode }) {
           border-radius: 8px;
           padding: 16px 20px;
           margin-top: 8px;
+        }
+        /* Single-column block: don't let it span the full row. Cap to a card
+           width and left-align so it reads as intentional, not stretched. */
+        .cp--single {
+          grid-template-columns: minmax(210px, 480px);
+          justify-content: start;
         }
         @media (max-width: 700px) {
           .cp { grid-template-columns: 1fr 1fr; gap: 18px; }
