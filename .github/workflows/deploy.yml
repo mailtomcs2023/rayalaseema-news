@@ -159,6 +159,11 @@ jobs:
             DATABASE_URL="postgresql://reapp:RayalaseemaExpress2026!@localhost:5432/rayalaseema_express"
             NEXTAUTH_SECRET="${{ secrets.NEXTAUTH_SECRET }}"
             NEXTAUTH_URL="https://admin.rayalaseemanews.com"
+            # Public web host. The page-builder template editor iframes the
+            # live preview from here (/page-builder/preview/[id]). Without it
+            # the admin code falls back to http://localhost:3000 and the
+            # preview shows "localhost refused to connect" in production.
+            SITE_URL="https://rayalaseemanews.com"
             AZURE_OPENAI_ENDPOINT="https://rayalaseema-ai.openai.azure.com/"
             AZURE_OPENAI_KEY="${{ secrets.AZURE_OPENAI_KEY }}"
             AZURE_OPENAI_DEPLOYMENT="gpt51"
