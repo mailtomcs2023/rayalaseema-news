@@ -364,11 +364,13 @@ export async function POST(req: NextRequest) {
           const tagSlug = slugify(name);
           if (!tagSlug || seen.has(tagSlug)) continue;
           seen.add(tagSlug);
-          const tag = await tx.tag.upsert({
-            where: { slug: tagSlug },
-            update: {},
-            create: { name, slug: tagSlug },
-          });
+          // Find-or-create keyed on BOTH unique columns (name AND slug). A
+          // plain upsert on slug 500'd when a tag already existed with the same
+          // NAME but a different slug (older slugify rules): the create then
+          // violated the `name` unique constraint. Matching on name OR slug
+          // reuses the existing row instead.
+          let tag = await tx.tag.findFirst({ where: { OR: [{ name }, { slug: tagSlug }] } });
+          if (!tag) tag = await tx.tag.create({ data: { name, slug: tagSlug } });
           await tx.contentTag.create({ data: { contentId: created.id, tagId: tag.id } });
         }
       }

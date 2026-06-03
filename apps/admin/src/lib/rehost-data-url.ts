@@ -32,11 +32,18 @@ export async function rehostDataUrlFields<T extends Record<string, unknown>>(
     if (typeof value !== "string" || !value.startsWith("data:")) continue;
     const match = value.match(DATA_URL_RE);
     if (!match || !blobConfigured()) continue;
-    const raw = Buffer.from(match[1].replace(/\s/g, ""), "base64");
-    if (raw.length === 0 || raw.length > MAX_BYTES) continue;
-    const processed = await processImageBuffer(raw);
-    const hosted = await uploadBuffer(processed.buffer, processed.ext, processed.contentType);
-    out = { ...out, [field]: hosted };
+    try {
+      const raw = Buffer.from(match[1].replace(/\s/g, ""), "base64");
+      if (raw.length === 0 || raw.length > MAX_BYTES) continue;
+      const processed = await processImageBuffer(raw);
+      const hosted = await uploadBuffer(processed.buffer, processed.ext, processed.contentType);
+      out = { ...out, [field]: hosted };
+    } catch (e) {
+      // Best-effort (per this module's contract): on any decode/process/upload
+      // failure, leave the field as-is so the schema returns a clear field
+      // error instead of this throwing and 500-ing the entire save.
+      console.warn(`[rehostDataUrlFields] couldn't rehost ${field}:`, (e as Error)?.message);
+    }
   }
   return out as T;
 }
