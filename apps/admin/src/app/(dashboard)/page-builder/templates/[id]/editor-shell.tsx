@@ -14,6 +14,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { WithTooltip } from "@/components/ui/tooltip";
+import { confirm } from "@/components/confirm-dialog";
 
 interface Initial {
   id: string;
@@ -414,7 +415,14 @@ export function EditorShell({
   }
 
   async function publish() {
-    if (!confirm("Publish the current draft? This snapshots a new version and updates the live site.")) return;
+    if (
+      !(await confirm({
+        title: "Publish the current draft?",
+        description: "This snapshots a new version and updates the live site.",
+        confirmText: "Publish",
+      }))
+    )
+      return;
     setError(null);
     setPublishing(true);
     // Make sure we've persisted the latest draft first.

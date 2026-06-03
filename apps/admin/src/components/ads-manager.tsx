@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import ReactCrop, { type Crop, type PixelCrop, centerCrop, makeAspectCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
+import { confirm } from "@/components/confirm-dialog";
 
 // ============ Position metadata ============
 // Recommended sizes per IAB Display Ad Guidelines + our actual slot footprint.
@@ -139,7 +140,14 @@ export function AdsManager({ initialAds }: { initialAds: AdRow[] }) {
   }
 
   async function deleteAd(ad: AdRow) {
-    if (!confirm(`Delete ad "${ad.name}"?`)) return;
+    if (
+      !(await confirm({
+        title: `Delete ad "${ad.name}"?`,
+        confirmText: "Delete",
+        destructive: true,
+      }))
+    )
+      return;
     await fetch(`/api/ads/${ad.id}`, { method: "DELETE" });
     refresh();
   }

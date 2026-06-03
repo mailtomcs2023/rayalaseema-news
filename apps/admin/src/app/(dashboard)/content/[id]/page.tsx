@@ -15,6 +15,7 @@ import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { buildSlugFromTitle, isPlaceholderSlug, sanitizeSlug } from "@/lib/slug";
 import { canSetStatus, ARTICLE_STATUSES } from "@/lib/permissions";
+import { confirm } from "@/components/confirm-dialog";
 import type { Role } from "@prisma/client";
 import { RichEditor, type RichEditorRef } from "@/components/rich-editor";
 import { ImageUpload } from "@/components/image-upload";
@@ -139,7 +140,14 @@ export default function ContentEditorPage() {
 
   const enhanceImage = async (op: string) => {
     if (!featuredImage || enhancing) return;
-    if (!confirm(`Run AI '${op}' on the current featured image? Takes ~15s + ~$0.06.`)) return;
+    if (
+      !(await confirm({
+        title: `Run AI '${op}' on the current featured image?`,
+        description: "Takes ~15s and costs ~$0.06.",
+        confirmText: "Run",
+      }))
+    )
+      return;
     setEnhancing(op);
     setError("");
     try {

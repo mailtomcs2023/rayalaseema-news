@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { confirm } from "@/components/confirm-dialog";
 
 interface Version {
   id: string;
@@ -24,7 +25,13 @@ export function VersionsClient({
   const [error, setError] = useState<string | null>(null);
 
   async function restore(v: Version) {
-    if (!confirm(`Restore version from ${new Date(v.createdAt).toLocaleString()} into the current draft? Published layout stays untouched until you publish again.`))
+    if (
+      !(await confirm({
+        title: "Restore this version into the current draft?",
+        description: `From ${new Date(v.createdAt).toLocaleString()}. Published layout stays untouched until you publish again.`,
+        confirmText: "Restore",
+      }))
+    )
       return;
     setError(null);
     setRestoring(v.id);

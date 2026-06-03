@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Plus, Eye, EyeOff, Trash2, RefreshCw, DownloadCloud } from "lucide-react";
 import { toast } from "sonner";
+import { confirm } from "@/components/confirm-dialog";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -152,7 +153,14 @@ export default function PreciousMetalsPage() {
   };
 
   const remove = async (row: PreciousRate) => {
-    if (!confirm(`Delete ${row.metal} ${row.purity ?? ""} for ${row.city}?`)) return;
+    if (
+      !(await confirm({
+        title: `Delete ${row.metal} ${row.purity ?? ""} for ${row.city}?`,
+        confirmText: "Delete",
+        destructive: true,
+      }))
+    )
+      return;
     setBusyRowId(row.id);
     try {
       const res = await fetch(`/api/precious-metals/${row.id}`, { method: "DELETE" });

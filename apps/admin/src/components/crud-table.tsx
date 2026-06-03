@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Languages } from "lucide-react";
 import { toast as sonner } from "sonner";
 import { useKycGate } from "@/components/kyc-gated-link";
+import { confirm } from "@/components/confirm-dialog";
 
 // English text → URL-safe slug. Lowercase, dashes, alphanumerics only, ≤60 chars.
 const slugify = (s: string) =>
@@ -129,7 +130,15 @@ export function CrudTable({ title, apiPath, columns, data, fields }: CrudTablePr
 
   const handleDelete = async (id: string) => {
     if (kycBlocked) { fireKycToast("delete this item"); return; }
-    if (!confirm("Are you sure you want to delete this?")) return;
+    if (
+      !(await confirm({
+        title: "Delete this item?",
+        description: "This action cannot be undone.",
+        confirmText: "Delete",
+        destructive: true,
+      }))
+    )
+      return;
     try {
       const res = await fetch(`/api/${apiPath}/${id}`, { method: "DELETE" });
       if (!res.ok) {

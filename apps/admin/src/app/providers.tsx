@@ -4,6 +4,7 @@ import { SessionProvider } from "next-auth/react";
 import type { Session } from "next-auth";
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ConfirmDialogHost } from "@/components/confirm-dialog";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 
@@ -46,6 +47,10 @@ export function Providers({
               `toast.success(...)` etc. and have it show up here. Top-right
               with rich colors matches the admin's other notification chrome. */}
           <Toaster position="bottom-right" richColors closeButton />
+          {/* App-wide promise-based confirm()/prompt() host - replaces the
+              native browser dialogs. Any client component can import
+              { confirm, prompt } from "@/components/confirm-dialog". */}
+          <ConfirmDialogHost />
         </TooltipProvider>
       </QueryClientProvider>
     </SessionProvider>

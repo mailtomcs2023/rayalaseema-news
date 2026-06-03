@@ -6,6 +6,7 @@
 // visual block-builder.
 
 import { useEffect, useState } from "react";
+import { confirm } from "@/components/confirm-dialog";
 
 interface Template {
   id: string;
@@ -70,7 +71,15 @@ export default function TemplatesPage() {
 
   const remove = async () => {
     if (!selected) return;
-    if (!confirm(`Delete template "${selected.name}"? This cannot be undone.`)) return;
+    if (
+      !(await confirm({
+        title: `Delete template "${selected.name}"?`,
+        description: "This cannot be undone.",
+        confirmText: "Delete",
+        destructive: true,
+      }))
+    )
+      return;
     setBusy(true); setError("");
     try {
       const res = await fetch(`/api/epaper/templates/${selected.id}`, { method: "DELETE" });

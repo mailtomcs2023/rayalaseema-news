@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ToastViewport, useToasts } from "@/components/toast";
+import { confirm } from "@/components/confirm-dialog";
 import { EditorV2 } from "@/components/epaper/editor-v2";
 import type { Block as CanvasBlock } from "@/components/epaper/canvas";
 
@@ -46,7 +47,14 @@ export default function MasterEditorPage() {
 
   const save = async () => {
     if (!master) return;
-    if (!confirm(`Save changes to '${master.slug}'? This affects every page that inherits this master on next render.`)) return;
+    if (
+      !(await confirm({
+        title: `Save changes to '${master.slug}'?`,
+        description: "This affects every page that inherits this master on next render.",
+        confirmText: "Save changes",
+      }))
+    )
+      return;
     setSaving(true);
     try {
       const r = await fetch(`/api/epaper/masters/${slug}`, {

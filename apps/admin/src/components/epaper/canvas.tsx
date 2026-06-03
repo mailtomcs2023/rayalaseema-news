@@ -5,6 +5,7 @@ import Moveable from "react-moveable";
 import Selecto from "selecto";
 import { DEFAULT_GEOMETRY, snapColumn, type PageGeometry } from "@/lib/epaper/geometry";
 import { WithTooltip } from "@/components/ui/tooltip";
+import { confirm } from "@/components/confirm-dialog";
 
 // v2 editor Canvas (#125). Absolute-mm-positioned blocks rendered inside a
 // 330×520mm live area. Moveable wraps the active selection (drag + resize
@@ -222,10 +223,16 @@ export function Canvas({
                 if (isMaster) return;
                 onSelect([b.id], e.shiftKey);
               }}
-              onContextMenu={(e) => {
+              onContextMenu={async (e) => {
                 if (!isMaster || !onDetachMaster) return;
                 e.preventDefault();
-                if (confirm(`Detach this ${b.type} block from the master? It becomes editable on this page only - the master is unchanged.`)) {
+                if (
+                  await confirm({
+                    title: `Detach this ${b.type} block from the master?`,
+                    description: "It becomes editable on this page only - the master is unchanged.",
+                    confirmText: "Detach",
+                  })
+                ) {
                   onDetachMaster(b);
                 }
               }}

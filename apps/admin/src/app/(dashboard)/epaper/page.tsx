@@ -18,6 +18,7 @@ import GridLayout, { type Layout as RGLLayout } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import { EditorV2 } from "@/components/epaper/editor-v2";
 import { migrateLegacyLayout } from "@/lib/epaper/migrate-layout";
+import { confirm, prompt } from "@/components/confirm-dialog";
 import { PreflightPanel, PreflightChip } from "@/components/epaper/preflight-panel";
 import { InlineTextEditor } from "@/components/epaper/inline-text-editor";
 import { WithTooltip } from "@/components/ui/tooltip";
@@ -195,7 +196,13 @@ function EpaperEditorPage() {
   // Clone a district variant from the current edition.
   const cloneVariant = async () => {
     if (!edition) return;
-    const slug = prompt("Variant slug (e.g. 'district-kurnool', 'district-tirupati'):", "district-kurnool");
+    const slug = await prompt({
+      title: "Clone district variant",
+      description: "Variant slug (e.g. 'district-kurnool', 'district-tirupati')",
+      defaultValue: "district-kurnool",
+      placeholder: "district-kurnool",
+      confirmText: "Clone",
+    });
     if (!slug) return;
     setBusy("cloning");
     try {
@@ -423,7 +430,15 @@ function EpaperEditorPage() {
   };
   const transitionTo = async (to: string, label: string, needNote: boolean) => {
     if (!edition) return;
-    const note = needNote ? prompt(`${label} - reason note (required):`) : null;
+    const note = needNote
+      ? await prompt({
+          title: label,
+          description: "Reason note (required)",
+          required: true,
+          multiline: true,
+          confirmText: "Submit",
+        })
+      : null;
     if (needNote && !note) return;
     const r = await fetch(`/api/epaper/edition/${edition.id}/transition`, {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -452,7 +467,15 @@ function EpaperEditorPage() {
     const keep = activePage.layout.blocks.filter((b) => b.y + b.h <= MAX_ROWS);
     const removed = activePage.layout.blocks.length - keep.length;
     if (removed === 0) { toast("info", "No off-page blocks to clear"); return; }
-    if (!confirm(`Delete ${removed} block${removed > 1 ? "s" : ""} past row ${MAX_ROWS} (off-page on print)?`)) return;
+    if (
+      !(await confirm({
+        title: `Delete ${removed} off-page block${removed > 1 ? "s" : ""}?`,
+        description: `These land past row ${MAX_ROWS} and print off-page.`,
+        confirmText: "Delete",
+        destructive: true,
+      }))
+    )
+      return;
     pushUndo(activePage.id, activePage.layout.blocks);
     setEdition((prev) => prev ? { ...prev, pages: prev.pages.map((p) =>
       p.id === activePage.id ? { ...p, layout: { blocks: keep } } : p) } : prev);
@@ -551,7 +574,12 @@ function EpaperEditorPage() {
   const insertBlankPage = async () => {
     if (!edition) return;
     const insertAfter = activePage?.pageNumber ?? edition.pages.length;
-    const label = prompt("Page label:", "Blank page");
+    const label = await prompt({
+      title: "Insert blank page",
+      description: "Page label",
+      defaultValue: "Blank page",
+      confirmText: "Insert",
+    });
     if (label === null) return;
     const r = await fetch("/api/epaper/pages", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -622,13 +650,26 @@ function EpaperEditorPage() {
     await loadEdition(date);
   };
   const deletePage = async (pageId: string, label: string) => {
-    if (!confirm(`Delete page "${label}"? A snapshot will be auto-saved so you can restore from History.`)) return;
+    if (
+      !(await confirm({
+        title: `Delete page "${label}"?`,
+        description: "A snapshot will be auto-saved so you can restore from History.",
+        confirmText: "Delete",
+        destructive: true,
+      }))
+    )
+      return;
     const r = await fetch(`/api/epaper/pages/${pageId}`, { method: "DELETE" });
     if (!r.ok) { setError("Delete failed"); return; }
     await loadEdition(date);
   };
   const renamePage = async (pageId: string, current: string) => {
-    const next = prompt("Page label:", current);
+    const next = await prompt({
+      title: "Rename page",
+      description: "Page label",
+      defaultValue: current,
+      confirmText: "Rename",
+    });
     if (!next || !next.trim() || next.trim() === current) return;
     const r = await fetch(`/api/epaper/pages/${pageId}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
@@ -793,7 +834,15 @@ function EpaperEditorPage() {
 
   const restoreSnap = async (id: string) => {
     if (!edition) return;
-    if (!confirm("Restore this snapshot? Your current layout will be auto-snapshotted first so you can undo the restore from the History panel.")) return;
+    if (
+      !(await confirm({
+        title: "Restore this snapshot?",
+        description:
+          "Your current layout will be auto-snapshotted first so you can undo the restore from the History panel.",
+        confirmText: "Restore",
+      }))
+    )
+      return;
     const r = await fetch(`/api/epaper/snapshots/${id}/restore`, { method: "POST" });
     if (!r.ok) { toast("error", "Restore failed"); return; }
     await loadEdition(date);
@@ -2198,8 +2247,12 @@ function EpaperEditorPage() {
                     const used = usedArticleIdsInEdition.has(a.id);
                     return (
                     <WithTooltip key={a.id} text={used ? "⚠ Already placed on another page in this edition" : "Drag onto any block, or click to assign to selected block"}>
-                    <button onClick={() => {
-                      if (used && !confirm(`This article is already placed on another page of this edition. Pick it again anyway?`)) return;
+                    <button onClick={async () => {
+                      if (used && !(await confirm({
+                        title: "Article already placed",
+                        description: "This article is already placed on another page of this edition. Pick it again anyway?",
+                        confirmText: "Pick again",
+                      }))) return;
                       setBlockArticle(a.id);
                     }}
                       draggable
@@ -2520,7 +2573,7 @@ function DraggableBlockGrid({
                 <WithTooltip text={`Delete this ${b.type} block`}>
                   <button
                     className="lock-btn"
-                    onClick={(e) => { e.stopPropagation(); if (confirm(`Delete ${b.type} block?`)) onRemoveBlock(b.id); }}
+                    onClick={async (e) => { e.stopPropagation(); if (await confirm({ title: `Delete ${b.type} block?`, confirmText: "Delete", destructive: true })) onRemoveBlock(b.id); }}
                     style={{ position: "absolute", bottom: 2, right: 2, background: "rgba(220,38,38,0.85)", color: "#fff", fontSize: 11, fontWeight: 800, width: 18, height: 18, border: "none", borderRadius: 3, cursor: "pointer", zIndex: 6, lineHeight: 1, padding: 0 }}>
                     ×
                   </button>

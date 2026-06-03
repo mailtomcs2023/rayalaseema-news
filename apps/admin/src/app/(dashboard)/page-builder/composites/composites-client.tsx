@@ -7,6 +7,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { confirm } from "@/components/confirm-dialog";
 
 interface Row {
   id: string;
@@ -35,7 +36,14 @@ export function CompositesClient({ initialRows }: { initialRows: Row[] }) {
   const [error, setError] = useState<string | null>(null);
 
   async function handleDelete(row: Row) {
-    if (!confirm(`Delete composite "${row.name}"? Templates referencing it will render a missing-composite placeholder.`))
+    if (
+      !(await confirm({
+        title: `Delete composite "${row.name}"?`,
+        description: "Templates referencing it will render a missing-composite placeholder.",
+        confirmText: "Delete",
+        destructive: true,
+      }))
+    )
       return;
     setError(null);
     const res = await fetch(`/api/page-builder/composites/${row.id}`, { method: "DELETE" });

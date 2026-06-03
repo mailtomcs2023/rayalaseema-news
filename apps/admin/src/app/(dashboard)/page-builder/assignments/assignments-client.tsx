@@ -5,6 +5,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { confirm } from "@/components/confirm-dialog";
 
 interface TemplateOpt {
   id: string;
@@ -36,7 +37,15 @@ export function AssignmentsClient({
   const [error, setError] = useState<string | null>(null);
 
   async function handleDelete(row: Row) {
-    if (!confirm(`Remove assignment "${row.pattern}" → ${row.template.name}?`)) return;
+    if (
+      !(await confirm({
+        title: "Remove assignment?",
+        description: `"${row.pattern}" → ${row.template.name}`,
+        confirmText: "Remove",
+        destructive: true,
+      }))
+    )
+      return;
     setError(null);
     const res = await fetch(`/api/page-builder/assignments/${row.id}`, { method: "DELETE" });
     if (!res.ok) {

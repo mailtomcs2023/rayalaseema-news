@@ -7,6 +7,7 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState, useTransition } from "react";
+import { confirm } from "@/components/confirm-dialog";
 
 interface Row {
   id: string;
@@ -39,7 +40,14 @@ export function TemplatesTable({ initialRows }: { initialRows: Row[] }) {
   const [error, setError] = useState<string | null>(null);
 
   async function handleDelete(row: Row) {
-    if (!confirm(`Delete template "${row.name}"? This also removes its assignments and version history.`))
+    if (
+      !(await confirm({
+        title: `Delete template "${row.name}"?`,
+        description: "This also removes its assignments and version history.",
+        confirmText: "Delete",
+        destructive: true,
+      }))
+    )
       return;
     setError(null);
     const res = await fetch(`/api/page-builder/templates/${row.id}`, { method: "DELETE" });

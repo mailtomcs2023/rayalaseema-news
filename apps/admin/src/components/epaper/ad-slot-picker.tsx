@@ -5,6 +5,7 @@
 // EpaperEdition.mastheadAds[slotName].
 
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 interface AdAsset {
   id: string;
@@ -48,7 +49,7 @@ export function AdSlotPicker({ editionId, slotName, current, onSave, onClose }: 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ slot: slotName, assetId: selected }),
       });
-      if (!r.ok) { alert(`Save failed (${r.status})`); return; }
+      if (!r.ok) { toast.error(`Save failed (${r.status})`); return; }
       onSave(selected);
       onClose();
     } finally { setSaving(false); }

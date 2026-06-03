@@ -10,6 +10,7 @@ import TextAlign from "@tiptap/extension-text-align";
 import Underline from "@tiptap/extension-underline";
 import React from "react";
 import Highlight from "@tiptap/extension-highlight";
+import { prompt } from "@/components/confirm-dialog";
 import { useState, useCallback, useRef, useEffect } from "react";
 
 // Spec #1 G1 #127 - industry-standard extensions.
@@ -202,8 +203,8 @@ export const RichEditor = React.forwardRef<RichEditorRef, { content: string; onC
         <T on={editor.isActive("subscript")} fn={() => editor.chain().focus().toggleSubscript().run()}>x₂</T>
         <T on={editor.isActive("taskList")} fn={() => editor.chain().focus().toggleTaskList().run()}>☐</T>
         <T on={false} fn={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>⊞</T>
-        <T on={false} fn={() => {
-          const url = prompt("YouTube URL");
+        <T on={false} fn={async () => {
+          const url = await prompt({ title: "Embed YouTube video", placeholder: "https://www.youtube.com/watch?v=…" });
           if (url) editor.commands.setYoutubeVideo({ src: url });
         }}>▶</T>
         <S />
