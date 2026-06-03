@@ -50,15 +50,15 @@ export default async function DashboardPage() {
   const stats = await getDashboardStats();
 
   const statCards = [
-    { label: "Published", value: stats.publishedArticles, color: "#16a34a", href: "/content", icon: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" },
-    { label: "Drafts", value: stats.draftArticles, color: "#eab308", href: "/content", icon: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" },
-    { label: "In Review", value: stats.inReviewArticles, color: "#3b82f6", href: "/content", icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" },
+    { label: "Published", value: stats.publishedArticles, color: "#16a34a", href: "/content?status=PUBLISHED", icon: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" },
+    { label: "Drafts", value: stats.draftArticles, color: "#eab308", href: "/content?status=DRAFT", icon: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" },
+    { label: "In Review", value: stats.inReviewArticles, color: "#3b82f6", href: "/content?status=IN_REVIEW", icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" },
     { label: "Categories", value: stats.totalCategories, color: "#8b5cf6", href: "/categories", icon: "M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" },
-    { label: "Breaking News", value: stats.breakingNewsCount, color: "#ef4444", href: "/breaking-news", icon: "M13 10V3L4 14h7v7l9-11h-7z" },
-    { label: "Videos", value: stats.totalVideos, color: "#ec4899", href: "/videos", icon: "M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" },
-    { label: "Web Stories", value: stats.totalStories, color: "#f59e0b", href: "/stories", icon: "M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" },
-    { label: "Reels", value: stats.totalReels, color: "#14b8a6", href: "/reels", icon: "M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" },
-    { label: "Cartoons", value: stats.totalCartoons, color: "#6366f1", href: "/cartoons", icon: "M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
+    { label: "Breaking News", value: stats.breakingNewsCount, color: "#ef4444", href: "/content?type=BREAKING_NEWS", icon: "M13 10V3L4 14h7v7l9-11h-7z" },
+    { label: "Videos", value: stats.totalVideos, color: "#ec4899", href: "/content?type=VIDEO", icon: "M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" },
+    { label: "Web Stories", value: stats.totalStories, color: "#f59e0b", href: "/content?type=WEB_STORY", icon: "M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" },
+    { label: "Reels", value: stats.totalReels, color: "#14b8a6", href: "/content?type=REEL", icon: "M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" },
+    { label: "Cartoons", value: stats.totalCartoons, color: "#6366f1", href: "/content?type=CARTOON", icon: "M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
     { label: "Active Ads", value: stats.totalAds, color: "#64748b", href: "/ads", icon: "M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" },
   ];
 

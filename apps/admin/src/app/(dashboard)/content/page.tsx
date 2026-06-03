@@ -211,6 +211,16 @@ export default function ContentListPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Initialise filters from the URL so dashboard cards can deep-link, e.g.
+  // /content?type=VIDEO or /content?status=PUBLISHED.
+  useEffect(() => {
+    const t = searchParams.get("type");
+    const s = searchParams.get("status");
+    if (t) setTypeFilter(t);
+    if (s) setStatusFilter(s);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [bulkLoading, setBulkLoading] = useState(false);
