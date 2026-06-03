@@ -77,7 +77,7 @@ export class AITruncationError extends Error {
 
 // Pull the triggered category names out of Azure's content_filter_results
 // shape: { hate: { filtered: bool, severity }, violence: {...}, ... }
-function triggeredCategories(filterResults: unknown): string[] {
+export function triggeredCategories(filterResults: unknown): string[] {
   if (!filterResults || typeof filterResults !== "object") return [];
   const out: string[] = [];
   for (const [name, val] of Object.entries(filterResults as Record<string, unknown>)) {
@@ -86,6 +86,31 @@ function triggeredCategories(filterResults: unknown): string[] {
     }
   }
   return out;
+}
+
+// A clear, editor-facing message for a content-filter block. Crime/violence
+// news legitimately trips Azure's Responsible-AI filter; tell the editor what
+// happened and what to do, instead of the raw Azure boilerplate.
+export function contentFilterUserMessage(categories: string[]): string {
+  const cats = categories.length ? ` (${categories.join(", ")})` : "";
+  return `Azure AI safety filter blocked this article${cats}. Crime, violence or sensitive news can trigger it - write or translate the story manually in the editor.`;
+}
+
+// Detect a content filter on a raw Azure chat/completions response body (used
+// by routes that call Azure directly instead of via chatJson). Returns the
+// triggered categories, or null when the response wasn't content-filtered.
+export function detectContentFilter(data: {
+  error?: { code?: string; innererror?: { content_filter_result?: unknown } };
+  choices?: { finish_reason?: string; content_filter_results?: unknown }[];
+}): string[] | null {
+  if (data?.error?.code === "content_filter") {
+    return triggeredCategories(data.error.innererror?.content_filter_result);
+  }
+  const choice = data?.choices?.[0];
+  if (choice?.finish_reason === "content_filter") {
+    return triggeredCategories(choice.content_filter_results);
+  }
+  return null;
 }
 
 export async function chat(opts: ChatOpts): Promise<ChatResult> {

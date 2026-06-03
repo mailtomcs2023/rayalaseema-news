@@ -3,7 +3,7 @@ import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 import { getReporterId } from "@/lib/reporter-auth";
 import { isUrlSafeToFetch } from "@/lib/ssrf-guard";
 import { runPipeline } from "@/lib/ai/pipeline";
-import { AITruncationError, AIContentFilterError } from "@/lib/ai/client";
+import { AITruncationError, AIContentFilterError, detectContentFilter, contentFilterUserMessage } from "@/lib/ai/client";
 import { uploadImageFromUrl } from "@/lib/blob";
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -268,6 +268,13 @@ ${text}`,
             },
           );
           const briefData = await briefRes.json();
+          const briefFiltered = detectContentFilter(briefData);
+          if (briefFiltered) {
+            return NextResponse.json(
+              { error: contentFilterUserMessage(briefFiltered), code: "content_filter" },
+              { status: 422 },
+            );
+          }
           if (briefData.error) {
             return NextResponse.json({ error: briefData.error.message }, { status: 500 });
           }
@@ -431,6 +438,16 @@ ${fullText}`,
     );
 
     const data = await res.json();
+    // Azure Responsible-AI content filter (prompt 400 or response finish_reason).
+    // Crime/violence news legitimately trips it - return a clear, actionable
+    // message instead of the raw Azure boilerplate.
+    const filtered = detectContentFilter(data);
+    if (filtered) {
+      return NextResponse.json(
+        { error: contentFilterUserMessage(filtered), code: "content_filter" },
+        { status: 422 },
+      );
+    }
     if (data.error) return NextResponse.json({ error: data.error.message }, { status: 500 });
 
     return NextResponse.json({
