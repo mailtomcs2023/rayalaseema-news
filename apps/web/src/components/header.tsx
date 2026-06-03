@@ -230,8 +230,10 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
       {/* Masthead - Eenadu style: Logo left, ad center, links right */}
       <div className="container-news">
         <div className="flex items-center py-1.5 gap-4">
-          {/* Left: Logo + Date */}
-          <div className="shrink-0 flex items-center gap-4">
+          {/* Left: Logo with date BELOW (Eenadu masthead convention).
+              Wrapping container is flex-col so the date sits under the wordmark
+              instead of beside it with a vertical divider. */}
+          <div className="shrink-0 flex flex-col items-start gap-0.5">
             <Link href="/" className="block">
               {/* PNGs are tiny (165–211 KB) vs the 2.2 MB SVG masthead. Mobile
                   showed the old logo because the heavy SVG either failed to
@@ -248,16 +250,16 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
                 />
               </picture>
             </Link>
-            {/* Noto Sans Telugu (not Mandali): Mandali ships only weight 400, so
-                font-bold faux-bolds it and the weekday looks uneven. */}
-            <div className="hidden md:block border-l border-gray-200 pl-4">
-              {/* Day = heading font (Anek Telugu); date = body font (Noto Sans Telugu). */}
-              <p className="text-[15px] font-bold text-gray-900 leading-tight" style={{ fontFamily: "var(--font-telugu-heading)" }}>
+            {/* Day + date on ONE line under the wordmark, comma-separated,
+                Eenadu-style. Inline so it doesn't take an extra row. */}
+            <div className="hidden md:flex items-baseline gap-1.5 mt-0.5">
+              <span className="text-[13px] font-bold text-gray-900 leading-tight" style={{ fontFamily: "var(--font-telugu-heading)" }}>
                 {new Date().toLocaleDateString("te-IN", { weekday: "long" })}
-              </p>
-              <p className="text-[13px] font-semibold text-gray-600 leading-tight mt-0.5" style={{ fontFamily: "var(--font-telugu-body)" }}>
+              </span>
+              <span className="text-[11px] text-gray-400 leading-none">·</span>
+              <span className="text-[12px] font-semibold text-gray-600 leading-tight" style={{ fontFamily: "var(--font-telugu-body)" }}>
                 {new Date().toLocaleDateString("te-IN", { day: "numeric", month: "long", year: "numeric" })}
-              </p>
+              </span>
             </div>
           </div>
 
