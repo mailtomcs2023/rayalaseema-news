@@ -3,7 +3,7 @@
 // daily editorial cartoon (ఎట్టెట / యెట్టెట section).
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { Header } from "@/components/header";
+import { SiteHeader } from "@/components/site-header";
 import { Footer } from "@/components/footer";
 import { ShareBar } from "@/components/share-bar";
 import { getCartoonBySlug, getSiteConfig, incrementViewCount } from "@/lib/db-queries";
@@ -34,7 +34,7 @@ export default async function CartoonPage({ params }: { params: Promise<{ slug: 
 
   return (
     <div className="min-h-screen" style={{ background: "#fff" }}>
-      <Header config={config} breakingNews={[]} />
+      <SiteHeader config={config} breakingNews={[]} />
       <main style={{ maxWidth: 900, margin: "0 auto", padding: "16px 12px 48px" }}>
         <h1 style={{ fontFamily: "var(--font-telugu-heading), serif", fontSize: 28, fontWeight: 800, color: "#111", marginBottom: 4 }}>
           {cartoon.title}

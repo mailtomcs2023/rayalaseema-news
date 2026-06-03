@@ -4,7 +4,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { prisma } from "@rayalaseema/db";
-import { Header } from "@/components/header";
+import { SiteHeader } from "@/components/site-header";
 import { Footer } from "@/components/footer";
 import { VideoGrid } from "@/components/video-grid";
 import { getSiteConfig } from "@/lib/db-queries";
@@ -97,7 +97,7 @@ export default async function VideoPage({
 
   return (
     <div className="min-h-screen" style={{ background: "#fff" }}>
-      <Header config={config} breakingNews={[]} />
+      <SiteHeader config={config} breakingNews={[]} />
       <main style={{ maxWidth: 980, margin: "0 auto", padding: "18px 12px 48px" }}>
         <div
           style={{

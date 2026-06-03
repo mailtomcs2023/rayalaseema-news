@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@rayalaseema/db";
-import { Header } from "@/components/header";
+import { SiteHeader } from "@/components/site-header";
 import { Footer } from "@/components/footer";
 import { getSiteConfig } from "@/lib/db-queries";
 
@@ -31,7 +31,7 @@ export default async function EpaperCorrectionsPage() {
 
   return (
     <div className="min-h-screen" style={{ background: "#fff" }}>
-      <Header config={config} breakingNews={[]} />
+      <SiteHeader config={config} breakingNews={[]} />
       <div style={{ background: "var(--brand, #E01B1B)" }}>
         <div style={{ maxWidth: 980, margin: "0 auto", padding: "12px" }}>
           <span style={{ fontFamily: "var(--font-telugu-heading), serif", fontSize: 24, fontWeight: 800, color: "#fff" }}>

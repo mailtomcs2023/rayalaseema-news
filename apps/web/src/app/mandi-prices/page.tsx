@@ -4,7 +4,7 @@
 // commodity + market name client-side; daily-updated server-side.
 
 import type { Metadata } from "next";
-import { Header } from "@/components/header";
+import { SiteHeader } from "@/components/site-header";
 import { Footer } from "@/components/footer";
 import { prisma } from "@rayalaseema/db";
 import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
@@ -61,7 +61,7 @@ export default async function MandiPricesPage() {
     <div className="min-h-screen bg-gray-50">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: stringifyJsonLd(breadcrumbLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: stringifyJsonLd(articleLd as any) }} />
-      <Header />
+      <SiteHeader />
       <main style={{ maxWidth: 1000, margin: "0 auto", padding: "40px 16px" }}>
         <h1 style={{ fontSize: 30, fontWeight: 900, color: "#111", marginBottom: 4 }}>
           Today's mandi prices

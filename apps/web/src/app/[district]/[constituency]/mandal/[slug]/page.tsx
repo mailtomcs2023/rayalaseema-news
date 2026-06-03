@@ -23,7 +23,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@rayalaseema/db";
-import { Header } from "@/components/header";
+import { SiteHeader } from "@/components/site-header";
 import { Footer } from "@/components/footer";
 import { articleHref } from "@/lib/article-href";
 import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
@@ -154,7 +154,7 @@ export default async function MandalPage({ params }: { params: Params }) {
   return (
     <div className="min-h-screen bg-gray-50">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: stringifyJsonLd(breadcrumbLd) }} />
-      <Header />
+      <SiteHeader />
       <main style={{ maxWidth: 1280, margin: "0 auto", padding: "20px 12px" }}>
         <nav style={{ fontSize: 13, color: "#888", marginBottom: 12 }}>
           <Link href="/" style={{ color: "#888", textDecoration: "none" }}>Home</Link>

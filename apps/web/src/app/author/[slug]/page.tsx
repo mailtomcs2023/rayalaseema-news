@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Header } from "@/components/header";
+import { SiteHeader } from "@/components/site-header";
 import { Footer } from "@/components/footer";
 import { prisma } from "@rayalaseema/db";
 import { articleHref } from "@/lib/article-href";
@@ -108,7 +108,7 @@ export default async function AuthorPage({
   return (
     <div className="min-h-screen bg-gray-50">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: stringifyJsonLd(personLd) }} />
-      <Header />
+      <SiteHeader />
       <main style={{ maxWidth: 900, margin: "0 auto", padding: "30px 16px" }}>
         {/* Author Card */}
         <div style={{ background: "#fff", borderRadius: 12, padding: 32, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", marginBottom: 24, display: "flex", alignItems: "center", gap: 24 }}>

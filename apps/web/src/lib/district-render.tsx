@@ -7,7 +7,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@rayalaseema/db";
-import { Header } from "@/components/header";
+import { SiteHeader } from "@/components/site-header";
 import { Footer } from "@/components/footer";
 import { ConstituencyFilter } from "@/app/district/[slug]/filter";
 import { getSiteConfig, getTrendingArticles } from "@/lib/db-queries";
@@ -107,7 +107,7 @@ export async function DistrictView({ slug }: { slug: string }) {
   return (
     <div className="min-h-screen" style={{ background: "#fff" }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: stringifyJsonLd(breadcrumbLd) }} />
-      <Header config={config} breakingNews={[]} />
+      <SiteHeader config={config} breakingNews={[]} />
 
       {/* District header - plain white bg, title in dark text, matches site shell */}
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: "16px 12px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>

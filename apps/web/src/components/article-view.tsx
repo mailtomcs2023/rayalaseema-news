@@ -5,7 +5,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Badge } from "@rayalaseema/ui";
-import { Header } from "@/components/header";
+import { SiteHeader } from "@/components/site-header";
 import { Footer } from "@/components/footer";
 import { TTSButton } from "@/components/tts-button";
 import { CommentsSection } from "@/components/comments-section";
@@ -159,7 +159,7 @@ export function ArticleView({ article, related, trending, siteUrl }: Props) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: stringifyJsonLd(newsArticleLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: stringifyJsonLd(breadcrumbLd) }} />
       <ScrollShareNudge title={article.title} slug={slug} articleUrl={canonical} />
-      <Header />
+      <SiteHeader />
 
       <main style={{ maxWidth: 1280, margin: "0 auto", padding: "20px 12px" }}>
         <nav style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#888", marginBottom: 16 }}>

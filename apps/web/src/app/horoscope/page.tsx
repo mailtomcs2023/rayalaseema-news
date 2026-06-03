@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Header } from "@/components/header";
+import { SiteHeader } from "@/components/site-header";
 import { Footer } from "@/components/footer";
 
 interface Rashi {
@@ -54,7 +54,7 @@ export default function HoroscopePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
+      <SiteHeader />
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "20px 12px" }}>
         {/* Page Title */}
         <div style={{ textAlign: "center", marginBottom: 20 }}>

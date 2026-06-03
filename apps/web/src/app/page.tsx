@@ -5,7 +5,7 @@
 // block tree that mirrors the pre-Spec-#2 layout.
 
 import { cookies } from "next/headers";
-import { Header } from "@/components/header";
+import { SiteHeader } from "@/components/site-header";
 import { Footer } from "@/components/footer";
 import { MarketTickerServer } from "@/components/market-ticker-server";
 import { MastheadAdSlot } from "@/components/masthead-ad-slot";

@@ -10,7 +10,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@rayalaseema/db";
-import { Header } from "@/components/header";
+import { SiteHeader } from "@/components/site-header";
 import { Footer } from "@/components/footer";
 import { buildBreadcrumbListSchema, buildLiveBlogPostingSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 
@@ -102,7 +102,7 @@ export default async function ExamResultsPage({ params }: { params: Params }) {
     <div className="min-h-screen bg-gray-50">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: stringifyJsonLd(breadcrumbLd) }} />
       {liveBlogLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: stringifyJsonLd(liveBlogLd) }} />}
-      <Header />
+      <SiteHeader />
       <main style={{ maxWidth: 800, margin: "0 auto", padding: "32px 16px" }}>
         {live && !live.endedAt && (
           <span style={{ display: "inline-block", padding: "4px 10px", borderRadius: 4, background: "#dc2626", color: "#fff", fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase" }}>

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@rayalaseema/db";
-import { Header } from "@/components/header";
+import { SiteHeader } from "@/components/site-header";
 import { Footer } from "@/components/footer";
 import { getSiteConfig } from "@/lib/db-queries";
 import { articleHref } from "@/lib/article-href";
@@ -125,7 +125,7 @@ export default async function CinemaPage({
 
   return (
     <div className="min-h-screen" style={{ background: "#fff" }}>
-      <Header config={config} breakingNews={[]} />
+      <SiteHeader config={config} breakingNews={[]} />
 
       {/* Branded header */}
       <div style={{ background: "var(--brand, #E01B1B)" }}>

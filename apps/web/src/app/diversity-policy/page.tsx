@@ -1,7 +1,7 @@
 // Spec #4 C5 (#208) - /diversity-policy.
 
 import type { Metadata } from "next";
-import { Header } from "@/components/header";
+import { SiteHeader } from "@/components/site-header";
 import { Footer } from "@/components/footer";
 import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 
@@ -21,7 +21,7 @@ export default function DiversityPolicyPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: stringifyJsonLd(ld) }} />
-      <Header />
+      <SiteHeader />
       <main style={{ maxWidth: 800, margin: "0 auto", padding: "40px 16px" }}>
         <h1 style={{ fontSize: 32, fontWeight: 900, marginBottom: 6, color: "#111" }}>Diversity Policy</h1>
         <p style={{ fontSize: 13, color: "#888", marginBottom: 24 }}>Last reviewed: 2026-05-27</p>

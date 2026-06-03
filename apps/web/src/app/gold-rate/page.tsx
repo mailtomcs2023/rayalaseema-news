@@ -7,7 +7,7 @@
 // SiteConfig.precious_metal_source (admin UI in a follow-up).
 
 import type { Metadata } from "next";
-import { Header } from "@/components/header";
+import { SiteHeader } from "@/components/site-header";
 import { Footer } from "@/components/footer";
 import { TodayGoldRate } from "@/components/today-gold-rate";
 import { prisma } from "@rayalaseema/db";
@@ -71,7 +71,7 @@ export default async function GoldRatePage() {
     <div className="min-h-screen bg-gray-50">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: stringifyJsonLd(breadcrumbLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: stringifyJsonLd(articleLd as any) }} />
-      <Header />
+      <SiteHeader />
       <main style={{ maxWidth: 900, margin: "0 auto", padding: "40px 16px" }}>
         <h1 style={{ fontSize: 30, fontWeight: 900, color: "#111", marginBottom: 4 }}>
           Gold &amp; silver rates today

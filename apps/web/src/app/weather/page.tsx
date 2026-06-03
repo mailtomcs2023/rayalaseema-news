@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Header } from "@/components/header";
+import { SiteHeader } from "@/components/site-header";
 import { Footer } from "@/components/footer";
 
 const allDistricts = [
@@ -141,7 +141,7 @@ export default function WeatherPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
+      <SiteHeader />
       <main style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 12px" }}>
         {/* Page Header */}
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>

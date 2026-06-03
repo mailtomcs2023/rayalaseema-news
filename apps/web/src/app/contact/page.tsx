@@ -1,4 +1,4 @@
-import { Header } from "@/components/header";
+import { SiteHeader } from "@/components/site-header";
 import { Footer } from "@/components/footer";
 
 export const metadata = { title: "సంప్రదించండి | Rayalaseema News" };
@@ -6,7 +6,7 @@ export const metadata = { title: "సంప్రదించండి | Rayalas
 export default function ContactPage() {
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
+      <SiteHeader />
       <main style={{ maxWidth: 800, margin: "0 auto", padding: "40px 16px" }}>
         <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8, color: "#111" }}>సంప్రదించండి</h1>
         <p style={{ fontSize: 16, color: "#888", marginBottom: 32 }}>Contact Us</p>

@@ -8,7 +8,7 @@
 
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Header } from "@/components/header";
+import { SiteHeader } from "@/components/site-header";
 import { Footer } from "@/components/footer";
 import { prisma } from "@rayalaseema/db";
 import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
@@ -61,7 +61,7 @@ export default async function MastheadPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: stringifyJsonLd(breadcrumbLd) }} />
-      <Header />
+      <SiteHeader />
       <main style={{ maxWidth: 900, margin: "0 auto", padding: "40px 16px" }}>
         <h1 style={{ fontSize: 32, fontWeight: 900, marginBottom: 6, color: "#111" }}>Masthead</h1>
         <p style={{ fontSize: 14, color: "#888", marginBottom: 32 }}>

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@rayalaseema/db";
-import { Header } from "@/components/header";
+import { SiteHeader } from "@/components/site-header";
 import { Footer } from "@/components/footer";
 import { EpaperViewer } from "@/components/epaper-viewer";
 import { getSiteConfig } from "@/lib/db-queries";
@@ -68,7 +68,7 @@ export default async function EpaperPage({
 
   return (
     <div className="min-h-screen" style={{ background: "#fff" }}>
-      <Header config={config} breakingNews={[]} />
+      <SiteHeader config={config} breakingNews={[]} />
 
       <div style={{ background: "var(--brand, #E01B1B)" }}>
         <div style={{ maxWidth: 1280, margin: "0 auto", padding: "12px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>

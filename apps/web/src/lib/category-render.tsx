@@ -11,7 +11,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@rayalaseema/db";
-import { Header } from "@/components/header";
+import { SiteHeader } from "@/components/site-header";
 import { Footer } from "@/components/footer";
 import { TemplateRenderer } from "@/components/blocks/template-renderer";
 import { getSiteConfig } from "@/lib/db-queries";
@@ -54,7 +54,7 @@ export async function CategoryView({ slug }: { slug: string }) {
   return (
     <div className="min-h-screen" style={{ background: "#fff" }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: stringifyJsonLd(breadcrumbLd) }} />
-      <Header config={config} breakingNews={[]} />
+      <SiteHeader config={config} breakingNews={[]} />
       <main style={{ maxWidth: 1280, margin: "0 auto", padding: "18px 12px 48px" }}>
         {/* Spec #4 F4 (#228) - category header with name + description so
             the hub has its own content surface for crawlers. The

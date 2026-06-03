@@ -1,7 +1,7 @@
 // Spec #4 C6 (#209) - /mission.
 
 import type { Metadata } from "next";
-import { Header } from "@/components/header";
+import { SiteHeader } from "@/components/site-header";
 import { Footer } from "@/components/footer";
 import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 
@@ -21,7 +21,7 @@ export default function MissionPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: stringifyJsonLd(ld) }} />
-      <Header />
+      <SiteHeader />
       <main style={{ maxWidth: 800, margin: "0 auto", padding: "40px 16px" }}>
         <h1 style={{ fontSize: 32, fontWeight: 900, marginBottom: 6, color: "#111" }}>Our Mission</h1>
         <p style={{ fontSize: 13, color: "#888", marginBottom: 24 }}>రాయలసీమ న్యూస్ - Why we exist</p>

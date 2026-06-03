@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@rayalaseema/db";
-import { Header } from "@/components/header";
+import { SiteHeader } from "@/components/site-header";
 import { Footer } from "@/components/footer";
 import { getSiteConfig } from "@/lib/db-queries";
 import type { Metadata } from "next";
@@ -66,7 +66,7 @@ export default async function TagPage({ params }: Props) {
   return (
     <div style={{ minHeight: "100vh", background: "var(--page-bg, #f6f6f6)" }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: stringifyJsonLd(breadcrumbLd) }} />
-      <Header config={config} />
+      <SiteHeader config={config} />
       <main style={{ maxWidth: 1280, margin: "0 auto", padding: "var(--sp-5, 24px) var(--sp-4, 16px)" }}>
         {/* Tag header */}
         <div style={{ padding: "var(--sp-4, 16px) 0 var(--sp-5, 24px)", borderBottom: "1px solid var(--paper-edge, rgba(0,0,0,0.08))", marginBottom: "var(--sp-5, 24px)" }}>

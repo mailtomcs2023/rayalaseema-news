@@ -1,4 +1,4 @@
-import { Header } from "@/components/header";
+import { SiteHeader } from "@/components/site-header";
 import { Footer } from "@/components/footer";
 
 export const metadata = { title: "Terms of Service | Rayalaseema News" };
@@ -6,7 +6,7 @@ export const metadata = { title: "Terms of Service | Rayalaseema News" };
 export default function TermsPage() {
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
+      <SiteHeader />
       <main style={{ maxWidth: 800, margin: "0 auto", padding: "40px 16px" }}>
         <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 24, color: "#111" }}>Terms of Service</h1>
         <div className="article-body" style={{ fontSize: 15, lineHeight: 1.8, color: "#333" }}>

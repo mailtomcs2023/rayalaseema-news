@@ -3,7 +3,7 @@
 // full image in a new tab for now; richer lightbox can land in a polish PR).
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { Header } from "@/components/header";
+import { SiteHeader } from "@/components/site-header";
 import { Footer } from "@/components/footer";
 import { ShareBar } from "@/components/share-bar";
 import { getPhotoGalleryBySlug, getSiteConfig, incrementViewCount } from "@/lib/db-queries";
@@ -34,7 +34,7 @@ export default async function GalleryPage({ params }: { params: Promise<{ slug: 
 
   return (
     <div className="min-h-screen" style={{ background: "#fff" }}>
-      <Header config={config} breakingNews={[]} />
+      <SiteHeader config={config} breakingNews={[]} />
       <main style={{ maxWidth: 1080, margin: "0 auto", padding: "16px 12px 48px" }}>
         <h1 style={{ fontFamily: "var(--font-telugu-heading), serif", fontSize: 28, fontWeight: 800, color: "#111", marginBottom: 8 }}>
           {gallery.title}

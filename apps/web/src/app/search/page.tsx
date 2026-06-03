@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Header } from "@/components/header";
+import { SiteHeader } from "@/components/site-header";
 import { Footer } from "@/components/footer";
 import { articleHref } from "@/lib/article-href";
 
@@ -105,7 +105,7 @@ export default function SearchPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
+      <SiteHeader />
       <main style={{ maxWidth: 800, margin: "0 auto", padding: "30px 16px" }}>
         <h1 style={{ fontSize: 24, fontWeight: 800, color: "#111", marginBottom: 4 }}>వార్తలు వెతకండి</h1>
         <p style={{ fontSize: 13, color: "#888", marginBottom: 20 }}>Search in Telugu or English - type in English and get Telugu suggestions</p>

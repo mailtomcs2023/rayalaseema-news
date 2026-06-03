@@ -3,7 +3,7 @@
 // don't ship a swiper lib for the MVP). Each slide = full-bleed image + caption.
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { Header } from "@/components/header";
+import { SiteHeader } from "@/components/site-header";
 import { Footer } from "@/components/footer";
 import { getWebStoryBySlug, getSiteConfig, incrementViewCount } from "@/lib/db-queries";
 
@@ -38,7 +38,7 @@ export default async function StoryPage({ params }: { params: Promise<{ slug: st
 
   return (
     <div className="min-h-screen" style={{ background: "#000" }}>
-      <Header config={config} breakingNews={[]} />
+      <SiteHeader config={config} breakingNews={[]} />
       <main style={{ maxWidth: 480, margin: "0 auto", padding: "12px" }}>
         <h1 style={{ fontFamily: "var(--font-telugu-heading), serif", fontSize: 22, fontWeight: 700, color: "#fff", marginBottom: 12 }}>
           {story.title}

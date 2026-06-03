@@ -3,7 +3,7 @@
 // hosted clips since reels are typically Azure Blob MP4s, not embeds.
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { Header } from "@/components/header";
+import { SiteHeader } from "@/components/site-header";
 import { Footer } from "@/components/footer";
 import { ShareBar } from "@/components/share-bar";
 import { getReelBySlug, getSiteConfig, incrementViewCount } from "@/lib/db-queries";
@@ -32,7 +32,7 @@ export default async function ReelPage({ params }: { params: Promise<{ slug: str
 
   return (
     <div className="min-h-screen" style={{ background: "#000" }}>
-      <Header config={config} breakingNews={[]} />
+      <SiteHeader config={config} breakingNews={[]} />
       <main style={{ maxWidth: 480, margin: "0 auto", padding: "16px 12px 48px" }}>
         <h1 style={{ fontFamily: "var(--font-telugu-heading), serif", fontSize: 22, fontWeight: 700, color: "#fff", marginBottom: 12 }}>
           {reel.title}
