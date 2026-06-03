@@ -543,9 +543,15 @@ export default function ContentEditorPage() {
     setError("");
     setSuccess("");
     // Create mode needs at least a title (the slug auto-derives from it) before
-    // the row can be created.
+    // the row can be created. Red-ring + focus the Title field, same as the
+    // submit-time field validation.
     if (isNew && !title.trim()) {
-      setError("Add a title before saving.");
+      setFieldErrors({ title: "Title is required." });
+      if (titleRef.current) {
+        titleRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+        titleRef.current.focus();
+      }
+      toast.error("Add a title before saving.");
       setSaving(false);
       return;
     }
