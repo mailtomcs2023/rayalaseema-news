@@ -5,9 +5,15 @@
 // use this pattern as the highest-revenue mobile slot.
 //
 // Priority:
-//   1. DB Ad at MOBILE_ANCHOR — your own inventory
-//   2. AdSense mobile_anchor slot — config.adsense_slot_mobile_anchor
-//   3. null (renders nothing) — no empty white bar
+//   1. DB Ad at MOBILE_ANCHOR — phone-specific inventory the admin uploaded
+//      at the right 320x100 crop.
+//   2. DB Ad at LEADERBOARD — re-use the masthead ad if no phone variant is
+//      configured. Saves admins from re-uploading the same hiring/promo banner
+//      twice; CSS scales the leaderboard image to the phone width.
+//   3. AdSense mobile_anchor slot — config.adsense_slot_mobile_anchor.
+//   4. AdSense leaderboard slot — mirrors the desktop masthead AdSense unit
+//      so even an AdSense-only setup fills the phone bottom.
+//   5. null (renders nothing) — no empty white bar.
 //
 // Mounted in the root layout so it appears on every page automatically.
 
@@ -18,8 +24,15 @@ export async function MobileAnchorSlot({
 }: {
   config?: Record<string, string>;
 }) {
-  const ads = await getAdsByPosition("MOBILE_ANCHOR");
-  const ad = ads[0];
+  // Try the phone-specific slot first; if nothing's there, reuse whatever
+  // the masthead leaderboard is currently serving so a single admin ad
+  // covers both surfaces.
+  const mobileAds = await getAdsByPosition("MOBILE_ANCHOR");
+  let ad = mobileAds[0];
+  if (!ad) {
+    const lbAds = await getAdsByPosition("LEADERBOARD");
+    ad = lbAds[0];
+  }
 
   const containerStyle: React.CSSProperties = {
     position: "fixed",
@@ -70,14 +83,20 @@ export async function MobileAnchorSlot({
     }
   }
 
-  if (config?.google_adsense_id && config?.adsense_slot_mobile_anchor) {
+  // AdSense fallbacks — mobile-specific slot first, then the masthead
+  // leaderboard slot if mobile_anchor isn't configured. Either fills the
+  // 320x90-ish phone bottom; AdSense returns responsive sizing on its end.
+  const adSenseClient = config?.google_adsense_id;
+  const adSenseSlot =
+    config?.adsense_slot_mobile_anchor || config?.adsense_slot_header;
+  if (adSenseClient && adSenseSlot) {
     return (
       <div className="md:hidden" style={containerStyle}>
         <ins
           className="adsbygoogle"
           style={{ display: "inline-block", minHeight: 50, width: 320 }}
-          data-ad-client={config.google_adsense_id}
-          data-ad-slot={config.adsense_slot_mobile_anchor}
+          data-ad-client={adSenseClient}
+          data-ad-slot={adSenseSlot}
           data-ad-format="horizontal"
         />
       </div>
