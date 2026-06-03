@@ -8,6 +8,21 @@ export function ReturnVisitBanner() {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
+    // In the page-builder editor preview this banner would render NOTHING -
+    // it only appears to a RETURNING visitor (one who last visited on an
+    // earlier day), so there's no state to trigger it in the editor. Show a
+    // clearly-labelled sample so the operator can see + position the block.
+    // Production pages never hit this path (URL isn't /page-builder/preview),
+    // so live behaviour is unchanged: real returning-visitor logic below.
+    if (
+      typeof window !== "undefined" &&
+      window.location.pathname.startsWith("/page-builder/preview")
+    ) {
+      setMessage("👋 తిరిగి వచ్చిన పాఠకులకు చూపే బ్యానర్ (ఎడిటర్ నమూనా)");
+      setShow(true);
+      return;
+    }
+
     const lastVisit = localStorage.getItem("last-visit-date");
     const today = new Date().toDateString();
 
