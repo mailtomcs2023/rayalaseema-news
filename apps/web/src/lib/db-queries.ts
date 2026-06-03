@@ -8,7 +8,7 @@
 // Old per-table queries (prisma.article, prisma.video, prisma.webStory, etc.)
 // are gone from this file. Those tables still exist in the DB but are dormant;
 // they get dropped in #189 once every reader/writer has migrated.
-import { prisma } from "@rayalaseema/db";
+import { prisma, AdPosition } from "@rayalaseema/db";
 import { sanitizeAdHtml } from "./sanitize";
 
 // Run admin-supplied ad markup through the sanitizer at the data layer so the
@@ -530,9 +530,17 @@ export async function getCartoons(limit = 5) {
 // ---------- Ads (unchanged - Ad is its own table, not unified) ----------
 
 export async function getAdsByPosition(position: string) {
+  // Guard: a position not in the AdPosition enum (e.g. a slot component
+  // referencing a value that was never added to the schema, like MOBILE_ANCHOR)
+  // makes Prisma throw PrismaClientValidationError and crash the entire page.
+  // Treat an unknown position as "no house ads" - the slot's AdSense fallback
+  // still renders. This makes the whole class of position typos non-fatal.
+  if (!(Object.values(AdPosition) as string[]).includes(position)) {
+    return [];
+  }
   const rows = await prisma.ad.findMany({
     where: {
-      position: position as any,
+      position: position as AdPosition,
       active: true,
       OR: [{ endDate: null }, { endDate: { gt: new Date() } }],
     },
