@@ -11,7 +11,7 @@
 
 import { ArrowLeft, ChevronDown as ChevronDownIcon, Sparkles } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { buildSlugFromTitle, isPlaceholderSlug, sanitizeSlug } from "@/lib/slug";
 import { canSetStatus, ARTICLE_STATUSES } from "@/lib/permissions";
@@ -77,6 +77,11 @@ export default function ContentEditorPage() {
   const router = useRouter();
   const params = useParams();
   const contentId = params.id as string;
+  const searchParams = useSearchParams();
+  // Create mode: the type-picker routes here as /content/_create?type=X with NO
+  // DB row yet. We start with an empty form and only POST on first Save, so
+  // abandoning the editor never leaves an "Untitled" draft behind.
+  const isNew = contentId === "_create";
 
   // Role drives which Status values the dropdown offers (see canSetStatus /
   // permissions.ts). The server PUT enforces the same rule authoritatively.
@@ -258,8 +263,23 @@ export default function ContentEditorPage() {
   }, [title, slug]);
 
   const runAI = async (action: "translate" | "editorial" | "summarize" | "headline") => {
-    const text = body || summary || title;
-    if (!text) { setError("No content to process - type or paste something first."); return; }
+    // Base the guard on the ACTUAL article content, never the title. New
+    // drafts persist a default title of "Untitled Article", so `body ||
+    // summary || title` was always truthy - which let "Headline ideas" run
+    // on an empty body and made the model invent headlines from nothing.
+    // Headlines/summaries are derived from the content, so require it.
+    const plainBody = body.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    const hasContent = plainBody.length > 0 || summary.trim().length > 0;
+    if (!hasContent) {
+      setError(
+        action === "headline"
+          ? "Write the article body (or a summary) first — headline ideas are generated from the content."
+          : action === "summarize"
+            ? "Write the article body first — the summary is generated from it."
+            : "No content to process — type or paste something in the Body first."
+      );
+      return;
+    }
     setAiLoading(action);
     setError("");
     setSuccess("");
@@ -379,6 +399,24 @@ export default function ContentEditorPage() {
   };
 
   useEffect(() => {
+    // Create mode: no DB row yet. Load only reference data and leave the form
+    // empty (Title/Slug/etc. all blank). The row is created on first Save.
+    if (isNew) {
+      setType(searchParams.get("type") || "ARTICLE");
+      Promise.all([
+        fetch("/api/categories").then((r) => r.json()),
+        fetch("/api/desks").then((r) => r.json()).catch(() => []),
+        fetch("/api/locations").then((r) => r.json()).catch(() => []),
+      ]).then(([cats, deskList, locs]) => {
+        setCategories(cats || []);
+        setDesks(deskList || []);
+        setDistricts(locs || []);
+        initialSnapshotRef.current = ""; // any input marks the form dirty
+        loadedAsPlaceholderRef.current = false;
+        setLoading(false);
+      });
+      return;
+    }
     Promise.all([
       fetch(`/api/content/${contentId}`).then((r) => r.json()),
       fetch("/api/categories").then((r) => r.json()),
@@ -504,6 +542,13 @@ export default function ContentEditorPage() {
     setSaving(true);
     setError("");
     setSuccess("");
+    // Create mode needs at least a title (the slug auto-derives from it) before
+    // the row can be created.
+    if (isNew && !title.trim()) {
+      setError("Add a title before saving.");
+      setSaving(false);
+      return;
+    }
     setPayloadError("");
     // Capture the status BEFORE save so the success toast can distinguish
     // a state transition ("Article published") from a same-status re-save
@@ -588,10 +633,12 @@ export default function ContentEditorPage() {
     };
 
     try {
-      const res = await fetch(`/api/content/${contentId}`, {
-        method: "PUT",
+      // Create mode: POST creates the row now (deferred from the type-picker);
+      // edit mode: PUT updates the existing row. POST needs `type`.
+      const res = await fetch(isNew ? "/api/content" : `/api/content/${contentId}`, {
+        method: isNew ? "POST" : "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body_),
+        body: JSON.stringify(isNew ? { type, ...body_ } : body_),
       });
       const data = await res.json();
       if (!res.ok) {

@@ -11,7 +11,6 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { toast } from "sonner";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -52,45 +51,17 @@ export default function NewContentPage() {
   const [error, setError] = useState("");
   const inflight = useRef(false);
 
-  const create = async (chosenType: string) => {
+  const create = (chosenType: string) => {
     if (inflight.current) return;
     inflight.current = true;
     setCreating(chosenType);
     setError("");
-    try {
-      const meta = TYPES.find((t) => t.type === chosenType);
-      const placeholderTitle = `Untitled ${meta?.title || chosenType}`;
-      const ts = Date.now();
-      const slug = chosenType === "BREAKING_NEWS" ? `breaking-${ts}` : `untitled-${ts}`;
-      const res = await fetch("/api/content", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: chosenType, title: placeholderTitle, slug }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        // KYC gate: server returned 403 with kycRequired:true. Surface as
-        // a red toast with a one-click jump to /onboarding/kyc instead of
-        // a dead-end error message.
-        if (data.kycRequired) {
-          toast.error(data.error || "KYC must be verified to create articles.", {
-            action: { label: "Complete KYC", onClick: () => router.push("/onboarding/kyc") },
-            duration: 8000,
-          });
-        } else {
-          setError(data.error || `Create failed (HTTP ${res.status})`);
-        }
-        inflight.current = false;
-        setCreating(null);
-        return;
-      }
-      const row = await res.json();
-      router.push(`/content/${row.id}`);
-    } catch (e: any) {
-      setError(e.message || "Create failed");
-      inflight.current = false;
-      setCreating(null);
-    }
+    // Deferred creation: open a BLANK editor in create mode - no DB row is
+    // created yet. The row is created only when the editor clicks Save (POST).
+    // This stops abandoned "Untitled" placeholder drafts from piling up.
+    // KYC is enforced server-side on that first save (and the entry link is
+    // already KYC-gated), so no eager check is needed here.
+    router.push(`/content/_create?type=${chosenType}`);
   };
 
   return (
