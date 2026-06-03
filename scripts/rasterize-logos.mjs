@@ -22,16 +22,31 @@ const sharp = (await import("sharp")).default;
 const SRC_LIGHT = "apps/web/public/logo-candidates/red-black.svg";
 const SRC_DARK = "apps/web/public/logo-candidates/white-gray.svg";
 
-// SVG viewBox is 300x83.04 (≈ 3.61:1). Render PNGs at 2x retina for HiDPI.
-const WIDTH = 800;
-const HEIGHT = Math.round((83.04 / 300) * WIDTH); // 221
+// Read viewBox from the SVG so the PNG aspect matches whatever the source
+// is (the previous design was 300x83 = 3.61:1; the current is 1500x308 =
+// 4.87:1). Render at ~1600px wide for retina quality on common screen sizes.
+const TARGET_WIDTH = 1600;
+
+function readViewBox(svgText) {
+  const m = svgText.match(/viewBox="([\d.\s-]+)"/);
+  if (!m) return { w: 300, h: 83 };
+  const parts = m[1].trim().split(/\s+/).map(Number);
+  // viewBox = "minX minY width height"
+  return { w: parts[2], h: parts[3] };
+}
 
 async function emit(srcSvgPath, targets) {
-  const svgBuf = readFileSync(srcSvgPath);
+  const svgText = readFileSync(srcSvgPath, "utf8");
+  const svgBuf = Buffer.from(svgText, "utf8");
+  const { w: vbW, h: vbH } = readViewBox(svgText);
+  const aspect = vbW / vbH;
+  const WIDTH = TARGET_WIDTH;
+  const HEIGHT = Math.round(WIDTH / aspect);
   const pngBuf = await sharp(svgBuf, { density: 288 })
     .resize(WIDTH, HEIGHT, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .png({ compressionLevel: 9 })
     .toBuffer();
+  console.log(`  (source viewBox ${vbW}x${vbH} aspect ${aspect.toFixed(2)}:1 -> PNG ${WIDTH}x${HEIGHT})`);
 
   for (const [pathSvg, pathPng] of targets) {
     if (pathSvg) {
