@@ -223,6 +223,11 @@ function CreateModal({
 }) {
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
+  // Auto-fill the slug from the name AS THE USER TYPES, until they edit the
+  // slug field by hand. The old `if (!slug)` guard only fired on the first
+  // keystroke (slug became non-empty after one char, then froze), so the slug
+  // never tracked the full name.
+  const [slugEdited, setSlugEdited] = useState(false);
   const [description, setDescription] = useState("");
   const [cloneFromId, setCloneFromId] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -237,7 +242,9 @@ function CreateModal({
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         name,
-        slug: slug || slugify(name),
+        // Normalise whatever's in the field (or derive from name) so the
+        // saved slug is always valid even if the user typed spaces/caps.
+        slug: slugify(slug || name),
         description: description || null,
         cloneFromId: cloneFromId || undefined,
       }),
@@ -285,7 +292,7 @@ function CreateModal({
           value={name}
           onChange={(e) => {
             setName(e.target.value);
-            if (!slug) setSlug(slugify(e.target.value));
+            if (!slugEdited) setSlug(slugify(e.target.value));
           }}
           required
           style={inp}
@@ -295,7 +302,10 @@ function CreateModal({
         <Label>Slug</Label>
         <input
           value={slug}
-          onChange={(e) => setSlug(e.target.value)}
+          onChange={(e) => {
+            setSlug(e.target.value);
+            setSlugEdited(true);
+          }}
           style={inp}
           placeholder="auto from name"
         />
