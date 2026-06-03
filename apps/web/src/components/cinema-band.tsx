@@ -282,12 +282,15 @@ export function CinemaBand({
           display: block;
           overflow: hidden;
           border-radius: 4px;
-          background: var(--n-100, #f3f4f6);
+          /* Dark letterbox so the FULL poster shows (no crop), matching the
+             article page. object-fit:contain leaves side/top bars - fill them
+             with black for a cinematic look. */
+          background: #000;
         }
         .cb-lead-img img {
           width: 100%;
           aspect-ratio: 16/10;
-          object-fit: cover;
+          object-fit: contain;
           display: block;
           transition: transform 0.4s ease;
         }
