@@ -250,14 +250,17 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
                 />
               </picture>
             </Link>
-            {/* Day + date on ONE line under the wordmark, comma-separated,
-                Eenadu-style. Inline so it doesn't take an extra row. */}
-            <div className="hidden md:flex items-baseline gap-1.5 mt-0.5">
-              <span className="text-[13px] font-bold text-gray-900 leading-tight" style={{ fontFamily: "var(--font-telugu-heading)" }}>
+            {/* Day + date on ONE line, aligned under the wordmark's first
+                Telugu letter "ర" — not under the map-icon at the start of
+                the logo. The logo's red map glyph occupies roughly the first
+                14% of the wordmark width; padding-left:14% (~44px @ h-16)
+                shifts the date row to start where the wordmark text starts. */}
+            <div className="hidden md:flex items-baseline gap-1.5 mt-0.5 self-stretch" style={{ paddingLeft: "14%" }}>
+              <span className="text-[13px] font-bold text-gray-900 leading-tight whitespace-nowrap" style={{ fontFamily: "var(--font-telugu-heading)" }}>
                 {new Date().toLocaleDateString("te-IN", { weekday: "long" })}
               </span>
               <span className="text-[11px] text-gray-400 leading-none">·</span>
-              <span className="text-[12px] font-semibold text-gray-600 leading-tight" style={{ fontFamily: "var(--font-telugu-body)" }}>
+              <span className="text-[12px] font-semibold text-gray-600 leading-tight whitespace-nowrap" style={{ fontFamily: "var(--font-telugu-body)" }}>
                 {new Date().toLocaleDateString("te-IN", { day: "numeric", month: "long", year: "numeric" })}
               </span>
             </div>
