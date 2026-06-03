@@ -3,7 +3,7 @@
 // Used by:
 //   - MarketTickerServer (server-side fetch + render, zero flash on first paint)
 //   - MarketTicker (legacy client-side fetch, fallback for pages not yet migrated)
-import { Trophy, Coins, IndianRupee, Sprout, TrendingUp, TrendingDown } from "lucide-react";
+import { TrendingUp, TrendingDown } from "lucide-react";
 
 export interface CricketMatch {
   id: string;
@@ -55,10 +55,6 @@ export function MarketTickerView({ data }: { data: TickerData | null }) {
             <>
           {cricketMatches.length > 0 && (
             <>
-              <span className="ticker-section-label" style={{ background: "#16a34a" }}>
-                <Trophy size={11} strokeWidth={2.5} aria-hidden />
-                {"క్రికెట్"}
-              </span>
               {cricketMatches.slice(0, 2).map((m) => (
                 <span key={m.id} className="ticker-item">
                   <span className="ticker-text">
@@ -74,10 +70,6 @@ export function MarketTickerView({ data }: { data: TickerData | null }) {
 
           {data.bullion.length > 0 && (
             <>
-              <span className="ticker-section-label" style={{ background: "#b45309" }}>
-                <Coins size={11} strokeWidth={2.5} aria-hidden />
-                {"బులియన్"}
-              </span>
               {data.bullion.map((b, i) => (
                 <span key={i} className="ticker-item">
                   <span className="ticker-name">{b.name}</span>
@@ -98,10 +90,6 @@ export function MarketTickerView({ data }: { data: TickerData | null }) {
 
           {data.forex.length > 0 && (
             <>
-              <span className="ticker-section-label" style={{ background: "#1d4ed8" }}>
-                <IndianRupee size={11} strokeWidth={2.5} aria-hidden />
-                {"ఫారెక్స్"}
-              </span>
               {data.forex.map((f, i) => (
                 <span key={i} className="ticker-item">
                   <span className="ticker-name">{f.icon} {f.name}</span>
@@ -114,10 +102,6 @@ export function MarketTickerView({ data }: { data: TickerData | null }) {
 
           {data.mandi.length > 0 && (
             <>
-              <span className="ticker-section-label" style={{ background: "#15803d" }}>
-                <Sprout size={11} strokeWidth={2.5} aria-hidden />
-                {"మండి"}
-              </span>
               {data.mandi.map((m, i) => (
                 <span key={i} className="ticker-item">
                   <span className="ticker-name">{m.commodity} ({m.market})</span>
@@ -145,11 +129,15 @@ export function MarketTickerView({ data }: { data: TickerData | null }) {
           overflow: hidden;
           white-space: nowrap;
           font-family: "Inter", "Noto Sans Telugu", sans-serif;
+          display: flex;
+          align-items: center;
+          min-height: 36px;
+          line-height: 1;
         }
         .market-ticker-scroll {
           overflow-x: auto;
           overflow-y: hidden;
-          padding: 4px 0;
+          width: 100%;
           scrollbar-width: none;
         }
         .market-ticker-scroll::-webkit-scrollbar { display: none; }
@@ -157,6 +145,7 @@ export function MarketTickerView({ data }: { data: TickerData | null }) {
           display: inline-flex;
           align-items: center;
           gap: 6px;
+          padding-left: 14px;
         }
         .ticker-section-label {
           color: #fff;

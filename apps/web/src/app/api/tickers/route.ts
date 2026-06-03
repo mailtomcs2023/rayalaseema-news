@@ -203,25 +203,17 @@ async function getBullionPrices() {
 // ====== FOREX: from exchangerate-api.com (free, accurate) ======
 async function getForexRates() {
   try {
+    // Only USD/INR in the strip. Live rate from open.er-api (free); refreshed
+    // often so it tracks the current rate as closely as the source allows.
     const res = await fetch("https://open.er-api.com/v6/latest/INR", {
-      next: { revalidate: 300 },
+      next: { revalidate: 120 },
       signal: AbortSignal.timeout(5000),
     });
     const data = await res.json();
-    if (!data.rates) return [];
-
-    const usd = data.rates.USD ? parseFloat((1 / data.rates.USD).toFixed(2)) : 0;
-    const eur = data.rates.EUR ? parseFloat((1 / data.rates.EUR).toFixed(2)) : 0;
-    const gbp = data.rates.GBP ? parseFloat((1 / data.rates.GBP).toFixed(2)) : 0;
-    const aed = data.rates.AED ? parseFloat((1 / data.rates.AED).toFixed(2)) : 0;
-    const sar = data.rates.SAR ? parseFloat((1 / data.rates.SAR).toFixed(2)) : 0;
-
+    if (!data.rates?.USD) return [];
+    const usd = parseFloat((1 / data.rates.USD).toFixed(2));
     return [
       { name: "USD/INR", nameEn: "US Dollar", price: usd, icon: "$", flag: "🇺🇸" },
-      { name: "EUR/INR", nameEn: "Euro", price: eur, icon: "€", flag: "🇪🇺" },
-      { name: "GBP/INR", nameEn: "British Pound", price: gbp, icon: "£", flag: "🇬🇧" },
-      { name: "AED/INR", nameEn: "UAE Dirham", price: aed, icon: "د.إ", flag: "🇦🇪" },
-      { name: "SAR/INR", nameEn: "Saudi Riyal", price: sar, icon: "﷼", flag: "🇸🇦" },
     ];
   } catch { return []; }
 }
