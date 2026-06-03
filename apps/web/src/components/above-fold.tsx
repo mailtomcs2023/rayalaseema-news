@@ -376,18 +376,36 @@ export function AboveFold({
         }
         .af-dist-lead:hover h3 { color: var(--brand-dark, #B91414); }
         .af-dist-sub {
-          display: block;
+          /* flex so the bullet prefix sits next to the headline as a
+             clear separator — without it the supporting headlines blurred
+             into a paragraph that looked like a single excerpt under the
+             lead story. */
+          display: flex;
+          align-items: flex-start;
+          gap: 6px;
           font-family: var(--font-telugu-body), sans-serif;
-          font-size: 12px;
+          font-size: 12.5px;
           font-weight: 600;
-          line-height: 1.4;
-          color: var(--n-600, #4b5563);
+          line-height: 1.42;
+          color: var(--n-700, #374151);
           text-decoration: none;
-          padding: 4px 0 0;
-          border-top: 1px dotted var(--paper-edge, rgba(0,0,0,0.12));
-          margin-top: 4px;
+          padding: 7px 0;
+          border-top: 1px solid #e5e7eb;
+          margin-top: 6px;
         }
         .af-dist-sub:hover { color: var(--brand-dark, #B91414); }
+        /* Bullet glyph stays the brand-red even when the headline text is
+           grey, so the reader's eye snaps to it as a list marker. */
+        .af-dist-sub::before {
+          content: "▸";
+          color: var(--brand, #E01B1B);
+          font-size: 11px;
+          line-height: 1.42;
+          flex-shrink: 0;
+        }
+        .af-dist-sub:hover::before {
+          color: var(--brand-dark, #B91414);
+        }
         .af-dist-empty {
           font-family: var(--font-telugu-body), sans-serif;
           font-size: 12px;
