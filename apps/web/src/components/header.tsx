@@ -261,47 +261,43 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
             </div>
           </div>
 
-          {/* Center: spacer (desktop only) */}
-          <div className="hidden lg:block flex-1" />
+          {/* Center: Header AdSense slot (728x90 leaderboard, Eenadu-style).
+              Reads slot ID from SiteConfig; falls back to a labelled empty
+              placeholder so the masthead grid stays aligned pre-AdSense approval. */}
+          <div className="hidden lg:flex flex-1 items-center justify-center min-w-0">
+            <div className="masthead-ad-slot">
+              {config.google_adsense_id && config.adsense_slot_header ? (
+                <ins
+                  className="adsbygoogle"
+                  style={{ display: "block", width: 728, height: 90 }}
+                  data-ad-client={config.google_adsense_id}
+                  data-ad-slot={config.adsense_slot_header}
+                  data-ad-format="horizontal"
+                  data-full-width-responsive="false"
+                />
+              ) : (
+                <span className="masthead-ad-placeholder">Advertisement</span>
+              )}
+            </div>
+          </div>
 
-          {/* Right: Tabs + E-Paper (desktop). shadcn Button (asChild on links). */}
-          <div className="hidden lg:flex flex-col items-end gap-1.5 shrink-0">
-            {/* Top row: Latest / Search / Breaking */}
-            <div className="flex gap-1.5">
-              <Button asChild variant="outline" size="sm" className="leading-none">
-                <Link href="/">
-                  <svg className="block size-3.5 shrink-0" fill="none" stroke="var(--brand)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                  తాజా వార్తలు
-                </Link>
-              </Button>
-              <Button asChild variant="outline" size="sm" className="leading-none">
-                <Link href="/search">
-                  <svg className="block size-3.5 shrink-0" fill="none" stroke="var(--n-500)" strokeWidth="1.8" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-                  వెతకండి
-                </Link>
-              </Button>
-              <Button asChild variant="ghost" size="sm" className="leading-none text-[var(--brand-dark)] bg-[var(--brand-soft)] hover:bg-[var(--brand-soft)] hover:text-[var(--brand-dark)]">
-                <Link href="/">
-                  <span className="animate-pulse block shrink-0" style={{ width: 6, height: 6, background: "var(--brand)", borderRadius: "var(--r-pill)" }} />
-                  బ్రేకింగ్
-                </Link>
-              </Button>
+          {/* Right: 3 stacked icon-tiles, Eenadu masthead style. Latest +
+              Breaking on top row, E-PAPER full-width below. */}
+          <div className="hidden lg:flex flex-col items-end gap-1 shrink-0">
+            <div className="flex gap-1">
+              <Link href="/" className="masthead-tile" aria-label="Latest news">
+                <svg className="size-5" fill="none" stroke="var(--n-700, #374151)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/></svg>
+                <span className="masthead-tile-label">Latest</span>
+              </Link>
+              <Link href="/" className="masthead-tile masthead-tile-breaking" aria-label="Breaking news">
+                <svg className="size-5" fill="none" stroke="var(--brand, #E01B1B)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="9"/></svg>
+                <span className="masthead-tile-label">Breaking</span>
+              </Link>
             </div>
-            {/* Bottom row: E-Paper + Google News Follow */}
-            <div className="flex gap-1.5">
-              <Button asChild variant="default" size="sm" className="leading-none tracking-[0.06em]">
-                <Link href="/epaper">
-                  <svg className="block size-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2"/></svg>
-                  E-PAPER
-                </Link>
-              </Button>
-              <Button asChild variant="outline" size="sm" className="leading-none">
-                <a href="https://news.google.com/publications/CAAqBwgKMIGwlgswrOWEAw?hl=te&gl=IN&ceid=IN:te" target="_blank" rel="noopener noreferrer">
-                  <svg className="block size-3.5 shrink-0" viewBox="0 0 24 24"><path d="M22.077 12c0-5.523-4.477-10-10-10S2.077 6.477 2.077 12s4.477 10 10 10 10-4.477 10-10z" fill="#4285F4"/><path d="M22.077 12c0-5.523-4.477-10-10-10" fill="#EA4335"/><path d="M2.077 12c0 5.523 4.477 10 10 10" fill="#34A853"/><path d="M2.077 12c0-5.523 4.477-10 10-10" fill="#FBBC05"/><path d="M12.077 7v10" stroke="#fff" strokeWidth="2"/><path d="M7.077 12h10" stroke="#fff" strokeWidth="2"/></svg>
-                  Follow
-                </a>
-              </Button>
-            </div>
+            <Link href="/epaper" className="masthead-tile masthead-tile-epaper" aria-label="E-Paper">
+              <svg className="size-4" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2"/></svg>
+              <span className="text-[11px] font-bold tracking-[0.08em]">E-PAPER</span>
+            </Link>
           </div>
 
           {/* Mobile: hamburger */}
@@ -496,6 +492,80 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
         @keyframes slideFromBottom {
           from { transform: translateY(100%); }
           to { transform: translateY(0); }
+        }
+
+        /* === Masthead center AdSense slot (Eenadu-style) === */
+        .masthead-ad-slot {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          max-width: 728px;
+          min-height: 90px;
+        }
+        .masthead-ad-placeholder {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          max-width: 728px;
+          height: 90px;
+          font-family: var(--font-sans, system-ui);
+          font-size: 11px;
+          font-weight: 600;
+          letter-spacing: 0.12em;
+          color: #b0b6bf;
+          background: repeating-linear-gradient(45deg, #fafbfc 0 10px, #f4f5f7 10px 20px);
+          border: 1px dashed #d8dde3;
+          border-radius: 4px;
+          text-transform: uppercase;
+        }
+
+        /* === Masthead right quick-tiles (Latest / Breaking / E-PAPER) === */
+        .masthead-tile {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 2px;
+          min-width: 58px;
+          padding: 4px 10px;
+          background: #fff;
+          border: 1px solid #e5e7eb;
+          border-radius: 6px;
+          text-decoration: none;
+          transition: background 0.15s, border-color 0.15s, transform 0.15s;
+        }
+        .masthead-tile:hover {
+          background: #f9fafb;
+          border-color: #d1d5db;
+          transform: translateY(-1px);
+        }
+        .masthead-tile-label {
+          font-family: var(--font-sans, system-ui);
+          font-size: 11px;
+          font-weight: 700;
+          color: var(--n-800, #1f2937);
+          letter-spacing: 0.02em;
+        }
+        .masthead-tile-breaking .masthead-tile-label {
+          color: var(--brand, #E01B1B);
+        }
+        .masthead-tile-breaking { border-color: #fecaca; background: #fff5f5; }
+        .masthead-tile-breaking:hover { background: #fff1f1; border-color: #f87171; }
+        .masthead-tile-epaper {
+          flex-direction: row;
+          gap: 6px;
+          padding: 6px 14px;
+          width: 100%;
+          background: var(--brand, #E01B1B);
+          color: #fff;
+          border-color: var(--brand-dark, #B91414);
+          font-weight: 800;
+        }
+        .masthead-tile-epaper:hover {
+          background: var(--brand-dark, #B91414);
+          border-color: var(--brand-dark, #B91414);
         }
       `}</style>
     </>
