@@ -158,14 +158,14 @@ export default async function RootLayout({
     <html lang="te" className={cn("font-sans", geist.variable, notoTelugu.variable, anekTelugu.variable)} suppressHydrationWarning>
       <head>
         {bingVerify && <meta name="msvalidate.01" content={bingVerify} />}
-        {/* JSON-LD structured data - search-engine metadata. Uses
-            next/script so React 19 doesn't warn about raw <script>
-            tags inside components, but renders as an inline script in
-            <head> at hydration time (which is what crawlers read). */}
-        <Script
-          id="ld-json-org"
+        {/* JSON-LD structured data - search-engine metadata. A PLAIN
+            <script type="application/ld+json"> is the App Router pattern for
+            structured data: it's crawler-read DATA, not executable JS, so it
+            renders straight into <head>. next/script's beforeInteractive is
+            meant for real scripts and triggers React's "script tag while
+            rendering a component" warning here. (Same pattern as article-view.) */}
+        <script
           type="application/ld+json"
-          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: stringifyJsonLd(orgLd) }}
         />
       </head>
