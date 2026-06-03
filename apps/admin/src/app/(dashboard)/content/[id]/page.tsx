@@ -660,10 +660,39 @@ export default function ContentEditorPage() {
           setSaving(false);
           return;
         }
-        const fieldErrs = data.fieldErrors
-          ? Object.entries(data.fieldErrors).map(([k, v]) => `${k}: ${(v as string[]).join(", ")}`).join(" · ")
-          : "";
-        setError(data.error + (fieldErrs ? ` (${fieldErrs})` : "") || `Save failed (${res.status})`);
+        // Map server-side errors to the inline field UI (red ring + scroll +
+        // focus), same as the client submit validation - not just a flat
+        // message. Covers structured `fieldErrors` and common single-field
+        // messages like "Slug already exists".
+        const fe: Partial<Record<ArticleFieldKey, string>> = {};
+        const FIELD_KEYS: ArticleFieldKey[] = ["title", "slug", "summary", "body", "featuredMedia"];
+        if (data.fieldErrors && typeof data.fieldErrors === "object") {
+          for (const [k, v] of Object.entries(data.fieldErrors)) {
+            if ((FIELD_KEYS as string[]).includes(k)) {
+              fe[k as ArticleFieldKey] = Array.isArray(v) ? (v as string[]).join(", ") : String(v);
+            }
+          }
+        }
+        const lowerErr = (data.error || "").toLowerCase();
+        if (!fe.slug && lowerErr.includes("slug")) fe.slug = data.error;
+        if (!fe.title && lowerErr.includes("title")) fe.title = data.error;
+        if (Object.keys(fe).length) {
+          setFieldErrors(fe);
+          const candidates: (HTMLElement | null)[] = [
+            fe.featuredMedia ? mediaRef.current : null,
+            fe.title ? titleRef.current : null,
+            fe.slug ? slugRef.current : null,
+            fe.summary ? summaryRef.current : null,
+            fe.body ? bodyRef.current : null,
+          ];
+          const target = candidates.find((el): el is HTMLElement => el != null);
+          if (target) {
+            target.scrollIntoView({ behavior: "smooth", block: "center" });
+            target.focus();
+          }
+        }
+        toast.error(data.error || `Save failed (${res.status})`);
+        setError(data.error || `Save failed (${res.status})`);
       } else {
         setStatus(data.status);
         // Toast message reflects what *changed*, not just the final state:
