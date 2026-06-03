@@ -66,8 +66,8 @@ export function DistrictNewsGrid({ districts }: { districts: DistrictNews[] }) {
                 {myData.articles[0].featuredImage ? (
                   <img src={myData.articles[0].featuredImage} alt="" className="my-district-img" loading="lazy" />
                 ) : (
-                  <div className="my-district-img" style={{ background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ color: "#ccc", fontWeight: 800, fontSize: 32 }}>RE</span>
+                  <div className="my-district-img logo-fallback">
+                    <img src="/logo-icon.png" alt="" className="logo-fallback-img" loading="lazy" />
                   </div>
                 )}
                 <h3 className="my-district-title">{myData.articles[0].title}</h3>
@@ -122,8 +122,8 @@ export function DistrictNewsGrid({ districts }: { districts: DistrictNews[] }) {
                       {main.featuredImage ? (
                         <img src={main.featuredImage} alt="" style={{ width: "100%", aspectRatio: "16/10", objectFit: "cover", borderRadius: 4, display: "block" }} loading="lazy" />
                       ) : (
-                        <div style={{ width: "100%", aspectRatio: "16/10", background: "#f3f4f6", borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <span style={{ color: "#ccc", fontWeight: 800, fontSize: 20 }}>RE</span>
+                        <div className="logo-fallback" style={{ width: "100%", aspectRatio: "16/10", borderRadius: 4 }}>
+                          <img src="/logo-icon.png" alt="" className="logo-fallback-img" loading="lazy" />
                         </div>
                       )}
                       <h3 className="district-news-title">{main.title}</h3>
@@ -248,6 +248,31 @@ export function DistrictNewsGrid({ districts }: { districts: DistrictNews[] }) {
           margin-top: auto;
         }
         .my-district-more:hover { text-decoration: underline; }
+
+        /* === Logo fallback when article has no featuredImage ===
+           Soft gray gradient background with the brand icon centered + a
+           subtle inset shadow so the placeholder feels intentional, not blank. */
+        .logo-fallback {
+          background: linear-gradient(135deg, #f8f9fa 0%, #eef0f2 60%, #e5e7eb 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), inset 0 -1px 2px rgba(0,0,0,0.06);
+        }
+        .logo-fallback-img {
+          width: 38%;
+          max-width: 90px;
+          height: auto;
+          opacity: 0.55;
+          filter: grayscale(20%) drop-shadow(0 1px 2px rgba(0,0,0,0.1));
+          transition: opacity 0.18s, transform 0.18s;
+        }
+        .district-news-card:hover .logo-fallback-img,
+        .my-district-main:hover .logo-fallback-img {
+          opacity: 0.75;
+          transform: scale(1.03);
+        }
 
         /* === OTHER DISTRICTS GRID === */
         .district-news-grid {
