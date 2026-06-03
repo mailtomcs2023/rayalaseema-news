@@ -36,6 +36,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { z } from "zod";
 
 interface Category { id: string; name: string; nameEn: string; slug: string; parentId?: string | null }
 
@@ -58,6 +59,19 @@ const TYPE_META: Record<string, { label: string; bg: string; fg: string }> = {
   CARTOON: { label: "Cartoon", bg: "#fce7f3", fg: "#9d174d" },
   BREAKING_NEWS: { label: "Breaking News", bg: "#fef2f2", fg: "#7f1d1d" },
 };
+
+// Client-side article validation, enforced when leaving DRAFT (Submit /
+// Publish). Mirrors the server's required fields. On failure the editor marks
+// each bad field with aria-invalid (red) + an inline message and focuses the
+// first one. Drafts skip this so editors keep incomplete work.
+const articleSubmitSchema = z.object({
+  title: z.string().trim().min(1, "Title is required."),
+  slug: z.string().trim().min(1, "Slug (the article URL) is required."),
+  summary: z.string().trim().min(1, "Summary is required."),
+  body: z.string().trim().min(1, "Body cannot be empty."),
+  featuredMedia: z.string().trim().min(1, "Add a featured image or video."),
+});
+type ArticleFieldKey = keyof z.infer<typeof articleSubmitSchema>;
 
 export default function ContentEditorPage() {
   const router = useRouter();
@@ -166,6 +180,21 @@ export default function ContentEditorPage() {
   const [headlineOpen, setHeadlineOpen] = useState(false);
 
   const editorRef = useRef<RichEditorRef>(null);
+  // Per-field validation errors (Submit/Publish). Drive aria-invalid red
+  // borders + inline messages; cleared per-field as the editor fixes them.
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<ArticleFieldKey, string>>>({});
+  const titleRef = useRef<HTMLInputElement>(null);
+  const slugRef = useRef<HTMLInputElement>(null);
+  const summaryRef = useRef<HTMLTextAreaElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const mediaRef = useRef<HTMLDivElement>(null);
+  const clearFieldError = (k: ArticleFieldKey) =>
+    setFieldErrors((prev) => {
+      if (!prev[k]) return prev;
+      const next = { ...prev };
+      delete next[k];
+      return next;
+    });
   // Snapshot of every editable field at load time. The Update button is
   // disabled while the current form state JSON-stringifies to the same value -
   // so a freshly-loaded row with no edits can't be re-saved by accident, and
@@ -498,20 +527,41 @@ export default function ContentEditorPage() {
     // rule), so an article is never blocked for having a video instead of an
     // image.
     if (type === "ARTICLE" && (finalStatus === "SUBMITTED" || finalStatus === "PUBLISHED")) {
-      const bodyText = (body || "").replace(/<[^>]+>/g, "").trim();
-      const missing: string[] = [];
-      if (!title.trim()) missing.push("Title");
-      if (!slug.trim()) missing.push("Slug");
-      if (!(summary || "").trim()) missing.push("Summary");
-      if (!bodyText) missing.push("Body");
-      if (!featuredImage.trim() && !featuredVideo.trim()) missing.push("Featured media (image or video)");
-      if (missing.length) {
-        setError(
-          `Can't ${finalStatus === "PUBLISHED" ? "publish" : "submit"} yet — please fill: ${missing.join(", ")}.`,
+      const parsed = articleSubmitSchema.safeParse({
+        title,
+        slug,
+        summary,
+        body: (body || "").replace(/<[^>]+>/g, " ").trim(),
+        featuredMedia: featuredImage.trim() || featuredVideo.trim(),
+      });
+      if (!parsed.success) {
+        const errs: Partial<Record<ArticleFieldKey, string>> = {};
+        for (const issue of parsed.error.issues) {
+          const k = issue.path[0] as ArticleFieldKey;
+          if (!errs[k]) errs[k] = issue.message;
+        }
+        setFieldErrors(errs);
+        // Focus + scroll the FIRST invalid field, in top-to-bottom form order.
+        const candidates: (HTMLElement | null)[] = [
+          errs.featuredMedia ? mediaRef.current : null,
+          errs.title ? titleRef.current : null,
+          errs.slug ? slugRef.current : null,
+          errs.summary ? summaryRef.current : null,
+          errs.body ? bodyRef.current : null,
+        ];
+        const target = candidates.find((el): el is HTMLElement => el != null);
+        if (target) {
+          target.scrollIntoView({ behavior: "smooth", block: "center" });
+          target.focus();
+        }
+        const n = Object.keys(errs).length;
+        toast.error(
+          `Please fix ${n} field${n > 1 ? "s" : ""} before ${finalStatus === "PUBLISHED" ? "publishing" : "submitting"}.`,
         );
         setSaving(false);
         return;
       }
+      setFieldErrors({});
     }
 
     // `type` is intentionally omitted - content type isn't updatable after
@@ -680,7 +730,11 @@ export default function ContentEditorPage() {
               {/* Featured image - pinned at the top so the hero visual is the
                   first thing the editor sees and confirms before scrolling down
                   to title/body. */}
-              <div className="space-y-2">
+              <div
+                ref={mediaRef}
+                tabIndex={-1}
+                className={`space-y-2 rounded-md outline-none ${fieldErrors.featuredMedia ? "p-1 ring-2 ring-destructive" : ""}`}
+              >
                 <div className="flex items-center justify-between">
                   <Label>{type === "ARTICLE" ? "Featured media" : "Featured image"}{type === "ARTICLE" && <span className="text-red-500"> *</span>}</Label>
                   {/* ARTICLE hero is image OR video, never both - the toggle
@@ -708,9 +762,10 @@ export default function ContentEditorPage() {
                     </div>
                   )}
                 </div>
+                {fieldErrors.featuredMedia && <p className="text-xs font-medium text-red-500">{fieldErrors.featuredMedia}</p>}
                 {type === "ARTICLE" && mediaMode === "video" ? (
                   <>
-                    <VideoUpload value={featuredVideo} onChange={(v) => setFeaturedVideo(v)} />
+                    <VideoUpload value={featuredVideo} onChange={(v) => { setFeaturedVideo(v); if (v) clearFieldError("featuredMedia"); }} />
                     <p className="text-xs text-muted-foreground">
                       Paste a YouTube link or upload an MP4/WebM. The video plays as the article hero — no separate image is used.
                     </p>
@@ -719,7 +774,7 @@ export default function ContentEditorPage() {
                 <>
                 <ImageUpload
                   value={featuredImage}
-                  onChange={setFeaturedImage}
+                  onChange={(v) => { setFeaturedImage(v); if (v) clearFieldError("featuredMedia"); }}
                   onSearchClick={() => setImageSearchOpen(true)}
                   onValidChange={setImageLoaded}
                 />
@@ -808,10 +863,13 @@ export default function ContentEditorPage() {
                 </div>
                 <Input
                   id="title-input"
+                  ref={titleRef}
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={(e) => { setTitle(e.target.value); clearFieldError("title"); }}
+                  aria-invalid={!!fieldErrors.title}
                   className="h-12 bg-white text-lg font-bold md:text-lg"
                 />
+                {fieldErrors.title && <p className="mt-1 text-xs font-medium text-red-500">{fieldErrors.title}</p>}
               </div>
 
               {/* Slug is hidden for REPORTER role - the auto-generation
@@ -824,16 +882,20 @@ export default function ContentEditorPage() {
                   <Label htmlFor="slug-input">Slug{type !== "BREAKING_NEWS" && <span className="text-red-500"> *</span>}</Label>
                   <Input
                     id="slug-input"
+                    ref={slugRef}
                     value={slug}
                     onChange={(e) => {
                       // Mark as manually edited so the auto-slug effect
                       // doesn't overwrite the editor's chosen value.
                       userTouchedSlug.current = true;
                       setSlug(e.target.value);
+                      clearFieldError("slug");
                     }}
                     placeholder={type === "BREAKING_NEWS" ? "(optional for breaking)" : "url-segment"}
+                    aria-invalid={!!fieldErrors.slug}
                     className="bg-white font-mono text-xs md:text-xs"
                   />
+                  {fieldErrors.slug && <p className="mt-1 text-xs font-medium text-red-500">{fieldErrors.slug}</p>}
                 </div>
               )}
 
@@ -856,12 +918,15 @@ export default function ContentEditorPage() {
                 </div>
                 <Textarea
                   id="summary-input"
+                  ref={summaryRef}
                   value={summary}
-                  onChange={(e) => setSummary(e.target.value)}
+                  onChange={(e) => { setSummary(e.target.value); clearFieldError("summary"); }}
                   rows={2}
                   placeholder="Short 60-word summary..."
+                  aria-invalid={!!fieldErrors.summary}
                   className="bg-white"
                 />
+                {fieldErrors.summary && <p className="mt-1 text-xs font-medium text-red-500">{fieldErrors.summary}</p>}
               </div>
 
             {/* AI Article Import - minimal section header makes it
@@ -912,7 +977,21 @@ export default function ContentEditorPage() {
               <>
                 <div className="space-y-1.5">
                   <Label>Body <span className="text-red-500">*</span></Label>
-                  <RichEditor ref={editorRef} content={body} onChange={setBody} />
+                  <div
+                    ref={bodyRef}
+                    tabIndex={-1}
+                    className={fieldErrors.body ? "rounded-md outline-none ring-2 ring-destructive" : "outline-none"}
+                  >
+                    <RichEditor
+                      ref={editorRef}
+                      content={body}
+                      onChange={(v) => {
+                        setBody(v);
+                        if (v.replace(/<[^>]+>/g, " ").trim()) clearFieldError("body");
+                      }}
+                    />
+                  </div>
+                  {fieldErrors.body && <p className="mt-1 text-xs font-medium text-red-500">{fieldErrors.body}</p>}
                 </div>
                 {/* Rating + reviewer-byline are movie-review-only inputs. The
                     Source URL is also gated to that category - most ARTICLEs
