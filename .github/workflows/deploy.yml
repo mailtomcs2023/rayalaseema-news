@@ -184,6 +184,11 @@ jobs:
             # Bearer secret for the cron endpoints (/api/cron/horoscope,
             # /api/cron/fetch-precious-metals). Without it those routes 503.
             CRON_SECRET="${{ secrets.CRON_SECRET }}"
+            # Optional Jina Reader key. AI Article Import falls back to
+            # r.jina.ai when a source blocks our datacenter IP (eenadu etc.).
+            # Works without a key (free tier); set this secret to raise the
+            # rate limit. Empty when the secret is unset -> keyless path.
+            JINA_API_KEY="${{ secrets.JINA_API_KEY }}"
             ENV
 
             echo "=== Build apps ==="

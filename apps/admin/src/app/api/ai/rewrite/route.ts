@@ -11,6 +11,9 @@ const ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT;
 const KEY = process.env.AZURE_OPENAI_KEY;
 const DEPLOYMENT = process.env.AZURE_OPENAI_DEPLOYMENT || "gpt51";
 const API_VERSION = process.env.AZURE_OPENAI_API_VERSION || "2024-10-21";
+// Optional Jina Reader key. The fallback works keyless (free tier, rate-
+// limited ~20 rpm); a key raises the limit. Never commit a real value.
+const JINA_KEY = process.env.JINA_API_KEY;
 
 // Standard Telugu - clean, professional, Eenadu-quality
 const NEWS_PROMPT = `You are a professional Telugu newspaper editor. Write clean, standard Telugu news articles.
@@ -49,6 +52,57 @@ DIALECT WORDS (use sparingly):
 నిమ్మలం=ప్రశాంతంగా, చిక్కుబాటు=సంక్లిష్ట స్థితి, దావ=దారి,
 లెక్క=డబ్బు, పైపైమాటలు=hollow promises, సీమ=రాయలసీమ,
 గాంధారి వాన=భారీ వర్షం, మోడం=మొబ్బు, కసురు=అరవడం, రావిడి=గోల`;
+
+// Fallback reader for sources that block our server's direct fetch.
+//
+// Many Indian publishers (eenadu, sakshi, ...) refuse datacenter/cloud IPs at
+// the edge - the prod VM gets a 403/empty/JS-shell while a residential IP (a
+// reporter's laptop in local dev) gets the full article. That's why "it works
+// in local but blocks on the server": SAME code, different egress IP.
+//
+// Jina AI Reader (r.jina.ai) fetches + JS-renders the page from Jina's own
+// (non-blocked) IPs and returns clean content, so the SERVER can read the real
+// article like local does - instead of the model fabricating from the URL slug.
+// We still SSRF-validate the ORIGINAL url before ever asking Jina to read it.
+async function scrapeViaJina(
+  url: string,
+): Promise<{ text: string; ogImage: string | null; ogTitle: string | null }> {
+  try {
+    const headers: Record<string, string> = { Accept: "application/json" };
+    if (JINA_KEY) headers.Authorization = `Bearer ${JINA_KEY}`;
+    const res = await fetch(`https://r.jina.ai/${url}`, {
+      headers,
+      // Jina renders the page, so give it longer than the direct fetch.
+      signal: AbortSignal.timeout(30000),
+    });
+    if (!res.ok) {
+      console.warn("[ai/rewrite] Jina reader HTTP", res.status, "for", url);
+      return { text: "", ogImage: null, ogTitle: null };
+    }
+    const json = await res.json();
+    const d = (json && json.data) || {};
+    const content: string = typeof d.content === "string" ? d.content : "";
+    // Jina returns Markdown. The model wants prose, so strip image/link syntax
+    // and markdown punctuation down to plain text. Capture the first content
+    // image URL for the og:image (Jina embeds them as ![alt](https://...)).
+    const imgMatch = content.match(/!\[[^\]]*\]\((https?:\/\/[^)\s]+)\)/);
+    const text = content
+      .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")        // images
+      .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")        // links -> keep label
+      .replace(/^[>#*\-+|]+/gm, " ")                  // md line markers
+      .replace(/[`*_~]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .substring(0, 18000);
+    const ogTitle: string | null =
+      typeof d.title === "string" && d.title.trim() ? d.title.trim() : null;
+    const ogImage: string | null = imgMatch ? imgMatch[1] : null;
+    return { text, ogImage, ogTitle };
+  } catch (e) {
+    console.error("[ai/rewrite] Jina reader error:", e);
+    return { text: "", ogImage: null, ogTitle: null };
+  }
+}
 
 // Scrape full article + og:image from source URL.
 //
@@ -132,10 +186,29 @@ async function scrapeSource(url: string): Promise<{ text: string; ogImage: strin
       .trim()
       .substring(0, 18000);
 
-    return { text, ogImage, ogTitle };
+    // Direct fetch succeeded and gave us real content - use it (fast path,
+    // no third party). This is the common case for sites that don't block us.
+    if (text.length > 100) {
+      return { text, ogImage, ogTitle };
+    }
+
+    // Direct fetch returned a block page / empty shell (datacenter IP refused,
+    // or the body is JS-rendered). Read it through Jina instead so the server
+    // gets the real article rather than fabricating from the URL slug.
+    console.warn(
+      `[ai/rewrite] direct scrape thin (${text.length} chars) - falling back to Jina reader: ${url}`,
+    );
+    const viaJina = await scrapeViaJina(url);
+    return {
+      text: viaJina.text.length > text.length ? viaJina.text : text,
+      ogImage: ogImage || viaJina.ogImage,
+      ogTitle: ogTitle || viaJina.ogTitle,
+    };
   } catch (e) {
-    console.error("[ai/rewrite] Scrape error:", e);
-    return { text: "", ogImage: null, ogTitle: null };
+    // Direct fetch threw (timeout / connection refused / TLS). The URL already
+    // passed the SSRF check above, so try Jina before giving up.
+    console.error("[ai/rewrite] Scrape error, trying Jina reader:", e);
+    return await scrapeViaJina(url);
   }
 }
 
@@ -208,15 +281,19 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // No-real-source guard. Article-building actions (full-import + translate)
-    // must NOT run on empty content: if the scrape failed (the site blocks our
-    // server - eenadu / paywalled / JS) and the editor only supplied a URL or a
-    // few words, the model FABRICATES a plausible-but-fake article from the URL
-    // slug (the exact bug: body+translate "generated" a Chandrababu story the
-    // server never actually read). Refuse and point them to paste the real
-    // text. Real pasted article text (>= ~40 words) still translates normally;
-    // scrapable sites still work because hasScrapedContent is true.
-    if ((action === "full-import" || action === "translate") && !hasScrapedContent) {
+    // No-real-source guard. EVERY article-building action - including editorial
+    // and dialect, which previously had NO guard and silently invented an
+    // opinion piece from the URL slug - must NOT run on empty content: if the
+    // scrape failed (the site blocks our server - eenadu / paywalled / JS) and
+    // the editor only supplied a URL or a few words, the model FABRICATES a
+    // plausible-but-fake article (the exact bug: body+translate "generated" a
+    // Chandrababu story the server never read; editorial did the same with no
+    // warning). Refuse and point them to paste the real text. Real pasted text
+    // (>= ~40 words) still works; scrapable sites still work (hasScrapedContent).
+    const ARTICLE_BUILD_ACTIONS = new Set([
+      "full-import", "translate", "editorial", "dialect", "expand", "rewrite",
+    ]);
+    if (ARTICLE_BUILD_ACTIONS.has(action) && !hasScrapedContent) {
       const meaningfulWords = (text || "")
         .replace(/https?:\/\/\S+/g, " ")
         .replace(/\b(?:Title|Summary|Body)\s*:/gi, " ")
@@ -285,10 +362,16 @@ ${text}`,
             fromBrief: true,
           });
         }
-        return NextResponse.json({
-          error: "Not enough source text to work from. Type a short brief in the Body (the AI will expand it into a draft), or paste the full article TEXT, then click తెలుగులో రాయండి.",
-          code: "no_source_content",
-        }, { status: 422 });
+        // No source URL and not translate's brief-expander. For editorial /
+        // dialect / expand / rewrite the editor may be authoring from a short
+        // TYPED brief - intentional, so let it fall through to the action's own
+        // prompt below. Only refuse when there's truly no text at all.
+        if (!(text || "").replace(/<[^>]+>/g, " ").trim()) {
+          return NextResponse.json({
+            error: "Not enough source text to work from. Type a short brief in the Body (the AI will expand it into a draft), or paste the full article TEXT, then click తెలుగులో రాయండి.",
+            code: "no_source_content",
+          }, { status: 422 });
+        }
       }
     }
 
