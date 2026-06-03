@@ -24,6 +24,23 @@ export default function DashboardError({
     // Surface the error to whatever observability we have (currently the
     // browser console; Sentry hooks in here in PR 26).
     console.error("[dashboard-error-boundary]", error);
+
+    // ChunkLoadError = this tab was loaded from a PREVIOUS build whose hashed
+    // chunk files were replaced by a deploy, so a lazy-loaded chunk now 404s.
+    // Self-heal by reloading once to pull the current build. The timestamp
+    // guard prevents a reload loop if the chunk is genuinely missing, while
+    // still allowing a fresh reload after a future deploy (>10s later).
+    const isChunkError =
+      error?.name === "ChunkLoadError" ||
+      /ChunkLoadError|Loading chunk|Failed to load chunk/i.test(error?.message || "");
+    if (isChunkError && typeof window !== "undefined") {
+      const KEY = "chunk-reload-ts";
+      const last = Number(sessionStorage.getItem(KEY) || 0);
+      if (Date.now() - last > 10000) {
+        sessionStorage.setItem(KEY, String(Date.now()));
+        window.location.reload();
+      }
+    }
   }, [error]);
 
   return (
