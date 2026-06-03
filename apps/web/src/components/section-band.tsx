@@ -1,6 +1,7 @@
 "use client";
 
 import { articleHref } from "@/lib/article-href";
+import { SectionHeading, sectionIcon } from "@/components/section-heading";
 import Link from "next/link";
 import { useState } from "react";
 import { BandEmpty } from "@/components/band-empty";
@@ -101,9 +102,11 @@ export function SectionBand({
   return (
     <section className="sb">
       <div className="sb-head">
-        <Link href={brandHref} className="sb-brand">
-          {brand} <span aria-hidden="true">›</span>
-        </Link>
+        <SectionHeading
+          title={brand}
+          icon={sectionIcon(brandHref.replace(/^\//, "").split(/[?#]/)[0])}
+          href={brandHref}
+        />
         <nav className="sb-tabs">
           {tabs.map((t, i) =>
             t.panel ? (
