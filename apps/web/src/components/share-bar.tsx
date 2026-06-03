@@ -58,11 +58,14 @@ export function ShareBar({ title, articleUrl, featuredImage: _featuredImage, des
         style={{
           display: "inline-flex", alignItems: "center", gap: 8,
           padding: "10px 20px",
-          background: "var(--brand, #E01B1B)", color: "#fff", border: "none", borderRadius: 999,
+          // Hex literal — some article-shell ancestors weren't propagating
+          // --brand to inline styles, which turned the button white-on-white.
+          background: "#E01B1B", color: "#ffffff",
+          border: "none", borderRadius: 999,
           fontSize: 14, fontWeight: 700, cursor: busy ? "wait" : "pointer",
           boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
         }}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <circle cx="18" cy="5" r="3"/>
           <circle cx="6" cy="12" r="3"/>
           <circle cx="18" cy="19" r="3"/>

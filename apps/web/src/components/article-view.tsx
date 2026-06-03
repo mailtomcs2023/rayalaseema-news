@@ -243,20 +243,45 @@ export function ArticleView({ article, related, trending, siteUrl }: Props) {
               </div>
             ) : article.featuredImage ? (
               <div style={{ marginTop: 20 }}>
-                {/* next/image - AVIF/WebP negotiated automatically, responsive
-                    variants generated based on `sizes`. width/height are
-                    intrinsic-ratio hints (16:9); CSS does the actual display
-                    sizing + maxHeight cap. `priority` because this is the
-                    article hero - Lighthouse penalises LCP otherwise. */}
-                <Image
-                  src={article.featuredImage}
-                  alt={article.title}
-                  width={1200}
-                  height={675}
-                  sizes="(max-width: 768px) 100vw, 800px"
-                  priority
-                  style={{ width: "100%", height: "auto", borderRadius: 8, maxHeight: 500, objectFit: "cover" }}
-                />
+                {/* objectFit:contain so the full image is always shown — no
+                    weird crops when reporters upload portrait phone photos
+                    OR ultra-wide DSLR shots. The dark backdrop fills any
+                    letterbox bars so the cap doesn't look broken. maxHeight
+                    600 prevents very tall portraits from dominating the
+                    article scroll.
+
+                    next/image still negotiates AVIF/WebP and serves the
+                    right variant for the viewport via `sizes` — we just stop
+                    cropping it after delivery. */}
+                <div
+                  style={{
+                    width: "100%",
+                    maxHeight: 600,
+                    background: "#0a0a0a",
+                    borderRadius: 8,
+                    overflow: "hidden",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Image
+                    src={article.featuredImage}
+                    alt={article.title}
+                    width={1200}
+                    height={675}
+                    sizes="(max-width: 768px) 100vw, 800px"
+                    priority
+                    style={{
+                      width: "auto",
+                      height: "auto",
+                      maxWidth: "100%",
+                      maxHeight: 600,
+                      objectFit: "contain",
+                      display: "block",
+                    }}
+                  />
+                </div>
                 {article.imageCaption && <p style={{ fontSize: 12, color: "#888", marginTop: 6, fontStyle: "italic" }}>{article.imageCaption}</p>}
               </div>
             ) : null}
