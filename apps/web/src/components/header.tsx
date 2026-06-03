@@ -270,12 +270,10 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
             </div>
           </div>
 
-          {/* Center: Masthead ad slot. Pre-rendered MastheadAdSlot is
-              passed from the server page — it fetches a DB Ad at position
-              LEADERBOARD first, falls back to AdSense, then to a striped
-              placeholder. Header itself is client-rendered, so the slot
-              has to be sent in via prop. */}
-          <div className="hidden lg:flex flex-1 items-center justify-center min-w-0">
+          {/* Center: Masthead ad slot. md:flex (was lg:flex) so tablets at
+              768px+ also see the leaderboard — they're a meaningful slice
+              of Telugu mobile-to-tablet readers and were getting no ad. */}
+          <div className="hidden md:flex flex-1 items-center justify-center min-w-0">
             {mastheadAdSlot ?? (
               <div className="masthead-ad-slot">
                 <span className="masthead-ad-placeholder">Advertisement</span>

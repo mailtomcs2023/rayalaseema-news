@@ -8,6 +8,7 @@ import { WebVitalsReporter } from "@/components/web-vitals-reporter";
 import { PushNotifications } from "@/components/push-notifications";
 import { DistrictPicker } from "@/components/district-picker";
 import { SWRegister } from "@/components/sw-register";
+import { MobileAnchorSlot } from "@/components/mobile-anchor-slot";
 import "./globals.css";
 import { Geist, Noto_Sans_Telugu, Anek_Telugu } from "next/font/google";
 import { cn } from "@/lib/utils";
@@ -227,6 +228,9 @@ export default async function RootLayout({
         <WebVitalsReporter />
         <PushNotifications />
         <SWRegister />
+        {/* Sticky bottom anchor ad — md:hidden inside the component so it
+            only shows on phones. Highest-revenue mobile slot per IAB data. */}
+        <MobileAnchorSlot config={config as Record<string, string>} />
       </body>
     </html>
   );

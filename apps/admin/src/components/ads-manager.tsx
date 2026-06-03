@@ -17,7 +17,8 @@ type PositionMeta = {
 };
 
 const POSITIONS: PositionMeta[] = [
-  { value: "LEADERBOARD",    label: "Masthead Leaderboard",          w: 728, h: 90,  aspect: 728 / 90,  description: "Top of every page, beside the logo. 728x90 standard banner." },
+  { value: "LEADERBOARD",    label: "Masthead Leaderboard",          w: 728, h: 90,  aspect: 728 / 90,  description: "Top of every page, beside the logo. 728x90 standard banner. (Tablet + desktop.)" },
+  { value: "MOBILE_ANCHOR",  label: "Mobile Sticky Bottom",          w: 320, h: 100, aspect: 320 / 100, description: "Sticks to the bottom of the viewport on phones only. Highest-revenue mobile slot." },
   { value: "BANNER_MID",     label: "Mid-page Banner",                w: 970, h: 250, aspect: 970 / 250, description: "Below the hero slider. High-visibility large rectangle." },
   { value: "HEADER_LEFT",    label: "Header Left Strip",              w: 200, h: 60,  aspect: 200 / 60,  description: "Small slot left of the masthead." },
   { value: "HEADER_RIGHT",   label: "Header Right Strip",             w: 200, h: 60,  aspect: 200 / 60,  description: "Small slot right of the masthead." },
