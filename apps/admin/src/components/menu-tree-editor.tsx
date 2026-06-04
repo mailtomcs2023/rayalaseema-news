@@ -48,6 +48,7 @@ import {
   removeItemById,
   patchItemById,
   findItemDeep,
+  sanitizeTree,
   type Item,
   type Target,
   type FlattenedItem,
@@ -197,7 +198,10 @@ export function MenuTreeEditor(props: Props) {
       const res = await fetch(`/api/menu-builder/menus/${props.location}/draft`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: tree }),
+        // sanitizeTree drops any `children` field off nested items so a tree
+        // touched by drag/reorder (or loaded from older dirty draft data) passes
+        // the strict server schema instead of 400-ing.
+        body: JSON.stringify({ items: sanitizeTree(tree) }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
