@@ -8,7 +8,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
-import { Footer } from "@/components/footer";
+import { SiteFooter } from "@/components/site-footer";
 import { prisma } from "@rayalaseema/db";
 import { getSiteConfig } from "@/lib/db-queries";
 
@@ -241,7 +241,7 @@ export default async function GalleryIndexPage({
         @media (max-width: 420px) { .gi-grid { grid-template-columns: 1fr; } }
       `}</style>
 
-      <Footer config={config} />
+      <SiteFooter config={config} />
     </div>
   );
 }

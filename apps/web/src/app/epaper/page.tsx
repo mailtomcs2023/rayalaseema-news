@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@rayalaseema/db";
 import { SiteHeader } from "@/components/site-header";
-import { Footer } from "@/components/footer";
+import { SiteFooter } from "@/components/site-footer";
 import { EpaperViewer } from "@/components/epaper-viewer";
 import { getSiteConfig } from "@/lib/db-queries";
 
@@ -129,7 +129,7 @@ export default async function EpaperPage({
         )}
       </main>
 
-      <Footer config={config} />
+      <SiteFooter config={config} />
     </div>
   );
 }

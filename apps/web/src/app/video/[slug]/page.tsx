@@ -3,7 +3,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { SiteHeader } from "@/components/site-header";
-import { Footer } from "@/components/footer";
+import { SiteFooter } from "@/components/site-footer";
 import { ShareBar } from "@/components/share-bar";
 import { getVideoBySlug, getSiteConfig, incrementViewCount } from "@/lib/db-queries";
 
@@ -78,7 +78,7 @@ export default async function VideoPage({ params }: { params: Promise<{ slug: st
           <ShareBar title={video.title} articleUrl={`${SITE_URL}/video/${slug}`} />
         </div>
       </main>
-      <Footer config={config} />
+      <SiteFooter config={config} />
     </div>
   );
 }

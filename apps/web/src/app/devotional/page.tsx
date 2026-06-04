@@ -7,7 +7,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { SiteHeader } from "@/components/site-header";
-import { Footer } from "@/components/footer";
+import { SiteFooter } from "@/components/site-footer";
 import { prisma } from "@rayalaseema/db";
 import { articleHref } from "@/lib/article-href";
 import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
@@ -92,7 +92,7 @@ export default async function DevotionalPage() {
           </div>
         )}
       </main>
-      <Footer />
+      <SiteFooter />
     </div>
   );
 }

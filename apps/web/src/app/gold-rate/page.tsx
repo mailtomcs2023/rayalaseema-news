@@ -8,7 +8,7 @@
 
 import type { Metadata } from "next";
 import { SiteHeader } from "@/components/site-header";
-import { Footer } from "@/components/footer";
+import { SiteFooter } from "@/components/site-footer";
 import { TodayGoldRate } from "@/components/today-gold-rate";
 import { prisma } from "@rayalaseema/db";
 import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
@@ -124,7 +124,7 @@ export default async function GoldRatePage() {
           Source: editorial desk · {rows[0]?.source || "-"}.
         </p>
       </main>
-      <Footer />
+      <SiteFooter />
     </div>
   );
 }

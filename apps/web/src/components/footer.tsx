@@ -6,6 +6,11 @@ import { categoryHref, normalizeSectionHref } from "@/lib/category-href";
 
 interface FooterProps {
   config?: Record<string, string>;
+  // Server-fetched FOOTER menu items. When provided (via SiteFooter / a server
+  // page), the columns render in the initial HTML - no empty-then-grow reflow,
+  // so scroll position is preserved on refresh. Omitted on client-only pages,
+  // which fall back to the mount fetch.
+  footerItems?: any[];
 }
 
 // A footer nav column = one top-level menu item (the heading) + its children
@@ -36,16 +41,35 @@ function isExternalHref(href: string) {
   return /^(https?:|mailto:|tel:)/i.test(href) || href.endsWith(".xml");
 }
 
-export function Footer({ config: initialConfig = {} }: FooterProps) {
+// Build the footer columns from raw FOOTER menu items. Only columns that have
+// links render (guards against a flat / un-reshaped menu painting empty stray
+// headings). Shared by the SSR-prop path and the client-fetch fallback.
+function buildFooterColumns(items: any[]): FooterColumn[] {
+  if (!Array.isArray(items)) return [];
+  return items
+    .map((it: any) => ({
+      heading: it.label,
+      links: (Array.isArray(it.children) ? it.children : []).map((c: any) => ({
+        name: c.label,
+        href: footerHref(c.target),
+      })),
+    }))
+    .filter((col) => col.links.length > 0);
+}
+
+export function Footer({ config: initialConfig = {}, footerItems }: FooterProps) {
   const [config, setConfig] = useState(initialConfig);
-  // Admin-published FOOTER menu, fetched on mount. Each top-level item renders
-  // as a column (heading + child links). Empty until the fetch resolves.
-  const [columns, setColumns] = useState<FooterColumn[]>([]);
+  // Admin-published FOOTER menu. SSR'd via `footerItems` when provided (no
+  // reflow on refresh); otherwise fetched on mount.
+  const [columns, setColumns] = useState<FooterColumn[]>(
+    footerItems ? buildFooterColumns(footerItems) : [],
+  );
 
   useEffect(() => {
     if (Object.keys(config).length === 0) {
       fetch("/api/config").then((r) => r.json()).then(setConfig).catch(() => {});
     }
+    if (footerItems) return; // already rendered from server data
     fetch("/api/menu/footer").then((r) => r.json()).then((data) => {
       const items = Array.isArray(data?.items) ? data.items : [];
       if (items.length === 0) return;

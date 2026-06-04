@@ -1,5 +1,5 @@
 import { SiteHeader } from "@/components/site-header";
-import { Footer } from "@/components/footer";
+import { SiteFooter } from "@/components/site-footer";
 
 export const metadata = { title: "సంప్రదించండి | Rayalaseema News" };
 
@@ -42,7 +42,7 @@ export default function ContactPage() {
           </div>
         </div>
       </main>
-      <Footer />
+      <SiteFooter />
     </div>
   );
 }

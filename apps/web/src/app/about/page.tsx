@@ -1,5 +1,5 @@
 import { SiteHeader } from "@/components/site-header";
-import { Footer } from "@/components/footer";
+import { SiteFooter } from "@/components/site-footer";
 
 export const metadata = { title: "మా గురించి | Rayalaseema News" };
 
@@ -25,7 +25,7 @@ export default function AboutPage() {
           <p>Email: <a href="mailto:editor@rayalaseemanews.com">editor@rayalaseemanews.com</a></p>
         </div>
       </main>
-      <Footer />
+      <SiteFooter />
     </div>
   );
 }

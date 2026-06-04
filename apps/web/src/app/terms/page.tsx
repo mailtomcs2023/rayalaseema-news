@@ -1,5 +1,5 @@
 import { SiteHeader } from "@/components/site-header";
-import { Footer } from "@/components/footer";
+import { SiteFooter } from "@/components/site-footer";
 
 export const metadata = { title: "Terms of Service | Rayalaseema News" };
 
@@ -58,7 +58,7 @@ export default function TermsPage() {
           <p>For queries regarding these terms: <a href="mailto:legal@rayalaseemanews.com">legal@rayalaseemanews.com</a></p>
         </div>
       </main>
-      <Footer />
+      <SiteFooter />
     </div>
   );
 }

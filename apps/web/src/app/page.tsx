@@ -6,7 +6,7 @@
 
 import { cookies } from "next/headers";
 import { Header } from "@/components/header";
-import { Footer } from "@/components/footer";
+import { SiteFooter } from "@/components/site-footer";
 import { MastheadAdSlot } from "@/components/masthead-ad-slot";
 import { TemplateRenderer } from "@/components/blocks/template-renderer";
 import { getSiteConfig } from "@/lib/db-queries";
@@ -42,7 +42,7 @@ export default async function HomePage() {
       <main style={{ maxWidth: 1280, margin: "0 auto", padding: "2px 8px 0" }}>
         <TemplateRenderer urlPath="/" ctx={{ districtSlug: myDistrictSlug }} />
       </main>
-      <Footer config={config} />
+      <SiteFooter config={config} />
     </div>
   );
 }

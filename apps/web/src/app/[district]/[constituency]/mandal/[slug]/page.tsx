@@ -24,7 +24,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@rayalaseema/db";
 import { SiteHeader } from "@/components/site-header";
-import { Footer } from "@/components/footer";
+import { SiteFooter } from "@/components/site-footer";
 import { articleHref } from "@/lib/article-href";
 import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 
@@ -203,7 +203,7 @@ export default async function MandalPage({ params }: { params: Params }) {
           </div>
         )}
       </main>
-      <Footer />
+      <SiteFooter />
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { SiteHeader } from "@/components/site-header";
-import { Footer } from "@/components/footer";
+import { SiteFooter } from "@/components/site-footer";
 import { prisma } from "@rayalaseema/db";
 import { articleHref } from "@/lib/article-href";
 import { buildPersonSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
@@ -223,7 +223,7 @@ export default async function AuthorPage({
           </nav>
         )}
       </main>
-      <Footer />
+      <SiteFooter />
     </div>
   );
 }

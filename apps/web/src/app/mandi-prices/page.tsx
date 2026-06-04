@@ -5,7 +5,7 @@
 
 import type { Metadata } from "next";
 import { SiteHeader } from "@/components/site-header";
-import { Footer } from "@/components/footer";
+import { SiteFooter } from "@/components/site-footer";
 import { prisma } from "@rayalaseema/db";
 import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 
@@ -115,7 +115,7 @@ export default async function MandiPricesPage() {
           + agmarknet.gov.in.
         </p>
       </main>
-      <Footer />
+      <SiteFooter />
     </div>
   );
 }

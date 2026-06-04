@@ -4,7 +4,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { SiteHeader } from "@/components/site-header";
-import { Footer } from "@/components/footer";
+import { SiteFooter } from "@/components/site-footer";
 import { ShareBar } from "@/components/share-bar";
 import { getReelBySlug, getSiteConfig, incrementViewCount } from "@/lib/db-queries";
 
@@ -59,7 +59,7 @@ export default async function ReelPage({ params }: { params: Promise<{ slug: str
           <ShareBar title={reel.title} articleUrl={`${SITE_URL}/reel/${slug}`} />
         </div>
       </main>
-      <Footer config={config} />
+      <SiteFooter config={config} />
     </div>
   );
 }

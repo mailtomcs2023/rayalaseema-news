@@ -1,5 +1,5 @@
 import { SiteHeader } from "@/components/site-header";
-import { Footer } from "@/components/footer";
+import { SiteFooter } from "@/components/site-footer";
 
 export const metadata = { title: "Privacy Policy | Rayalaseema News" };
 
@@ -68,7 +68,7 @@ export default function PrivacyPage() {
           <p>For privacy-related queries, contact us at: <a href="mailto:privacy@rayalaseemanews.com">privacy@rayalaseemanews.com</a></p>
         </div>
       </main>
-      <Footer />
+      <SiteFooter />
     </div>
   );
 }

@@ -7,7 +7,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { SiteHeader } from "@/components/site-header";
-import { Footer } from "@/components/footer";
+import { SiteFooter } from "@/components/site-footer";
 import { ShareBar } from "@/components/share-bar";
 import { GalleryFlipbook } from "@/components/gallery-flipbook";
 import { getPhotoGalleryBySlug, getSiteConfig, incrementViewCount } from "@/lib/db-queries";
@@ -89,7 +89,7 @@ export default async function GalleryPage({ params }: { params: Promise<{ slug: 
         @media (max-width: 480px) { .gallery-cols { column-count: 1 !important; } }
       `}</style>
 
-      <Footer config={config} />
+      <SiteFooter config={config} />
     </div>
   );
 }

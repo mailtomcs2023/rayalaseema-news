@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Badge } from "@rayalaseema/ui";
 import { SiteHeader } from "@/components/site-header";
-import { Footer } from "@/components/footer";
+import { SiteFooter } from "@/components/site-footer";
 import { TTSButton } from "@/components/tts-button";
 import { CommentsSection } from "@/components/comments-section";
 import { ScrollShareNudge } from "@/components/scroll-share-nudge";
@@ -345,7 +345,7 @@ export function ArticleView({ article, related, trending, siteUrl }: Props) {
         </div>
       </main>
 
-      <Footer />
+      <SiteFooter />
     </div>
   );
 }

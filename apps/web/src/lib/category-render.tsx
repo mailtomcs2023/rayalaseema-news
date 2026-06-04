@@ -12,7 +12,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@rayalaseema/db";
 import { SiteHeader } from "@/components/site-header";
-import { Footer } from "@/components/footer";
+import { SiteFooter } from "@/components/site-footer";
 import { TemplateRenderer } from "@/components/blocks/template-renderer";
 import { getSiteConfig } from "@/lib/db-queries";
 import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
@@ -75,7 +75,7 @@ export async function CategoryView({ slug }: { slug: string }) {
           ctx={{ categorySlug: slug }}
         />
       </main>
-      <Footer config={config} />
+      <SiteFooter config={config} />
     </div>
   );
 }

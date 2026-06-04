@@ -2,7 +2,7 @@
 
 import type { Metadata } from "next";
 import { SiteHeader } from "@/components/site-header";
-import { Footer } from "@/components/footer";
+import { SiteFooter } from "@/components/site-footer";
 import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 
 const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
@@ -67,7 +67,7 @@ export default function MissionPage() {
           </p>
         </div>
       </main>
-      <Footer />
+      <SiteFooter />
     </div>
   );
 }

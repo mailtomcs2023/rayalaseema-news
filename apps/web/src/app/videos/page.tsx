@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { prisma } from "@rayalaseema/db";
 import { SiteHeader } from "@/components/site-header";
-import { Footer } from "@/components/footer";
+import { SiteFooter } from "@/components/site-footer";
 import { VideoGrid } from "@/components/video-grid";
 import { getSiteConfig } from "@/lib/db-queries";
 
@@ -70,7 +70,7 @@ export default async function VideosPage() {
         </div>
         <VideoGrid videos={items} />
       </main>
-      <Footer config={config} />
+      <SiteFooter config={config} />
     </div>
   );
 }

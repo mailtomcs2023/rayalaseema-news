@@ -11,7 +11,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@rayalaseema/db";
 import { SiteHeader } from "@/components/site-header";
-import { Footer } from "@/components/footer";
+import { SiteFooter } from "@/components/site-footer";
 import { buildBreadcrumbListSchema, buildLiveBlogPostingSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 
 const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
@@ -139,7 +139,7 @@ export default async function ExamResultsPage({ params }: { params: Params }) {
           </section>
         )}
       </main>
-      <Footer />
+      <SiteFooter />
     </div>
   );
 }

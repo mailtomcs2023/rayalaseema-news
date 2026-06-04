@@ -4,7 +4,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { SiteHeader } from "@/components/site-header";
-import { Footer } from "@/components/footer";
+import { SiteFooter } from "@/components/site-footer";
 import { getWebStoryBySlug, getSiteConfig, incrementViewCount } from "@/lib/db-queries";
 
 const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
@@ -97,7 +97,7 @@ export default async function StoryPage({ params }: { params: Promise<{ slug: st
           {slides.length} {slides.length === 1 ? "slide" : "slides"} · swipe to read more
         </p>
       </main>
-      <Footer config={config} />
+      <SiteFooter config={config} />
     </div>
   );
 }

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@rayalaseema/db";
 import { SiteHeader } from "@/components/site-header";
-import { Footer } from "@/components/footer";
+import { SiteFooter } from "@/components/site-footer";
 import { getSiteConfig } from "@/lib/db-queries";
 import type { Metadata } from "next";
 import { articleHref } from "@/lib/article-href";
@@ -117,7 +117,7 @@ export default async function TagPage({ params }: Props) {
           </div>
         )}
       </main>
-      <Footer config={config} />
+      <SiteFooter config={config} />
     </div>
   );
 }
