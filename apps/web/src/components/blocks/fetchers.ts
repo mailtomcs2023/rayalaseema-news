@@ -170,12 +170,29 @@ export async function fetchAboveFold(
         },
         orderBy: { publishedAt: "desc" },
         take: 4,
-        select: { id: true, title: true, slug: true },
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          // Used by the district-grid lead card. Without these the UI was
+          // falling through to /logo-icon.png placeholders even when the
+          // article had a real featured image saved on Content.
+          featuredImage: true,
+          // articleHref() needs constituency.district.slug for the
+          // /[district]/[constituency]/<slug>-<id8> canonical URL.
+          constituency: { select: { slug: true, district: { select: { slug: true } } } },
+        },
       });
       return {
         name: d.name,
         slug: d.slug,
-        articles: arts.map((a) => ({ id: a.id, title: a.title, slug: a.slug || "" })),
+        articles: arts.map((a) => ({
+          id: a.id,
+          title: a.title,
+          slug: a.slug || "",
+          featuredImage: a.featuredImage,
+          constituency: a.constituency,
+        })),
       };
     }),
   );
@@ -539,7 +556,7 @@ export async function fetchPhotoGallery(
     where: { type: "PHOTO_GALLERY", status: "PUBLISHED" },
     orderBy: { publishedAt: "desc" },
     take: config.count,
-    select: { id: true, title: true, featuredImage: true, payload: true },
+    select: { id: true, slug: true, title: true, featuredImage: true, payload: true },
   });
   return {
     photos: rows.map((r) => {
@@ -547,6 +564,7 @@ export async function fetchPhotoGallery(
       const photos = Array.isArray(p.photos) ? (p.photos as unknown[]) : [];
       return {
         id: r.id,
+        slug: r.slug,
         title: r.title,
         image: r.featuredImage || "",
         count: photos.length,

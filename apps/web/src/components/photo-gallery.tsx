@@ -3,6 +3,7 @@ import { SectionShell } from "./section-shell";
 
 interface Photo {
   id: string;
+  slug: string;
   title: string;
   image: string;
   count: number;
@@ -16,7 +17,7 @@ export function PhotoGallery({ photos }: { photos: Photo[] }) {
     <SectionShell title="ఫోటో గ్యాలరీ" moreHref="/gallery">
       <div className="pg-grid">
         {photos.slice(0, 4).map((photo) => (
-          <Link key={photo.id} href="/gallery" className="pg-item">
+          <Link key={photo.id} href={`/gallery/${photo.slug}`} className="pg-item">
             <div className="pg-img">
               <img src={photo.image} alt={photo.title} loading="lazy" />
               <div className="pg-shade" />

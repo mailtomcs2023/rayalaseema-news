@@ -11,6 +11,7 @@
 import { prisma } from "@rayalaseema/db";
 import { buildSlugFromTitle, uniqueSlug } from "./slug";
 import { uploadImageFromUrlWithMeta } from "./blob";
+import { queueMirror } from "./sharepoint";
 import { runPipeline } from "./ai/pipeline";
 import { AIContentFilterError } from "./ai/client";
 
@@ -110,9 +111,10 @@ export async function importOneArticle(
 
   let finalSlug = slug;
   let created = false;
+  let createdId: string | null = null;
   for (let attempt = 0; attempt < 3 && !created; attempt++) {
     try {
-      await prisma.content.create({
+      const row = await prisma.content.create({
         data: {
           type: "ARTICLE",
           title: translated.title,
@@ -129,8 +131,10 @@ export async function importOneArticle(
           publishedAt: null,
           constituencyId: constituencyId || null,
         },
+        select: { id: true },
       });
       created = true;
+      createdId = row.id;
     } catch (e: any) {
       const msg = String(e?.message || "");
       if (msg.includes("Unique constraint") && msg.includes("slug")) {
@@ -144,6 +148,18 @@ export async function importOneArticle(
     }
   }
   if (created && article.link) existingSourceSet.add(article.link);
+  // Mirror the featured image into SharePoint once we know the Content
+  // row's id (the SP filename depends on the article slug). Fire-and-
+  // forget - never blocks the bulk import path.
+  if (created && createdId && hostedImage) {
+    void queueMirror({
+      blobUrl: hostedImage,
+      contentId: createdId,
+      role: "cover",
+      mimeType: "image/webp",
+      sizeBytes: 0,
+    }).catch((e) => console.warn("[news-import] sp mirror enqueue failed:", e));
+  }
   return created;
 }
 

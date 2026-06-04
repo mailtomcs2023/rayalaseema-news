@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 import { uploadBuffer, blobConfigured } from "@/lib/blob";
 import { processImageBuffer } from "@/lib/image-process";
+import { queueMirror, type MirrorRole } from "@/lib/sharepoint";
+
+const VALID_ROLES = new Set<MirrorRole>(["cover", "body", "gallery", "thumb", "video"]);
 
 const EXT_BY_TYPE: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -52,6 +55,22 @@ export async function POST(req: NextRequest) {
       }
     }
     const url = await uploadBuffer(outBuf, outExt, outCt);
+
+    // Mirror to SharePoint (fire-and-forget). Pulls optional contentId +
+    // role from the form so the file lands under the right article +
+    // slug-prefixed filename. Skipped silently if SP env not configured.
+    const contentId = (formData.get("contentId") as string | null) || null;
+    const roleRaw = (formData.get("role") as string | null) || "body";
+    const role: MirrorRole = VALID_ROLES.has(roleRaw as MirrorRole)
+      ? (roleRaw as MirrorRole)
+      : "body";
+    void queueMirror({
+      blobUrl: url,
+      contentId,
+      role,
+      mimeType: outCt,
+      sizeBytes: outBuf.length,
+    }).catch((e) => console.warn("[upload] sp mirror enqueue failed:", e));
 
     // Low-resolution warning (don't block) - a small image looks blurry shown
     // large. 800px is the floor for a featured/hero image.
