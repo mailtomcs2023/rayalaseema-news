@@ -3,6 +3,7 @@ import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError } from "@/lib/api-utils";
 import { buildSlugFromTitle, sanitizeSlug } from "@/lib/slug";
 import { uploadImageFromUrl } from "@/lib/blob";
+import { queueMirror } from "@/lib/sharepoint";
 
 const NEWSDATA_API_KEY = process.env.NEWSDATA_API_KEY;
 const PTI_CENTERCODE = process.env.PTI_CENTERCODE;
@@ -375,6 +376,18 @@ export async function POST(req: NextRequest) {
         categoryId,
       },
     });
+
+    // Mirror the featured image into SharePoint with the new article's
+    // slug + district context. Fire-and-forget.
+    if (hostedImage) {
+      void queueMirror({
+        blobUrl: hostedImage,
+        contentId: content.id,
+        role: "cover",
+        mimeType: "image/webp",
+        sizeBytes: 0,
+      }).catch((e) => console.warn("[fetch-news] sp mirror enqueue failed:", e));
+    }
 
     return NextResponse.json(content, { status: 201 });
   } catch (error: any) {

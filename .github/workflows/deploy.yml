@@ -186,6 +186,16 @@ jobs:
             # key encrypt() throws and the save 500s. 32-byte base64 - rotate
             # via the GitHub secret, never commit a real value.
             KYC_ENCRYPTION_KEY="${{ secrets.KYC_ENCRYPTION_KEY }}"
+            # SharePoint mirror - blob uploads also mirror to
+            # repress.sharepoint.com/sites/rayalaseemaexpress. App with
+            # Sites.Selected permission, write role granted only on
+            # this site. Two libraries: Media-Library + Video-Social.
+            SP_TENANT_ID="${{ secrets.SP_TENANT_ID }}"
+            SP_CLIENT_ID="${{ secrets.SP_CLIENT_ID }}"
+            SP_CLIENT_SECRET="${{ secrets.SP_CLIENT_SECRET }}"
+            SP_SITE_ID="${{ secrets.SP_SITE_ID }}"
+            SP_MEDIA_DRIVE_ID="${{ secrets.SP_MEDIA_DRIVE_ID }}"
+            SP_VIDEO_DRIVE_ID="${{ secrets.SP_VIDEO_DRIVE_ID }}"
             # Bearer secret for the cron endpoints (/api/cron/horoscope,
             # /api/cron/fetch-precious-metals). Without it those routes 503.
             CRON_SECRET="${{ secrets.CRON_SECRET }}"

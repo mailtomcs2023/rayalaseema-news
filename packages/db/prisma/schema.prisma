@@ -10,35 +10,35 @@ datasource db {
 // ============ USER & AUTH ============
 
 enum Role {
-  ADMIN           // Full access - everything
-  EDITOR          // Edit all categories, publish, breaking news
-  SUB_EDITOR      // Edit assigned categories, review articles, can't publish
-  REPORTER        // Write articles, upload photos, submit for review only
-  USER            // Non-staff account - public read access only, no admin app
+  ADMIN // Full access - everything
+  EDITOR // Edit all categories, publish, breaking news
+  SUB_EDITOR // Edit assigned categories, review articles, can't publish
+  REPORTER // Write articles, upload photos, submit for review only
+  USER // Non-staff account - public read access only, no admin app
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String
-  passwordHash  String
+  id                 String   @id @default(cuid())
+  email              String   @unique
+  name               String
+  passwordHash       String
   // When true, the user MUST set a new password the next time they sign
   // in - the login flow blocks normal access until they pick one. Set by
   // admin "Reset password → require change on next sign-in".
-  mustChangePassword Boolean @default(false)
-  role          Role      @default(REPORTER)
-  avatar        String?
-  bio           String?
-  phone         String?
-  active        Boolean   @default(true)
+  mustChangePassword Boolean  @default(false)
+  role               Role     @default(REPORTER)
+  avatar             String?
+  bio                String?
+  phone              String?
+  active             Boolean  @default(true)
   // Public 6-digit login code, mintable instead of (or alongside) the email.
   // Stored as a string so leading zeros are preserved ("041729"). Nullable
   // until the next deploy's backfill script runs over legacy rows. After
   // that everyone has one; new accounts get one in the same transaction as
   // the user create.
-  userCode      String?   @unique
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  userCode           String?  @unique
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   // Spec #4 A2 (#193) - Author profile / E-E-A-T fields. Populated for active
   // editorial users; REPORTER role typically lives in ReporterProfile and
@@ -59,7 +59,7 @@ model User {
   // Category assignments (for SUB_EDITOR role)
   assignedCategories UserCategory[]
 
-  media         Media[]
+  media Media[]
 
   // ePaper edition snapshots created by this user
   epaperSnapshots EpaperEditionSnapshot[]
@@ -67,7 +67,7 @@ model User {
   epaperComments  EpaperComment[]
 
   // Audit log entries (actions performed by this user)
-  auditLogs        AuditLog[]
+  auditLogs AuditLog[]
 
   // Reporter profile (for REPORTER role). DB table name retained as
   // `journalist_profiles` via @@map on the model so this is a TS-only
@@ -75,19 +75,19 @@ model User {
   reporterProfile ReporterProfile?
 
   // Unified Content (Spec #1) - Article-side back-relations dropped in A1C.
-  contents          Content[]         @relation("ContentAuthor")
-  contentRevisions  ContentRevision[]
-  contentPayments   ContentPayment[]  @relation("ContentJournalist")
+  contents         Content[]         @relation("ContentAuthor")
+  contentRevisions ContentRevision[]
+  contentPayments  ContentPayment[]  @relation("ContentJournalist")
   // Stage 2 - articles auto-assigned to this sub-editor's review queue.
-  assignedReviews   Content[]         @relation("ContentAssignedReviewer")
+  assignedReviews  Content[]         @relation("ContentAssignedReviewer")
 
   // Page Builder (Spec #2) - back-relations
-  templates         Template[]         @relation("TemplateCreator")
-  templateVersions  TemplateVersion[]
-  composites        CompositeBlock[]   @relation("CompositeCreator")
+  templates        Template[]        @relation("TemplateCreator")
+  templateVersions TemplateVersion[]
+  composites       CompositeBlock[]  @relation("CompositeCreator")
 
   // Menu Builder (Spec #3) - back-relation
-  menuVersions      MenuVersion[]      @relation("MenuVersionEditor")
+  menuVersions MenuVersion[] @relation("MenuVersionEditor")
 
   // Profile-change requests this user has reviewed (admin role)
   reviewedProfileUpdateRequests ProfileUpdateRequest[] @relation("ProfileUpdateRequestReviewer")
@@ -125,27 +125,27 @@ model UserCategory {
 // ============ AUDIT LOG (immutable, append-only - compliance + accountability) ============
 
 model AuditLog {
-  id          String   @id @default(cuid())
+  id String @id @default(cuid())
 
   // Actor - null if system / cron / unauthenticated action
-  actorId     String?
-  actor       User?    @relation(fields: [actorId], references: [id])
-  actorEmail  String?  // denormalized (kept even if user deleted)
-  actorRole   String?  // "ADMIN", "CHIEF_SUB_EDITOR", etc. at time of action
+  actorId    String?
+  actor      User?   @relation(fields: [actorId], references: [id])
+  actorEmail String? // denormalized (kept even if user deleted)
+  actorRole  String? // "ADMIN", "CHIEF_SUB_EDITOR", etc. at time of action
 
   // What happened
-  action      String   // "article.create", "article.update", "article.delete", "article.publish",
-                       // "article.restore", "user.create", "user.update", "user.role.change",
-                       // "comment.approve", "settings.update", "auth.login", "auth.logout", "cron.publish-scheduled"
-  resource    String?  // "article" | "user" | "category" | "comment" | "settings" | ...
-  resourceId  String?  // ID of affected resource (nullable for global actions)
+  action     String // "article.create", "article.update", "article.delete", "article.publish",
+  // "article.restore", "user.create", "user.update", "user.role.change",
+  // "comment.approve", "settings.update", "auth.login", "auth.logout", "cron.publish-scheduled"
+  resource   String? // "article" | "user" | "category" | "comment" | "settings" | ...
+  resourceId String? // ID of affected resource (nullable for global actions)
 
   // Optional structured payload - changes summary, IP, etc.
-  meta        Json?
-  ipAddress   String?
-  userAgent   String?
+  meta      Json?
+  ipAddress String?
+  userAgent String?
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([actorId, createdAt])
   @@index([resource, resourceId])
@@ -160,14 +160,14 @@ model AuditLog {
 // ============ CONTENT ============
 
 enum ArticleStatus {
-  DRAFT        // Reporter working on it
-  SUBMITTED    // Reporter submitted for review
-  IN_REVIEW    // Sub-editor is reviewing
-  APPROVED     // Chief sub-editor approved, ready to publish
-  SCHEDULED    // Approved + queued for auto-publish at scheduledAt
-  PUBLISHED    // Live on website
-  REJECTED     // Sent back to reporter with notes
-  ARCHIVED     // Removed from site
+  DRAFT // Reporter working on it
+  SUBMITTED // Reporter submitted for review
+  IN_REVIEW // Sub-editor is reviewing
+  APPROVED // Chief sub-editor approved, ready to publish
+  SCHEDULED // Approved + queued for auto-publish at scheduledAt
+  PUBLISHED // Live on website
+  REJECTED // Sent back to reporter with notes
+  ARCHIVED // Removed from site
 }
 
 enum Language {
@@ -177,29 +177,29 @@ enum Language {
 
 // Spec #1 A1C (#189) - model Article dropped. See Content table for the unified replacement.
 model Category {
-  id          String     @id @default(cuid())
+  id          String  @id @default(cuid())
   name        String
-  nameEn      String?    // English name
-  slug        String     @unique
+  nameEn      String? // English name
+  slug        String  @unique
   description String?
-  color       String?    @default("#DC2626")
-  sortOrder   Int        @default(0)
-  active      Boolean    @default(true)
+  color       String? @default("#DC2626")
+  sortOrder   Int     @default(0)
+  active      Boolean @default(true)
 
-  parentId    String?
-  parent      Category?  @relation("CategoryTree", fields: [parentId], references: [id])
-  children    Category[] @relation("CategoryTree")
+  parentId String?
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryTree")
 
-  contents    Content[]
+  contents            Content[]
   // Cross-listed contents (Content rows whose PRIMARY category isn't this
   // one, but which the editor opted in to "Also list under" this category).
   crossListedContents ContentCategory[]
-  assignedUsers UserCategory[]
-  desk        Desk?      // back-relation: TOPICAL desk auto-derived from category
-  tagSuggestions CategoryTagSuggestion[]
+  assignedUsers       UserCategory[]
+  desk                Desk? // back-relation: TOPICAL desk auto-derived from category
+  tagSuggestions      CategoryTagSuggestion[]
 
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("categories")
 }
@@ -210,8 +210,8 @@ model Category {
 // tags from past ContentTag history get merged in at query time, so this
 // table only stores the cold-start seed, not usage stats.
 enum TagSuggestionSource {
-  CURATED      // Editorial seed - written by the seed script or admin UI
-  MANUAL       // Editor pinned this tag manually via admin UI
+  CURATED // Editorial seed - written by the seed script or admin UI
+  MANUAL // Editor pinned this tag manually via admin UI
 }
 
 model CategoryTagSuggestion {
@@ -246,11 +246,11 @@ model ContentCategory {
 }
 
 model Tag {
-  id              String                  @id @default(cuid())
-  name            String                  @unique
-  slug            String                  @unique
-  contentTags     ContentTag[]
-  categorySeeds   CategoryTagSuggestion[]
+  id            String                  @id @default(cuid())
+  name          String                  @unique
+  slug          String                  @unique
+  contentTags   ContentTag[]
+  categorySeeds CategoryTagSuggestion[]
 
   @@map("tags")
 }
@@ -266,17 +266,17 @@ enum MediaType {
 }
 
 model Media {
-  id          String    @id @default(cuid())
-  url         String
-  filename    String
-  altText     String?
-  type        MediaType @default(IMAGE)
-  size        Int       // bytes
-  width       Int?
-  height      Int?
+  id           String    @id @default(cuid())
+  url          String
+  filename     String
+  altText      String?
+  type         MediaType @default(IMAGE)
+  size         Int // bytes
+  width        Int?
+  height       Int?
   uploadedById String
-  uploadedBy  User      @relation(fields: [uploadedById], references: [id])
-  createdAt   DateTime  @default(now())
+  uploadedBy   User      @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime  @default(now())
 
   @@map("media")
 }
@@ -289,7 +289,7 @@ model Media {
 model EpaperSpellIgnore {
   id        String   @id @default(cuid())
   token     String
-  deskId    String?  // null = global ignore
+  deskId    String? // null = global ignore
   note      String?
   addedById String?
   createdAt DateTime @default(now())
@@ -303,14 +303,14 @@ model EpaperSpellIgnore {
 /// article pages. Curated by editorial team - small enough to ship the
 /// whole list to the client on article render.
 model DialectGloss {
-  id              String   @id @default(cuid())
-  token           String   @unique
-  standardTelugu  String
-  region          String?  // "rayalaseema" | "ananthapuramu" | "chittoor" - narrowing optional
-  note            String?
-  addedById       String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String   @id @default(cuid())
+  token          String   @unique
+  standardTelugu String
+  region         String? // "rayalaseema" | "ananthapuramu" | "chittoor" - narrowing optional
+  note           String?
+  addedById      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@map("dialect_glosses")
 }
@@ -320,17 +320,17 @@ model DialectGloss {
 /// After a settle window the winner is auto-promoted to Article.title.
 // Spec #1 A1B (#188) - column renamed articleId -> contentId.
 model HeadlineTest {
-  id           String   @id @default(cuid())
-  contentId    String
-  variantA     String
-  variantB     String
-  sentAt       DateTime?
-  clicksA      Int      @default(0)
-  clicksB      Int      @default(0)
+  id            String    @id @default(cuid())
+  contentId     String
+  variantA      String
+  variantB      String
+  sentAt        DateTime?
+  clicksA       Int       @default(0)
+  clicksB       Int       @default(0)
   winnerVariant String? // "A" | "B" | null while running
-  winnerAt     DateTime?
-  createdById  String?
-  createdAt    DateTime @default(now())
+  winnerAt      DateTime?
+  createdById   String?
+  createdAt     DateTime  @default(now())
 
   @@index([contentId])
   @@index([winnerVariant])
@@ -343,7 +343,7 @@ model HeadlineTest {
 /// Logged-in readers don't get tracked here (subscription bypass).
 model ArticleReadEvent {
   id          String   @id @default(cuid())
-  fingerprint String   // SHA-256 of UA + IP-hash + lang
+  fingerprint String // SHA-256 of UA + IP-hash + lang
   articleSlug String
   createdAt   DateTime @default(now())
 
@@ -356,18 +356,18 @@ model ArticleReadEvent {
 /// dashboard (P50/P95/P99 + success rate) and lets us see retries + errors
 /// without scraping app logs.
 model EpaperRenderJob {
-  id          String   @id @default(cuid())
-  editionId   String
+  id            String    @id @default(cuid())
+  editionId     String
   triggeredById String?
-  status      String   // "queued" | "running" | "succeeded" | "failed"
-  startedAt   DateTime?
-  completedAt DateTime?
-  durationMs  Int?
-  retries     Int      @default(0)
-  pageCount   Int?
-  pdfSizeBytes Int?
-  lastError   String?
-  createdAt   DateTime @default(now())
+  status        String // "queued" | "running" | "succeeded" | "failed"
+  startedAt     DateTime?
+  completedAt   DateTime?
+  durationMs    Int?
+  retries       Int       @default(0)
+  pageCount     Int?
+  pdfSizeBytes  Int?
+  lastError     String?
+  createdAt     DateTime  @default(now())
 
   @@index([editionId])
   @@index([status])
@@ -376,54 +376,54 @@ model EpaperRenderJob {
 }
 
 enum EpaperWorkflowState {
-  DRAFT             // operator is laying out
-  SUB_REVIEW        // sub-editor needs to read it
-  CHIEF_REVIEW      // chief editor needs final say
-  APPROVED          // ready to publish; render + push runs
-  PUBLISHED         // out to readers
-  REJECTED          // sent back with a note
-  KILLED            // retracted after publish - hidden from /epaper, logged on /epaper/corrections
+  DRAFT // operator is laying out
+  SUB_REVIEW // sub-editor needs to read it
+  CHIEF_REVIEW // chief editor needs final say
+  APPROVED // ready to publish; render + push runs
+  PUBLISHED // out to readers
+  REJECTED // sent back with a note
+  KILLED // retracted after publish - hidden from /epaper, logged on /epaper/corrections
 }
 
 model EpaperEdition {
-  id          String   @id @default(cuid())
-  date        DateTime @db.Date
-  edition     String   @default("main") // "main" or a district slug - one paper per district
-  title       String?
-  pdfUrl      String?  // combined PDF - set once generation finishes
-  thumbnailUrl String?
-  pageCount   Int      @default(0)
-  layout      Json?    // editable plan - [{label,isFront,slots:{lead,majors[],secondary[],briefs[]}}]
-  status      String   @default("pending") // RENDER lifecycle: pending | draft | generating | ready | failed
-  workflowState EpaperWorkflowState @default(DRAFT) // EDITORIAL approval workflow
+  id            String                  @id @default(cuid())
+  date          DateTime                @db.Date
+  edition       String                  @default("main") // "main" or a district slug - one paper per district
+  title         String?
+  pdfUrl        String? // combined PDF - set once generation finishes
+  thumbnailUrl  String?
+  pageCount     Int                     @default(0)
+  layout        Json? // editable plan - [{label,isFront,slots:{lead,majors[],secondary[],briefs[]}}]
+  status        String                  @default("pending") // RENDER lifecycle: pending | draft | generating | ready | failed
+  workflowState EpaperWorkflowState     @default(DRAFT) // EDITORIAL approval workflow
   workflowNote  String? // last transition's note (rejection reason etc.)
-  active      Boolean  @default(true)
+  active        Boolean                 @default(true)
   // Retraction / kill switch (#88) - when set, edition is hidden from readers
   // but persists in DB + appears on /epaper/corrections with the kill reason.
-  killedAt    DateTime?
-  killedReason String?
-  killedById  String?
+  killedAt      DateTime?
+  killedReason  String?
+  killedById    String?
   // Masthead bibliographic fields (Eenadu-style): సంపుటి / సంచిక / price.
   // Optional - defaults applied at render time if null. Set per-edition by
   // operator or autoincremented from a known epoch.
-  volumeNumber Int?
-  issueNumber  Int?
-  priceInPaise Int?    @default(650)  // Rs 6.50 default
+  volumeNumber  Int?
+  issueNumber   Int?
+  priceInPaise  Int?                    @default(650) // Rs 6.50 default
   // v2 editor (#108): per-edition PageGeometry override (defaults apply if
   // null). Lets ops run a special-format edition (e.g. tabloid Sunday) w/o
   // re-templating the whole system.
-  pageGeometry Json?
+  pageGeometry  Json?
   // v2 editor (#108): which ad asset fills each masthead slot for THIS edition.
   // Keyed by slot name from the master block (e.g. { "ad-left": "<assetId>", "ad-right": "<assetId>" }).
   // Render falls back to auto-pick from EpaperAdAsset library when a slot key
   // is missing or the asset has been deactivated.
-  mastheadAds  Json?
-  pages       EpaperPage[]
-  ads         EpaperAd[]
-  snapshots   EpaperEditionSnapshot[]
-  comments    EpaperComment[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  mastheadAds   Json?
+  pages         EpaperPage[]
+  ads           EpaperAd[]
+  snapshots     EpaperEditionSnapshot[]
+  comments      EpaperComment[]
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
 
   @@unique([date, edition])
   @@index([date])
@@ -431,14 +431,14 @@ model EpaperEdition {
 }
 
 model EpaperAd {
-  id          String         @id @default(cuid())
-  editionId   String
-  edition     EpaperEdition  @relation(fields: [editionId], references: [id], onDelete: Cascade)
-  pageNumber  Int            // which page this ad sits on
-  slot        String         // "top" | "bottom"
-  imageUrl    String         // ad creative on Azure Blob
-  linkUrl     String?
-  createdAt   DateTime       @default(now())
+  id         String        @id @default(cuid())
+  editionId  String
+  edition    EpaperEdition @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  pageNumber Int // which page this ad sits on
+  slot       String // "top" | "bottom"
+  imageUrl   String // ad creative on Azure Blob
+  linkUrl    String?
+  createdAt  DateTime      @default(now())
 
   @@index([editionId])
   @@map("epaper_ads")
@@ -458,22 +458,22 @@ enum EpaperImageAssetCategory {
 /// by `assetId`. Separate from EpaperAdAsset because ads carry pricing /
 /// advertiser metadata that doesn't apply to a cartoon.
 model EpaperImageAsset {
-  id          String                       @id @default(cuid())
-  category    EpaperImageAssetCategory     @default(OTHER)
-  title       String                       // operator label, e.g. "Saturday cartoon - markets"
-  imageUrl    String                       // Azure Blob URL
-  caption     String?                      // optional caption rendered under the image in some templates
-  tags        String?                      // comma-separated for quick text search
-  active      Boolean                      @default(true)
+  id               String                   @id @default(cuid())
+  category         EpaperImageAssetCategory @default(OTHER)
+  title            String // operator label, e.g. "Saturday cartoon - markets"
+  imageUrl         String // Azure Blob URL
+  caption          String? // optional caption rendered under the image in some templates
+  tags             String? // comma-separated for quick text search
+  active           Boolean                  @default(true)
   // Image rights tracking (#98) - required before render-time use so we
   // never publish an unlicensed photo.
-  licenseType String?                      // "STAFF" | "AGENCY" | "WIRE" | "UGC" | "CC0" | "CC-BY" | "PURCHASED"
-  licenseSource String?                    // "PTI" | "Reuters" | reporter name | URL
+  licenseType      String? // "STAFF" | "AGENCY" | "WIRE" | "UGC" | "CC0" | "CC-BY" | "PURCHASED"
+  licenseSource    String? // "PTI" | "Reuters" | reporter name | URL
   licenseExpiresAt DateTime?
-  copyrightHolder String?
-  attributionText String?                  // rendered under image as required
-  createdAt   DateTime                     @default(now())
-  updatedAt   DateTime                     @updatedAt
+  copyrightHolder  String?
+  attributionText  String? // rendered under image as required
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
 
   @@index([category, active])
   @@index([licenseType])
@@ -484,29 +484,29 @@ model EpaperImageAsset {
 /// references one of these by id. Separate from per-edition placement so the
 /// same creative can run across multiple editions without re-upload.
 model EpaperAdAsset {
-  id          String   @id @default(cuid())
-  advertiser  String   // e.g. "Heritage Foods", for ops + reporting
-  imageUrl    String   // Azure Blob URL
-  linkUrl     String?  // click-through (rendered as <a href>)
-  validFrom   DateTime?
-  validTo     DateTime?
-  active      Boolean  @default(true)
-  price       Int?     // monthly run price in paise; informational
-  notes       String?  @db.Text
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String    @id @default(cuid())
+  advertiser String // e.g. "Heritage Foods", for ops + reporting
+  imageUrl   String // Azure Blob URL
+  linkUrl    String? // click-through (rendered as <a href>)
+  validFrom  DateTime?
+  validTo    DateTime?
+  active     Boolean   @default(true)
+  price      Int? // monthly run price in paise; informational
+  notes      String?   @db.Text
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   @@index([active, validFrom, validTo])
   @@map("epaper_ad_assets")
 }
 
 model EpaperPage {
-  id          String         @id @default(cuid())
-  editionId   String
-  edition     EpaperEdition  @relation(fields: [editionId], references: [id], onDelete: Cascade)
-  pageNumber  Int
-  label       String         // "ముఖ్యాంశాలు", "రాజకీయం", ...
-  templateSlug String?       // → EpaperTemplate.slug - which template this page was built from
+  id           String          @id @default(cuid())
+  editionId    String
+  edition      EpaperEdition   @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  pageNumber   Int
+  label        String // "ముఖ్యాంశాలు", "రాజకీయం", ...
+  templateSlug String? // → EpaperTemplate.slug - which template this page was built from
   // Per-page WYSIWYG layout. v2 editor (#108) shape:
   //   { coordSystem: "grid-v1" | "mm-v2",
   //     masterSlug?: string,         // master to inherit (overrides template.masterSlug per-page)
@@ -521,22 +521,22 @@ model EpaperPage {
   //     }] }
   // Legacy layouts (no coordSystem field) treated as grid-v1; auto-migrated
   // to mm-v2 on first save via migrateLegacyLayout().
-  layout      Json?
-  imageUrl    String         // rendered broadsheet page PNG on Azure Blob (legacy raster path)
-  pdfUrl      String?        // per-page vector PDF (new v2 render path)
-  hotspots    Json?          // [{slug,x,y,w,h}] - legacy raster overlay click regions
-  comments    EpaperComment[]
+  layout       Json?
+  imageUrl     String // rendered broadsheet page PNG on Azure Blob (legacy raster path)
+  pdfUrl       String? // per-page vector PDF (new v2 render path)
+  hotspots     Json? // [{slug,x,y,w,h}] - legacy raster overlay click regions
+  comments     EpaperComment[]
   // Optimistic concurrency token. Bumps on every successful PATCH; client must
   // send the version it last fetched so two editors can't silently overwrite
   // each other. Server returns 409 if expected != current.
-  version     Int            @default(1)
+  version      Int             @default(1)
   // OCR'd text for legacy/uploaded PDFs that don't carry article-DB
   // references (#89). Populated by background OCR worker (Tesseract tel+eng);
   // exposed via /api/epaper/search alongside live-article hits.
-  ocrText     String?
-  ocrAt       DateTime?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @default(now()) @updatedAt
+  ocrText      String?
+  ocrAt        DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @default(now()) @updatedAt
 
   @@unique([editionId, pageNumber])
   @@index([editionId])
@@ -551,9 +551,9 @@ model EpaperPageView {
   id          String   @id @default(cuid())
   editionId   String
   pageNumber  Int
-  articleSlug String?  // when set, this row records a hotspot click on that article
+  articleSlug String? // when set, this row records a hotspot click on that article
   referrer    String?
-  ipHash      String?  // sha256(ip + UA) - for unique-visitor approximations w/o storing PII
+  ipHash      String? // sha256(ip + UA) - for unique-visitor approximations w/o storing PII
   createdAt   DateTime @default(now())
 
   @@index([editionId, createdAt])
@@ -566,18 +566,18 @@ model EpaperPageView {
 /// `blockId` is set) or to a whole page (when `blockId` is null). Used by the
 /// chief editor to leave notes like "swap this lead" without WhatsApp ping.
 model EpaperComment {
-  id          String         @id @default(cuid())
-  editionId   String
-  edition     EpaperEdition  @relation(fields: [editionId], references: [id], onDelete: Cascade)
-  pageId      String
-  page        EpaperPage     @relation(fields: [pageId], references: [id], onDelete: Cascade)
-  blockId     String?        // null = applies to whole page; set = applies to that block
-  text        String         @db.Text
-  resolved    Boolean        @default(false)
-  authorId    String
-  author      User           @relation(fields: [authorId], references: [id])
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id        String        @id @default(cuid())
+  editionId String
+  edition   EpaperEdition @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  pageId    String
+  page      EpaperPage    @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  blockId   String? // null = applies to whole page; set = applies to that block
+  text      String        @db.Text
+  resolved  Boolean       @default(false)
+  authorId  String
+  author    User          @relation(fields: [authorId], references: [id])
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 
   @@index([editionId, resolved])
   @@index([pageId])
@@ -590,52 +590,52 @@ model EpaperComment {
 /// the current state first, then overwrites all pages from the chosen
 /// snapshot - so rollback is itself undoable.
 model EpaperEditionSnapshot {
-  id          String         @id @default(cuid())
+  id          String        @id @default(cuid())
   editionId   String
-  edition     EpaperEdition  @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  edition     EpaperEdition @relation(fields: [editionId], references: [id], onDelete: Cascade)
   // [{ pageNumber, label, templateSlug, layout, version }] - one entry per
   // EpaperPage at the moment of capture.
   pages       Json
-  reason      String         // "pre-render" | "manual" | "pre-regenerate" | "pre-restore"
-  note        String?        // operator-supplied label, e.g. "before homepage swap"
+  reason      String // "pre-render" | "manual" | "pre-regenerate" | "pre-restore"
+  note        String? // operator-supplied label, e.g. "before homepage swap"
   snappedById String?
-  snappedBy   User?          @relation(fields: [snappedById], references: [id])
-  createdAt   DateTime       @default(now())
+  snappedBy   User?         @relation(fields: [snappedById], references: [id])
+  createdAt   DateTime      @default(now())
 
   @@index([editionId, createdAt])
   @@map("epaper_edition_snapshots")
 }
 
 enum EpaperTemplateType {
-  FRONT       // front page - lead + majors + briefs + ad band
-  DISTRICT    // per-district edition page
-  SECTION     // sports / cinema / editorial / classifieds / etc.
-  BACK        // back page
+  FRONT // front page - lead + majors + briefs + ad band
+  DISTRICT // per-district edition page
+  SECTION // sports / cinema / editorial / classifieds / etc.
+  BACK // back page
 }
 
 /// Reusable page layouts. DTP staff curates these JSON blocks once; the
 /// auto-fill engine then drops the day's articles into matching slots.
 model EpaperTemplate {
-  id            String              @id @default(cuid())
-  slug          String              @unique          // "front", "district-kurnool", "section-sports", ...
-  name          String                               // "Front Page" / "Sports Section"
-  type          EpaperTemplateType
+  id           String             @id @default(cuid())
+  slug         String             @unique // "front", "district-kurnool", "section-sports", ...
+  name         String // "Front Page" / "Sports Section"
+  type         EpaperTemplateType
   // Default label rendered in the section-band block of the produced page
   // (e.g. "క్రీడలు" for sports). When `type = DISTRICT` the label is dynamic.
-  defaultLabel  String?
+  defaultLabel String?
   // Optional filters used by the auto-fill engine when matching articles to
   // slots inside this template (e.g. `{ "categorySlug": "sports" }` or
   // `{ "districtSlug": "kurnool" }`).
-  fillRules     Json?
+  fillRules    Json?
   // Block layout - same shape as EpaperPage.layout but with empty articleIds.
-  layout        Json
+  layout       Json
   // v2 editor (#108): which EpaperMaster the produced pages inherit from.
   // null = no master (legacy templates / unstyled section pages).
-  masterSlug    String?
-  sortOrder     Int                 @default(0)
-  active        Boolean             @default(true)
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
+  masterSlug   String?
+  sortOrder    Int                @default(0)
+  active       Boolean            @default(true)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
 
   @@index([type])
   @@index([masterSlug])
@@ -654,14 +654,14 @@ model EpaperTemplate {
 /// renders each slot as a click target that opens the ad-asset picker;
 /// per-edition selection lives in EpaperEdition.mastheadAds.
 model EpaperMaster {
-  id              String   @id @default(cuid())
-  slug            String   @unique
-  name            String
-  geometryOverride Json?    // optional PageGeometry override (defaults apply if null)
-  layout          Json     // { blocks: Block[] } - every block has isMaster:true
-  version         Int      @default(1)  // bumps on update for optimistic concurrency
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id               String   @id @default(cuid())
+  slug             String   @unique
+  name             String
+  geometryOverride Json? // optional PageGeometry override (defaults apply if null)
+  layout           Json // { blocks: Block[] } - every block has isMaster:true
+  version          Int      @default(1) // bumps on update for optimistic concurrency
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   @@map("epaper_masters")
 }
@@ -688,15 +688,15 @@ enum SocialPostStatus {
 
 // Spec #1 A1B (#188) - articleId renamed to contentId. Relation now Content.
 model SocialPost {
-  id          String           @id @default(cuid())
-  contentId   String
-  content     Content          @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  platform    SocialPlatform
-  status      SocialPostStatus @default(QUEUED)
-  postUrl     String?
-  error       String?
-  postedAt    DateTime?
-  createdAt   DateTime         @default(now())
+  id        String           @id @default(cuid())
+  contentId String
+  content   Content          @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  platform  SocialPlatform
+  status    SocialPostStatus @default(QUEUED)
+  postUrl   String?
+  error     String?
+  postedAt  DateTime?
+  createdAt DateTime         @default(now())
 
   @@unique([contentId, platform])
   @@map("social_posts")
@@ -717,47 +717,47 @@ model SiteConfig {
 // ============ LOCATIONS (Districts → Constituencies → Mandals) ============
 
 model District {
-  id              String          @id @default(cuid())
-  name            String          // Telugu name
-  nameEn          String          // English name
-  slug            String          @unique
-  loksabhaSeats   String?         // Comma-separated Lok Sabha constituency names
-  sortOrder       Int             @default(0)
-  active          Boolean         @default(true)
+  id              String         @id @default(cuid())
+  name            String // Telugu name
+  nameEn          String // English name
+  slug            String         @unique
+  loksabhaSeats   String? // Comma-separated Lok Sabha constituency names
+  sortOrder       Int            @default(0)
+  active          Boolean        @default(true)
   // Spec #4 A3 (#194) - feeds spatialCoverage on NewsArticle JSON-LD.
   lat             Float?
   lng             Float?
   population      Int?
-  metaDescription String?         @db.Text
+  metaDescription String?        @db.Text
   constituencies  Constituency[]
-  desk            Desk?           // back-relation: GEOGRAPHIC desk for this district
-  createdAt       DateTime        @default(now())
+  desk            Desk? // back-relation: GEOGRAPHIC desk for this district
+  createdAt       DateTime       @default(now())
 
   @@map("districts")
 }
 
 /// Assembly Constituency (AC). acNumber = official ECI delimitation number (e.g. 137 = Kurnool).
 model Constituency {
-  id          String   @id @default(cuid())
-  name        String   // Telugu name
-  nameEn      String   // English name
-  slug        String   @unique
-  acNumber    Int?     @unique  // Official ECI AC number (120..175 for Rayalaseema)
-  type        String   @default("ASSEMBLY") // ASSEMBLY or LOKSABHA
-  districtId  String
-  district    District @relation(fields: [districtId], references: [id])
-  loksabha    String?  // Which Lok Sabha seat this falls under
-  mandals     Mandal[]
-  contents    Content[] @relation("ContentConstituency")
-  desk        Desk?     // back-relation: GEOGRAPHIC desk for this AC (e.g. "ప్రొద్దుటూరు")
+  id              String    @id @default(cuid())
+  name            String // Telugu name
+  nameEn          String // English name
+  slug            String    @unique
+  acNumber        Int?      @unique // Official ECI AC number (120..175 for Rayalaseema)
+  type            String    @default("ASSEMBLY") // ASSEMBLY or LOKSABHA
+  districtId      String
+  district        District  @relation(fields: [districtId], references: [id])
+  loksabha        String? // Which Lok Sabha seat this falls under
+  mandals         Mandal[]
+  contents        Content[] @relation("ContentConstituency")
+  desk            Desk? // back-relation: GEOGRAPHIC desk for this AC (e.g. "ప్రొద్దుటూరు")
   // Spec #4 A3 (#194) - feeds spatialCoverage on NewsArticle JSON-LD.
   lat             Float?
   lng             Float?
   population      Int?
-  metaDescription String?  @db.Text
-  sortOrder   Int      @default(0)
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
+  metaDescription String?   @db.Text
+  sortOrder       Int       @default(0)
+  active          Boolean   @default(true)
+  createdAt       DateTime  @default(now())
 
   @@index([districtId])
   @@map("constituencies")
@@ -766,38 +766,38 @@ model Constituency {
 // ============ DESKS (byline + e-paper section grouping) ============
 
 enum DeskBranch {
-  TOPICAL      // e.g. "రాయలసీమ న్యూస్ బిజినెస్ డెస్క్" (linked to a Category)
-  GEOGRAPHIC   // e.g. "రాయలసీమ న్యూస్" (root), "అనంతపురం" (district), "ప్రొద్దుటూరు" (AC)
-  EDITORIAL    // e.g. "రాయలసీమ న్యూస్ ఎడిటోరియల్ డెస్క్"
+  TOPICAL // e.g. "రాయలసీమ న్యూస్ బిజినెస్ డెస్క్" (linked to a Category)
+  GEOGRAPHIC // e.g. "రాయలసీమ న్యూస్" (root), "అనంతపురం" (district), "ప్రొద్దుటూరు" (AC)
+  EDITORIAL // e.g. "రాయలసీమ న్యూస్ ఎడిటోరియల్ డెస్క్"
 }
 
 /// Desk = byline & section grouping. Hierarchical (Topical/Geographic/Editorial branches).
 /// Auto-resolved on article save via fallback chain (see lib/desk-resolver.ts):
 ///   manual deskId → constituency desk → district desk → category desk → root (Rayalaseema News)
 model Desk {
-  id              String        @id @default(cuid())
-  name            String        // Telugu display name (the byline string)
-  nameEn          String        // English name (admin UI + slug source)
-  slug            String        @unique
-  branch          DeskBranch
-  parentId        String?
-  parent          Desk?         @relation("DeskHierarchy", fields: [parentId], references: [id])
-  children        Desk[]        @relation("DeskHierarchy")
+  id       String     @id @default(cuid())
+  name     String // Telugu display name (the byline string)
+  nameEn   String // English name (admin UI + slug source)
+  slug     String     @unique
+  branch   DeskBranch
+  parentId String?
+  parent   Desk?      @relation("DeskHierarchy", fields: [parentId], references: [id])
+  children Desk[]     @relation("DeskHierarchy")
 
   // Optional links so we can auto-derive the desk from article metadata.
   // All three are @unique - one desk per category / district / constituency at most.
-  categoryId      String?       @unique
-  category        Category?     @relation(fields: [categoryId], references: [id])
-  districtId      String?       @unique
-  district        District?     @relation(fields: [districtId], references: [id])
-  constituencyId  String?       @unique
-  constituency    Constituency? @relation(fields: [constituencyId], references: [id])
+  categoryId     String?       @unique
+  category       Category?     @relation(fields: [categoryId], references: [id])
+  districtId     String?       @unique
+  district       District?     @relation(fields: [districtId], references: [id])
+  constituencyId String?       @unique
+  constituency   Constituency? @relation(fields: [constituencyId], references: [id])
 
-  contents        Content[]
-  sortOrder       Int           @default(0)
-  active          Boolean       @default(true)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  contents  Content[]
+  sortOrder Int       @default(0)
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@index([branch])
   @@index([parentId])
@@ -806,10 +806,10 @@ model Desk {
 
 model Mandal {
   id              String       @id @default(cuid())
-  name            String       // Telugu name
-  nameEn          String       // English name
+  name            String // Telugu name
+  nameEn          String // English name
   slug            String       @unique
-  code            Int?         @unique  // Official AP mandal code (e.g. 5259 = Kurnool)
+  code            Int?         @unique // Official AP mandal code (e.g. 5259 = Kurnool)
   constituencyId  String
   constituency    Constituency @relation(fields: [constituencyId], references: [id])
   // Spec #4 A3 (#194) - feeds spatialCoverage on NewsArticle JSON-LD.
@@ -846,14 +846,14 @@ model Mandal {
 enum AdPosition {
   HEADER_LEFT
   HEADER_RIGHT
-  HEADER_LEADERBOARD   // full-width strip under the masthead (page-builder block)
+  HEADER_LEADERBOARD // full-width strip under the masthead (page-builder block)
   BANNER_MID
   SIDEBAR_SQUARE
   SIDEBAR_TALL
   LEADERBOARD
   IN_FEED
   VERTICAL_STRIP
-  MOBILE_ANCHOR        // sticky bottom-of-viewport ad on mobile (MobileAnchorSlot)
+  MOBILE_ANCHOR // sticky bottom-of-viewport ad on mobile (MobileAnchorSlot)
 }
 
 model Ad {
@@ -899,16 +899,16 @@ model Comment {
 // ============ MANDI PRICES ============
 
 model MandiPrice {
-  id        String   @id @default(cuid())
-  commodity String   // e.g. "మిర్చి", "పత్తి"
+  id          String   @id @default(cuid())
+  commodity   String // e.g. "మిర్చి", "పత్తి"
   commodityEn String // e.g. "Chilli", "Cotton"
-  market    String   // e.g. "కర్నూలు"
-  marketEn  String   // e.g. "Kurnool"
-  price     Float    // price per quintal in Rs
-  unit      String   @default("క్వింటల్")
-  change    Float    @default(0) // daily change percentage
-  date      DateTime @default(now())
-  active    Boolean  @default(true)
+  market      String // e.g. "కర్నూలు"
+  marketEn    String // e.g. "Kurnool"
+  price       Float // price per quintal in Rs
+  unit        String   @default("క్వింటల్")
+  change      Float    @default(0) // daily change percentage
+  date        DateTime @default(now())
+  active      Boolean  @default(true)
 
   @@index([date, active])
   @@map("mandi_prices")
@@ -972,53 +972,53 @@ enum KycStatus {
 }
 
 model ReporterProfile {
-  id              String    @id @default(cuid())
-  userId          String    @unique
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Personal
-  fullName        String
-  fatherName      String?
-  dateOfBirth     DateTime?
-  gender          String?
-  address         String?   @db.Text
-  city            String?
-  pincode         String?
+  fullName    String
+  fatherName  String?
+  dateOfBirth DateTime?
+  gender      String?
+  address     String?   @db.Text
+  city        String?
+  pincode     String?
 
   // District assignment
-  primaryDistrict String?   // District slug they cover
+  primaryDistrict    String? // District slug they cover
   secondaryDistricts String[] // Additional districts
 
   // KYC documents
   kycStatus       KycStatus @default(PENDING)
   aadhaarNumber   String?
-  aadhaarFrontUrl String?   // Uploaded image
+  aadhaarFrontUrl String? // Uploaded image
   aadhaarBackUrl  String?
   panNumber       String?
   panCardUrl      String?
-  idCardUrl       String?   // Press/company ID
-  photoUrl        String?   // Passport photo
+  idCardUrl       String? // Press/company ID
+  photoUrl        String? // Passport photo
 
   // Bank / Payment
-  upiId           String?
-  bankName        String?
-  bankAccount     String?
-  bankIfsc        String?
-  bankBranch      String?
+  upiId       String?
+  bankName    String?
+  bankAccount String?
+  bankIfsc    String?
+  bankBranch  String?
 
   // Experience
-  experience      String?   @db.Text // Previous media experience
-  languages       String[]            // ["Telugu", "English", "Hindi"]
-  specialization  String?             // "Politics", "Crime", etc.
+  experience     String?  @db.Text // Previous media experience
+  languages      String[] // ["Telugu", "English", "Hindi"]
+  specialization String? // "Politics", "Crime", etc.
 
   // App specific
-  deviceToken     String?   // Push notification token
-  lastActiveAt    DateTime?
+  deviceToken  String? // Push notification token
+  lastActiveAt DateTime?
 
   kycRejectionNote String?
-  verifiedAt      DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  verifiedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   // Reporter-initiated edits awaiting (or completed by) admin review
   profileUpdateRequests ProfileUpdateRequest[]
@@ -1051,26 +1051,26 @@ enum ProfileUpdateRequestStatus {
 // so we can restore it if admin rejects (we flip the journalist's kycStatus to
 // SUBMITTED on submission to pause earnings until re-verification).
 model ProfileUpdateRequest {
-  id                String                     @id @default(cuid())
+  id                String          @id @default(cuid())
   // DB column name stays `journalistProfileId` via @map - TS API is now
   // `reporterProfileId` to match the renamed ReporterProfile model.
-  reporterProfileId String                     @map("journalistProfileId")
-  reporterProfile   ReporterProfile            @relation(fields: [reporterProfileId], references: [id], onDelete: Cascade)
+  reporterProfileId String          @map("journalistProfileId")
+  reporterProfile   ReporterProfile @relation(fields: [reporterProfileId], references: [id], onDelete: Cascade)
 
-  field               String                     // e.g. "name", "phone", "aadhaarNumber", "bankIfsc"
-  oldValue            String?                    @db.Text
-  newValue            String?                    @db.Text
+  field    String // e.g. "name", "phone", "aadhaarNumber", "bankIfsc"
+  oldValue String? @db.Text
+  newValue String? @db.Text
 
-  status              ProfileUpdateRequestStatus @default(PENDING)
-  previousKycStatus   KycStatus?                 // restored on REJECT for KYC-critical fields
+  status            ProfileUpdateRequestStatus @default(PENDING)
+  previousKycStatus KycStatus? // restored on REJECT for KYC-critical fields
 
-  reviewerNote        String?                    @db.Text
-  reviewedById        String?
-  reviewedBy          User?                      @relation("ProfileUpdateRequestReviewer", fields: [reviewedById], references: [id])
-  reviewedAt          DateTime?
+  reviewerNote String?   @db.Text
+  reviewedById String?
+  reviewedBy   User?     @relation("ProfileUpdateRequestReviewer", fields: [reviewedById], references: [id])
+  reviewedAt   DateTime?
 
-  createdAt           DateTime                   @default(now())
-  updatedAt           DateTime                   @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([reporterProfileId, status])
   @@index([status, createdAt])
@@ -1080,18 +1080,18 @@ model ProfileUpdateRequest {
 // ============ PAYMENT CONFIG (admin-configurable rates) ============
 
 model PaymentConfig {
-  id          String   @id @default(cuid())
-  articleType String   @unique // "text_news", "photo_news", "video_story", "exclusive", "breaking"
-  name        String            // Display name: "Text News (300+ words)"
-  nameTE      String?           // Telugu name
-  rate        Float             // Base rate in Rs
-  minWords    Int     @default(0)  // Minimum word count required
-  requiresImage Boolean @default(false)
-  requiresVideo Boolean @default(false)
-  bonusRate   Float   @default(0) // Bonus per 1000 views
-  active      Boolean @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(cuid())
+  articleType   String   @unique // "text_news", "photo_news", "video_story", "exclusive", "breaking"
+  name          String // Display name: "Text News (300+ words)"
+  nameTE        String? // Telugu name
+  rate          Float // Base rate in Rs
+  minWords      Int      @default(0) // Minimum word count required
+  requiresImage Boolean  @default(false)
+  requiresVideo Boolean  @default(false)
+  bonusRate     Float    @default(0) // Bonus per 1000 views
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   contentPayments ContentPayment[] @relation("ContentPaymentConfig")
 
@@ -1101,33 +1101,33 @@ model PaymentConfig {
 // ============ ARTICLE PAYMENT ============
 
 enum PaymentStatus {
-  CALCULATED  // Sub-editor set the amount when moving SUBMITTED → IN_REVIEW.
-              // Reporter sees this as "Pending" in their app.
-  APPROVED    // Article was published. Awaiting payout from admin.
-  PROCESSING  // Bank transfer initiated, not yet confirmed. (Unused in v1.)
-  PAID        // Money transferred. Reporter sees this as "Settled".
-  CANCELLED   // Article was rejected → payment cancelled. Row kept for the
-              // audit trail; flipped back to CALCULATED if the reporter
-              // re-submits and a sub-editor re-claims it.
-  DISPUTED    // Journalist raised dispute. (Unused in v1.)
+  CALCULATED // Sub-editor set the amount when moving SUBMITTED → IN_REVIEW.
+  // Reporter sees this as "Pending" in their app.
+  APPROVED // Article was published. Awaiting payout from admin.
+  PROCESSING // Bank transfer initiated, not yet confirmed. (Unused in v1.)
+  PAID // Money transferred. Reporter sees this as "Settled".
+  CANCELLED // Article was rejected → payment cancelled. Row kept for the
+  // audit trail; flipped back to CALCULATED if the reporter
+  // re-submits and a sub-editor re-claims it.
+  DISPUTED // Journalist raised dispute. (Unused in v1.)
 }
 
 // Spec #1 A1C (#189) - model ArticlePayment dropped. See Content table for the unified replacement.
 // ============ PAYOUT BATCH ============
 
 model PayoutBatch {
-  id            String   @id @default(cuid())
-  month         Int      // 1-12
-  year          Int
-  totalAmount   Float
-  totalArticles Int
+  id               String    @id @default(cuid())
+  month            Int // 1-12
+  year             Int
+  totalAmount      Float
+  totalArticles    Int
   totalJournalists Int
-  status        String   @default("DRAFT") // DRAFT, APPROVED, PROCESSING, COMPLETED
-  approvedById  String?
-  approvedAt    DateTime?
-  completedAt   DateTime?
-  note          String?
-  createdAt     DateTime @default(now())
+  status           String    @default("DRAFT") // DRAFT, APPROVED, PROCESSING, COMPLETED
+  approvedById     String?
+  approvedAt       DateTime?
+  completedAt      DateTime?
+  note             String?
+  createdAt        DateTime  @default(now())
 
   @@unique([month, year])
   @@map("payout_batches")
@@ -1154,64 +1154,64 @@ enum ContentType {
 }
 
 model Content {
-  id              String        @id @default(cuid())
-  type            ContentType
-  title           String
+  id            String      @id @default(cuid())
+  type          ContentType
+  title         String
   // Null for BREAKING_NEWS (ticker headline, no public URL). All other types require slug.
-  slug            String?       @unique
-  summary         String?       @db.Text
+  slug          String?     @unique
+  summary       String?     @db.Text
   // HTML body - ARTICLE only. Other types render from `payload`.
-  body            String?       @db.Text
-  featuredImage   String?
+  body          String?     @db.Text
+  featuredImage String?
   // Type-specific blob. Shape validated by Zod schemas in packages/db/src/payload-schemas.ts.
-  payload         Json?
+  payload       Json?
 
-  categoryId      String?
-  category        Category?     @relation(fields: [categoryId], references: [id])
-  authorId        String
-  author          User          @relation("ContentAuthor", fields: [authorId], references: [id])
-  deskId          String?
-  desk            Desk?         @relation(fields: [deskId], references: [id])
-  constituencyId  String?
-  constituency    Constituency? @relation("ContentConstituency", fields: [constituencyId], references: [id])
+  categoryId     String?
+  category       Category?     @relation(fields: [categoryId], references: [id])
+  authorId       String
+  author         User          @relation("ContentAuthor", fields: [authorId], references: [id])
+  deskId         String?
+  desk           Desk?         @relation(fields: [deskId], references: [id])
+  constituencyId String?
+  constituency   Constituency? @relation("ContentConstituency", fields: [constituencyId], references: [id])
 
-  status          ArticleStatus @default(DRAFT)
-  featured        Boolean       @default(false)
-  language        Language      @default(TELUGU)
-  viewCount       Int           @default(0)
+  status    ArticleStatus @default(DRAFT)
+  featured  Boolean       @default(false)
+  language  Language      @default(TELUGU)
+  viewCount Int           @default(0)
 
-  publishedAt     DateTime?
-  scheduledAt     DateTime?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  publishedAt DateTime?
+  scheduledAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   // PIB approval workflow (preserved from Article - #99)
-  needsPibApproval    Boolean       @default(false)
-  pibApprovedAt       DateTime?
-  pibReferenceNumber  String?
+  needsPibApproval   Boolean   @default(false)
+  pibApprovedAt      DateTime?
+  pibReferenceNumber String?
 
   // Ingestion dedup - source news URL, unique so the same item can't be imported twice
-  sourceUrl       String?       @unique
+  sourceUrl String? @unique
 
   // Soft-delete (Spec #1 follow-up). Non-null = hidden from list/public.
   // Reporters soft-delete their own DRAFT/SUBMITTED. Editors soft-delete
   // anything not PUBLISHED. Admins soft-delete anything + can hard-purge.
   // List queries default to `deletedAt: null`; trash view filters non-null.
-  deletedAt       DateTime?
-  deletedById     String?
+  deletedAt   DateTime?
+  deletedById String?
 
   // Editorial review trail (Spec #1 A1C #189 - promoted from Article columns
   // so existing UI keeps showing rejection notes + reviewer stamps).
-  rejectionNote   String?       @db.Text
+  rejectionNote String?   @db.Text
   // Editor → Sub-editor return-with-feedback note. Distinct from rejectionNote
   // (which is reporter-facing). Set when the Editor uses "Return to SE" on
   // an IN_REVIEW row; cleared on the next forward transition (review/reject/
   // approve/publish/archive) so a stale note never leaks into a fresh cycle.
-  editorNote      String?       @db.Text
-  reviewedById    String?
-  reviewedAt      DateTime?
-  approvedById    String?
-  approvedAt      DateTime?
+  editorNote    String?   @db.Text
+  reviewedById  String?
+  reviewedAt    DateTime?
+  approvedById  String?
+  approvedAt    DateTime?
 
   // Auto-assigned sub-editor when the article enters SUBMITTED. Set by the
   // load-balancing algorithm (least-loaded sub-editor in the article's
@@ -1223,25 +1223,27 @@ model Content {
   assignedReviewerId String?
   assignedReviewer   User?   @relation("ContentAssignedReviewer", fields: [assignedReviewerId], references: [id])
 
-  tags            ContentTag[]
+  tags                 ContentTag[]
   // Multi-category cross-listing. categoryId above stays as the PRIMARY
   // category (canonical URL, default listing). additionalCategories holds
   // secondary categories where this row should ALSO appear on /category/…
   // pages. Editor UI: primary dropdown + "Also list under" multi-select.
   additionalCategories ContentCategory[]
-  revisions       ContentRevision[]
-  payments        ContentPayment[]
+  revisions            ContentRevision[]
+  payments             ContentPayment[]
   // Spec #1 A1B (#188) - back-relations from tables whose FK moved to Content.
-  comments        Comment[]
-  socialPosts     SocialPost[]
+  comments             Comment[]
+  socialPosts          SocialPost[]
   // Spec #4 A1 (#192) - many-to-many to District/Constituency/Mandal via the
   // polymorphic ContentLocation join. `Content.constituencyId` above remains
   // as a denormalized fast-path for the primary constituency tag; the join
   // table is the source of truth for ALL tagged locations (incl. mandal-level
   // tags + multi-location articles).
-  locations       ContentLocation[]
+  locations            ContentLocation[]
   // Spec #4 K5 (#250) - optional LiveBlogPosting state.
-  liveBlog        ContentLiveBlog?
+  liveBlog             ContentLiveBlog?
+  // SharePoint mirror records - one row per blob uploaded for this article.
+  mediaMirrors         MediaMirror[]
 
   @@index([type, status, publishedAt])
   @@index([categoryId, status, publishedAt])
@@ -1263,10 +1265,10 @@ model Content {
 }
 
 model ContentTag {
-  contentId  String
-  content    Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  tagId      String
-  tag        Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  contentId String
+  content   Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  tagId     String
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([contentId, tagId])
   // The composite PK above gives us a fast `[contentId, tagId]` lookup
@@ -1278,25 +1280,25 @@ model ContentTag {
 }
 
 model ContentRevision {
-  id              String        @id @default(cuid())
-  contentId       String
-  content         Content       @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  id        String  @id @default(cuid())
+  contentId String
+  content   Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
 
-  title           String
-  slug            String?
-  summary         String?       @db.Text
-  body            String?       @db.Text
-  featuredImage   String?
-  categoryId      String?
-  payload         Json?
-  status          ArticleStatus
+  title         String
+  slug          String?
+  summary       String?       @db.Text
+  body          String?       @db.Text
+  featuredImage String?
+  categoryId    String?
+  payload       Json?
+  status        ArticleStatus
 
-  editedById      String
-  editedBy        User          @relation(fields: [editedById], references: [id])
-  editNote        String?
-  bodyLength      Int           @default(0)
+  editedById String
+  editedBy   User    @relation(fields: [editedById], references: [id])
+  editNote   String?
+  bodyLength Int     @default(0)
 
-  createdAt       DateTime      @default(now())
+  createdAt DateTime @default(now())
 
   @@index([contentId, createdAt])
   @@index([editedById])
@@ -1304,30 +1306,30 @@ model ContentRevision {
 }
 
 model ContentPayment {
-  id            String         @id @default(cuid())
-  contentId     String         @unique
-  content       Content        @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  journalistId  String
-  journalist    User           @relation("ContentJournalist", fields: [journalistId], references: [id])
-  configId      String?
-  config        PaymentConfig? @relation("ContentPaymentConfig", fields: [configId], references: [id])
+  id           String         @id @default(cuid())
+  contentId    String         @unique
+  content      Content        @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  journalistId String
+  journalist   User           @relation("ContentJournalist", fields: [journalistId], references: [id])
+  configId     String?
+  config       PaymentConfig? @relation("ContentPaymentConfig", fields: [configId], references: [id])
 
-  baseAmount    Float
-  bonusAmount   Float          @default(0)
-  deductions    Float          @default(0)
-  totalAmount   Float
-  currency      String         @default("INR")
+  baseAmount  Float
+  bonusAmount Float  @default(0)
+  deductions  Float  @default(0)
+  totalAmount Float
+  currency    String @default("INR")
 
-  status        PaymentStatus  @default(CALCULATED)
+  status        PaymentStatus @default(CALCULATED)
   approvedById  String?
   approvedAt    DateTime?
   paidAt        DateTime?
   transactionId String?
   paymentMethod String?
 
-  note          String?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([journalistId, status])
   @@index([status])
@@ -1343,22 +1345,22 @@ model ContentPayment {
 // CompositeBlock = reusable named group of blocks; referenced by { type:"Composite", compositeId }.
 
 model Template {
-  id           String              @id @default(cuid())
-  name         String
-  slug         String              @unique
-  description  String?
+  id          String               @id @default(cuid())
+  name        String
+  slug        String               @unique
+  description String?
   // Published layout (block tree). Shape validated by Zod (layoutSchema).
-  layout       Json
+  layout      Json
   // In-progress edits; promoted to `layout` on publish.
-  draftLayout  Json?
-  isPublished  Boolean             @default(false)
-  publishedAt  DateTime?
-  createdById  String
-  createdBy    User                @relation("TemplateCreator", fields: [createdById], references: [id])
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
-  assignments  TemplateAssignment[]
-  versions     TemplateVersion[]
+  draftLayout Json?
+  isPublished Boolean              @default(false)
+  publishedAt DateTime?
+  createdById String
+  createdBy   User                 @relation("TemplateCreator", fields: [createdById], references: [id])
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  assignments TemplateAssignment[]
+  versions    TemplateVersion[]
 
   @@index([slug])
   @@map("templates")
@@ -1433,31 +1435,31 @@ enum MenuItemTargetType {
 }
 
 model Menu {
-  id              String        @id @default(cuid())
+  id          String        @id @default(cuid())
   // One menu per location - UI never needs more than one of each, and the
   // unique constraint keeps the seed script idempotent.
-  location        MenuLocation  @unique
-  name            String
-  items           Json          // published tree visitors see
-  draftItems      Json?         // in-progress edits; promoted on publish
-  isPublished     Boolean       @default(false)
-  publishedAt     DateTime?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  versions        MenuVersion[]
+  location    MenuLocation  @unique
+  name        String
+  items       Json // published tree visitors see
+  draftItems  Json? // in-progress edits; promoted on publish
+  isPublished Boolean       @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  versions    MenuVersion[]
 
   @@map("menus")
 }
 
 model MenuVersion {
-  id          String   @id @default(cuid())
-  menuId      String
-  menu        Menu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
-  items       Json
-  editedById  String
-  editedBy    User     @relation("MenuVersionEditor", fields: [editedById], references: [id])
-  editNote    String?
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  menuId     String
+  menu       Menu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  items      Json
+  editedById String
+  editedBy   User     @relation("MenuVersionEditor", fields: [editedById], references: [id])
+  editNote   String?
+  createdAt  DateTime @default(now())
 
   @@index([menuId, createdAt])
   @@map("menu_versions")
@@ -1527,9 +1529,9 @@ enum PreciousMetal {
 // page. One row per (rashi, period, date) - the cron upserts.
 model Horoscope {
   id           String          @id @default(cuid())
-  rashi        String          // slug: mesha, vrushabha, ... meena
+  rashi        String // slug: mesha, vrushabha, ... meena
   period       HoroscopePeriod
-  date         DateTime        // daily: that day; weekly: week-start (midnight)
+  date         DateTime // daily: that day; weekly: week-start (midnight)
   predictionTe String          @db.Text
   predictionEn String?         @db.Text
   source       String?
@@ -1549,12 +1551,12 @@ enum HoroscopePeriod {
 model PreciousMetalRate {
   id           String        @id @default(cuid())
   metal        PreciousMetal
-  city         String        // English city name, e.g. "Hyderabad"
-  cityTe       String?       // Telugu city name
-  purity       String?       // "22K" / "24K" for gold; null for silver
+  city         String // English city name, e.g. "Hyderabad"
+  cityTe       String? // Telugu city name
+  purity       String? // "22K" / "24K" for gold; null for silver
   pricePerGram Float
-  unit         String        @default("per gram")  // "per gram" / "per 10g" / "per kg"
-  source       String?       // IBJA / IIFL / publisher's own desk
+  unit         String        @default("per gram") // "per gram" / "per 10g" / "per kg"
+  source       String? // IBJA / IIFL / publisher's own desk
   date         DateTime      @default(now())
   active       Boolean       @default(true)
 
@@ -1567,13 +1569,75 @@ model PreciousMetalRate {
 // LiveBlogPosting JSON-LD variant fires from the schema generator when
 // `isLive` is true. dateModified bumps via cron while live.
 model ContentLiveBlog {
-  contentId         String   @id
-  content           Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  startedAt         DateTime @default(now())
-  endedAt           DateTime?
+  contentId String    @id
+  content   Content   @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
   /// Append-only entries: [{ at: ISO, html: string }]
-  entries           Json     @default("[]")
+  entries   Json      @default("[]")
 
   @@index([endedAt])
   @@map("content_live_blogs")
+}
+
+// SharePoint mirror index. Every blob upload writes a row here once the
+// background mirror task lands the file in SP. The picker UI queries
+// this table to browse media (Graph search is restricted under
+// Sites.Selected). Manual uploads in SP UI are picked up by
+// scripts/sp-reconcile.ts and inserted here too.
+model MediaMirror {
+  id String @id @default(cuid())
+
+  /// Primary key from the editor side - the Azure Blob URL that's actually
+  /// rendered on the public site. Unique so re-uploads of the same blob
+  /// don't double-mirror.
+  blobUrl String @unique
+
+  /// Resolved SP target after the mirror task succeeds. Null until success.
+  spDriveId    String?
+  spItemId     String?
+  spWebUrl     String?
+  /// e.g. "Kurnool/2026/06" or "_Statewide/2026/06" - the path within the
+  /// drive root, without the filename. Indexed for the picker's
+  /// browse-by-folder view.
+  spFolderPath String?
+  /// The renamed filename actually written to SP, e.g.
+  /// "pawan-kalyan-telangana-politics-cover.jpg". Distinct from the blob's
+  /// original timestamped name so editors can find files in SP UI.
+  spFileName   String?
+
+  /// Article this file belongs to, when uploaded inside an editor flow.
+  /// Null for context-less uploads (admin direct upload, image-search
+  /// picker without target article).
+  contentId String?
+  content   Content? @relation(fields: [contentId], references: [id], onDelete: SetNull)
+
+  /// "cover" | "body" | "gallery" | "thumb" | "video" - drives the index
+  /// suffix (-cover, -01, -02, -gallery-01, -thumb, -video) and which
+  /// drive the file lands in (Video-Social for thumb/video, Media-Library
+  /// for the rest).
+  role String
+
+  /// Sequence number within (contentId, role). 1 for cover/thumb/video
+  /// (single per article). Increments for body/gallery on each new upload.
+  roleIndex Int @default(1)
+
+  mimeType  String
+  sizeBytes Int
+
+  /// State machine - pending: queued; uploading: mirror task running;
+  /// done: SP item created; failed: terminal after retry budget exhausted.
+  status    String  @default("pending")
+  /// Last error message when status=failed. Truncated to 500 chars.
+  lastError String?
+  attempts  Int     @default(0)
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  mirroredAt DateTime?
+
+  @@index([contentId, role, roleIndex])
+  @@index([status, createdAt])
+  @@index([spFolderPath])
+  @@map("media_mirrors")
 }

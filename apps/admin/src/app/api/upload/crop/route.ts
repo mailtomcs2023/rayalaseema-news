@@ -13,6 +13,9 @@ import sharp from "sharp";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 import { uploadBuffer, blobConfigured } from "@/lib/blob";
 import { processImageBuffer } from "@/lib/image-process";
+import { queueMirror, type MirrorRole } from "@/lib/sharepoint";
+
+const VALID_CROP_ROLES = new Set<MirrorRole>(["cover", "body", "gallery", "thumb"]);
 
 // Load the source image into a Buffer. Accepts a data: URL (freshly pasted /
 // canvas image not yet hosted) or an http(s) URL (our Azure blob, or any
@@ -41,7 +44,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { src, x, y, width, height } = await req.json();
+    const { src, x, y, width, height, contentId, role } = await req.json();
     if (typeof src !== "string" || !src) {
       return NextResponse.json({ error: "Source image is required" }, { status: 400 });
     }
@@ -76,6 +79,19 @@ export async function POST(req: NextRequest) {
     // Reuse the standard pipeline (EXIF strip + brand + resize-to-max-width).
     const p = await processImageBuffer(cropped);
     const url = await uploadBuffer(p.buffer, p.ext, p.contentType);
+
+    // Mirror to SharePoint. Cropped images inherit the editor's chosen
+    // role (defaults to cover - crop UI is mostly used for hero images).
+    const mirrorRole: MirrorRole = VALID_CROP_ROLES.has(role as MirrorRole)
+      ? (role as MirrorRole)
+      : "cover";
+    void queueMirror({
+      blobUrl: url,
+      contentId: typeof contentId === "string" ? contentId : null,
+      role: mirrorRole,
+      mimeType: p.contentType,
+      sizeBytes: p.buffer.length,
+    }).catch((e) => console.warn("[upload/crop] sp mirror enqueue failed:", e));
 
     return NextResponse.json({ url, width: w, height: h });
   } catch (error) {
