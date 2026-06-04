@@ -539,7 +539,7 @@ export async function fetchPhotoGallery(
     where: { type: "PHOTO_GALLERY", status: "PUBLISHED" },
     orderBy: { publishedAt: "desc" },
     take: config.count,
-    select: { id: true, title: true, featuredImage: true, payload: true },
+    select: { id: true, slug: true, title: true, featuredImage: true, payload: true },
   });
   return {
     photos: rows.map((r) => {
@@ -547,6 +547,7 @@ export async function fetchPhotoGallery(
       const photos = Array.isArray(p.photos) ? (p.photos as unknown[]) : [];
       return {
         id: r.id,
+        slug: r.slug,
         title: r.title,
         image: r.featuredImage || "",
         count: photos.length,
