@@ -16,7 +16,13 @@ interface AFArticle {
 interface AFDistrict {
   name: string;
   slug: string;
-  articles: { id: string; title: string; slug: string }[];
+  articles: {
+    id: string;
+    title: string;
+    slug: string;
+    featuredImage?: string | null;
+    constituency?: { slug: string; district: { slug: string } } | null;
+  }[];
 }
 
 interface AFBreaking {
