@@ -20,7 +20,29 @@ interface Props {
   initialQuery?: string;
   onClose: () => void;
   onPick: (url: string) => void;
+  /** Current article's slug. When set + the SharePoint tab is active,
+   * the picker auto-filters to filenames containing this slug so the
+   * editor sees their own past uploads for this article first. */
+  contentSlug?: string;
+  /** District slug from the article's constituency (e.g. "kurnool"). The
+   * picker maps it to the PascalCase SP folder ("Kurnool") and preselects
+   * the district filter so editors see local imagery by default. */
+  districtSlug?: string | null;
 }
+
+// DB district slug -> SharePoint folder name. Mirrors the backend map
+// in apps/admin/src/lib/sharepoint.ts. Updating either requires updating
+// the other.
+const DISTRICT_FOLDER: Record<string, string> = {
+  kurnool: "Kurnool",
+  nandyal: "Nandyal",
+  ananthapuramu: "Ananthapuramu",
+  "sri-sathya-sai": "Sri-Sathya-Sai",
+  "ysr-kadapa": "YSR-Kadapa",
+  annamayya: "Annamayya",
+  tirupati: "Tirupati",
+  chittoor: "Chittoor",
+};
 
 type Provider = "pexels" | "google" | "ai" | "sp";
 
@@ -34,7 +56,7 @@ interface SpItem {
   contentSlug?: string | null;
 }
 
-export function ImageSearchModal({ open, initialQuery = "", onClose, onPick }: Props) {
+export function ImageSearchModal({ open, initialQuery = "", onClose, onPick, contentSlug, districtSlug }: Props) {
   const [query, setQuery] = useState(initialQuery);
   const [provider, setProvider] = useState<Provider>("pexels");
   const [loading, setLoading] = useState(false);
@@ -53,6 +75,14 @@ export function ImageSearchModal({ open, initialQuery = "", onClose, onPick }: P
   const [spDistrict, setSpDistrict] = useState("");
   const [spYyyy, setSpYyyy] = useState("");
   const [spMm, setSpMm] = useState("");
+  /** Tristate scope toggle for the SP tab:
+   *   "article"  - filter spFileName by contentSlug (default when known)
+   *   "district" - default district + this month (default when no slug)
+   *   "all"      - clear all SP filters
+   */
+  const [spScope, setSpScope] = useState<"article" | "district" | "all">(
+    contentSlug ? "article" : (districtSlug ? "district" : "all"),
+  );
 
   if (!open) return null;
 
@@ -102,6 +132,41 @@ export function ImageSearchModal({ open, initialQuery = "", onClose, onPick }: P
     setLoading(false);
   };
 
+  /** Apply a scope preset: "article" pre-filters to this article's
+   * slug; "district" pre-filters to the article's district + current
+   * month; "all" clears every filter. Editor opens the SP tab on the
+   * smartest preset for the current context. */
+  const applyScope = (scope: "article" | "district" | "all") => {
+    setSpScope(scope);
+    if (scope === "all") {
+      setSpDistrict("");
+      setSpYyyy("");
+      setSpMm("");
+      setQuery("");
+      runSp({ district: "", yyyy: "", mm: "", q: "" });
+      return;
+    }
+    if (scope === "article") {
+      const dist = districtSlug ? DISTRICT_FOLDER[districtSlug] || "" : "";
+      setSpDistrict(dist);
+      setSpYyyy("");
+      setSpMm("");
+      setQuery(contentSlug || "");
+      runSp({ district: dist, yyyy: "", mm: "", q: contentSlug || "" });
+      return;
+    }
+    // scope === "district"
+    const dist = districtSlug ? DISTRICT_FOLDER[districtSlug] || "" : "";
+    const now = new Date();
+    const yyyy = String(now.getFullYear());
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    setSpDistrict(dist);
+    setSpYyyy(yyyy);
+    setSpMm(mm);
+    setQuery("");
+    runSp({ district: dist, yyyy, mm, q: "" });
+  };
+
   const switchProvider = (p: Provider) => {
     setProvider(p);
     setError("");
@@ -113,7 +178,10 @@ export function ImageSearchModal({ open, initialQuery = "", onClose, onPick }: P
     }
     if (p === "sp") {
       setHits([]);
-      runSp({});
+      // Open with the smartest scope: article-filtered if we know the
+      // slug, otherwise this district's current month, otherwise show
+      // everything.
+      applyScope(contentSlug ? "article" : (districtSlug ? "district" : "all"));
       return;
     }
     if (query.trim()) run(query, p as "pexels" | "google");
@@ -274,6 +342,35 @@ export function ImageSearchModal({ open, initialQuery = "", onClose, onPick }: P
             </button>
           )}
         </div>
+
+        {/* SP-only scope toggle - prefilled from article context. */}
+        {provider === "sp" && (
+          <div style={{ display: "flex", gap: 6, padding: "8px 16px", borderBottom: "1px solid #e5e7eb", flexWrap: "wrap", background: "#ccfbf1", alignItems: "center" }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#0f766e", marginRight: 4 }}>Scope:</span>
+            {contentSlug && (
+              <button onClick={() => applyScope("article")}
+                style={scopePill(spScope === "article")}
+                title={`Filter to filenames containing "${contentSlug}"`}>
+                This article
+              </button>
+            )}
+            {districtSlug && (
+              <button onClick={() => applyScope("district")}
+                style={scopePill(spScope === "district")}
+                title={`This district + ${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`}>
+                {DISTRICT_FOLDER[districtSlug] || "District"} · this month
+              </button>
+            )}
+            <button onClick={() => applyScope("all")} style={scopePill(spScope === "all")}>
+              All folders
+            </button>
+            {spScope !== "all" && (
+              <span style={{ fontSize: 10, color: "#0f766e", marginLeft: "auto" }}>
+                Auto-suggested from article context.
+              </span>
+            )}
+          </div>
+        )}
 
         {/* SP-only filter strip - district + year + month */}
         {provider === "sp" && (
@@ -461,6 +558,19 @@ function tab(active: boolean): React.CSSProperties {
     border: "1px solid #e5e7eb",
     borderRadius: 999,
     fontSize: 12,
+    fontWeight: 700,
+    cursor: "pointer",
+  };
+}
+
+function scopePill(active: boolean): React.CSSProperties {
+  return {
+    padding: "4px 12px",
+    background: active ? "#0f766e" : "#fff",
+    color: active ? "#fff" : "#0f766e",
+    border: "1px solid #99f6e4",
+    borderRadius: 999,
+    fontSize: 11,
     fontWeight: 700,
     cursor: "pointer",
   };

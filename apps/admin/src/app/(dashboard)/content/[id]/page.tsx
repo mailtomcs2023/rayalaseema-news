@@ -1363,6 +1363,15 @@ export default function ContentEditorPage() {
       <ImageSearchModal
         open={imageSearchOpen}
         initialQuery={title.replace(/<[^>]+>/g, "").trim().slice(0, 80)}
+        contentSlug={slug || undefined}
+        districtSlug={
+          // Resolve the article's currently-selected constituency to its
+          // district slug. Lets the SP picker auto-filter to that
+          // district's folder so reused imagery stays local-first.
+          (constituencyId
+            ? districts.find((d) => (d.constituencies || []).some((c: any) => c.id === constituencyId))?.slug
+            : null) || null
+        }
         onClose={() => setImageSearchOpen(false)}
         onPick={(url) => { setFeaturedImage(url); setCropSrc(url); }}
       />
