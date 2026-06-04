@@ -59,6 +59,8 @@ export default function MediaLibraryPage() {
       if (mm) params.set("mm", mm);
       if (q.trim()) params.set("q", q.trim());
       if (append && cursor) params.set("cursor", cursor);
+      // Standalone library page surfaces SP-only items (no blobUrl).
+      params.set("includeExternal", "true");
       const res = await fetch(`/api/media/sp-picker?${params}`);
       const data = await res.json();
       if (!res.ok) { setError(data.error || `API ${res.status}`); return; }
@@ -144,17 +146,27 @@ export default function MediaLibraryPage() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12 }}>
           {items.map((it) => {
             const isImage = it.mimeType.startsWith("image/");
+            // sp-only items were ingested by the reconciler (manual SP
+            // upload). Their blobUrl is a synthetic placeholder; copying
+            // it is useless, and the image preview won't load. Show a
+            // SharePoint-themed badge instead.
+            const spOnly = it.blobUrl.startsWith("sp-only://");
             return (
               <div key={it.blobUrl} style={{ background: "#fff", borderRadius: 8, border: "1px solid #e5e7eb", overflow: "hidden", display: "flex", flexDirection: "column" }}>
-                <div style={{ aspectRatio: "4/3", background: "#000", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-                  {isImage ? (
+                <div style={{ aspectRatio: "4/3", background: "#000", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative" }}>
+                  {isImage && !spOnly ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={it.blobUrl} alt={it.spFileName || ""} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy"
                       onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
                   ) : (
                     <div style={{ color: "#fff", fontSize: 11, padding: 10, textAlign: "center" }}>
-                      {it.mimeType}
+                      {spOnly ? "SP-only · open in SharePoint" : it.mimeType}
                     </div>
+                  )}
+                  {spOnly && (
+                    <span style={{ position: "absolute", top: 6, left: 6, background: "#0f766e", color: "#fff", fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 3 }}>
+                      SP
+                    </span>
                   )}
                 </div>
                 <div style={{ padding: 8, fontSize: 11, flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
@@ -163,15 +175,24 @@ export default function MediaLibraryPage() {
                   </div>
                   <div style={{ color: "#6b7280" }}>{it.spFolderPath || "—"}</div>
                   <div style={{ display: "flex", gap: 4, marginTop: "auto", paddingTop: 4 }}>
-                    <button onClick={() => copy(it.blobUrl)}
-                      style={{ flex: 1, padding: "5px 8px", background: copied === it.blobUrl ? "#10b981" : "#111827", color: "#fff", border: "none", borderRadius: 4, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-                      {copied === it.blobUrl ? "Copied ✓" : "Copy URL"}
-                    </button>
-                    {it.spWebUrl && (
-                      <a href={it.spWebUrl} target="_blank" rel="noopener noreferrer"
-                        style={{ padding: "5px 8px", background: "#fff", color: "#374151", border: "1px solid #e5e7eb", borderRadius: 4, fontSize: 11, fontWeight: 700, textDecoration: "none" }}>
-                        SP ↗
+                    {spOnly ? (
+                      <a href={it.spWebUrl || "#"} target="_blank" rel="noopener noreferrer"
+                        style={{ flex: 1, padding: "5px 8px", background: "#0f766e", color: "#fff", border: "none", borderRadius: 4, fontSize: 11, fontWeight: 700, textDecoration: "none", textAlign: "center" }}>
+                        Open in SharePoint ↗
                       </a>
+                    ) : (
+                      <>
+                        <button onClick={() => copy(it.blobUrl)}
+                          style={{ flex: 1, padding: "5px 8px", background: copied === it.blobUrl ? "#10b981" : "#111827", color: "#fff", border: "none", borderRadius: 4, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                          {copied === it.blobUrl ? "Copied ✓" : "Copy URL"}
+                        </button>
+                        {it.spWebUrl && (
+                          <a href={it.spWebUrl} target="_blank" rel="noopener noreferrer"
+                            style={{ padding: "5px 8px", background: "#fff", color: "#374151", border: "1px solid #e5e7eb", borderRadius: 4, fontSize: 11, fontWeight: 700, textDecoration: "none" }}>
+                            SP ↗
+                          </a>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>

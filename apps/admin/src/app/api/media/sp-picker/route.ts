@@ -28,9 +28,13 @@ export async function GET(req: NextRequest) {
   const q = searchParams.get("q") || undefined;
   const cursor = searchParams.get("cursor") || undefined;
   const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "48", 10), 1), 200);
+  // Editor-side picker keeps default (status="done" only) so it never
+  // hands the editor a synthetic sp-only:// URL. /media-library page
+  // passes ?includeExternal=true so it shows manual-SP-upload items too.
+  const includeExternal = searchParams.get("includeExternal") === "true";
 
   try {
-    const result = await listMirroredMedia({ district, yyyy, mm, q, cursor, limit });
+    const result = await listMirroredMedia({ district, yyyy, mm, q, cursor, limit, includeExternal });
     return NextResponse.json(result);
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || "picker query failed" }, { status: 500 });

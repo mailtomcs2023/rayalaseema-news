@@ -22,7 +22,17 @@ interface Props {
   onPick: (url: string) => void;
 }
 
-type Provider = "pexels" | "google" | "ai";
+type Provider = "pexels" | "google" | "ai" | "sp";
+
+interface SpItem {
+  blobUrl: string;
+  spWebUrl: string | null;
+  spFolderPath: string | null;
+  spFileName: string | null;
+  role: string;
+  mimeType: string;
+  contentSlug?: string | null;
+}
 
 export function ImageSearchModal({ open, initialQuery = "", onClose, onPick }: Props) {
   const [query, setQuery] = useState(initialQuery);
@@ -36,6 +46,13 @@ export function ImageSearchModal({ open, initialQuery = "", onClose, onPick }: P
   const [generating, setGenerating] = useState(false);
   const [generatedUrl, setGeneratedUrl] = useState<string | null>(null);
   const [aiSize, setAiSize] = useState<"1792x1024" | "1024x1024" | "1024x1792">("1792x1024");
+
+  // SP picker state - separate from search hits because the items have
+  // their own shape (blobUrl is pre-resolved + SP URL is opt-in).
+  const [spItems, setSpItems] = useState<SpItem[]>([]);
+  const [spDistrict, setSpDistrict] = useState("");
+  const [spYyyy, setSpYyyy] = useState("");
+  const [spMm, setSpMm] = useState("");
 
   if (!open) return null;
 
@@ -58,6 +75,33 @@ export function ImageSearchModal({ open, initialQuery = "", onClose, onPick }: P
     setLoading(false);
   };
 
+  const runSp = async (overrides: { q?: string; district?: string; yyyy?: string; mm?: string } = {}) => {
+    setLoading(true);
+    setError("");
+    try {
+      const params = new URLSearchParams();
+      const d = overrides.district ?? spDistrict;
+      const y = overrides.yyyy ?? spYyyy;
+      const m = overrides.mm ?? spMm;
+      const q = (overrides.q ?? query).trim();
+      if (d) params.set("district", d);
+      if (y) params.set("yyyy", y);
+      if (m) params.set("mm", m);
+      if (q) params.set("q", q);
+      const res = await fetch(`/api/media/sp-picker?${params}`);
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        setError(data.error || `Picker failed (${res.status})`);
+        setSpItems([]);
+      } else {
+        setSpItems(data.items || []);
+      }
+    } catch (e: any) {
+      setError(e.message || "Picker failed");
+    }
+    setLoading(false);
+  };
+
   const switchProvider = (p: Provider) => {
     setProvider(p);
     setError("");
@@ -65,6 +109,11 @@ export function ImageSearchModal({ open, initialQuery = "", onClose, onPick }: P
       // AI doesn't search - user types a prompt + clicks Generate. Clear
       // any prior search hits so the UI doesn't show stale results.
       setHits([]);
+      return;
+    }
+    if (p === "sp") {
+      setHits([]);
+      runSp({});
       return;
     }
     if (query.trim()) run(query, p as "pexels" | "google");
@@ -156,6 +205,9 @@ export function ImageSearchModal({ open, initialQuery = "", onClose, onPick }: P
           <button onClick={() => switchProvider("ai")} style={tab(provider === "ai")}>
             ✨ Generate (AI) - gpt-image-2
           </button>
+          <button onClick={() => switchProvider("sp")} style={tab(provider === "sp")}>
+            📂 SharePoint - reuse
+          </button>
         </div>
 
         {/* search row */}
@@ -166,11 +218,14 @@ export function ImageSearchModal({ open, initialQuery = "", onClose, onPick }: P
             onKeyDown={(e) => {
               if (e.key !== "Enter") return;
               if (provider === "ai") generateAi();
+              else if (provider === "sp") runSp({ q: query });
               else run(query, provider as "pexels" | "google");
             }}
             placeholder={provider === "ai"
               ? "Describe the image - e.g. 'pawan kalyan at a rally in vijayawada, photojournalism style'"
-              : "Search keyword (English) - e.g. hyderabad water supply"}
+              : provider === "sp"
+                ? "Filename / slug filter (optional)"
+                : "Search keyword (English) - e.g. hyderabad water supply"}
             style={{ flex: 1, minWidth: 200, padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 14 }}
             autoFocus
           />
@@ -195,6 +250,17 @@ export function ImageSearchModal({ open, initialQuery = "", onClose, onPick }: P
               }}>
               {generating ? "Generating… (~10s)" : "✨ Generate"}
             </button>
+          ) : provider === "sp" ? (
+            <button
+              onClick={() => runSp({ q: query })}
+              disabled={loading}
+              style={{
+                padding: "8px 16px", background: "#0f766e", color: "#fff", border: "none",
+                borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: loading ? "wait" : "pointer",
+                opacity: loading ? 0.5 : 1,
+              }}>
+              {loading ? "Loading…" : "Filter"}
+            </button>
           ) : (
             <button
               onClick={() => run(query, provider as "pexels" | "google")}
@@ -208,6 +274,41 @@ export function ImageSearchModal({ open, initialQuery = "", onClose, onPick }: P
             </button>
           )}
         </div>
+
+        {/* SP-only filter strip - district + year + month */}
+        {provider === "sp" && (
+          <div style={{ display: "flex", gap: 6, padding: "8px 16px", borderBottom: "1px solid #e5e7eb", flexWrap: "wrap", background: "#f0fdfa" }}>
+            <select value={spDistrict} onChange={(e) => { setSpDistrict(e.target.value); runSp({ district: e.target.value }); }}
+              style={{ padding: "6px 10px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 12 }}>
+              <option value="">All folders</option>
+              <option value="Kurnool">Kurnool</option>
+              <option value="Nandyal">Nandyal</option>
+              <option value="Ananthapuramu">Ananthapuramu</option>
+              <option value="Sri-Sathya-Sai">Sri Sathya Sai</option>
+              <option value="YSR-Kadapa">YSR Kadapa</option>
+              <option value="Annamayya">Annamayya</option>
+              <option value="Tirupati">Tirupati</option>
+              <option value="Chittoor">Chittoor</option>
+              <option value="_Statewide">_Statewide</option>
+            </select>
+            <select value={spYyyy} onChange={(e) => { setSpYyyy(e.target.value); runSp({ yyyy: e.target.value }); }}
+              style={{ padding: "6px 10px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 12 }}>
+              <option value="">Any year</option>
+              <option value={String(new Date().getFullYear())}>{new Date().getFullYear()}</option>
+              <option value={String(new Date().getFullYear() - 1)}>{new Date().getFullYear() - 1}</option>
+            </select>
+            <select value={spMm} onChange={(e) => { setSpMm(e.target.value); runSp({ mm: e.target.value }); }}
+              style={{ padding: "6px 10px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 12 }}>
+              <option value="">Any month</option>
+              {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, "0")).map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+            <div style={{ fontSize: 11, color: "#0f766e", padding: "6px 0", marginLeft: "auto" }}>
+              {spItems.length} item{spItems.length === 1 ? "" : "s"} - already on CDN, instant insert
+            </div>
+          </div>
+        )}
 
         {provider === "ai" && (
           <div style={{ padding: "8px 16px", background: "#ede9fe", borderBottom: "1px solid #ddd6fe", color: "#5b21b6", fontSize: 12 }}>
@@ -275,12 +376,12 @@ export function ImageSearchModal({ open, initialQuery = "", onClose, onPick }: P
             </>
           )}
 
-          {provider !== "ai" && hits.length === 0 && !loading && !error && (
+          {provider !== "ai" && provider !== "sp" && hits.length === 0 && !loading && !error && (
             <p style={{ textAlign: "center", color: "#888", padding: 40, fontSize: 13 }}>
               Type a search above and press Enter.
             </p>
           )}
-          {provider !== "ai" && <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12 }}>
+          {provider !== "ai" && provider !== "sp" && <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12 }}>
             {hits.map((h, i) => (
               <div key={i} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 6, overflow: "hidden" }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -306,6 +407,46 @@ export function ImageSearchModal({ open, initialQuery = "", onClose, onPick }: P
               </div>
             ))}
           </div>}
+
+          {/* SP-mirrored picker grid. blobUrl is already on our CDN so
+            inserting is instant - no re-host round-trip needed. */}
+          {provider === "sp" && spItems.length === 0 && !loading && !error && (
+            <p style={{ textAlign: "center", color: "#888", padding: 40, fontSize: 13 }}>
+              No mirrored media match. Try clearing the district / year / month filter.
+            </p>
+          )}
+          {provider === "sp" && spItems.length > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12 }}>
+              {spItems.map((it) => {
+                const isImg = it.mimeType.startsWith("image/");
+                return (
+                  <div key={it.blobUrl} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 6, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                    <div style={{ height: 140, background: "#000", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                      {isImg ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={it.blobUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                      ) : (
+                        <div style={{ color: "#fff", fontSize: 11, padding: 10, textAlign: "center" }}>{it.mimeType}</div>
+                      )}
+                    </div>
+                    <div style={{ padding: 6, fontSize: 11, color: "#6b7280", flex: 1, display: "flex", flexDirection: "column", gap: 3 }}>
+                      <div style={{ fontWeight: 700, color: "#111", wordBreak: "break-all", lineHeight: 1.3, fontSize: 10 }}>
+                        {it.spFileName || it.blobUrl.split("/").pop()}
+                      </div>
+                      <div style={{ fontSize: 10 }}>{it.spFolderPath || ""}</div>
+                    </div>
+                    <button
+                      onClick={() => { onPick(it.blobUrl); onClose(); }}
+                      style={{ width: "100%", padding: "6px 0", background: "#0f766e", color: "#fff", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                    >
+                      Use this image
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>
