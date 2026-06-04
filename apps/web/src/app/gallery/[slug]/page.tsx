@@ -1,12 +1,15 @@
 // /gallery/[slug] - PHOTO_GALLERY Content type detail page (Spec #1 #111).
-// Masonry-ish grid using CSS columns - clicking opens the full image
-// in a new tab. Stories-style overlay was tried + reverted on editor
-// pushback (broke a hydration script + wrong vibe for news gallery).
+//
+// Server-rendered masonry grid (SEO-indexable, crawlers see every img +
+// caption in the static HTML) PLUS a client-side magazine flipbook
+// launcher: brand-red "ఫ్లిప్‌బుక్‌గా చూడండి" CTA opens a 3D page-turn
+// viewer (react-pageflip / StPageFlip) with one photo per page.
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { SiteHeader } from "@/components/site-header";
 import { Footer } from "@/components/footer";
 import { ShareBar } from "@/components/share-bar";
+import { GalleryFlipbookLauncher } from "@/components/gallery-flipbook-launcher";
 import { getPhotoGalleryBySlug, getSiteConfig, incrementViewCount } from "@/lib/db-queries";
 
 const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
@@ -48,6 +51,12 @@ export default async function GalleryPage({ params }: { params: Promise<{ slug: 
         {photos.length === 0 && gallery.coverImage && (
           <img src={gallery.coverImage} alt={gallery.title} style={{ width: "100%", borderRadius: 8 }} />
         )}
+
+        {/* Magazine-flipbook launcher. Falls back silently if the
+          react-pageflip chunk can't load (button stays, click opens
+          a broken viewer — improvement for the chunk failure case
+          can land later if it becomes a real problem). */}
+        <GalleryFlipbookLauncher photos={photos} title={gallery.title} />
 
         <div style={{ columnCount: 3, columnGap: 12 }} className="gallery-cols">
           {photos.map((photo, i) => (
