@@ -154,7 +154,7 @@ export default function ContentEditorPage() {
       const res = await fetch("/api/images/enhance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: featuredImage, op }),
+        body: JSON.stringify({ url: featuredImage, op, contentId: isNew ? undefined : contentId, role: "cover" }),
       });
       // Tolerate non-JSON bodies (e.g. an nginx 502/504 HTML page) so the
       // user sees a clear message instead of "Unexpected token '<'".
@@ -168,6 +168,34 @@ export default function ContentEditorPage() {
       }
     } catch (e: any) {
       setError(e.message || "Enhance failed");
+    }
+    setEnhancing(null);
+  };
+
+  // Sharp-backed quick-fixes - no confirmation, no cost dialog, fast.
+  // Covers ~80% of editorial photo adjustments (brighten, sharpen,
+  // upscale, saturate, b&w) so AI is only used when sharp genuinely
+  // can't help (watermark removal, severe restore).
+  const quickFixImage = async (op: string) => {
+    if (!featuredImage || enhancing) return;
+    setEnhancing(op);
+    setError("");
+    try {
+      const res = await fetch("/api/images/quick-fix", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: featuredImage, op, contentId: isNew ? undefined : contentId, role: "cover" }),
+      });
+      const data = await res.json().catch(() => ({} as any));
+      if (!res.ok || !data.url) {
+        setError(data.error || "Couldn't apply that fix. Try again or use AI tools below.");
+      } else {
+        setFeaturedImage(data.url);
+        setSuccess(`✓ '${op}' applied.`);
+        setTimeout(() => setSuccess(""), 3000);
+      }
+    } catch (e: any) {
+      setError(e.message || "Quick-fix failed");
     }
     setEnhancing(null);
   };
@@ -880,13 +908,37 @@ export default function ContentEditorPage() {
                     >
                       Crop
                     </Button>
-                    {/* AI enhance row - only visible once an image is set.
-                        ~$0.06 per operation. Result replaces featuredImage. */}
+                    {/* Quick-fix row (sharp, free, ~200ms). Editor reaches
+                        for these first; AI row below is the fallback for
+                        the few cases sharp can't handle. */}
+                    {[
+                      { op: "auto-fix", label: "Auto-fix" },
+                      { op: "brighten", label: "Brighten" },
+                      { op: "darken", label: "Darken" },
+                      { op: "sharpen", label: "Sharpen" },
+                      { op: "upscale-2x", label: "2× Upscale" },
+                      { op: "saturate", label: "Saturate" },
+                      { op: "desaturate", label: "Desaturate" },
+                      { op: "grayscale", label: "B&W" },
+                    ].map((b) => (
+                      <Button
+                        key={b.op}
+                        type="button"
+                        size="sm"
+                        onClick={() => quickFixImage(b.op)}
+                        disabled={enhancing !== null}
+                        title={`Quick fix '${b.op}' — sharp-backed, free, ~200ms`}
+                        className={`gap-1 bg-emerald-600 text-white hover:bg-emerald-700 ${enhancing && enhancing !== b.op ? "opacity-50" : ""}`}
+                      >
+                        {enhancing === b.op ? "…" : b.label}
+                      </Button>
+                    ))}
+                    {/* AI row trimmed to the two ops sharp can't replicate.
+                        Watermark removal needs content-aware fill;
+                        Restore needs a true diffusion model. */}
                     {[
                       { op: "remove-watermark", label: "Remove watermark" },
-                      { op: "enhance", label: "Enhance" },
-                      { op: "upscale", label: "Upscale" },
-                      { op: "restore", label: "Restore" },
+                      { op: "restore", label: "Restore (AI)" },
                     ].map((b) => (
                       <Button
                         key={b.op}
@@ -894,7 +946,7 @@ export default function ContentEditorPage() {
                         size="sm"
                         onClick={() => enhanceImage(b.op)}
                         disabled={enhancing !== null}
-                        title={`AI '${b.op}' - gpt-image-2, ~15s, ~$0.06`}
+                        title={`AI '${b.op}' — gpt-image-2, ~15s, ~$0.06`}
                         className={`gap-1 bg-violet-600 text-white hover:bg-violet-700 ${enhancing && enhancing !== b.op ? "opacity-50" : ""}`}
                       >
                         <Sparkles className="h-3.5 w-3.5" />
