@@ -127,6 +127,18 @@ jobs:
             # already-seeded menus. This patches the existing rows to match the
             # hardcoded header fallback. No-ops once the item is present.
             bunx tsx scripts/patch-header-horoscope.ts
+            echo "=== Fix menu targets: HEADER '#'→NONE + reshape flat FOOTER/MOBILE into columns (idempotent) ==="
+            # The web footer + mobile drawer are now DB-driven and expect the
+            # FOOTER/MOBILE menus shaped as heading-with-children columns. The
+            # original seed was flat, so already-seeded prod rows need reshaping
+            # once. Also rewrites the legacy HEADER dropdown url:"#" (which fails
+            # the strict menu schema) to a NONE target. No-ops once clean.
+            bunx tsx scripts/fix-menu-targets.ts
+            echo "=== Add footer 'లింకులు' (policy/links) column to the FOOTER menu if missing (idempotent) ==="
+            # The footer Links column is now admin-managed (was hardcoded in
+            # apps/web footer.tsx). fix-menu-targets only reshapes a flat footer,
+            # so already-2-column footers need this additive patch. No-ops once present.
+            bunx tsx scripts/patch-footer-links.ts
             echo "=== Seed category tag suggestions (chip row under Tags input) ==="
             # Idempotent: re-running upserts Tag rows + skips existing
             # CategoryTagSuggestion links. Editor work - to add tags for a

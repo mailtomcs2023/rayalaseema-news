@@ -101,10 +101,33 @@ const childInternal = (label: string, url: string) =>
   ({ id: id(), label, target: { type: "INTERNAL_URL", url }, mobileVariant: "show" });
 const childCat = (label: string, slug: string) =>
   ({ id: id(), label, target: { type: "CATEGORY", categorySlug: slug }, mobileVariant: "show" });
+const childExternal = (label: string, url: string) =>
+  ({ id: id(), label, target: { type: "EXTERNAL_URL", url }, mobileVariant: "show" });
 
-// Two NONE columns: districts + sections (+ horoscope page link).
-function canonicalColumns(sections: { label: string; slug: string }[]) {
-  return [
+// Footer "లింకులు" (policy/links) column - kept in sync with FOOTER_LINKS in
+// seed-menus.ts + patch-footer-links.ts.
+export const LINKS_CHILDREN = [
+  childInternal("ePaper", "/epaper"),
+  childInternal("మా గురించి (About)", "/about"),
+  childInternal("Mission", "/mission"),
+  childInternal("Masthead", "/masthead"),
+  childInternal("Ownership & Funding", "/ownership"),
+  childInternal("Ethics Policy", "/ethics-policy"),
+  childInternal("Editorial Standards", "/editorial-standards"),
+  childInternal("Corrections Policy", "/corrections-policy"),
+  childInternal("Diversity Policy", "/diversity-policy"),
+  childInternal("Feedback Policy", "/feedback-policy"),
+  childInternal("సంప్రదించండి (Contact)", "/contact"),
+  childExternal("ప్రకటనలు (Advertise)", "mailto:ads@rayalaseemanews.com"),
+  childInternal("Privacy Policy", "/privacy"),
+  childInternal("Terms of Service", "/terms"),
+  childInternal("Sitemap", "/sitemap.xml"),
+];
+
+// NONE columns: districts + sections (+ horoscope). FOOTER also gets a Links
+// column; MOBILE does not.
+function canonicalColumns(sections: { label: string; slug: string }[], includeLinks = false) {
+  const cols: any[] = [
     {
       id: id(),
       label: "రాయలసీమ జిల్లాలు",
@@ -123,6 +146,10 @@ function canonicalColumns(sections: { label: string; slug: string }[]) {
       ],
     },
   ];
+  if (includeLinks) {
+    cols.push({ id: id(), label: "లింకులు", target: { type: "NONE" }, mobileVariant: "show", children: LINKS_CHILDREN });
+  }
+  return cols;
 }
 
 async function fixLocation(location: MenuLocation) {
@@ -155,8 +182,9 @@ async function fixLocation(location: MenuLocation) {
     const current = (data.items as any[]) ?? itemsArr;
     const hasColumns = current.some((it) => Array.isArray(it?.children) && it.children.length > 0);
     if (!hasColumns) {
-      const sections = location === MenuLocation.FOOTER ? FOOTER_SECTIONS : MOBILE_SECTIONS;
-      data.items = canonicalColumns(sections) as any;
+      const isFooter = location === MenuLocation.FOOTER;
+      const sections = isFooter ? FOOTER_SECTIONS : MOBILE_SECTIONS;
+      data.items = canonicalColumns(sections, isFooter) as any;
       data.draftItems = Prisma.DbNull;
       data.isPublished = true;
       data.publishedAt = new Date();

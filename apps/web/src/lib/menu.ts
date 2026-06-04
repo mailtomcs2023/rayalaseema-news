@@ -7,9 +7,10 @@
 import { unstable_cache } from "next/cache";
 import { prisma, MenuLocation, resolveItemHref, type MenuItem } from "@rayalaseema/db";
 
-// Cached behind tag "menu" so admin publish (revalidateTag("menu")) busts it
-// instantly. 60s TTL is enough for the cold-cache path; everything else hits
-// the in-memory cache.
+// Cached behind tag "menu". The admin publish route pings POST /api/revalidate-
+// menu in THIS app after publishing, which busts the tag instantly (admin's own
+// revalidateTag can't reach this separate process). The short 15s TTL is just a
+// safety net so the menu self-heals even if that ping is missed.
 async function getMenuImpl(location: MenuLocation): Promise<MenuItem[]> {
   const menu = await prisma.menu.findUnique({ where: { location } });
   if (!menu || !menu.isPublished) return [];
@@ -17,15 +18,15 @@ async function getMenuImpl(location: MenuLocation): Promise<MenuItem[]> {
 }
 
 const getHeader = unstable_cache(() => getMenuImpl(MenuLocation.HEADER), ["menu-header"], {
-  revalidate: 60,
+  revalidate: 15,
   tags: ["menu"],
 });
 const getFooter = unstable_cache(() => getMenuImpl(MenuLocation.FOOTER), ["menu-footer"], {
-  revalidate: 60,
+  revalidate: 15,
   tags: ["menu"],
 });
 const getMobile = unstable_cache(() => getMenuImpl(MenuLocation.MOBILE), ["menu-mobile"], {
-  revalidate: 60,
+  revalidate: 15,
   tags: ["menu"],
 });
 

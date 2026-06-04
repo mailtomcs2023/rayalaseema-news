@@ -4,26 +4,56 @@
 // Publish copies draftItems -> items + snapshots a MenuVersion.
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useKycGate } from "@/components/kyc-gated-link";
+import { confirm } from "@/components/confirm-dialog";
 import { toast } from "sonner";
+import { ChevronDown, Plus, Trash, ChevronsUpDown, Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { WithTooltip } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+  MeasuringStrategy,
+  type DragStartEvent,
+  type DragMoveEvent,
+  type DragOverEvent,
+  type DragEndEvent,
+  type UniqueIdentifier,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  sortableKeyboardCoordinates,
+  arrayMove,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
+  flattenTree,
+  buildTree,
+  getProjection,
+  removeChildrenOf,
+  getChildCount,
+  removeItemById,
+  patchItemById,
+  findItemDeep,
+  type Item,
+  type Target,
+  type FlattenedItem,
+} from "./menu-tree-dnd";
 
-type Target =
-  | { type: "NONE" }
-  | { type: "CATEGORY"; categorySlug: string }
-  | { type: "INTERNAL_URL"; url: string }
-  | { type: "EXTERNAL_URL"; url: string }
-  | { type: "CONTENT"; contentId: string; contentTypeCache?: string; contentSlugCache?: string };
-
-interface Item {
-  id: string;
-  label: string;
-  target: Target;
-  mobileVariant: "show" | "hide";
-  openInNewTab?: boolean;
-  children?: Item[];
-}
+const INDENT = 28; // px per nesting level in the tree pane
 
 interface Category { slug: string; name: string; nameEn: string }
 interface ContentRow { id: string; type: string; title: string; slug: string | null }
@@ -93,7 +123,17 @@ export function MenuTreeEditor(props: Props) {
     });
   };
   const [tree, setTree] = useState<Item[]>(props.items);
-  const [selected, setSelected] = useState<{ topIdx: number; childIdx: number | null } | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // dnd-kit drag state.
+  const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
+  const [overId, setOverId] = useState<UniqueIdentifier | null>(null);
+  const [offsetLeft, setOffsetLeft] = useState(0);
+  // The DragOverlay portals into document.body, which doesn't exist during SSR.
+  // Render it only after mount on the client.
+  const [mounted, setMounted] = useState(false);
+  // Editor-only accordion state - which parent rows are collapsed. NOT persisted
+  // (our menu schema is strict), so this never touches the published menu.
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const [contentSearch, setContentSearch] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
@@ -135,8 +175,12 @@ export function MenuTreeEditor(props: Props) {
     saveTimer.current = setTimeout(() => doSave(), 5000);
   }, []);
 
-  const doSave = async () => {
-    if (!dirty.current) return;
+  // `force` ignores the dirty guard (the explicit Save Draft button + the
+  // pre-publish save always persist the current tree, collapsed or not - the
+  // whole `tree` is sent regardless of which rows are collapsed in the editor).
+  // `notify` shows a success/error toast (only the manual button does).
+  const doSave = async ({ force = false, notify = false }: { force?: boolean; notify?: boolean } = {}) => {
+    if (!force && !dirty.current) return;
     setSaving(true);
     setError("");
     try {
@@ -147,37 +191,60 @@ export function MenuTreeEditor(props: Props) {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(formatSaveError(data, res.status));
+        const msg = formatSaveError(data, res.status);
+        setError(msg);
+        if (notify) toast.error("Save failed", { description: msg });
       } else {
         dirty.current = false;
         setSavedAt(new Date());
+        if (notify) toast.success("Draft saved");
       }
     } catch (e: any) {
-      setError(e.message || "Save failed");
+      const msg = e.message || "Save failed";
+      setError(msg);
+      if (notify) toast.error("Save failed", { description: msg });
     }
     setSaving(false);
   };
 
   const handlePublish = async () => {
     if (kycBlocked) { fireKycToast("publish the menu"); return; }
-    await doSave();
+    // Publishing overwrites the live menu visitors see - confirm first.
+    const ok = await confirm({
+      title: `Publish the ${props.label.toLowerCase()}?`,
+      description:
+        "This replaces the current live menu on the website with your latest changes. Visitors will see the new menu within a few seconds. The version it replaces is saved to history and can be restored.",
+      confirmText: "Publish",
+    });
+    if (!ok) return;
+    await doSave({ force: true });
     setPublishing(true);
     setError("");
     try {
       const res = await fetch(`/api/menu-builder/menus/${props.location}/publish`, { method: "POST" });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(formatSaveError(data, res.status));
+        const msg = formatSaveError(data, res.status);
+        setError(msg);
+        toast.error("Publish failed", { description: msg });
       } else {
+        toast.success(`${props.label} published`, {
+          description: "Live on the website within a few seconds.",
+        });
         router.refresh();
       }
     } catch (e: any) {
-      setError(e.message || "Publish failed");
+      const msg = e.message || "Publish failed";
+      setError(msg);
+      toast.error("Publish failed", { description: msg });
     }
     setPublishing(false);
   };
 
-  useEffect(() => { return () => { if (saveTimer.current) clearTimeout(saveTimer.current); }; }, []);
+  useEffect(() => {
+    setMounted(true);
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+  }, []);
 
   // Presence heartbeat (Spec #3 F1 #185). Pings every 10s; the API stores
   // entries with a 30s TTL so a closed tab silently times out.
@@ -199,9 +266,9 @@ export function MenuTreeEditor(props: Props) {
   }, [props.location]);
 
   // --- mutators ---
-  // Every Add / Edit / Remove eventually flows through here, so gating
-  // once covers the whole tree editor. Blocked clicks fire a red toast
-  // and leave the tree untouched.
+  // Every Add / Edit / Remove / drag flows through update(), so gating once
+  // covers the whole tree editor. Blocked clicks fire a red toast and leave
+  // the tree untouched.
   const update = (next: Item[]) => {
     if (kycBlocked) { fireKycToast(); return; }
     setTree(next);
@@ -209,88 +276,107 @@ export function MenuTreeEditor(props: Props) {
   };
 
   const addItem = (target: Target, label: string) => {
-    update([...tree, { id: genId(), label, target, mobileVariant: "show", children: [] }]);
+    const id = genId();
+    update([...tree, { id, label, target, mobileVariant: "show", children: [] }]);
+    setSelectedId(id);
   };
 
-  const updateItem = (topIdx: number, childIdx: number | null, patch: Partial<Item>) => {
-    const next = tree.map((t, i) => {
-      if (i !== topIdx) return t;
-      if (childIdx === null) return { ...t, ...patch };
-      const newChildren = (t.children || []).map((c, j) => (j === childIdx ? { ...c, ...patch } : c));
-      return { ...t, children: newChildren };
+  const patchSelected = (patch: Partial<Item>) => {
+    if (!selectedId) return;
+    update(patchItemById(tree, selectedId, patch));
+  };
+
+  const removeById = async (id: string, label: string) => {
+    const ok = await confirm({
+      title: `Delete "${label}"?`,
+      description: "This removes the item (and any sub-items under it) from the menu. Publish to apply it to the live site.",
+      confirmText: "Delete",
+      destructive: true,
     });
-    update(next);
+    if (!ok) return;
+    update(removeItemById(tree, id));
+    if (selectedId === id) setSelectedId(null);
   };
 
-  const removeItem = (topIdx: number, childIdx: number | null) => {
-    const next = tree.flatMap((t, i) => {
-      if (i !== topIdx) return [t];
-      if (childIdx === null) return [];
-      return [{ ...t, children: (t.children || []).filter((_, j) => j !== childIdx) }];
-    });
-    update(next);
-    setSelected(null);
+  // Add a child under a top-level item (only top items can have children - the
+  // 2-level cap). Defaults to a valid internal link so it saves immediately;
+  // the editor selects it so the user can set its label/target in the config
+  // pane. Expands the parent so the new child is visible.
+  const addChild = (parentId: string) => {
+    const id = genId();
+    const child: Item = { id, label: "New item", target: { type: "INTERNAL_URL", url: "/" }, mobileVariant: "show" };
+    update(tree.map((t) => (t.id === parentId ? { ...t, children: [...(t.children ?? []), child] } : t)));
+    setSelectedId(id);
+    setCollapsedIds((s) => { const n = new Set(s); n.delete(parentId); return n; });
   };
 
-  const moveItem = (topIdx: number, childIdx: number | null, delta: -1 | 1) => {
-    if (childIdx === null) {
-      const j = topIdx + delta;
-      if (j < 0 || j >= tree.length) return;
-      const next = [...tree];
-      [next[topIdx], next[j]] = [next[j], next[topIdx]];
-      update(next);
-      setSelected({ topIdx: j, childIdx: null });
-    } else {
-      const t = tree[topIdx];
-      const children = [...(t.children || [])];
-      const j = childIdx + delta;
-      if (j < 0 || j >= children.length) return;
-      [children[childIdx], children[j]] = [children[j], children[childIdx]];
-      const next = tree.map((x, i) => (i === topIdx ? { ...x, children } : x));
-      update(next);
-      setSelected({ topIdx, childIdx: j });
-    }
+  const toggleCollapse = (id: string) => {
+    setCollapsedIds((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
   };
 
-  // Demote a top-level item to a child of the item above (only if the
-  // item has no children - depth limit max 2).
-  const nest = (topIdx: number) => {
-    if (topIdx === 0) return;
-    const item = tree[topIdx];
-    if (item.children && item.children.length > 0) {
-      setError("Item with children can't become a child (max depth 2).");
-      setTimeout(() => setError(""), 4000);
-      return;
-    }
-    const parent = tree[topIdx - 1];
-    const newParent = { ...parent, children: [...(parent.children || []), { ...item, children: undefined }] };
-    const next = tree.filter((_, i) => i !== topIdx).map((t, i) => (i === topIdx - 1 ? newParent : t));
-    update(next);
-    setSelected({ topIdx: topIdx - 1, childIdx: newParent.children.length - 1 });
-  };
+  // --- drag & drop (dnd-kit sortable tree, depth-capped at 2 levels) ---
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
-  // Promote a child to top level (inserted just after its parent).
-  const unnest = (topIdx: number, childIdx: number) => {
-    const parent = tree[topIdx];
-    const child = parent.children![childIdx];
-    const newChildren = parent.children!.filter((_, j) => j !== childIdx);
-    const promoted: Item = { ...child, children: [] };
-    const next: Item[] = [];
-    for (let i = 0; i < tree.length; i++) {
-      if (i === topIdx) next.push({ ...parent, children: newChildren });
-      else next.push(tree[i]);
-      if (i === topIdx) next.push(promoted);
-    }
-    update(next);
-    setSelected({ topIdx: topIdx + 1, childIdx: null });
-  };
+  // Flatten the tree; while dragging, hide the active item's own descendants so
+  // a parent drags as a single block.
+  const flattenedItems = useMemo(() => {
+    const flat = flattenTree(tree);
+    // Hide children of collapsed parents + (while dragging) the active item's
+    // own descendants.
+    const collapsed = flat
+      .filter((i) => collapsedIds.has(i.id) && (i.children?.length ?? 0) > 0)
+      .map((i) => i.id);
+    const excluded = activeId ? [activeId, ...collapsed] : collapsed;
+    return removeChildrenOf(flat, excluded);
+  }, [tree, activeId, collapsedIds]);
+  const sortedIds = useMemo(() => flattenedItems.map((i) => i.id), [flattenedItems]);
+  const activeItem = activeId ? flattenedItems.find((i) => i.id === activeId) ?? null : null;
+
+  // An item that already has children can't be nested (that would create a
+  // depth-2 grandchild), so cap its projected depth at 0.
+  const activeHasChildren = activeId
+    ? !!findItemDeep(tree, String(activeId))?.children?.length
+    : false;
+  const projected =
+    activeId && overId
+      ? getProjection(flattenedItems, activeId, overId, offsetLeft, INDENT, activeHasChildren ? 0 : 1)
+      : null;
+
+  function handleDragStart({ active }: DragStartEvent) {
+    setActiveId(active.id);
+    setOverId(active.id);
+    setSelectedId(String(active.id));
+    document.body.style.setProperty("cursor", "grabbing");
+  }
+  function handleDragMove({ delta }: DragMoveEvent) {
+    setOffsetLeft(delta.x);
+  }
+  function handleDragOver({ over }: DragOverEvent) {
+    setOverId(over?.id ?? null);
+  }
+  function handleDragEnd({ active, over }: DragEndEvent) {
+    const proj = projected;
+    resetDrag();
+    if (!proj || !over) return;
+    const clone: FlattenedItem[] = JSON.parse(JSON.stringify(flattenTree(tree)));
+    const overIndex = clone.findIndex((i) => i.id === over.id);
+    const activeIndex = clone.findIndex((i) => i.id === active.id);
+    if (activeIndex < 0 || overIndex < 0) return;
+    clone[activeIndex] = { ...clone[activeIndex], depth: proj.depth, parentId: proj.parentId };
+    update(buildTree(arrayMove(clone, activeIndex, overIndex)));
+  }
+  function resetDrag() {
+    setActiveId(null);
+    setOverId(null);
+    setOffsetLeft(0);
+    document.body.style.setProperty("cursor", "");
+  }
 
   // --- selected item lookup ---
-  const sel: Item | null = selected
-    ? selected.childIdx === null
-      ? tree[selected.topIdx]
-      : tree[selected.topIdx]?.children?.[selected.childIdx] ?? null
-    : null;
+  const sel: Item | null = selectedId ? findItemDeep(tree, selectedId) ?? null : null;
 
   // --- Render ---
   return (
@@ -315,7 +401,7 @@ export function MenuTreeEditor(props: Props) {
         <button
           onClick={() => {
             if (kycBlocked) { fireKycToast("save menu drafts"); return; }
-            doSave();
+            doSave({ force: true, notify: true });
           }}
           disabled={saving}
           style={{ padding: "8px 14px", background: "#fff", color: "#374151", border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: saving ? "not-allowed" : "pointer" }}>
@@ -377,8 +463,9 @@ export function MenuTreeEditor(props: Props) {
       )}
 
       <div style={{ display: "grid", gridTemplateColumns: "260px 1fr 320px", gap: 16 }}>
-        {/* PALETTE - 4 target type adders */}
-        <div style={{ background: "#fff", borderRadius: 10, padding: 14, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+        {/* PALETTE - 4 target type adders. Sticky so it stays in view while the
+            tree column scrolls. */}
+        <div style={{ background: "#fff", borderRadius: 10, padding: 14, boxShadow: "0 1px 3px rgba(0,0,0,0.05)", position: "sticky", top: 16, alignSelf: "start", maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>
           <h3 style={{ fontSize: 13, fontWeight: 700, color: "#111", marginBottom: 10 }}>Add item</h3>
 
           <Section title="Category">
@@ -410,47 +497,91 @@ export function MenuTreeEditor(props: Props) {
           </Section>
         </div>
 
-        {/* TREE */}
+        {/* TREE - drag to reorder, drag right to nest under the item above */}
         <div style={{ background: "#fff", borderRadius: 10, padding: 14, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
           {tree.length === 0 ? (
             <p style={{ fontSize: 13, color: "#888", textAlign: "center", padding: 40 }}>
               No items yet. Add one from the palette.
             </p>
           ) : (
-            tree.map((item, ti) => (
-              <ItemRow
-                key={item.id}
-                item={item}
-                isTop
-                broken={isBroken(item)}
-                selected={selected?.topIdx === ti && selected.childIdx === null}
-                onSelect={() => setSelected({ topIdx: ti, childIdx: null })}
-                onUp={() => moveItem(ti, null, -1)}
-                onDown={() => moveItem(ti, null, 1)}
-                onNest={() => nest(ti)}
-                onRemove={() => removeItem(ti, null)}
-              >
-                {(item.children || []).map((child, ci) => (
-                  <ItemRow
-                    key={child.id}
-                    item={child}
-                    isTop={false}
-                    broken={isBroken(child)}
-                    selected={selected?.topIdx === ti && selected.childIdx === ci}
-                    onSelect={() => setSelected({ topIdx: ti, childIdx: ci })}
-                    onUp={() => moveItem(ti, ci, -1)}
-                    onDown={() => moveItem(ti, ci, 1)}
-                    onUnnest={() => unnest(ti, ci)}
-                    onRemove={() => removeItem(ti, ci)}
+            <>
+              <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: 10 }}>
+                Drag the ⠿ handle to reorder · drag right to nest under the item above.
+              </p>
+              {/* dnd-kit's useSortable generates non-deterministic aria ids
+                  (DndDescribedBy-N) that differ between SSR and the client,
+                  causing a hydration mismatch. Render static (non-draggable)
+                  rows on the server + first client render, then swap to the
+                  full DnD tree after mount. */}
+              {!mounted ? (
+                flattenedItems.map((item) => (
+                  <MenuRowContent
+                    key={item.id}
+                    item={item}
+                    depth={item.depth}
+                    broken={isBroken(item)}
+                    selected={selectedId === item.id}
+                    isTop={item.depth === 0}
+                    childCount={item.children?.length ?? 0}
+                    collapsed={collapsedIds.has(item.id)}
+                    onSelect={() => setSelectedId(item.id)}
+                    onRemove={() => removeById(item.id, item.label)}
+                    onAddChild={() => addChild(item.id)}
+                    onToggleCollapse={() => toggleCollapse(item.id)}
                   />
-                ))}
-              </ItemRow>
-            ))
+                ))
+              ) : (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+                  onDragStart={handleDragStart}
+                  onDragMove={handleDragMove}
+                  onDragOver={handleDragOver}
+                  onDragEnd={handleDragEnd}
+                  onDragCancel={resetDrag}
+                >
+                  <SortableContext items={sortedIds} strategy={verticalListSortingStrategy}>
+                    {flattenedItems.map((item) => (
+                      <SortableMenuRow
+                        key={item.id}
+                        item={item}
+                        depth={item.id === activeId && projected ? projected.depth : item.depth}
+                        broken={isBroken(item)}
+                        selected={selectedId === item.id}
+                        isTop={item.depth === 0}
+                        childCount={item.children?.length ?? 0}
+                        collapsed={collapsedIds.has(item.id)}
+                        onSelect={() => setSelectedId(item.id)}
+                        onRemove={() => removeById(item.id, item.label)}
+                        onAddChild={() => addChild(item.id)}
+                        onToggleCollapse={() => toggleCollapse(item.id)}
+                      />
+                    ))}
+                  </SortableContext>
+                  {createPortal(
+                    <DragOverlay>
+                      {activeItem ? (
+                        <MenuRowContent
+                          item={activeItem}
+                          depth={0}
+                          broken={isBroken(activeItem)}
+                          selected
+                          clone
+                          childCount={getChildCount(tree, String(activeId))}
+                        />
+                      ) : null}
+                    </DragOverlay>,
+                    document.body,
+                  )}
+                </DndContext>
+              )}
+            </>
           )}
         </div>
 
-        {/* CONFIG PANEL */}
-        <div style={{ background: "#fff", borderRadius: 10, padding: 14, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+        {/* CONFIG PANEL - sticky so it stays in view while the tree scrolls. */}
+        <div style={{ background: "#fff", borderRadius: 10, padding: 14, boxShadow: "0 1px 3px rgba(0,0,0,0.05)", position: "sticky", top: 16, alignSelf: "start", maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>
           {!sel ? (
             <p style={{ fontSize: 13, color: "#888" }}>Select an item to edit.</p>
           ) : (
@@ -458,7 +589,7 @@ export function MenuTreeEditor(props: Props) {
               item={sel}
               categories={props.categories}
               recentContent={props.recentContent}
-              onChange={(patch) => updateItem(selected!.topIdx, selected!.childIdx, patch)}
+              onChange={(patch) => patchSelected(patch)}
             />
           )}
         </div>
@@ -478,17 +609,72 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function CategoryPicker({ categories, onPick }: { categories: Category[]; onPick: (c: Category) => void }) {
-  const [v, setV] = useState("");
+// Searchable category combobox (shadcn Popover + Input + filtered list - no
+// native <select>). Controlled by `value` (slug; "" = none).
+function CategoryCombobox({
+  categories, value, onChange, placeholder = "Pick a category",
+}: {
+  categories: Category[];
+  value: string;
+  onChange: (slug: string) => void;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const selected = categories.find((c) => c.slug === value);
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? categories.filter((c) =>
+        c.nameEn.toLowerCase().includes(q) || c.name.toLowerCase().includes(q) || c.slug.toLowerCase().includes(q))
+    : categories;
   return (
-    <div style={{ display: "flex", gap: 6 }}>
-      <select value={v} onChange={(e) => setV(e.target.value)} style={inp}>
-        <option value="">- pick -</option>
-        {categories.map((c) => <option key={c.slug} value={c.slug}>{c.nameEn}</option>)}
-      </select>
-      <button onClick={() => { const c = categories.find((x) => x.slug === v); if (c) { onPick(c); setV(""); } }}
-        disabled={!v} style={addBtn}>+</button>
-    </div>
+    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) setQuery(""); }}>
+      <PopoverTrigger asChild>
+        <Button type="button" variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-9 font-normal">
+          <span className={cn("truncate", !selected && "text-muted-foreground")}>
+            {selected ? selected.nameEn : placeholder}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="p-0" style={{ width: "var(--radix-popover-trigger-width)" }}>
+        <div className="border-b p-2">
+          <Input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search categories…" className="h-8" />
+        </div>
+        <div className="max-h-64 overflow-y-auto p-1">
+          {filtered.length === 0 ? (
+            <p className="px-2 py-6 text-center text-sm text-muted-foreground">No category found.</p>
+          ) : (
+            filtered.map((c) => (
+              <button
+                key={c.slug}
+                type="button"
+                onClick={() => { onChange(c.slug); setOpen(false); setQuery(""); }}
+                className={cn(
+                  "flex w-full items-center justify-between rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent",
+                  c.slug === value && "bg-accent",
+                )}
+              >
+                <span className="truncate">{c.nameEn}</span>
+                {c.slug === value && <Check className="ml-2 h-4 w-4 shrink-0" />}
+              </button>
+            ))
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+// Palette adder: search a category and add it on click.
+function CategoryPicker({ categories, onPick }: { categories: Category[]; onPick: (c: Category) => void }) {
+  return (
+    <CategoryCombobox
+      categories={categories}
+      value=""
+      placeholder="Search & add category"
+      onChange={(slug) => { const c = categories.find((x) => x.slug === slug); if (c) onPick(c); }}
+    />
   );
 }
 
@@ -542,43 +728,165 @@ function ContentPicker({ rows, search, setSearch, onPick }: { rows: ContentRow[]
   );
 }
 
-function ItemRow({
-  item, isTop, broken, selected, onSelect, onUp, onDown, onNest, onUnnest, onRemove, children,
+// A single draggable row. Wraps useSortable; the ⠿ handle carries the drag
+// listeners so clicking the rest of the row just selects it.
+function SortableMenuRow({
+  item, depth, broken, selected, isTop, childCount, collapsed,
+  onSelect, onRemove, onAddChild, onToggleCollapse,
 }: {
-  item: Item; isTop: boolean; broken?: boolean; selected: boolean;
-  onSelect: () => void; onUp: () => void; onDown: () => void;
-  onNest?: () => void; onUnnest?: () => void; onRemove: () => void;
-  children?: React.ReactNode;
+  item: Item; depth: number; broken?: boolean; selected: boolean;
+  isTop?: boolean; childCount?: number; collapsed?: boolean;
+  onSelect: () => void; onRemove: () => void;
+  onAddChild?: () => void; onToggleCollapse?: () => void;
 }) {
+  const { setNodeRef, listeners, attributes, transform, transition, isDragging } = useSortable({ id: item.id });
+  const style: React.CSSProperties = {
+    transform: CSS.Translate.toString(transform),
+    transition,
+  };
+  // While this row is the one being dragged, render it as a dashed drop
+  // indicator at the PROJECTED depth (the live menu-tree-dnd projection), so the
+  // user sees exactly where it will land - indented when it will become a sub
+  // item. The solid row itself floats in the DragOverlay. Mirrors the dnd-kit
+  // "indicator" ghost (.Wrapper.ghost.indicator).
+  if (isDragging) {
+    return (
+      <div ref={setNodeRef} style={style}>
+        <div
+          style={{
+            marginLeft: depth * INDENT,
+            height: 38,
+            marginBottom: 4,
+            borderRadius: 6,
+            border: "1px dashed #93c5fd",
+            background: "#eff6ff",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            paddingLeft: 12,
+            color: "#3b82f6",
+            fontSize: 13,
+            fontWeight: 600,
+          }}
+        >
+          {item.label}
+          {depth > 0 && (
+            <span style={{ fontStyle: "italic", fontWeight: 400, fontSize: 12, color: "#6b7280" }}>
+              sub item
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
   return (
-    <div>
-      <div style={{
+    <div ref={setNodeRef} style={style}>
+      <MenuRowContent
+        item={item}
+        depth={depth}
+        broken={broken}
+        selected={selected}
+        isTop={isTop}
+        childCount={childCount}
+        collapsed={collapsed}
+        onSelect={onSelect}
+        onRemove={onRemove}
+        onAddChild={onAddChild}
+        onToggleCollapse={onToggleCollapse}
+        handleProps={{ ...attributes, ...listeners }}
+      />
+    </div>
+  );
+}
+
+// Row visuals - shared by the live list and the DragOverlay clone.
+function MenuRowContent({
+  item, depth, broken, selected, clone, childCount, isTop, collapsed,
+  handleProps, onSelect, onRemove, onAddChild, onToggleCollapse,
+}: {
+  item: Item; depth: number; broken?: boolean; selected: boolean;
+  clone?: boolean; childCount?: number; isTop?: boolean; collapsed?: boolean;
+  handleProps?: any;
+  onSelect?: () => void; onRemove?: () => void;
+  onAddChild?: () => void; onToggleCollapse?: () => void;
+}) {
+  const hasChildren = (childCount ?? 0) > 0;
+  return (
+    <div
+      onClick={onSelect}
+      style={{
         display: "flex", alignItems: "center", gap: 6,
         padding: "8px 10px", borderRadius: 6, marginBottom: 4,
-        background: selected ? "#eff6ff" : broken ? "#fef3c7" : "transparent",
-        marginLeft: isTop ? 0 : 24,
-        border: selected ? "1px solid #93c5fd" : broken ? "1px solid #fde68a" : "1px solid transparent",
+        marginLeft: depth * INDENT,
+        background: selected ? "#eff6ff" : broken ? "#fef3c7" : "#fff",
+        border: selected ? "1px solid #93c5fd" : broken ? "1px solid #fde68a" : "1px solid #f1f1f4",
+        boxShadow: clone ? "0 8px 20px rgba(0,0,0,0.18)" : undefined,
         cursor: "pointer",
-      }} onClick={onSelect}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", width: 60 }}>
-          {item.target.type === "NONE" ? "HEADING" : item.target.type.replace("_URL", "").slice(0, 8)}
-        </span>
-        {broken && <span title="Target row no longer exists" style={{ fontSize: 13 }}>⚠</span>}
-        <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: "#111", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {item.label}
-        </span>
-        {item.mobileVariant === "hide" && <span title="Hidden on mobile" style={{ fontSize: 10, color: "#6b7280" }}>📱⊘</span>}
-        <button onClick={(e) => { e.stopPropagation(); onUp(); }} title="Move up" style={tinyBtn}>↑</button>
-        <button onClick={(e) => { e.stopPropagation(); onDown(); }} title="Move down" style={tinyBtn}>↓</button>
-        {isTop && onNest && (
-          <button onClick={(e) => { e.stopPropagation(); onNest!(); }} title="Nest under previous" style={tinyBtn}>→</button>
-        )}
-        {!isTop && onUnnest && (
-          <button onClick={(e) => { e.stopPropagation(); onUnnest!(); }} title="Promote to top" style={tinyBtn}>←</button>
-        )}
-        <button onClick={(e) => { e.stopPropagation(); onRemove(); }} title="Remove" style={{ ...tinyBtn, color: "#dc2626" }}>✕</button>
-      </div>
-      {children}
+        // The DragOverlay already sizes itself to the dragged row's real width,
+        // so the clone must NOT impose its own width (that made it look short).
+        boxSizing: "border-box",
+      }}
+    >
+      <span
+        {...(handleProps || {})}
+        title="Drag to move"
+        onClick={(e) => e.stopPropagation()}
+        style={{ cursor: "grab", color: "#9ca3af", fontSize: 15, padding: "0 2px", touchAction: "none", lineHeight: 1 }}
+      >
+        ⠿
+      </span>
+      <span style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", width: 60 }}>
+        {item.target.type === "NONE" ? "HEADING" : item.target.type.replace("_URL", "").slice(0, 8)}
+      </span>
+      {broken && <span title="Target row no longer exists" style={{ fontSize: 13 }}>⚠</span>}
+      <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: "#111", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        {item.label}
+      </span>
+      {!clone && collapsed && hasChildren && (
+        <span style={{ fontSize: 11, color: "#9ca3af" }}>({childCount})</span>
+      )}
+      {item.mobileVariant === "hide" && <span title="Hidden on mobile" style={{ fontSize: 10, color: "#6b7280" }}>📱⊘</span>}
+      {clone && childCount ? <span style={{ fontSize: 11, color: "#6b7280", marginRight: 4 }}>+{childCount}</span> : null}
+      {/* Collapse/expand chevron (leftmost of the action group). Editor-only. */}
+      {!clone && hasChildren && (
+        <WithTooltip text={collapsed ? "Expand" : "Collapse"}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-gray-500"
+            onClick={(e) => { e.stopPropagation(); onToggleCollapse?.(); }}
+          >
+            <ChevronDown className={`transition-transform ${collapsed ? "-rotate-90" : ""}`} />
+          </Button>
+        </WithTooltip>
+      )}
+      {!clone && isTop && onAddChild && (
+        <WithTooltip text="Add sub-item">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-blue-600 hover:text-blue-700"
+            onClick={(e) => { e.stopPropagation(); onAddChild(); }}
+          >
+            <Plus />
+          </Button>
+        </WithTooltip>
+      )}
+      {onRemove && (
+        <WithTooltip text="Delete">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-destructive hover:text-destructive"
+            onClick={(e) => { e.stopPropagation(); onRemove(); }}
+          >
+            <Trash />
+          </Button>
+        </WithTooltip>
+      )}
     </div>
   );
 }
@@ -614,11 +922,11 @@ function ItemConfig({
       {item.target.type === "CATEGORY" && (
         <>
           <Label>Category</Label>
-          <select value={item.target.categorySlug}
-            onChange={(e) => onChange({ target: { type: "CATEGORY", categorySlug: e.target.value } })} style={inp}>
-            <option value="">- pick -</option>
-            {categories.map((c) => <option key={c.slug} value={c.slug}>{c.nameEn}</option>)}
-          </select>
+          <CategoryCombobox
+            categories={categories}
+            value={item.target.categorySlug}
+            onChange={(slug) => onChange({ target: { type: "CATEGORY", categorySlug: slug } })}
+          />
         </>
       )}
 
@@ -678,4 +986,3 @@ function Label({ children }: { children: React.ReactNode }) {
 
 const inp: React.CSSProperties = { width: "100%", padding: "6px 8px", border: "1px solid #e5e7eb", borderRadius: 6, fontSize: 13, outline: "none", background: "#fff", boxSizing: "border-box" };
 const addBtn: React.CSSProperties = { padding: "0 12px", background: "#dc2626", color: "#fff", border: "none", borderRadius: 6, fontSize: 14, fontWeight: 700, cursor: "pointer" };
-const tinyBtn: React.CSSProperties = { padding: "2px 6px", background: "transparent", border: "1px solid #e5e7eb", borderRadius: 4, fontSize: 11, cursor: "pointer", color: "#374151" };

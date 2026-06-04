@@ -53,8 +53,21 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ loc
       },
     });
 
-    // Bust the web-app menu cache (tag set in apps/web/src/lib/menu.ts).
+    // Bust this app's "menu" tag (harmless; admin doesn't cache the menu).
     try { revalidateTag("menu", "global"); } catch {}
+
+    // apps/web is a SEPARATE Next.js process, so the revalidateTag above can't
+    // reach its menu cache. Ping its on-demand revalidation endpoint so the
+    // published menu shows up immediately instead of after the web TTL.
+    try {
+      const siteUrl = process.env.SITE_URL || "http://localhost:3000";
+      await fetch(`${siteUrl}/api/revalidate-menu`, {
+        method: "POST",
+        headers: { "x-revalidate-secret": process.env.MENU_REVALIDATE_SECRET || "" },
+        // Don't let a slow/unreachable web app block the publish response.
+        signal: AbortSignal.timeout(3000),
+      });
+    } catch { /* non-fatal - the web TTL still refreshes it within ~15s */ }
 
     return NextResponse.json({ ok: true, publishedAt: updated.publishedAt });
   } catch (e) { return apiError(e); }

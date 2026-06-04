@@ -30,6 +30,12 @@ function footerHref(t: any): string {
   return "#";
 }
 
+// Links that must render as a plain <a> rather than Next <Link>: external
+// schemes (http, mailto, tel) and the generated sitemap file.
+function isExternalHref(href: string) {
+  return /^(https?:|mailto:|tel:)/i.test(href) || href.endsWith(".xml");
+}
+
 export function Footer({ config: initialConfig = {} }: FooterProps) {
   const [config, setConfig] = useState(initialConfig);
   // Admin-published FOOTER menu, fetched on mount. Each top-level item renders
@@ -43,13 +49,19 @@ export function Footer({ config: initialConfig = {} }: FooterProps) {
     fetch("/api/menu/footer").then((r) => r.json()).then((data) => {
       const items = Array.isArray(data?.items) ? data.items : [];
       if (items.length === 0) return;
-      const cols: FooterColumn[] = items.map((it: any) => ({
-        heading: it.label,
-        links: (Array.isArray(it.children) ? it.children : []).map((c: any) => ({
-          name: c.label,
-          href: footerHref(c.target),
-        })),
-      }));
+      const cols: FooterColumn[] = items
+        .map((it: any) => ({
+          heading: it.label,
+          links: (Array.isArray(it.children) ? it.children : []).map((c: any) => ({
+            name: c.label,
+            href: footerHref(c.target),
+          })),
+        }))
+        // Only render columns that actually have links. Guards against a flat
+        // (un-reshaped) FOOTER menu painting a row of empty stray headings -
+        // the footer degrades to brand + policy links until the menu is nested
+        // into heading-with-children columns.
+        .filter((col: FooterColumn) => col.links.length > 0);
       setColumns(cols);
     }).catch(() => {});
   }, []);
@@ -101,11 +113,18 @@ export function Footer({ config: initialConfig = {} }: FooterProps) {
                 </a>
               ))}
             </div>
+
+            {/* App download - promo placeholder (not a menu), lives under the brand. */}
+            <div className="mt-6">
+              <h4 className="text-white font-semibold mb-3 text-sm uppercase tracking-wider">App Download</h4>
+              <span className="block max-w-xs bg-gray-800 rounded-lg px-4 py-2.5 text-xs text-gray-500">
+                App Coming Soon
+              </span>
+            </div>
           </div>
 
-          {/* Admin-managed nav columns (FOOTER menu). Each top-level item is a
-              column heading; its children are the links. Districts + sections
-              live here - nothing hardcoded. */}
+          {/* Admin-managed nav columns (FOOTER menu) - districts, sections, and
+              links are ALL driven by the Menu Builder. Nothing hardcoded. */}
           {columns.map((col, ci) => (
             <div key={ci}>
               <h4 className="text-white font-semibold mb-4 text-sm uppercase tracking-wider font-telugu">
@@ -114,55 +133,24 @@ export function Footer({ config: initialConfig = {} }: FooterProps) {
               <ul className="space-y-2 text-sm">
                 {col.links.map((link, li) => (
                   <li key={li}>
-                    <Link
-                      href={link.href}
-                      className="hover:text-white transition-colors font-telugu"
-                    >
-                      {link.name}
-                    </Link>
+                    {isExternalHref(link.href) ? (
+                      <a
+                        href={link.href}
+                        className="hover:text-white transition-colors font-telugu"
+                        {...(/^https?:/i.test(link.href) ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                      >
+                        {link.name}
+                      </a>
+                    ) : (
+                      <Link href={link.href} className="hover:text-white transition-colors font-telugu">
+                        {link.name}
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>
             </div>
           ))}
-
-          {/* Quick Links */}
-          <div>
-            <h4 className="text-white font-semibold mb-4 text-sm uppercase tracking-wider">
-              లింకులు
-            </h4>
-            {/* Spec #4 C9 (#212) - site-wide trust + policy link bar. All 12
-                E-E-A-T pages are reachable from every page on the site so
-                Google + AI-search crawlers see consistent organization-level
-                signals. */}
-            <ul className="space-y-2 text-sm">
-              <li><Link href="/epaper" className="hover:text-white transition-colors font-telugu">ePaper</Link></li>
-              <li><Link href="/about" className="hover:text-white transition-colors font-telugu">మా గురించి (About)</Link></li>
-              <li><Link href="/mission" className="hover:text-white transition-colors">Mission</Link></li>
-              <li><Link href="/masthead" className="hover:text-white transition-colors">Masthead</Link></li>
-              <li><Link href="/ownership" className="hover:text-white transition-colors">Ownership &amp; Funding</Link></li>
-              <li><Link href="/ethics-policy" className="hover:text-white transition-colors">Ethics Policy</Link></li>
-              <li><Link href="/editorial-standards" className="hover:text-white transition-colors">Editorial Standards</Link></li>
-              <li><Link href="/corrections-policy" className="hover:text-white transition-colors">Corrections Policy</Link></li>
-              <li><Link href="/diversity-policy" className="hover:text-white transition-colors">Diversity Policy</Link></li>
-              <li><Link href="/feedback-policy" className="hover:text-white transition-colors">Feedback Policy</Link></li>
-              <li><Link href="/contact" className="hover:text-white transition-colors font-telugu">సంప్రదించండి (Contact)</Link></li>
-              <li><a href="mailto:ads@rayalaseemanews.com" className="hover:text-white transition-colors font-telugu">ప్రకటనలు (Advertise)</a></li>
-              <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
-              <li><Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
-              <li><a href="/sitemap.xml" className="hover:text-white transition-colors">Sitemap</a></li>
-            </ul>
-
-            {/* Download App */}
-            <h4 className="text-white font-semibold mt-6 mb-3 text-sm uppercase tracking-wider">
-              App Download
-            </h4>
-            <div className="space-y-2">
-              <span className="block bg-gray-800 rounded-lg px-4 py-2.5 text-xs text-gray-500">
-                App Coming Soon
-              </span>
-            </div>
-          </div>
         </div>
       </div>
 

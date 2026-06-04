@@ -104,6 +104,29 @@ function childInternal(label: string, url: string) {
 function childCat(label: string, slug: string) {
   return { id: id(), label, target: { type: "CATEGORY", categorySlug: slug }, mobileVariant: "show" };
 }
+function childExternal(label: string, url: string) {
+  return { id: id(), label, target: { type: "EXTERNAL_URL", url }, mobileVariant: "show" };
+}
+
+// Footer "లింకులు" (Links) column - the E-E-A-T / policy + utility links that
+// used to be hardcoded in apps/web footer.tsx. Now admin-managed like the rest.
+export const FOOTER_LINKS: { label: string; url: string; external?: boolean }[] = [
+  { label: "ePaper", url: "/epaper" },
+  { label: "మా గురించి (About)", url: "/about" },
+  { label: "Mission", url: "/mission" },
+  { label: "Masthead", url: "/masthead" },
+  { label: "Ownership & Funding", url: "/ownership" },
+  { label: "Ethics Policy", url: "/ethics-policy" },
+  { label: "Editorial Standards", url: "/editorial-standards" },
+  { label: "Corrections Policy", url: "/corrections-policy" },
+  { label: "Diversity Policy", url: "/diversity-policy" },
+  { label: "Feedback Policy", url: "/feedback-policy" },
+  { label: "సంప్రదించండి (Contact)", url: "/contact" },
+  { label: "ప్రకటనలు (Advertise)", url: "mailto:ads@rayalaseemanews.com", external: true },
+  { label: "Privacy Policy", url: "/privacy" },
+  { label: "Terms of Service", url: "/terms" },
+  { label: "Sitemap", url: "/sitemap.xml" },
+];
 
 const FOOTER_SECTIONS = [
   { label: "ఆంధ్రప్రదేశ్", slug: "andhra-pradesh" },
@@ -123,8 +146,9 @@ const FOOTER_SECTIONS = [
   { label: "వాతావరణం", slug: "weather" },
 ];
 
-// Footer nav = two NONE column headings, each with leaf children. The footer's
-// policy/legal links + social row stay hardcoded in apps/web footer.tsx.
+// Footer nav = three NONE column headings, each with leaf children: districts,
+// sections, and the policy/links column. Fully admin-managed (only the brand
+// blurb, social row, and App-download placeholder stay in apps/web footer.tsx).
 const FOOTER_ITEMS = [
   {
     id: id(),
@@ -143,6 +167,13 @@ const FOOTER_ITEMS = [
       // Horoscope is a dedicated page, not a category - link it directly.
       childInternal("రాశి ఫలాలు", "/horoscope"),
     ],
+  },
+  {
+    id: id(),
+    label: "లింకులు",
+    target: { type: "NONE" },
+    mobileVariant: "show",
+    children: FOOTER_LINKS.map((l) => (l.external ? childExternal(l.label, l.url) : childInternal(l.label, l.url))),
   },
 ];
 
