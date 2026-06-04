@@ -63,7 +63,24 @@ export function buildTree(flattened: FlattenedItem[]): Item[] {
     const parent = nodes[parentId] ?? root;
     parent.children.push(nodes[f.id] as Item);
   }
-  return root.children;
+  // Strip the `children` field off nested items - see sanitizeTree.
+  return sanitizeTree(root.children);
+}
+
+// Depth is capped at 2 levels, so ONLY top-level items may carry a `children`
+// array. The strict server schema (childItemSchema) FORBIDS a `children` key on
+// nested items, so an empty `children: []` left on a child (as buildTree's node
+// map produces) makes the draft/publish save 400. This strips it off children
+// (and drops any stray grandchildren) so the tree always validates. Idempotent,
+// so it's safe to also run at the save boundary over already-loaded data.
+export function sanitizeTree(items: Item[]): Item[] {
+  return items.map((top) => {
+    const kids = (top.children ?? []).map((child) => {
+      const { children: _drop, ...rest } = child;
+      return rest as Item;
+    });
+    return { ...top, children: kids };
+  });
 }
 
 // --- projection (where the dragged row would land) ---------------------------
