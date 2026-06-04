@@ -10,6 +10,7 @@ import { useKycGate } from "@/components/kyc-gated-link";
 import { toast } from "sonner";
 
 type Target =
+  | { type: "NONE" }
   | { type: "CATEGORY"; categorySlug: string }
   | { type: "INTERNAL_URL"; url: string }
   | { type: "EXTERNAL_URL"; url: string }
@@ -49,6 +50,27 @@ interface Props {
 
 function genId() {
   return "itm_" + Math.random().toString(36).slice(2, 11);
+}
+
+// Turn a 400 response body ({ error, fieldErrors }) from the draft/publish
+// routes into a readable message. Zod's array fieldErrors are keyed by top-
+// level item index, so surface which item failed instead of a generic
+// "Invalid menu shape".
+function formatSaveError(data: any, status: number): string {
+  const base = data?.error || `Save failed (${status})`;
+  const fe = data?.fieldErrors;
+  if (fe && typeof fe === "object") {
+    const parts = Object.entries(fe)
+      .map(([idx, msgs]) => {
+        const n = Number(idx);
+        const where = Number.isInteger(n) ? `Item #${n + 1}` : idx;
+        const msg = Array.isArray(msgs) ? msgs.join(", ") : String(msgs);
+        return `${where}: ${msg}`;
+      })
+      .slice(0, 4);
+    if (parts.length) return `${base} - ${parts.join("; ")}`;
+  }
+  return base;
 }
 
 export function MenuTreeEditor(props: Props) {
@@ -125,7 +147,7 @@ export function MenuTreeEditor(props: Props) {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error || `Save failed (${res.status})`);
+        setError(formatSaveError(data, res.status));
       } else {
         dirty.current = false;
         setSavedAt(new Date());
@@ -145,7 +167,7 @@ export function MenuTreeEditor(props: Props) {
       const res = await fetch(`/api/menu-builder/menus/${props.location}/publish`, { method: "POST" });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error || `Publish failed (${res.status})`);
+        setError(formatSaveError(data, res.status));
       } else {
         router.refresh();
       }
@@ -382,6 +404,10 @@ export function MenuTreeEditor(props: Props) {
               }, c.title)}
             />
           </Section>
+
+          <Section title="Heading / Dropdown">
+            <HeadingAdder onAdd={(label) => addItem({ type: "NONE" }, label)} />
+          </Section>
         </div>
 
         {/* TREE */}
@@ -481,6 +507,19 @@ function UrlAdder({ placeholder, prefix: _, onAdd }: { placeholder: string; pref
   );
 }
 
+// Adds a label-only item (NONE target). Used for the header dropdown trigger
+// ("మరిన్ని") and footer column headings - it has no link, just children.
+function HeadingAdder({ onAdd }: { onAdd: (label: string) => void }) {
+  const [label, setLabel] = useState("");
+  return (
+    <div style={{ display: "flex", gap: 6 }}>
+      <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Heading label" style={inp} />
+      <button onClick={() => { if (label) { onAdd(label); setLabel(""); } }}
+        disabled={!label} style={addBtn}>+</button>
+    </div>
+  );
+}
+
 function ContentPicker({ rows, search, setSearch, onPick }: { rows: ContentRow[]; search: string; setSearch: (v: string) => void; onPick: (c: ContentRow) => void }) {
   const filtered = search.trim()
     ? rows.filter((r) => r.title.toLowerCase().includes(search.toLowerCase())).slice(0, 8)
@@ -522,7 +561,7 @@ function ItemRow({
         cursor: "pointer",
       }} onClick={onSelect}>
         <span style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", width: 60 }}>
-          {item.target.type.replace("_URL", "").slice(0, 8)}
+          {item.target.type === "NONE" ? "HEADING" : item.target.type.replace("_URL", "").slice(0, 8)}
         </span>
         {broken && <span title="Target row no longer exists" style={{ fontSize: 13 }}>⚠</span>}
         <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: "#111", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -557,16 +596,17 @@ function ItemConfig({
 
       <Label>Target type</Label>
       <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 8 }}>
-        {(["CATEGORY", "INTERNAL_URL", "EXTERNAL_URL", "CONTENT"] as const).map((t) => (
+        {(["NONE", "CATEGORY", "INTERNAL_URL", "EXTERNAL_URL", "CONTENT"] as const).map((t) => (
           <label key={t} style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
             <input type="radio" checked={item.target.type === t} onChange={() => {
               // Switching type resets the type-specific fields.
-              if (t === "CATEGORY") onChange({ target: { type: "CATEGORY", categorySlug: "" } });
+              if (t === "NONE") onChange({ target: { type: "NONE" } });
+              else if (t === "CATEGORY") onChange({ target: { type: "CATEGORY", categorySlug: "" } });
               else if (t === "INTERNAL_URL") onChange({ target: { type: "INTERNAL_URL", url: "/" } });
               else if (t === "EXTERNAL_URL") onChange({ target: { type: "EXTERNAL_URL", url: "https://" } });
               else onChange({ target: { type: "CONTENT", contentId: "" } });
             }} />
-            {t.replace("_", " ")}
+            {t === "NONE" ? "Heading (no link)" : t.replace("_", " ")}
           </label>
         ))}
       </div>

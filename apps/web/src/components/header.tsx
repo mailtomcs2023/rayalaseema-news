@@ -8,50 +8,61 @@ import { MarketTicker } from "./market-ticker";
 import { categoryHref, normalizeSectionHref } from "@/lib/category-href";
 import { Button } from "@/components/ui/button";
 
-// Rayalaseema districts ARE the main nav - this is a Rayalaseema newspaper
-const mainNavItems = [
-  { name: "హోమ్", slug: "/", isHome: true },
-  { name: "కర్నూలు", slug: "/kurnool" },
-  { name: "నంద్యాల", slug: "/nandyal" },
-  { name: "అనంతపురం", slug: "/ananthapuramu" },
-  { name: "శ్రీ సత్యసాయి", slug: "/sri-sathya-sai" },
-  { name: "వై.యస్.ఆర్", slug: "/ysr-kadapa" },
-  { name: "తిరుపతి", slug: "/tirupati" },
-  { name: "అన్నమయ్య", slug: "/annamayya" },
-  { name: "చిత్తూరు", slug: "/chittoor" },
-  { name: "క్రీడలు", slug: "/sports" },
-  { name: "సినిమా", slug: "/entertainment" },
-  { name: "రాశి ఫలాలు", slug: "/horoscope" },
-  { name: "మరిన్ని ❯", slug: "#", isDropdown: true },
-];
+// Nav items are admin-managed via the Menu Builder (HEADER location) - there is
+// NO hardcoded menu here. The only constant is Home, which always leads the bar;
+// every other item comes from the published menu fetched in the effect below.
+type NavItem = { name: string; slug: string; isHome?: boolean; isDropdown?: boolean };
+const HOME_ITEM: NavItem = { name: "హోమ్", slug: "/", isHome: true };
 
-// These go in the "మరిన్ని" dropdown
-const dropdownItems = [
-  { name: "ఆంధ్రప్రదేశ్", slug: "/andhra-pradesh" },
-  { name: "తెలంగాణ", slug: "/telangana" },
-  { name: "జాతీయం", slug: "/national" },
-  { name: "అంతర్జాతీయం", slug: "/international" },
-  { name: "బిజినెస్", slug: "/business" },
-  { name: "టెక్నాలజీ", slug: "/technology" },
-  { name: "సినిమా రివ్యూలు", slug: "/movie-reviews" },
-  { name: "పరీక్షా ఫలితాలు", slug: "/exam-results" },
-  { name: "ఉద్యోగాలు", slug: "/jobs" },
-  { name: "వ్యవసాయం", slug: "/agriculture" },
-  { name: "విద్య", slug: "/education" },
-  { name: "ఆరోగ్యం", slug: "/health" },
-  { name: "భక్తి", slug: "/devotional" },
-  { name: "నేరాలు", slug: "/crime" },
-  { name: "నవ్యసీమ", slug: "/navyaseema" },
-  { name: "NRI వార్తలు", slug: "/nri" },
-  { name: "వాతావరణం", slug: "/weather" },
-  { name: "రియల్ ఎస్టేట్", slug: "/real-estate" },
-  { name: "ఫీచర్ పేజీలు", slug: "/features" },
-  { name: "సంపాదకీయం", slug: "/editorial" },
-  { name: "పాఠకుల లేఖలు", slug: "/reader-letters" },
-  { name: "రాయలసీమ రుచులు", slug: "/rayalaseema-ruchulu" },
-  { name: "ఎట్టెట 😄", slug: "/yetteta" },
-  { name: "పజిల్స్", slug: "/puzzles" },
-];
+// Resolve a menu item target to the href the renderer puts on the link. NONE
+// (label-only dropdown/heading) has no destination, so it returns "#".
+function resolveNavHref(t: any): string {
+  if (!t) return "#";
+  if (t.type === "CATEGORY") return categoryHref(t.categorySlug);
+  // INTERNAL_URL items persist legacy /category|/district paths; the sections
+  // now live at the bare slug, so normalize on render.
+  if (t.type === "INTERNAL_URL") return normalizeSectionHref(t.url);
+  if (t.type === "EXTERNAL_URL") return t.url;
+  if (t.type === "CONTENT" && t.contentSlugCache && t.contentTypeCache) {
+    const prefix: Record<string, string> = {
+      ARTICLE: "/article", VIDEO: "/video", REEL: "/reel",
+      WEB_STORY: "/story", PHOTO_GALLERY: "/gallery", CARTOON: "/cartoon",
+    };
+    return `${prefix[t.contentTypeCache] || ""}/${t.contentSlugCache}`;
+  }
+  return "#";
+}
+
+// Mobile bottom-sheet nav, driven by the MOBILE menu location (independent of
+// HEADER). Split into the district chip row + the category grid.
+type MobileLink = { name: string; href: string };
+type MobileNav = { districts: MobileLink[]; categories: MobileLink[] };
+
+// Map the MOBILE menu items into the two drawer sections. Column shape (top
+// items with children) → first column is districts, the rest are categories.
+// Flat shape (no nesting) → INTERNAL_URL items are districts, everything else a
+// category. Returns null when there's nothing to show so the caller can fall
+// back to the HEADER-derived split.
+function buildMobileNav(items: any[]): MobileNav | null {
+  if (!Array.isArray(items) || items.length === 0) return null;
+  const columns = items.filter((it) => Array.isArray(it.children) && it.children.length > 0);
+  if (columns.length > 0) {
+    const toLinks = (arr: any[]): MobileLink[] => arr.map((c) => ({ name: c.label, href: resolveNavHref(c.target) }));
+    return {
+      districts: toLinks(columns[0].children),
+      categories: columns.slice(1).flatMap((col) => toLinks(col.children)),
+    };
+  }
+  const districts: MobileLink[] = [];
+  const categories: MobileLink[] = [];
+  for (const it of items) {
+    const link = { name: it.label, href: resolveNavHref(it.target) };
+    if (it.target?.type === "INTERNAL_URL") districts.push(link);
+    else if (it.target?.type !== "NONE") categories.push(link);
+  }
+  if (districts.length === 0 && categories.length === 0) return null;
+  return { districts, categories };
+}
 
 interface HeaderProps {
   config?: Record<string, string>;
@@ -74,11 +85,16 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
   const [config, setConfig] = useState(initialConfig);
   const [breakingNews, setBreakingNews] = useState(initialBreaking);
   const [tickerPaused, setTickerPaused] = useState(false);
-  // Spec #3 E1 (#183) - admin-published HEADER menu, fetched on mount.
-  // While loading or when unpublished, we fall back to the hardcoded
-  // `mainNavItems` + `dropdownItems` above so the nav is never empty.
-  const [adminTop, setAdminTop] = useState<typeof mainNavItems | null>(null);
-  const [adminDrop, setAdminDrop] = useState<typeof dropdownItems | null>(null);
+  // Spec #3 E1 (#183) - admin-published HEADER menu, fetched on mount. The menu
+  // is fully admin-managed (no hardcoded fallback); Home shows immediately and
+  // the rest is filled in once the fetch resolves. An empty/unpublished menu
+  // simply leaves Home alone.
+  const [adminTop, setAdminTop] = useState<NavItem[]>([HOME_ITEM]);
+  const [adminDrop, setAdminDrop] = useState<NavItem[]>([]);
+  // MOBILE menu location, fetched on mount and used for the bottom-sheet drawer.
+  // Null until it resolves (or if empty) - the drawer then falls back to the
+  // HEADER-derived split so it's never blank.
+  const [mobileNav, setMobileNav] = useState<MobileNav | null>(null);
   const fetchedRef = useRef(false);
   const pathname = usePathname();
   // True when this nav item maps to the current URL. Home matches only "/";
@@ -107,50 +123,48 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
     fetch("/api/menu/header").then((r) => r.json()).then((data) => {
       const items = Array.isArray(data?.items) ? data.items : [];
       if (items.length === 0) return;
-      const top: typeof mainNavItems = [{ name: "హోమ్", slug: "/", isHome: true }];
-      const drop: typeof dropdownItems = [];
+      const top: NavItem[] = [HOME_ITEM];
+      const drop: NavItem[] = [];
       let hasDropdown = false;
+      // Label for the dropdown trigger comes from the (first) parent item that
+      // has children - no hardcoded "మరిన్ని" here.
+      let dropdownLabel = "";
       for (const it of items) {
-        const href = (() => {
-          const t = it.target;
-          if (!t) return "#";
-          if (t.type === "CATEGORY") return categoryHref(t.categorySlug);
-          // INTERNAL_URL items persist legacy /category|/district paths; the
-          // sections now live at the bare slug, so normalize on render.
-          if (t.type === "INTERNAL_URL") return normalizeSectionHref(t.url);
-          if (t.type === "EXTERNAL_URL") return t.url;
-          if (t.type === "CONTENT" && t.contentSlugCache && t.contentTypeCache) {
-            const prefix: Record<string, string> = {
-              ARTICLE: "/article", VIDEO: "/video", REEL: "/reel",
-              WEB_STORY: "/story", PHOTO_GALLERY: "/gallery", CARTOON: "/cartoon",
-            };
-            return `${prefix[t.contentTypeCache] || ""}/${t.contentSlugCache}`;
-          }
-          return "#";
-        })();
         if (Array.isArray(it.children) && it.children.length > 0) {
           hasDropdown = true;
+          if (!dropdownLabel) dropdownLabel = it.label;
           for (const c of it.children) {
-            const ct = c.target;
-            const childHref = ct?.type === "CATEGORY" ? categoryHref(ct.categorySlug)
-              : ct?.type === "INTERNAL_URL" ? normalizeSectionHref(ct.url)
-              : ct?.type === "EXTERNAL_URL" ? ct.url
-              : "#";
-            drop.push({ name: c.label, slug: childHref });
+            drop.push({ name: c.label, slug: resolveNavHref(c.target) });
           }
         } else {
-          top.push({ name: it.label, slug: href });
+          top.push({ name: it.label, slug: resolveNavHref(it.target) });
         }
       }
-      if (hasDropdown) top.push({ name: "మరిన్ని ❯", slug: "#", isDropdown: true });
+      if (hasDropdown) top.push({ name: `${dropdownLabel || "మరిన్ని"} ❯`, slug: "#", isDropdown: true });
       setAdminTop(top);
       setAdminDrop(drop);
     }).catch(() => {});
+    // MOBILE menu (independent of HEADER) for the bottom-sheet drawer.
+    fetch("/api/menu/mobile").then((r) => r.json()).then((data) => {
+      const items = Array.isArray(data?.items) ? data.items : [];
+      const nav = buildMobileNav(items);
+      if (nav) setMobileNav(nav);
+    }).catch(() => {});
   }, []);
 
-  // Active nav items - admin menu wins when published; otherwise hardcoded.
-  const activeMain = adminTop || mainNavItems;
-  const activeDrop = adminDrop || dropdownItems;
+  // Active nav items come straight from the admin-published HEADER menu (Home
+  // is always present; the rest fills in after the fetch resolves).
+  const activeMain = adminTop;
+  const activeDrop = adminDrop;
+
+  // Mobile drawer sections: prefer the dedicated MOBILE menu; fall back to the
+  // HEADER-derived split so the drawer is never blank.
+  const mobileDistricts: MobileLink[] = mobileNav
+    ? mobileNav.districts
+    : activeMain.filter((i) => !i.isDropdown && !i.isHome).map((i) => ({ name: i.name, href: i.slug }));
+  const mobileCategories: MobileLink[] = mobileNav
+    ? mobileNav.categories
+    : activeDrop.map((i) => ({ name: i.name, href: i.slug }));
 
   // ⌘K / Ctrl+K opens the search palette - canonical shadcn behaviour.
   useEffect(() => {
@@ -449,10 +463,10 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
             <div className="px-3 py-2 border-b border-gray-100">
               <p className="text-[10px] uppercase tracking-wider text-[var(--color-brand)] font-extrabold mb-2">రాయలసీమ జిల్లాలు</p>
               <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
-                {activeMain.filter((i: any) => !i.isDropdown && !i.isHome).map((item: any) => (
+                {mobileDistricts.map((item, i) => (
                   <Link
-                    key={item.slug}
-                    href={item.slug}
+                    key={`${item.href}-${i}`}
+                    href={item.href}
                     onClick={() => setMobileMenuOpen(false)}
                     className="shrink-0 px-3 py-1.5 rounded-full bg-gray-100 text-xs font-bold text-gray-700 hover:bg-red-50 hover:text-[var(--color-brand)]"
                   >
@@ -466,10 +480,10 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
             <div className="px-3 py-2">
               <p className="text-[10px] uppercase tracking-wider text-gray-500 font-extrabold mb-2">విభాగాలు</p>
               <div className="grid grid-cols-3 gap-1.5">
-                {activeDrop.map((item) => (
+                {mobileCategories.map((item, i) => (
                   <Link
-                    key={item.slug}
-                    href={item.slug}
+                    key={`${item.href}-${i}`}
+                    href={item.href}
                     onClick={() => setMobileMenuOpen(false)}
                     className="px-3 py-2.5 rounded-lg bg-gray-50 text-xs font-bold text-gray-700 text-center hover:bg-red-50 hover:text-[var(--color-brand)] transition-colors"
                   >

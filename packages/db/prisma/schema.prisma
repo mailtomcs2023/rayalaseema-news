@@ -1430,6 +1430,10 @@ enum MenuItemTargetType {
   INTERNAL_URL
   EXTERNAL_URL
   CONTENT
+  // Label-only item (dropdown/section heading) that opens its children but
+  // never navigates. Targets live in Menu.items JSON, so this value isn't a
+  // DB column constraint - listed here only to keep the enum complete.
+  NONE
 }
 
 model Menu {

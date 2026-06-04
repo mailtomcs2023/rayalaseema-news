@@ -2,19 +2,56 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { categoryHref } from "@/lib/category-href";
+import { categoryHref, normalizeSectionHref } from "@/lib/category-href";
 
 interface FooterProps {
   config?: Record<string, string>;
 }
 
+// A footer nav column = one top-level menu item (the heading) + its children
+// (the links). Admin-managed via the Menu Builder (FOOTER location); there is
+// no hardcoded district/section list here.
+type FooterLink = { name: string; href: string };
+type FooterColumn = { heading: string; links: FooterLink[] };
+
+// Resolve a menu item target to a footer href (mirrors the header resolver).
+function footerHref(t: any): string {
+  if (!t) return "#";
+  if (t.type === "CATEGORY") return categoryHref(t.categorySlug);
+  if (t.type === "INTERNAL_URL") return normalizeSectionHref(t.url);
+  if (t.type === "EXTERNAL_URL") return t.url;
+  if (t.type === "CONTENT" && t.contentSlugCache && t.contentTypeCache) {
+    const prefix: Record<string, string> = {
+      ARTICLE: "/article", VIDEO: "/video", REEL: "/reel",
+      WEB_STORY: "/story", PHOTO_GALLERY: "/gallery", CARTOON: "/cartoon",
+    };
+    return `${prefix[t.contentTypeCache] || ""}/${t.contentSlugCache}`;
+  }
+  return "#";
+}
+
 export function Footer({ config: initialConfig = {} }: FooterProps) {
   const [config, setConfig] = useState(initialConfig);
+  // Admin-published FOOTER menu, fetched on mount. Each top-level item renders
+  // as a column (heading + child links). Empty until the fetch resolves.
+  const [columns, setColumns] = useState<FooterColumn[]>([]);
 
   useEffect(() => {
     if (Object.keys(config).length === 0) {
       fetch("/api/config").then((r) => r.json()).then(setConfig).catch(() => {});
     }
+    fetch("/api/menu/footer").then((r) => r.json()).then((data) => {
+      const items = Array.isArray(data?.items) ? data.items : [];
+      if (items.length === 0) return;
+      const cols: FooterColumn[] = items.map((it: any) => ({
+        heading: it.label,
+        links: (Array.isArray(it.children) ? it.children : []).map((c: any) => ({
+          name: c.label,
+          href: footerHref(c.target),
+        })),
+      }));
+      setColumns(cols);
+    }).catch(() => {});
   }, []);
   return (
     <footer className="bg-gray-900 text-gray-300 mt-16">
@@ -66,69 +103,28 @@ export function Footer({ config: initialConfig = {} }: FooterProps) {
             </div>
           </div>
 
-          {/* Rayalaseema Districts - Primary */}
-          <div>
-            <h4 className="text-white font-semibold mb-4 text-sm uppercase tracking-wider">
-              రాయలసీమ జిల్లాలు
-            </h4>
-            <ul className="space-y-2 text-sm">
-              {[
-                { name: "కర్నూలు", slug: "kurnool" },
-                { name: "నంద్యాల", slug: "nandyal" },
-                { name: "అనంతపురం", slug: "ananthapuramu" },
-                { name: "శ్రీ సత్యసాయి", slug: "sri-sathya-sai" },
-                { name: "వై.యస్.ఆర్", slug: "ysr-kadapa" },
-                { name: "తిరుపతి", slug: "tirupati" },
-                { name: "అన్నమయ్య", slug: "annamayya" },
-                { name: "చిత్తూరు", slug: "chittoor" },
-              ].map((d) => (
-                <li key={d.slug}>
-                  <Link
-                    href={`/${d.slug}`}
-                    className="hover:text-white transition-colors font-telugu"
-                  >
-                    {d.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Other Sections */}
-          <div>
-            <h4 className="text-white font-semibold mb-4 text-sm uppercase tracking-wider">
-              విభాగాలు
-            </h4>
-            <ul className="space-y-2 text-sm">
-              {[
-                { name: "ఆంధ్రప్రదేశ్", slug: "andhra-pradesh" },
-                { name: "తెలంగాణ", slug: "telangana" },
-                { name: "జాతీయం", slug: "national" },
-                { name: "అంతర్జాతీయం", slug: "international" },
-                { name: "క్రీడలు", slug: "sports" },
-                { name: "బిజినెస్", slug: "business" },
-                { name: "సినిమా", slug: "entertainment" },
-                { name: "రాశి ఫలాలు", slug: "rasi-phalalu" },
-                { name: "టెక్నాలజీ", slug: "technology" },
-                { name: "సినిమా రివ్యూలు", slug: "movie-reviews" },
-                { name: "పరీక్షా ఫలితాలు", slug: "exam-results" },
-                { name: "ఉద్యోగాలు", slug: "jobs" },
-                { name: "ఆరోగ్యం", slug: "health" },
-                { name: "భక్తి", slug: "devotional" },
-                { name: "NRI వార్తలు", slug: "nri" },
-                { name: "వాతావరణం", slug: "weather" },
-              ].map((cat) => (
-                <li key={cat.slug}>
-                  <Link
-                    href={categoryHref(cat.slug)}
-                    className="hover:text-white transition-colors font-telugu"
-                  >
-                    {cat.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {/* Admin-managed nav columns (FOOTER menu). Each top-level item is a
+              column heading; its children are the links. Districts + sections
+              live here - nothing hardcoded. */}
+          {columns.map((col, ci) => (
+            <div key={ci}>
+              <h4 className="text-white font-semibold mb-4 text-sm uppercase tracking-wider font-telugu">
+                {col.heading}
+              </h4>
+              <ul className="space-y-2 text-sm">
+                {col.links.map((link, li) => (
+                  <li key={li}>
+                    <Link
+                      href={link.href}
+                      className="hover:text-white transition-colors font-telugu"
+                    >
+                      {link.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
 
           {/* Quick Links */}
           <div>

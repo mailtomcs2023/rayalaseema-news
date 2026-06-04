@@ -60,6 +60,33 @@ describe("menuItemsSchema - target shapes", () => {
     ]);
     expect(r.success).toBe(false);
   });
+
+  test("accepts NONE (label-only heading/dropdown)", () => {
+    const r = safeValidateMenuItems([
+      { id: id("a"), label: "More", target: { type: "NONE" } },
+    ]);
+    expect(r.success).toBe(true);
+  });
+
+  test("rejects NONE with extra fields (strict)", () => {
+    const r = safeValidateMenuItems([
+      { id: id("a"), label: "More", target: { type: "NONE", url: "#" } },
+    ]);
+    expect(r.success).toBe(false);
+  });
+
+  test("accepts NONE parent with children (dropdown/column)", () => {
+    const r = safeValidateMenuItems([
+      {
+        id: id("a"), label: "More",
+        target: { type: "NONE" },
+        children: [
+          { id: id("b"), label: "AP", target: { type: "CATEGORY", categorySlug: "andhra-pradesh" } },
+        ],
+      },
+    ]);
+    expect(r.success).toBe(true);
+  });
 });
 
 describe("menuItemsSchema - depth & shape", () => {
@@ -118,6 +145,9 @@ describe("menuItemsSchema - depth & shape", () => {
 });
 
 describe("resolveItemHref", () => {
+  test("NONE → null (label-only, never a link)", () => {
+    expect(resolveItemHref({ type: "NONE" })).toBe(null);
+  });
   test("CATEGORY → /category/<slug>", () => {
     const t: MenuItemTarget = { type: "CATEGORY", categorySlug: "sports" };
     expect(resolveItemHref(t)).toBe("/category/sports");

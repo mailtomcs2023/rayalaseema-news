@@ -7,6 +7,13 @@ import { MenuLocation, MenuItemTargetType } from "@prisma/client";
 // Discriminated union on target.type so the per-variant fields stay strict
 // (a CATEGORY target can't have an `url`, etc).
 const targetSchema = z.discriminatedUnion("type", [
+  // NONE = a label-only item: a dropdown/section parent that opens its children
+  // but never navigates (header "మరిన్ని", footer column headings). Stored as
+  // JSON so it doesn't need to be in the Prisma MenuItemTargetType enum, but we
+  // keep that enum in sync for type-completeness.
+  z.object({
+    type: z.literal("NONE"),
+  }).strict(),
   z.object({
     type: z.literal(MenuItemTargetType.CATEGORY),
     categorySlug: z.string().min(1),
@@ -85,6 +92,9 @@ const CONTENT_TYPE_PREFIX: Record<string, string> = {
 
 export function resolveItemHref(target: MenuItemTarget): string | null {
   switch (target.type) {
+    case "NONE":
+      // Label-only parent (dropdown/section heading) - never a link.
+      return null;
     case "CATEGORY":
       return `/category/${target.categorySlug}`;
     case "INTERNAL_URL":
