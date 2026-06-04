@@ -15,6 +15,11 @@ import { prisma } from "@rayalaseema/db";
 import { buildCategoryMetadata, CategoryView } from "@/lib/category-render";
 import { buildDistrictMetadata, DistrictView } from "@/lib/district-render";
 
+// Re-render at most once a minute so newly tagged/published articles appear on
+// category + district hubs instead of being frozen behind the full-route cache.
+// (Both bare-slug category and district pages resolve through this segment.)
+export const revalidate = 60;
+
 // Cheap existence check so generateMetadata and the page agree on what a slug
 // resolves to without double-rendering. Category takes precedence over district.
 async function classify(slug: string): Promise<"category" | "district" | null> {
