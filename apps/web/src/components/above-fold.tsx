@@ -111,7 +111,7 @@ export function AboveFold({
         <aside className="af-rail">
           {breaking.length > 0 && (
             <div className="af-breaking">
-              <div className="af-breaking-head">⚡ బ్రేకింగ్</div>
+              <div className="af-breaking-head">బ్రేకింగ్</div>
               {breaking.slice(0, 4).map((b) => (
                 <div key={b.id} className="af-breaking-item">{b.text}</div>
               ))}

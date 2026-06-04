@@ -153,7 +153,7 @@ export function GalleryFlipbook({ photos, title }: Props) {
             fontSize: 11, letterSpacing: 1,
             fontFamily: "var(--font-telugu-body), sans-serif",
           }}>
-            పేజీ తిప్పండి · DRAG CORNER
+            పేజీ తిప్పండి
           </div>
         </div>
       </div>

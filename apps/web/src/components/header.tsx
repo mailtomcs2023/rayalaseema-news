@@ -454,7 +454,7 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
                 <span className="text-[10px] font-bold" style={{ color: "var(--color-brand)" }}>ePaper</span>
               </Link>
               <Link href="/horoscope" onClick={() => setMobileMenuOpen(false)} className="flex flex-col items-center gap-1 p-2 rounded-lg" style={{ background: "var(--color-brand-bg)" }}>
-                <span className="text-lg">⭐</span>
+                <svg className="w-5 h-5" style={{ color: "var(--color-brand)" }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5L12 3z"/></svg>
                 <span className="text-[10px] font-bold" style={{ color: "var(--color-brand)" }}>రాశులు</span>
               </Link>
             </div>
