@@ -1,15 +1,15 @@
 // /gallery/[slug] - PHOTO_GALLERY Content type detail page (Spec #1 #111).
 //
-// Server-rendered masonry grid (SEO-indexable, crawlers see every img +
-// caption in the static HTML) PLUS a client-side magazine flipbook
-// launcher: brand-red "ఫ్లిప్‌బుక్‌గా చూడండి" CTA opens a 3D page-turn
-// viewer (react-pageflip / StPageFlip) with one photo per page.
+// The gallery renders as an inline magazine flipbook on the page,
+// with a fullscreen toggle for immersive reading. Crawlers see the
+// full <noscript> masonry grid with every <img> + caption so the
+// photos stay SEO-indexable and reachable for users with JS off.
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { SiteHeader } from "@/components/site-header";
 import { Footer } from "@/components/footer";
 import { ShareBar } from "@/components/share-bar";
-import { GalleryFlipbookLauncher } from "@/components/gallery-flipbook-launcher";
+import { GalleryFlipbook } from "@/components/gallery-flipbook";
 import { getPhotoGalleryBySlug, getSiteConfig, incrementViewCount } from "@/lib/db-queries";
 
 const SITE_URL = process.env.SITE_URL || "https://rayalaseemanews.com";
@@ -52,35 +52,32 @@ export default async function GalleryPage({ params }: { params: Promise<{ slug: 
           <img src={gallery.coverImage} alt={gallery.title} style={{ width: "100%", borderRadius: 8 }} />
         )}
 
-        {/* Magazine-flipbook launcher. Falls back silently if the
-          react-pageflip chunk can't load (button stays, click opens
-          a broken viewer — improvement for the chunk failure case
-          can land later if it becomes a real problem). */}
-        <GalleryFlipbookLauncher photos={photos} title={gallery.title} />
+        {/* Inline magazine flipbook. The user can drag corners to flip
+          pages right on the page; a fullscreen toggle expands the
+          book to a full-viewport overlay. */}
+        <GalleryFlipbook photos={photos} title={gallery.title} />
 
-        <div style={{ columnCount: 3, columnGap: 12 }} className="gallery-cols">
-          {photos.map((photo, i) => (
-            <a
-              key={i}
-              href={photo.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ display: "block", breakInside: "avoid", marginBottom: 12 }}
-            >
-              <img
-                src={photo.url}
-                alt={photo.caption || `Photo ${i + 1}`}
-                style={{ width: "100%", display: "block", borderRadius: 6 }}
-                loading="lazy"
-              />
-              {photo.caption && (
-                <p style={{ marginTop: 4, fontSize: 12, color: "#666", fontFamily: "var(--font-telugu-body), sans-serif" }}>
-                  {photo.caption}
-                </p>
-              )}
-            </a>
-          ))}
-        </div>
+        {/* SEO + no-JS fallback: every photo + caption rendered as
+          static HTML so crawlers and zero-JS visitors see the full
+          gallery. Hidden visually for JS clients (the inline flipbook
+          above covers them). */}
+        <noscript>
+          <div style={{ columnCount: 3, columnGap: 12 }} className="gallery-cols">
+            {photos.map((photo, i) => (
+              <a key={i} href={photo.url} target="_blank" rel="noopener noreferrer"
+                style={{ display: "block", breakInside: "avoid", marginBottom: 12 }}>
+                <img src={photo.url} alt={photo.caption || `Photo ${i + 1}`}
+                  style={{ width: "100%", display: "block", borderRadius: 6 }}
+                  loading="lazy" />
+                {photo.caption && (
+                  <p style={{ marginTop: 4, fontSize: 12, color: "#666", fontFamily: "var(--font-telugu-body), sans-serif" }}>
+                    {photo.caption}
+                  </p>
+                )}
+              </a>
+            ))}
+          </div>
+        </noscript>
 
         <div style={{ marginTop: 24 }}>
           <ShareBar title={gallery.title} articleUrl={`${SITE_URL}/gallery/${slug}`} />
