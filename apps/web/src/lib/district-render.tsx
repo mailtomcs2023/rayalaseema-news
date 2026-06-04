@@ -67,7 +67,17 @@ export async function DistrictView({ slug }: { slug: string }) {
         type: "ARTICLE",
         status: "PUBLISHED",
         OR: [
+          // Source of truth: ContentLocation join (district-level + any
+          // constituency in this district). The schema marks this join as
+          // authoritative for ALL location tags, so an article tagged to the
+          // district OR to one of its constituencies always surfaces here.
+          { locations: { some: { locationType: "DISTRICT", locationId: district.id } } },
+          { locations: { some: { locationType: "CONSTITUENCY", locationId: { in: district.constituencies.map((c) => c.id) } } } },
+          // Denormalized fast-path (primary constituency) - covers rows tagged
+          // before the join existed and mandal-primary rows that set this.
           { constituencyId: { in: district.constituencies.map((c) => c.id) } },
+          // Last-resort fuzzy match on name mentions (kept additive so nothing
+          // that used to appear disappears).
           { title: { contains: district.nameEn, mode: "insensitive" } },
           { title: { contains: district.name } },
           { summary: { contains: district.nameEn, mode: "insensitive" } },
@@ -80,10 +90,13 @@ export async function DistrictView({ slug }: { slug: string }) {
     getTrendingArticles(8),
   ]);
 
-  // Fallback to latest published when this district has thin coverage
+  // Only fall back to site-wide latest when this district has NO mapped
+  // articles at all. If even one article maps to the district, show the
+  // district's own coverage and hide the "coming soon" banner - the banner
+  // must appear only for genuinely empty districts, not thinly-covered ones.
   let articles = tagged;
   let showingGeneral = false;
-  if (tagged.length < 3) {
+  if (tagged.length === 0) {
     showingGeneral = true;
     articles = await prisma.content.findMany({
       where: { type: "ARTICLE", status: "PUBLISHED" },
