@@ -41,7 +41,7 @@ export function sectionIcon(slug?: string | null): LucideIcon {
 }
 
 // Reusable Eenadu-style ribbon section heading: a brand-red banner with a
-// lucide icon + Telugu title and a folded ribbon tail on the right. Use it for
+// lucide icon + Telugu title and a pointed (tag-style) right edge. Use it for
 // every homepage section header so they all match.
 //
 //   <SectionHeading title="రాజకీయం" icon={Landmark} href="/politics" />
@@ -84,17 +84,7 @@ export function SectionHeading({
         /* Noto/Anek Telugu reserve large descent space, so glyphs sit high in a
            line-height:1 box; nudge down ~1px to optically center on the icon. */
         .sh-ribbon-tx { display: inline-block; transform: translateY(1px); }
-        /* folded-under tail behind the left edge → 3D ribbon depth */
         .sh-ribbon-wrap { position: relative; display: inline-block; }
-        .sh-ribbon-wrap::before {
-          content: "";
-          position: absolute;
-          left: 0;
-          top: 100%;
-          border-style: solid;
-          border-width: 6px 7px 0 0;
-          border-color: var(--brand-dark, #8E0F0F) transparent transparent transparent;
-        }
         .sh-ribbon-link { text-decoration: none; display: inline-block; }
       `}</style>
     </span>
