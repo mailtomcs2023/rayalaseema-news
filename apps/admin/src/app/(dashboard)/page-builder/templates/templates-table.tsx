@@ -7,6 +7,18 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState, useTransition } from "react";
+import { confirm } from "@/components/confirm-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+// Radix Select forbids an empty-string item value, so the "start blank"
+// option uses this sentinel and maps back to "" in state.
+const BLANK = "__blank__";
 
 interface Row {
   id: string;
@@ -39,7 +51,14 @@ export function TemplatesTable({ initialRows }: { initialRows: Row[] }) {
   const [error, setError] = useState<string | null>(null);
 
   async function handleDelete(row: Row) {
-    if (!confirm(`Delete template "${row.name}"? This also removes its assignments and version history.`))
+    if (
+      !(await confirm({
+        title: `Delete template "${row.name}"?`,
+        description: "This also removes its assignments and version history.",
+        confirmText: "Delete",
+        destructive: true,
+      }))
+    )
       return;
     setError(null);
     const res = await fetch(`/api/page-builder/templates/${row.id}`, { method: "DELETE" });
@@ -311,19 +330,24 @@ function CreateModal({
         />
 
         <Label>Clone from existing (optional)</Label>
-        <select
-          data-clone-select
-          value={cloneFromId}
-          onChange={(e) => setCloneFromId(e.target.value)}
-          style={inp}
-        >
-          <option value="">- Start blank -</option>
-          {existing.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.name} ({r.slug})
-            </option>
-          ))}
-        </select>
+        <div style={{ marginBottom: 12 }}>
+          <Select
+            value={cloneFromId || BLANK}
+            onValueChange={(v) => setCloneFromId(v === BLANK ? "" : v)}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={BLANK}>- Start blank -</SelectItem>
+              {existing.map((r) => (
+                <SelectItem key={r.id} value={r.id}>
+                  {r.name} ({r.slug})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         {error && (
           <div style={{ color: "#B91C1C", fontSize: 12, marginTop: 8 }}>{error}</div>

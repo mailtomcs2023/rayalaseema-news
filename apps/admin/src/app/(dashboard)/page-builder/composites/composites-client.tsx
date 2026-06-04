@@ -132,6 +132,9 @@ function EditModal({
 }) {
   const [name, setName] = useState(row?.name || "");
   const [slug, setSlug] = useState(row?.slug || "");
+  // Keep the slug tracking the name as you type, until the slug is hand-edited.
+  // The old `!slug` guard froze it after the first character.
+  const [slugEdited, setSlugEdited] = useState(false);
   const [description, setDescription] = useState(row?.description || "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -147,7 +150,7 @@ function EditModal({
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         name,
-        slug: row ? undefined : slug || slugify(name),
+        slug: row ? undefined : slugify(slug || name),
         description: description || null,
       }),
     });
@@ -172,7 +175,7 @@ function EditModal({
           value={name}
           onChange={(e) => {
             setName(e.target.value);
-            if (!row && !slug) setSlug(slugify(e.target.value));
+            if (!row && !slugEdited) setSlug(slugify(e.target.value));
           }}
           required
           style={inp}
@@ -182,7 +185,15 @@ function EditModal({
         {!row && (
           <>
             <Label>Slug</Label>
-            <input value={slug} onChange={(e) => setSlug(e.target.value)} style={inp} placeholder="auto from name" />
+            <input
+              value={slug}
+              onChange={(e) => {
+                setSlug(e.target.value);
+                setSlugEdited(true);
+              }}
+              style={inp}
+              placeholder="auto from name"
+            />
           </>
         )}
 
