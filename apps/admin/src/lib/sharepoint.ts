@@ -535,9 +535,17 @@ export async function listMirroredMedia(opts: {
   q?: string; // filename / slug substring
   limit?: number;
   cursor?: string; // MediaMirror.id
+  /** Include rows ingested by the SP→DB reconciler (manual uploads to
+   * SharePoint UI). They have a synthetic `sp-only://...` blobUrl and
+   * shouldn't appear in the editor's "Use this image" picker, but the
+   * standalone media-library page surfaces them so editors can find
+   * everything in one place. */
+  includeExternal?: boolean;
 }): Promise<{ items: PickerItem[]; nextCursor: string | null }> {
   const limit = Math.min(Math.max(opts.limit || 48, 1), 200);
-  const where: Record<string, unknown> = { status: "done" };
+  const where: Record<string, unknown> = opts.includeExternal
+    ? { status: { in: ["done", "external"] } }
+    : { status: "done" };
   if (opts.district || opts.yyyy || opts.mm) {
     const segs = [opts.district, opts.yyyy, opts.mm].filter(Boolean).join("/");
     where.spFolderPath = { startsWith: segs };

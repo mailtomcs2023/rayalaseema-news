@@ -30,9 +30,15 @@ interface Props {
   // the clip); omitted for pasted URLs. URL + duration come in ONE call so the
   // parent can set both without a stale-state race.
   onChange: (url: string, durationSeconds?: number) => void;
+  // Optional - when set, the SharePoint mirror finalize call after the
+  // direct-to-Blob PUT tags the resulting MediaMirror row with this
+  // article so the file lands under the right slug + district folder.
+  // Omit for content-less uploads; the video then mirrors into the
+  // Video-Social _Uploads bucket instead.
+  contentId?: string;
 }
 
-export function VideoUpload({ value, onChange }: Props) {
+export function VideoUpload({ value, onChange, contentId }: Props) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [urlDraft, setUrlDraft] = useState("");
@@ -96,6 +102,20 @@ export function VideoUpload({ value, onChange }: Props) {
         xhr.onerror = () => reject(new Error("Upload failed - check your connection (or storage CORS)."));
         xhr.send(file);
       });
+      // Tell the SP mirror pipeline the upload finished so it can land
+      // the file in Video-Social with the right slug-prefixed name.
+      // Fire-and-forget - never block the editor on Graph latency.
+      void fetch("/api/upload/video-sas/finalize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          blobUrl: sas.blobUrl,
+          contentId: contentId || null,
+          role: "video",
+          sizeBytes: file.size,
+          mimeType: file.type,
+        }),
+      }).catch((e) => console.warn("[video-upload] sp finalize failed:", e));
       onChange(sas.blobUrl, duration || undefined);
       toast.success("Video uploaded.");
     } catch (e: any) {
