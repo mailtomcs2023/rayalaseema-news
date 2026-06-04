@@ -1,5 +1,5 @@
 import { articleHref } from "@/lib/article-href";
-import { MandiStrip } from "@/components/market-widgets";
+import { MandiStrip } from "@/components/market-strips-server";
 import Link from "next/link";
 import Image from "next/image";
 import { FeaturedCarousel } from "@/components/featured-carousel";

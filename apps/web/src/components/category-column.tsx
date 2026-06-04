@@ -1,6 +1,6 @@
 import { articleHref } from "@/lib/article-href";
 import { categoryHref } from "@/lib/category-href";
-import { BullionStrip, ForexStrip } from "@/components/market-widgets";
+import { BullionStrip, ForexStrip } from "@/components/market-strips-server";
 import Link from "next/link";
 import { Children } from "react";
 
