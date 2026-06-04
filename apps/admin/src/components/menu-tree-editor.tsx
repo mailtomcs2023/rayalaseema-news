@@ -131,9 +131,19 @@ export function MenuTreeEditor(props: Props) {
   // The DragOverlay portals into document.body, which doesn't exist during SSR.
   // Render it only after mount on the client.
   const [mounted, setMounted] = useState(false);
-  // Editor-only accordion state - which parent rows are collapsed. NOT persisted
-  // (our menu schema is strict), so this never touches the published menu.
+  // Editor-only accordion state - which parent rows are collapsed. Kept OUT of
+  // the published menu (the menu schema is strict), but persisted per-location
+  // to localStorage so the collapsed/expanded layout survives navigation and
+  // reloads. Restored after mount (effect below) so the first client render
+  // still matches the server (all-expanded) and hydration stays clean.
+  const collapseStorageKey = `rsn-menu-collapsed:${props.location}`;
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+  const persistCollapsed = useCallback(
+    (next: Set<string>) => {
+      try { localStorage.setItem(collapseStorageKey, JSON.stringify([...next])); } catch { /* storage full / disabled */ }
+    },
+    [collapseStorageKey],
+  );
   const [contentSearch, setContentSearch] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
@@ -246,6 +256,16 @@ export function MenuTreeEditor(props: Props) {
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, []);
 
+  // Restore the saved collapse layout for THIS location after mount. Done in an
+  // effect (not a lazy useState initializer) so the first client render matches
+  // the server's all-expanded HTML - then the layout settles to the saved set.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(collapseStorageKey);
+      setCollapsedIds(raw ? new Set(JSON.parse(raw) as string[]) : new Set());
+    } catch { /* ignore malformed storage */ }
+  }, [collapseStorageKey]);
+
   // Presence heartbeat (Spec #3 F1 #185). Pings every 10s; the API stores
   // entries with a 30s TTL so a closed tab silently times out.
   useEffect(() => {
@@ -307,11 +327,16 @@ export function MenuTreeEditor(props: Props) {
     const child: Item = { id, label: "New item", target: { type: "INTERNAL_URL", url: "/" }, mobileVariant: "show" };
     update(tree.map((t) => (t.id === parentId ? { ...t, children: [...(t.children ?? []), child] } : t)));
     setSelectedId(id);
-    setCollapsedIds((s) => { const n = new Set(s); n.delete(parentId); return n; });
+    setCollapsedIds((s) => { const n = new Set(s); n.delete(parentId); persistCollapsed(n); return n; });
   };
 
   const toggleCollapse = (id: string) => {
-    setCollapsedIds((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    setCollapsedIds((s) => {
+      const n = new Set(s);
+      n.has(id) ? n.delete(id) : n.add(id);
+      persistCollapsed(n);
+      return n;
+    });
   };
 
   // --- drag & drop (dnd-kit sortable tree, depth-capped at 2 levels) ---
