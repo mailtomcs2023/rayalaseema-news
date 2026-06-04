@@ -1,4 +1,5 @@
 import { articleHref } from "@/lib/article-href";
+import { MandiStrip } from "@/components/market-widgets";
 import Link from "next/link";
 import Image from "next/image";
 import { FeaturedCarousel } from "@/components/featured-carousel";
@@ -71,6 +72,8 @@ export function AboveFold({
           {/* DISTRICT GRID - 2x4, local-first */}
           <div className="af-dist-head">
             రాయలసీమ జిల్లాలు <span aria-hidden="true">›</span>
+            {/* Mandi prices strip (auto-scrolls) - replaces the retired ticker bar. */}
+            <div className="af-dist-head-mandi"><MandiStrip /></div>
           </div>
           <div className="af-dist-grid">
             {districts.map((d) => {
@@ -314,6 +317,11 @@ export function AboveFold({
           display: flex; align-items: baseline; gap: 6px;
         }
         .af-dist-head span, .af-rail-head span { color: var(--brand, #E01B1B); }
+        /* District header carries the mandi strip on the right - center-align
+           (override the shared baseline) and let the marquee fill the gap. */
+        .af-dist-head { align-items: center; }
+        .af-dist-head-mandi { margin-left: auto; min-width: 0; flex: 0 1 auto; max-width: 70%; }
+        .af-dist-head-mandi span { color: inherit; }
         .af-dist-grid {
           display: grid;
           grid-template-columns: repeat(4, 1fr);

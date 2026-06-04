@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SearchBar } from "./search-bar";
-import { MarketTicker } from "./market-ticker";
 import { categoryHref, normalizeSectionHref } from "@/lib/category-href";
 import { Button } from "@/components/ui/button";
 
@@ -64,9 +63,38 @@ function buildMobileNav(items: any[]): MobileNav | null {
   return { districts, categories };
 }
 
+// Transform raw HEADER menu items into the inline nav + dropdown the bar
+// renders. Used both for the server-passed initial menu (no flash) and the
+// client-fetch fallback. Home always leads; a top item WITH children becomes
+// the single dropdown (its label drives the trigger).
+function buildHeaderNav(items: any[]): { top: NavItem[]; drop: NavItem[] } {
+  const top: NavItem[] = [HOME_ITEM];
+  const drop: NavItem[] = [];
+  if (!Array.isArray(items)) return { top, drop };
+  let hasDropdown = false;
+  let dropdownLabel = "";
+  for (const it of items) {
+    if (Array.isArray(it.children) && it.children.length > 0) {
+      hasDropdown = true;
+      if (!dropdownLabel) dropdownLabel = it.label;
+      for (const c of it.children) drop.push({ name: c.label, slug: resolveNavHref(c.target) });
+    } else {
+      top.push({ name: it.label, slug: resolveNavHref(it.target) });
+    }
+  }
+  if (hasDropdown) top.push({ name: `${dropdownLabel || "మరిన్ని"} ❯`, slug: "#", isDropdown: true });
+  return { top, drop };
+}
+
 interface HeaderProps {
   config?: Record<string, string>;
   breakingNews?: { id: string; text: string }[];
+  // Server-fetched menus (SiteHeader passes these). When present the nav is
+  // rendered from the initial HTML - no empty-flash, always the current
+  // published order. Omitted on client-only pages, which fall back to the
+  // mount fetch below.
+  headerItems?: any[];
+  mobileItems?: any[];
   // Optional pre-rendered live-data strip. Pages that pass <MarketTickerServer />
   // here get a server-rendered bar with zero client-side flash; pages that
   // omit it fall back to the legacy <MarketTicker /> below (data fetched in
@@ -78,23 +106,24 @@ interface HeaderProps {
   mastheadAdSlot?: React.ReactNode;
 }
 
-export function Header({ config: initialConfig = {}, breakingNews: initialBreaking = [], tickerSlot, mastheadAdSlot }: HeaderProps) {
+export function Header({ config: initialConfig = {}, breakingNews: initialBreaking = [], mastheadAdSlot, headerItems, mobileItems }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [config, setConfig] = useState(initialConfig);
   const [breakingNews, setBreakingNews] = useState(initialBreaking);
   const [tickerPaused, setTickerPaused] = useState(false);
-  // Spec #3 E1 (#183) - admin-published HEADER menu, fetched on mount. The menu
-  // is fully admin-managed (no hardcoded fallback); Home shows immediately and
-  // the rest is filled in once the fetch resolves. An empty/unpublished menu
-  // simply leaves Home alone.
-  const [adminTop, setAdminTop] = useState<NavItem[]>([HOME_ITEM]);
-  const [adminDrop, setAdminDrop] = useState<NavItem[]>([]);
-  // MOBILE menu location, fetched on mount and used for the bottom-sheet drawer.
-  // Null until it resolves (or if empty) - the drawer then falls back to the
-  // HEADER-derived split so it's never blank.
-  const [mobileNav, setMobileNav] = useState<MobileNav | null>(null);
+  // Spec #3 E1 (#183) - admin-published HEADER menu. When SiteHeader passes
+  // `headerItems` (server-fetched), the nav renders from the initial HTML with
+  // zero flash and the current published order. On client-only pages that prop
+  // is absent and we fall back to fetching on mount.
+  const ssrNav = headerItems && headerItems.length ? buildHeaderNav(headerItems) : null;
+  const [adminTop, setAdminTop] = useState<NavItem[]>(ssrNav ? ssrNav.top : [HOME_ITEM]);
+  const [adminDrop, setAdminDrop] = useState<NavItem[]>(ssrNav ? ssrNav.drop : []);
+  // MOBILE menu for the bottom-sheet drawer - SSR'd when passed, else fetched.
+  const [mobileNav, setMobileNav] = useState<MobileNav | null>(
+    mobileItems ? buildMobileNav(mobileItems) : null,
+  );
   const fetchedRef = useRef(false);
   const pathname = usePathname();
   // True when this nav item maps to the current URL. Home matches only "/";
@@ -117,39 +146,26 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
     if (Object.keys(config).length === 0) {
       fetch("/api/config").then((r) => r.json()).then(setConfig).catch(() => {});
     }
-    // Spec #3 E1 - admin-published HEADER menu replaces hardcoded items
-    // when present. Items at depth 0 with children become the dropdown;
-    // items without children become inline nav.
-    fetch("/api/menu/header").then((r) => r.json()).then((data) => {
-      const items = Array.isArray(data?.items) ? data.items : [];
-      if (items.length === 0) return;
-      const top: NavItem[] = [HOME_ITEM];
-      const drop: NavItem[] = [];
-      let hasDropdown = false;
-      // Label for the dropdown trigger comes from the (first) parent item that
-      // has children - no hardcoded "మరిన్ని" here.
-      let dropdownLabel = "";
-      for (const it of items) {
-        if (Array.isArray(it.children) && it.children.length > 0) {
-          hasDropdown = true;
-          if (!dropdownLabel) dropdownLabel = it.label;
-          for (const c of it.children) {
-            drop.push({ name: c.label, slug: resolveNavHref(c.target) });
-          }
-        } else {
-          top.push({ name: it.label, slug: resolveNavHref(it.target) });
-        }
-      }
-      if (hasDropdown) top.push({ name: `${dropdownLabel || "మరిన్ని"} ❯`, slug: "#", isDropdown: true });
-      setAdminTop(top);
-      setAdminDrop(drop);
-    }).catch(() => {});
+    // Fallback for client-only pages (no SSR menu prop): fetch the HEADER menu
+    // on mount. Pages rendered through SiteHeader already have `headerItems`,
+    // so they skip this and never flash.
+    if (!headerItems) {
+      fetch("/api/menu/header").then((r) => r.json()).then((data) => {
+        const items = Array.isArray(data?.items) ? data.items : [];
+        if (items.length === 0) return;
+        const { top, drop } = buildHeaderNav(items);
+        setAdminTop(top);
+        setAdminDrop(drop);
+      }).catch(() => {});
+    }
     // MOBILE menu (independent of HEADER) for the bottom-sheet drawer.
-    fetch("/api/menu/mobile").then((r) => r.json()).then((data) => {
-      const items = Array.isArray(data?.items) ? data.items : [];
-      const nav = buildMobileNav(items);
-      if (nav) setMobileNav(nav);
-    }).catch(() => {});
+    if (!mobileItems) {
+      fetch("/api/menu/mobile").then((r) => r.json()).then((data) => {
+        const items = Array.isArray(data?.items) ? data.items : [];
+        const nav = buildMobileNav(items);
+        if (nav) setMobileNav(nav);
+      }).catch(() => {});
+    }
   }, []);
 
   // Active nav items come straight from the admin-published HEADER menu (Home
@@ -235,12 +251,10 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
         </div>
       </div>
 
-      {/* Live data ticker - slim row directly under BREAKING. Pulls gold +
-          silver + forex + mandi + cricket from /api/tickers. Pages that
-          pass `tickerSlot={<MarketTickerServer />}` get the bar rendered
-          server-side (zero flash); others fall back to the client variant
-          which fetches in useEffect. */}
-      {tickerSlot ?? <MarketTicker />}
+      {/* Top price ticker bar removed - gold/silver/platinum, USD→INR and mandi
+          prices now live inside the relevant homepage section headers
+          (Business, National, Rayalaseema districts). `tickerSlot` is retained
+          as an accepted prop for callers but is no longer rendered. */}
 
       {/* Search panel - slow reveal via framer-motion, shadcn Input inside */}
       <SearchBar open={searchOpen} onClose={() => setSearchOpen(false)} />

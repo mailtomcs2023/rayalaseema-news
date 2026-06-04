@@ -1,5 +1,6 @@
 import { articleHref } from "@/lib/article-href";
 import { categoryHref } from "@/lib/category-href";
+import { BullionStrip, ForexStrip } from "@/components/market-widgets";
 import Link from "next/link";
 import { Children } from "react";
 
@@ -28,9 +29,14 @@ export function CategoryColumn({
 }) {
   return (
     <div className="cc">
-      <Link href={categoryHref(slug)} className="cc-head">
-        {title} <span aria-hidden="true">›</span>
-      </Link>
+      <div className="cc-head-row">
+        <Link href={categoryHref(slug)} className="cc-head">
+          {title} <span aria-hidden="true">›</span>
+        </Link>
+        {/* Contextual price strip: Business → bullion, National → forex.
+            (Replaces the retired top ticker bar.) */}
+        {slug === "business" ? <BullionStrip /> : slug === "national" ? <ForexStrip /> : null}
+      </div>
 
       {/* LEAD - image on top, headline below (vertical card for 4-up rows) */}
       <Link href={articleHref(lead)} className="cc-lead-img" aria-label={lead.title}>
@@ -57,6 +63,10 @@ export function CategoryColumn({
 
       <style>{`
         .cc { min-width: 0; }
+        .cc-head-row {
+          display: flex; align-items: baseline; justify-content: space-between;
+          gap: 12px; margin-bottom: 12px; flex-wrap: wrap;
+        }
         .cc-head {
           display: block;
           font-family: var(--font-telugu-heading), serif;
@@ -66,7 +76,6 @@ export function CategoryColumn({
           text-transform: none;
           letter-spacing: 0.02em;
           text-decoration: none;
-          margin-bottom: 12px;
         }
         .cc-head span { color: var(--brand, #E01B1B); }
 

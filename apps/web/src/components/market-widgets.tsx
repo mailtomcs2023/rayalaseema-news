@@ -176,3 +176,119 @@ export function MandiWidget() {
     </div>
   );
 }
+
+// =====================================================================
+// COMPACT HEADER STRIPS
+// Inline, single-line price readouts designed to sit in a section header
+// (right of the title). Same /api/tickers data as the panels above; the
+// top ticker bar was retired in favour of these contextual strips:
+//   Business header  → BullionStrip (gold / silver / platinum)
+//   National header  → ForexStrip   (USD → INR)
+//   Districts header → MandiStrip    (auto-scrolling mandi prices)
+// =====================================================================
+
+// Shared styles for the static chip strips + the scrolling mandi marquee.
+// Rendered once per strip instance; identical rules so duplicates are inert.
+function HdrStripStyle() {
+  return (
+    <style>{`
+      .hdr-strip { display: inline-flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+      .hdr-chip {
+        font-family: var(--font-telugu-body), sans-serif;
+        font-size: 12px; font-weight: 700; color: var(--n-600, #4b5563);
+        display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+      }
+      .hdr-chip-val { font-weight: 800; color: var(--n-900, #111827); }
+      .hdr-chip-ch { font-weight: 700; font-size: 10px; }
+      .hdr-chip-ch.up { color: var(--success, #16a34a); }
+      .hdr-chip-ch.down { color: var(--danger, #dc2626); }
+      .hdr-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+      .hdr-marquee {
+        overflow: hidden; min-width: 0; position: relative;
+        -webkit-mask-image: linear-gradient(90deg, transparent, #000 22px, #000 calc(100% - 22px), transparent);
+        mask-image: linear-gradient(90deg, transparent, #000 22px, #000 calc(100% - 22px), transparent);
+      }
+      .hdr-marquee-track {
+        display: inline-flex; gap: 24px; white-space: nowrap;
+        animation: hdr-marq 32s linear infinite; will-change: transform;
+      }
+      .hdr-marquee:hover .hdr-marquee-track { animation-play-state: paused; }
+      @keyframes hdr-marq { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+      @media (prefers-reduced-motion: reduce) { .hdr-marquee-track { animation: none; } }
+    `}</style>
+  );
+}
+
+function findMetal(bullion: any[], re: RegExp) {
+  return bullion.find((b) => re.test(b?.nameEn || ""));
+}
+
+// ===== BULLION STRIP (Business header) =====
+export function BullionStrip() {
+  const data = useTickerData();
+  if (!data?.bullion?.length) return null;
+  const gold = findMetal(data.bullion, /gold.*22|22.*gold/i) || findMetal(data.bullion, /gold/i);
+  const silver = findMetal(data.bullion, /silver/i);
+  const platinum = findMetal(data.bullion, /platinum/i);
+  const items = [
+    gold && { label: "బంగారం", price: gold.price, color: "#d4af37" },
+    silver && { label: "వెండి", price: silver.price, color: "#9ca3af" },
+    platinum && { label: "ప్లాటినం", price: platinum.price, color: "#5b8db8" },
+  ].filter(Boolean) as { label: string; price: number; color: string }[];
+  if (!items.length) return null;
+  return (
+    <div className="hdr-strip">
+      {items.map((it, i) => (
+        <span key={i} className="hdr-chip">
+          <span className="hdr-dot" style={{ background: it.color }} />
+          {it.label} <span className="hdr-chip-val">₹{it.price.toLocaleString()}</span>
+        </span>
+      ))}
+      <HdrStripStyle />
+    </div>
+  );
+}
+
+// ===== FOREX STRIP (National header) =====
+export function ForexStrip() {
+  const data = useTickerData();
+  const usd = data?.forex?.find((f: any) => /USD/i.test(f?.name)) || data?.forex?.[0];
+  if (!usd) return null;
+  return (
+    <div className="hdr-strip">
+      <span className="hdr-chip">
+        <span aria-hidden style={{ fontWeight: 800, color: "var(--success, #16a34a)" }}>$</span>
+        1 = <span className="hdr-chip-val">₹{usd.price}</span>
+      </span>
+      <HdrStripStyle />
+    </div>
+  );
+}
+
+// ===== MANDI STRIP (Districts header) - auto-scrolling marquee =====
+export function MandiStrip() {
+  const data = useTickerData();
+  if (!data?.mandi?.length) return null;
+  const items = data.mandi.slice(0, 12).filter((m: any) => m?.commodity && m?.price != null);
+  if (!items.length) return null;
+  // Duplicate the list so the -50% translate loops seamlessly.
+  const loop = [...items, ...items];
+  return (
+    <div className="hdr-marquee" aria-label="మండి ధరలు">
+      <div className="hdr-marquee-track">
+        {loop.map((m: any, i: number) => (
+          <span key={i} className="hdr-chip">
+            {m.commodity}{m.market ? ` · ${m.market}` : ""}{" "}
+            <span className="hdr-chip-val">₹{Number(m.price).toLocaleString()}</span>
+            {m.change ? (
+              <span className={`hdr-chip-ch ${m.change > 0 ? "up" : "down"}`}>
+                {m.change > 0 ? "▲" : "▼"}{Math.abs(m.change)}%
+              </span>
+            ) : null}
+          </span>
+        ))}
+      </div>
+      <HdrStripStyle />
+    </div>
+  );
+}

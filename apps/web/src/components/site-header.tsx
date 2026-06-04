@@ -8,27 +8,36 @@
 
 import { Header } from "./header";
 import { MastheadAdSlot } from "./masthead-ad-slot";
-import { MarketTickerServer } from "./market-ticker-server";
+import { getMenuItems } from "@/lib/menu";
 
 type Props = {
   config?: Record<string, string>;
   breakingNews?: { id: string; text: string }[];
   // Allow per-page overrides if a route wants to suppress one of the slots.
+  // tickerSlot is retained for back-compat but the top ticker bar was retired
+  // (prices now live in the section headers), so it is no longer rendered.
   tickerSlot?: React.ReactNode;
   mastheadAdSlot?: React.ReactNode;
 };
 
-export function SiteHeader({
+export async function SiteHeader({
   config = {},
   breakingNews = [],
-  tickerSlot,
   mastheadAdSlot,
 }: Props) {
+  // Fetch the admin-published HEADER + MOBILE menus on the server so the nav is
+  // in the initial HTML (no empty-flash on refresh) and always reflects the
+  // latest publish. Cached + revalidated via lib/menu.ts.
+  const [headerItems, mobileItems] = await Promise.all([
+    getMenuItems("HEADER"),
+    getMenuItems("MOBILE"),
+  ]);
   return (
     <Header
       config={config}
       breakingNews={breakingNews}
-      tickerSlot={tickerSlot ?? <MarketTickerServer />}
+      headerItems={headerItems}
+      mobileItems={mobileItems}
       mastheadAdSlot={mastheadAdSlot ?? <MastheadAdSlot config={config} />}
     />
   );
