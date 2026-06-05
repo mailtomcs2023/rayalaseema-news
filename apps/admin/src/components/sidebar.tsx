@@ -57,6 +57,7 @@ const navItems: { name: string; href: string; icon: string; roles: Role[] }[] = 
   // Menu Builder (Spec #3 #177) - three named menus (header / footer /
   // mobile) editable as a drag-drop tree.
   { name: "Menu Builder", href: "/menu-builder/header", roles: EDITORIAL, icon: "M4 6h16M4 12h16M4 18h7" },
+  { name: "Redirects", href: "/redirects", roles: EDITORIAL, icon: "M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" },
   { name: "Ads", href: "/ads", roles: ADMIN_ONLY, icon: "M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" },
   // Reporters merged into /users - admins reach reporter KYC + profile
   // from the merged Users table by filtering Role → Reporter, which auto-

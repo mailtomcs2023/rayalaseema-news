@@ -1469,6 +1469,27 @@ model MenuVersion {
   @@map("menu_versions")
 }
 
+// ============ REDIRECTS ============
+//
+// Admin-managed URL redirects (301/308). The web middleware looks up the
+// incoming path here and redirects to `toPath`. Used when a page's URL changes
+// (e.g. a menu district link is given a custom/vanity slug) so the old/new URL
+// never 404s. `fromPath` and `toPath` are root-relative ("/ananthapuram").
+model Redirect {
+  id         String   @id @default(cuid())
+  fromPath   String   @unique
+  toPath     String
+  // 308 (permanent, method-preserving) by default; 307 for temporary moves.
+  statusCode Int      @default(308)
+  // Optional note + provenance so auto-created (menu) vs hand-added are clear.
+  note       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([createdAt])
+  @@map("redirects")
+}
+
 // ============ CONTENT × LOCATION (Spec #4 A1 #192) ============
 //
 // Polymorphic many-to-many join between Content and the three location levels
