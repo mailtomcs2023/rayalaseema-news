@@ -5,8 +5,8 @@
 // `data-block-id` attributes on each rendered block so the editor can
 // draw insertion lines + selection outlines via postMessage.
 //
-// Polish in H1 (#171): hide the global chrome (DistrictPicker / WhatsApp
-// float / cookie banner) when this page renders inside the editor frame.
+// Polish in H1 (#171): hide the global chrome (WhatsApp float / cookie
+// banner) when this page renders inside the editor frame.
 
 import { prisma } from "@rayalaseema/db";
 import { TemplateRenderer } from "@/components/blocks/template-renderer";
@@ -114,8 +114,8 @@ export default async function PreviewPage({
       />
       <style>{`
         /* Editor preview should not show site-wide chrome (cookie banner,
-           district picker, WhatsApp float, push permission). */
-        body :is(.district-picker-root, .cookie-consent-root, .whatsapp-float-root, .push-notif-root) {
+           WhatsApp float, push permission). */
+        body :is(.cookie-consent-root, .whatsapp-float-root, .push-notif-root) {
           display: none !important;
         }
       `}</style>

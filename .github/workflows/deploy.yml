@@ -115,6 +115,12 @@ jobs:
             bunx tsx scripts/seed-subgenre-categories.ts
             echo "=== Seed page-builder templates (Spec #2: homepage + category + movie-reviews) ==="
             bunx tsx scripts/seed-templates.ts
+            echo "=== Strip removed ReturnVisitBanner block from stored layouts (idempotent) ==="
+            # The ReturnVisitBanner page-builder block was ripped out of the code,
+            # so its type no longer exists in the Zod blockSchema. Any already-seeded
+            # layout still containing it would now fail validation → blank page.
+            # This scrubs the dead block from every persisted layout. No-ops once clean.
+            bunx tsx scripts/strip-return-visit-banner.ts
             echo "=== Patch SectionBand tabs: enable in-place filtering + fix AP/sports mis-links (idempotent) ==="
             # seed-templates is skip-if-exists, so it can't repair already-seeded
             # SectionBand tabs. This backfills each tab's categorySlug and fixes

@@ -4,7 +4,6 @@
 // detection (F2 #169) needs cross-block context.
 
 import type { BlockType, BuiltinBlockType } from "@rayalaseema/db";
-import { ReturnVisitBanner } from "@/components/return-visit-banner";
 import {
   AdHeaderLeaderboard,
   AdBannerMid,
@@ -59,10 +58,6 @@ interface RegistryEntry {
 }
 
 export const REGISTRY: Record<BuiltinBlockType, RegistryEntry> = {
-  ReturnVisitBanner: {
-    component: ReturnVisitBanner as AnyComponent,
-    fetcher: async () => ({}),
-  },
   AdHeaderLeaderboard: {
     component: AdHeaderLeaderboard as AnyComponent,
     fetcher: (config) => F.fetchAdHeaderLeaderboard(config as never) as never,

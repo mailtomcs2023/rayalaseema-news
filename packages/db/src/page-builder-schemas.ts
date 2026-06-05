@@ -29,8 +29,6 @@ export const adPositionSchema = z.enum([
 
 // --- Per-block-type config schemas ---
 
-export const returnVisitBannerConfig = z.object({}).strict();
-
 export const adHeaderLeaderboardConfig = z
   .object({ position: adPositionSchema.default("HEADER_LEADERBOARD") })
   .strict();
@@ -132,7 +130,6 @@ const baseBlock = {
 };
 
 export const blockSchema = z.discriminatedUnion("type", [
-  z.object({ ...baseBlock, type: z.literal("ReturnVisitBanner"), config: returnVisitBannerConfig }),
   z.object({ ...baseBlock, type: z.literal("AdHeaderLeaderboard"), config: adHeaderLeaderboardConfig }),
   z.object({ ...baseBlock, type: z.literal("AboveFold"), config: aboveFoldConfig }),
   z.object({ ...baseBlock, type: z.literal("AdBannerMid"), config: adBannerMidConfig }),
@@ -173,7 +170,6 @@ export type CompositeBlocks = z.infer<typeof compositeBlocksSchema>;
 
 // Built-in (non-Composite) block type list - used by the palette + registry.
 export const BUILTIN_BLOCK_TYPES = [
-  "ReturnVisitBanner",
   "AdHeaderLeaderboard",
   "AboveFold",
   "AdBannerMid",

@@ -52,7 +52,6 @@ function makeId(prefix: string): string {
 }
 
 const DEFAULT_CONFIG: Record<string, Record<string, unknown>> = {
-  ReturnVisitBanner: {},
   AdHeaderLeaderboard: { position: "HEADER_LEADERBOARD" },
   AboveFold: { districtCount: 6, latestCount: 10, excludeCategories: [] },
   AdBannerMid: { position: "BANNER_MID" },
@@ -985,8 +984,6 @@ function BlockConfigForm({
   setCfg: (patch: Record<string, unknown>) => void;
 }) {
   switch (block.type) {
-    case "ReturnVisitBanner":
-      return <div style={paletteHint}>No configuration.</div>;
     case "AdHeaderLeaderboard":
     case "AdBannerMid":
     case "AdLeaderboard":

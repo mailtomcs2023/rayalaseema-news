@@ -31,7 +31,6 @@ function pickCreatorEmail(): Promise<{ id: string; email: string } | null> {
 const DEFAULT_HOMEPAGE: Layout = {
   version: 1,
   blocks: [
-    { id: blkId("rvb"), type: "ReturnVisitBanner", config: {}, mobileVariant: "show" },
     {
       id: blkId("ad"),
       type: "AdHeaderLeaderboard",

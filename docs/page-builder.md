@@ -57,7 +57,7 @@ Spec doc: [`docs/superpowers/specs/2026-05-25-page-builder-design.md`](./superpo
 {
   "version": 1,
   "blocks": [
-    { "id": "blk_abc", "type": "ReturnVisitBanner", "config": {}, "mobileVariant": "show" },
+    { "id": "blk_abc", "type": "AdHeaderLeaderboard", "config": { "position": "HEADER_LEADERBOARD" }, "mobileVariant": "show" },
     {
       "id": "blk_def",
       "type": "SectionBand",
@@ -86,7 +86,6 @@ Zod-validated by `layoutSchema` in `packages/db/src/page-builder-schemas.ts` on 
 
 | `type` | Component | Configurable props |
 |---|---|---|
-| `ReturnVisitBanner` | `<ReturnVisitBanner>` | - |
 | `AdHeaderLeaderboard` | `<AdHeaderLeaderboard>` | `position` |
 | `AboveFold` | `<AboveFold>` | `districtCount`, `latestCount`, `excludeCategories[]` |
 | `AdBannerMid` | `<AdBannerMid>` | `position` |

@@ -112,7 +112,7 @@ describe("layoutSchema", () => {
     const layout = {
       version: 1,
       blocks: [
-        { id: "rvb_1", type: "ReturnVisitBanner", config: {}, mobileVariant: "show" },
+        { id: "pg_1", type: "PhotoGallery", config: { count: 6 }, mobileVariant: "show" },
         { id: "ad_1", type: "AdHeaderLeaderboard", config: { position: "HEADER_LEADERBOARD" }, mobileVariant: "show" },
         {
           id: "sb_1",
@@ -153,7 +153,7 @@ describe("layoutSchema", () => {
   test("rejects invalid mobileVariant", () => {
     const r = layoutSchema.safeParse({
       version: 1,
-      blocks: [{ id: "x", type: "ReturnVisitBanner", config: {}, mobileVariant: "explode" }],
+      blocks: [{ id: "x", type: "PhotoGallery", config: { count: 6 }, mobileVariant: "explode" }],
     });
     expect(r.success).toBe(false);
   });
@@ -214,7 +214,7 @@ describe("compositeBlocksSchema", () => {
 
   test("accepts a valid block list", () => {
     const r = compositeBlocksSchema.safeParse([
-      { id: "a", type: "ReturnVisitBanner", config: {}, mobileVariant: "show" },
+      { id: "a", type: "PhotoGallery", config: { count: 6 }, mobileVariant: "show" },
       { id: "b", type: "AdLeaderboard", config: { position: "LEADERBOARD" }, mobileVariant: "show" },
     ]);
     expect(r.success).toBe(true);

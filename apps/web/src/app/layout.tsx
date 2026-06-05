@@ -6,7 +6,6 @@ import { CookieConsent } from "@/components/cookie-consent";
 import { WhatsAppFloat } from "@/components/whatsapp-float";
 import { WebVitalsReporter } from "@/components/web-vitals-reporter";
 import { PushNotifications } from "@/components/push-notifications";
-import { DistrictPicker } from "@/components/district-picker";
 import { SWRegister } from "@/components/sw-register";
 import { MobileAnchorSlot } from "@/components/mobile-anchor-slot";
 import "./globals.css";
@@ -59,7 +58,7 @@ export const metadata: Metadata = {
     template: "%s | Rayalaseema News",
   },
   description:
-    "Latest Telugu news from Andhra Pradesh's Rayalaseema region — Kurnool, Nandyal, Anantapur, Sri Sathya Sai, Kadapa, Annamayya, Tirupati, Chittoor. Politics, sports, cinema, weather, mandi prices, gold rates, devotional. తాజా రాయలసీమ వార్తలు, రాజకీయాలు, క్రీడలు, సినిమా.",
+    "Latest Telugu news from Andhra Pradesh's Rayalaseema region - Kurnool, Nandyal, Anantapur, Sri Sathya Sai, Kadapa, Annamayya, Tirupati, Chittoor. Politics, sports, cinema, weather, mandi prices, gold rates, devotional. తాజా రాయలసీమ వార్తలు, రాజకీయాలు, క్రీడలు, సినిమా.",
   manifest: "/manifest.json",
   keywords: [
     "telugu news",
@@ -92,7 +91,7 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     title: "Telugu News Today - Rayalaseema News | రాయలసీమ తాజా వార్తలు",
-    description: "Latest Telugu news from the Rayalaseema region — Kurnool, Anantapur, Kadapa, Tirupati, Chittoor.",
+    description: "Latest Telugu news from the Rayalaseema region - Kurnool, Anantapur, Kadapa, Tirupati, Chittoor.",
     type: "website",
     locale: "te_IN",
     siteName: "Rayalaseema News",
@@ -222,13 +221,12 @@ export default async function RootLayout({
         )}
 
         {children}
-        <DistrictPicker />
         <WhatsAppFloat />
         <CookieConsent />
         <WebVitalsReporter />
         <PushNotifications />
         <SWRegister />
-        {/* Sticky bottom anchor ad — md:hidden inside the component so it
+        {/* Sticky bottom anchor ad - md:hidden inside the component so it
             only shows on phones. Highest-revenue mobile slot per IAB data. */}
         <MobileAnchorSlot config={config as Record<string, string>} />
       </body>

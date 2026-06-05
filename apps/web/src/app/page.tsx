@@ -4,7 +4,6 @@
 // wears them; the seed-templates script (#158) populates the default homepage
 // block tree that mirrors the pre-Spec-#2 layout.
 
-import { cookies } from "next/headers";
 import { Header } from "@/components/header";
 import { SiteFooter } from "@/components/site-footer";
 import { MastheadAdSlot } from "@/components/masthead-ad-slot";
@@ -14,9 +13,6 @@ import { getMenuItems } from "@/lib/menu";
 import { prisma } from "@rayalaseema/db";
 
 export default async function HomePage() {
-  const cookieStore = await cookies();
-  const myDistrictSlug = cookieStore.get("my-district")?.value || null;
-
   const [config, breakingRows, headerItems, mobileItems] = await Promise.all([
     getSiteConfig(),
     prisma.content.findMany({
@@ -40,7 +36,7 @@ export default async function HomePage() {
         mastheadAdSlot={<MastheadAdSlot config={config} />}
       />
       <main style={{ maxWidth: 1280, margin: "0 auto", padding: "2px 8px 0" }}>
-        <TemplateRenderer urlPath="/" ctx={{ districtSlug: myDistrictSlug }} />
+        <TemplateRenderer urlPath="/" />
       </main>
       <SiteFooter config={config} />
     </div>

@@ -99,7 +99,6 @@ export async function TemplateRenderer({
   const pageCtx: PageContext = {
     urlPath,
     categorySlug: ctx?.categorySlug ?? deriveCategorySlug(urlPath),
-    districtSlug: ctx?.districtSlug ?? null,
   };
 
   // Only pay the composite query when the layout actually references one.
