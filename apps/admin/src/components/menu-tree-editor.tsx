@@ -412,6 +412,53 @@ export function MenuTreeEditor(props: Props) {
   // --- selected item lookup ---
   const sel: Item | null = selectedId ? findItemDeep(tree, selectedId) ?? null : null;
 
+  // Each item can carry a "district tag" - the district shown in the left
+  // picker. It's SEEDED from any item whose internal URL is a district slug,
+  // then PERSISTS even when you change the target type (Heading / External /
+  // …), so toggling the type never drops the district from the left card. The
+  // tag is never auto-cleared; picking a district updates it.
+  const districtSlugSet = useMemo(() => new Set(props.districts.map((d) => d.slug)), [props.districts]);
+  const [districtByItem, setDistrictByItem] = useState<Record<string, string>>({});
+  useEffect(() => {
+    setDistrictByItem((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      const visit = (it: Item) => {
+        if (it.target.type === "INTERNAL_URL") {
+          const m = it.target.url.match(/^\/([^/?#]+)$/);
+          if (m && districtSlugSet.has(m[1]) && next[it.id] !== m[1]) {
+            next[it.id] = m[1];
+            changed = true;
+          }
+        }
+        it.children?.forEach(visit);
+      };
+      tree.forEach(visit);
+      return changed ? next : prev;
+    });
+  }, [tree, districtSlugSet]);
+  const selDistrictSlug = sel ? districtByItem[sel.id] ?? "" : "";
+
+  // Left District picker: when a district-tagged item is selected, picking a
+  // DIFFERENT district re-tags it (label + URL) after a confirm popup. When
+  // nothing district-y is selected, it just adds a new district item.
+  const handleDistrictPick = async (d: Category) => {
+    if (kycBlocked) { fireKycToast(); return; }
+    if (sel && selDistrictSlug) {
+      if (d.slug === selDistrictSlug) return; // already this district
+      const ok = await confirm({
+        title: `Change this item to ${d.nameEn}?`,
+        description: `Its label and URL will change to "${d.name}" and "/${d.slug}".`,
+        confirmText: "Proceed",
+      });
+      if (!ok) return;
+      setDistrictByItem((m) => ({ ...m, [sel.id]: d.slug }));
+      patchSelected({ label: d.name, target: { type: "INTERNAL_URL", url: `/${d.slug}` } });
+    } else {
+      addItem({ type: "INTERNAL_URL", url: `/${d.slug}` }, d.name);
+    }
+  };
+
   // --- Render ---
   return (
     <div>
@@ -507,7 +554,7 @@ export function MenuTreeEditor(props: Props) {
           </Section>
 
           <Section title="District">
-            <DistrictPicker districts={props.districts} onPick={(d) => addItem({ type: "DISTRICT", districtSlug: d.slug }, d.name)} />
+            <DistrictPicker districts={props.districts} value={selDistrictSlug} onPick={handleDistrictPick} />
           </Section>
 
           <Section title="Internal URL">
@@ -626,7 +673,6 @@ export function MenuTreeEditor(props: Props) {
             <ItemConfig
               item={sel}
               categories={props.categories}
-              districts={props.districts}
               recentContent={props.recentContent}
               onChange={(patch) => patchSelected(patch)}
             />
@@ -720,11 +766,11 @@ function CategoryPicker({ categories, onPick }: { categories: Category[]; onPick
 // Palette adder: search a district and add it as a clean bare /<slug> link.
 // Reuses the category combobox (districts share the {slug,name,nameEn} shape);
 // the inserted item's label is the district's Telugu name.
-function DistrictPicker({ districts, onPick }: { districts: Category[]; onPick: (d: Category) => void }) {
+function DistrictPicker({ districts, value, onPick }: { districts: Category[]; value: string; onPick: (d: Category) => void }) {
   return (
     <CategoryCombobox
       categories={districts}
-      value=""
+      value={value}
       placeholder="Search & add district"
       onChange={(slug) => { const d = districts.find((x) => x.slug === slug); if (d) onPick(d); }}
     />
@@ -945,11 +991,28 @@ function MenuRowContent({
 }
 
 function ItemConfig({
-  item, categories, districts, recentContent, onChange,
+  item, categories, recentContent, onChange,
 }: {
-  item: Item; categories: Category[]; districts: Category[]; recentContent: ContentRow[];
+  item: Item; categories: Category[]; recentContent: ContentRow[];
   onChange: (patch: Partial<Item>) => void;
 }) {
+  // Remember the last value of each target type for this item, so toggling the
+  // target type (e.g. Internal -> External -> Internal) restores what you had
+  // instead of wiping it to a blank default. Keyed by item id so it survives
+  // switching between items while the config panel stays open.
+  const lastByType = useRef<Record<string, Partial<Record<Target["type"], Target>>>>({});
+  const switchType = (t: "NONE" | "CATEGORY" | "INTERNAL_URL" | "EXTERNAL_URL" | "CONTENT") => {
+    if (t === item.target.type) return;
+    const bag = lastByType.current[item.id] ?? (lastByType.current[item.id] = {});
+    bag[item.target.type] = item.target; // stash the current value under its type
+    const remembered = bag[t];
+    if (remembered) { onChange({ target: remembered }); return; } // restore prior value
+    if (t === "NONE") onChange({ target: { type: "NONE" } });
+    else if (t === "CATEGORY") onChange({ target: { type: "CATEGORY", categorySlug: "" } });
+    else if (t === "INTERNAL_URL") onChange({ target: { type: "INTERNAL_URL", url: "/" } });
+    else if (t === "EXTERNAL_URL") onChange({ target: { type: "EXTERNAL_URL", url: "https://" } });
+    else onChange({ target: { type: "CONTENT", contentId: "" } });
+  };
   return (
     <div>
       <Label>Label</Label>
@@ -957,18 +1020,10 @@ function ItemConfig({
 
       <Label>Target type</Label>
       <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 8 }}>
-        {(["NONE", "CATEGORY", "DISTRICT", "INTERNAL_URL", "EXTERNAL_URL", "CONTENT"] as const).map((t) => (
+        {(["NONE", "CATEGORY", "INTERNAL_URL", "EXTERNAL_URL", "CONTENT"] as const).map((t) => (
           <label key={t} style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
-            <input type="radio" checked={item.target.type === t} onChange={() => {
-              // Switching type resets the type-specific fields.
-              if (t === "NONE") onChange({ target: { type: "NONE" } });
-              else if (t === "CATEGORY") onChange({ target: { type: "CATEGORY", categorySlug: "" } });
-              else if (t === "DISTRICT") onChange({ target: { type: "DISTRICT", districtSlug: "" } });
-              else if (t === "INTERNAL_URL") onChange({ target: { type: "INTERNAL_URL", url: "/" } });
-              else if (t === "EXTERNAL_URL") onChange({ target: { type: "EXTERNAL_URL", url: "https://" } });
-              else onChange({ target: { type: "CONTENT", contentId: "" } });
-            }} />
-            {t === "NONE" ? "Heading (no link)" : t === "DISTRICT" ? "District" : t.replace("_", " ")}
+            <input type="radio" checked={item.target.type === t} onChange={() => switchType(t)} />
+            {t === "NONE" ? "Heading (no link)" : t.replace("_", " ")}
           </label>
         ))}
       </div>
@@ -980,17 +1035,6 @@ function ItemConfig({
             categories={categories}
             value={item.target.categorySlug}
             onChange={(slug) => onChange({ target: { type: "CATEGORY", categorySlug: slug } })}
-          />
-        </>
-      )}
-
-      {item.target.type === "DISTRICT" && (
-        <>
-          <Label>District</Label>
-          <CategoryCombobox
-            categories={districts}
-            value={item.target.districtSlug}
-            onChange={(slug) => onChange({ target: { type: "DISTRICT", districtSlug: slug } })}
           />
         </>
       )}

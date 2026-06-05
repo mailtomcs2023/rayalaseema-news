@@ -285,7 +285,7 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
               </picture>
             </Link>
             {/* Day + date on ONE line, aligned under the wordmark's first
-                Telugu letter "ర" — not under the map-icon at the start of
+                Telugu letter "ర" - not under the map-icon at the start of
                 the logo. The logo's red map glyph occupies roughly the first
                 14% of the wordmark width; padding-left:14% (~44px @ h-16)
                 shifts the date row to start where the wordmark text starts. */}
@@ -301,7 +301,7 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
           </div>
 
           {/* Center: Masthead ad slot. md:flex (was lg:flex) so tablets at
-              768px+ also see the leaderboard — they're a meaningful slice
+              768px+ also see the leaderboard - they're a meaningful slice
               of Telugu mobile-to-tablet readers and were getting no ad. */}
           <div className="hidden md:flex flex-1 items-center justify-center min-w-0">
             {mastheadAdSlot ?? (
@@ -360,7 +360,9 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
               to-bottom, not just the inline content area. */}
           <ul className="hidden lg:flex items-stretch h-10">
             {activeMain.map((item, i) => (
-              <li key={item.slug} className="relative flex">
+              // Key by index too: several items (Headings, the "మరిన్ని" trigger)
+              // legitimately resolve to "#", so the href alone isn't unique.
+              <li key={`${i}-${item.slug}`} className="relative flex">
                 {item.isDropdown ? (
                   /* "మరిన్ని" dropdown trigger + panel anchored to this <li> */
                   <>
@@ -384,9 +386,9 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
                         padding: "8px 0",
                       }}>
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
-                          {activeDrop.map((dItem) => (
+                          {activeDrop.map((dItem, j) => (
                             <Link
-                              key={dItem.slug}
+                              key={`${j}-${dItem.slug}`}
                               href={dItem.slug}
                               onMouseDown={(e) => e.preventDefault()}
                               onClick={() => setDropdownOpen(false)}

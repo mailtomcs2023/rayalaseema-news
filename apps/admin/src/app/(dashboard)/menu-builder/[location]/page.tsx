@@ -7,7 +7,7 @@ import { redirect, notFound } from "next/navigation";
 import { prisma, MenuLocation } from "@rayalaseema/db";
 import { auth } from "@/lib/auth";
 import { MenuTreeEditor } from "@/components/menu-tree-editor";
-import { normalizeMenuTreeUrls, districtizeMenuTree } from "@/components/menu-normalize";
+import { normalizeMenuTreeUrls, dedistrictizeMenuTree } from "@/components/menu-normalize";
 
 export const dynamic = "force-dynamic";
 
@@ -74,10 +74,9 @@ export default async function MenuBuilderPage({ params }: { params: Promise<{ lo
     }),
   ]);
   const categories = rawCategories.map((c) => ({ slug: c.slug, name: c.name, nameEn: c.nameEn ?? c.name }));
-  // Districts reuse the {slug,name,nameEn} picker shape. The picker inserts a
-  // first-class DISTRICT item, so districts are fully menu-builder driven.
+  // Districts reuse the {slug,name,nameEn} picker shape. The District palette
+  // picker fills an editable bare /<slug> internal link.
   const districts = rawDistricts.map((d) => ({ slug: d.slug, name: d.name, nameEn: d.nameEn }));
-  const districtSlugSet = new Set(districts.map((d) => d.slug));
 
   // Spec #3 F1 #185 - broken-link detection. Collect every CATEGORY slug and
   // CONTENT id referenced by the menu (draft view, since editor shows draft),
@@ -124,7 +123,7 @@ export default async function MenuBuilderPage({ params }: { params: Promise<{ lo
           menuId={menu.id}
           location={slug}
           label={LOCATION_LABELS[slug] || slug}
-          items={districtizeMenuTree(normalizeMenuTreeUrls((menu.draftItems as any) || (menu.items as any) || []), districtSlugSet)}
+          items={dedistrictizeMenuTree(normalizeMenuTreeUrls((menu.draftItems as any) || (menu.items as any) || []))}
           publishedItems={(menu.items as any) || []}
           isPublished={menu.isPublished}
           hasUnpublishedDraft={menu.draftItems !== null}
