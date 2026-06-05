@@ -19,7 +19,7 @@ const BRANDING = {
     description: [
       "రాయలసీమ ప్రాంత తాజా వార్తలు, రాజకీయాలు, క్రీడలు, వినోదం, వాతావరణం, ధరలు, వ్యవసాయం.",
       "",
-      "Latest news from the Rayalaseema region of Andhra Pradesh — Kurnool, Nandyal, Anantapuramu,",
+      "Latest news from the Rayalaseema region of Andhra Pradesh - Kurnool, Nandyal, Anantapuramu,",
       "Sri Sathya Sai, YSR-Kadapa, Annamayya, Tirupati, Chittoor. Independent Telugu journalism.",
       "",
       "🌐 Website: https://rayalaseemanews.com",
@@ -50,13 +50,13 @@ const BRANDING = {
 };
 
 const PLAYLISTS = [
-  { title: "Daily Bulletin", description: "Evening 8 PM IST bulletin — 8-15 min recap of the day's top stories." },
+  { title: "Daily Bulletin", description: "Evening 8 PM IST bulletin - 8-15 min recap of the day's top stories." },
   { title: "Shorts", description: "60-second Telugu news clips from across the seven Rayalaseema districts." },
-  { title: "District Stories", description: "Hyperlocal deep dives — Kurnool, Anantapur, Kadapa, Tirupati, Chittoor, Nandyal, Annamayya, Sri Sathya Sai." },
+  { title: "District Stories", description: "Hyperlocal deep dives - Kurnool, Anantapur, Kadapa, Tirupati, Chittoor, Nandyal, Annamayya, Sri Sathya Sai." },
   { title: "Live & Breaking", description: "Live coverage of assembly sessions, festivals, cricket events, breaking news." },
-  { title: "Politics", description: "AP politics — TDP, YSRCP, JSP, BJP, Congress in the Rayalaseema region." },
+  { title: "Politics", description: "AP politics - TDP, YSRCP, JSP, BJP, Congress in the Rayalaseema region." },
   { title: "Weather & Agriculture", description: "Mandi prices, weather, farmer stories, irrigation projects (Tungabhadra, Krishna)." },
-  { title: "Devotional", description: "Tirupati, Sri Sailam, Lepakshi, Mahanandi, Yaganti, Pushpagiri — temple events + festivals." },
+  { title: "Devotional", description: "Tirupati, Sri Sailam, Lepakshi, Mahanandi, Yaganti, Pushpagiri - temple events + festivals." },
 ];
 
 async function main() {
@@ -64,11 +64,11 @@ async function main() {
   const me = await userApi<any>(
     "https://www.googleapis.com/youtube/v3/channels?part=snippet,brandingSettings,status&mine=true"
   );
-  if (!me.items?.length) throw new Error("no channel in this account — create one first");
+  if (!me.items?.length) throw new Error("no channel in this account - create one first");
   const ch = me.items[0];
   console.log(`Channel: ${ch.id}  "${ch.snippet.title}"`);
   if (ch.id !== CHANNEL_ID) {
-    console.warn(`  Warning: expected ${CHANNEL_ID}, got ${ch.id} — using actual.`);
+    console.warn(`  Warning: expected ${CHANNEL_ID}, got ${ch.id} - using actual.`);
   }
   const actualId = ch.id;
 

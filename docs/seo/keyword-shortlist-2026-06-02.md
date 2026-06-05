@@ -1,4 +1,4 @@
-# Rayalaseema News — Keyword Shortlist (2026-06-02)
+# Rayalaseema News - Keyword Shortlist (2026-06-02)
 
 Pool: 112 keywords  ·  After filter: 91  ·  Selected: 58  ·  Total monthly volume: **10,628,200**
 
@@ -57,7 +57,7 @@ Filter: min volume **100/mo**, max competition index **0.6**.
 | telugu cricket live | 480 | 0.10 | LOW |
 | telugu cricket news today | 390 | 0.00 | LOW |
 
-## Cinema — Telugu  (8)
+## Cinema - Telugu  (8)
 
 | Keyword | Monthly Vol | CPC ($) | Competition |
 |---|--:|--:|:--|
@@ -70,7 +70,7 @@ Filter: min volume **100/mo**, max competition index **0.6**.
 | greatandhra telugu film news | 1,600 | 0.00 | LOW |
 | greatandhra telugu movie news | 1,600 | 0.00 | LOW |
 
-## Politics — AP  (5)
+## Politics - AP  (5)
 
 | Keyword | Monthly Vol | CPC ($) | Competition |
 |---|--:|--:|:--|
@@ -80,7 +80,7 @@ Filter: min volume **100/mo**, max competition index **0.6**.
 | ysrcp news | 260 | 0.00 | 0.00 |
 | jagan mohan reddy news | 210 | 0.00 | 0.00 |
 
-## District — Kurnool/Nandyal  (3)
+## District - Kurnool/Nandyal  (3)
 
 | Keyword | Monthly Vol | CPC ($) | Competition |
 |---|--:|--:|:--|
@@ -88,7 +88,7 @@ Filter: min volume **100/mo**, max competition index **0.6**.
 | kurnool weather today | 5,400 | 0.00 | 0.00 |
 | nandyal news | 320 | 0.00 | 0.00 |
 
-## District — Anantapur/SSS  (3)
+## District - Anantapur/SSS  (3)
 
 | Keyword | Monthly Vol | CPC ($) | Competition |
 |---|--:|--:|:--|
@@ -96,14 +96,14 @@ Filter: min volume **100/mo**, max competition index **0.6**.
 | anantapuram news | 720 | 0.00 | 0.00 |
 | anantapur gold rate today | 590 | 0.01 | 0.00 |
 
-## District — Chittoor/Tirupati  (2)
+## District - Chittoor/Tirupati  (2)
 
 | Keyword | Monthly Vol | CPC ($) | Competition |
 |---|--:|--:|:--|
 | tirupati news | 2,400 | 0.00 | 0.00 |
 | chittoor news | 590 | 0.00 | 0.00 |
 
-## District — Kadapa/Annamayya  (1)
+## District - Kadapa/Annamayya  (1)
 
 | Keyword | Monthly Vol | CPC ($) | Competition |
 |---|--:|--:|:--|

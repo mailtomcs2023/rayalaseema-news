@@ -5,7 +5,7 @@
  * Phase 1: search volume + CPC + competition for a curated seed list of
  *          Telugu + English regional + topical news keywords.
  * Phase 2: related keywords (semantically clustered by DFS) for the top seeds.
- * Phase 3: SERP snapshot — who currently ranks #1-10 for our top targets.
+ * Phase 3: SERP snapshot - who currently ranks #1-10 for our top targets.
  *
  * Writes JSON output to docs/seo/keyword-research-YYYY-MM-DD.json
  *
@@ -20,7 +20,7 @@ const LOCATION_CODE = 2356; // India
 const LANGUAGE_CODE_TE = "te";
 const LANGUAGE_CODE_EN = "en";
 
-// Seed keywords — brand, district, topic. Mix Telugu + English so DFS
+// Seed keywords - brand, district, topic. Mix Telugu + English so DFS
 // returns both for cross-language coverage.
 const SEED_KEYWORDS = [
   // Brand
@@ -30,7 +30,7 @@ const SEED_KEYWORDS = [
   "రాయలసీమ న్యూస్",
   "rayalaseemanews",
 
-  // District — English
+  // District - English
   "kurnool news",
   "nandyal news",
   "anantapur news",
@@ -42,7 +42,7 @@ const SEED_KEYWORDS = [
   "sri sathya sai news",
   "annamayya news",
 
-  // District — Telugu
+  // District - Telugu
   "కర్నూలు వార్తలు",
   "నంద్యాల వార్తలు",
   "అనంతపురం వార్తలు",
@@ -148,7 +148,7 @@ async function main() {
   const outFile = join("docs", "seo", `keyword-research-${today}.json`);
   if (!existsSync(dirname(outFile))) mkdirSync(dirname(outFile), { recursive: true });
 
-  console.log(`DataForSEO keyword research for Rayalaseema News — ${today}`);
+  console.log(`DataForSEO keyword research for Rayalaseema News - ${today}`);
   console.log(`Location: IN (code ${LOCATION_CODE})`);
   console.log(`Output:   ${outFile}\n`);
 
@@ -156,7 +156,7 @@ async function main() {
   const teluguSeeds = SEED_KEYWORDS.filter((k) => /[ఀ-౿]/.test(k));
   const englishSeeds = SEED_KEYWORDS.filter((k) => !/[ఀ-౿]/.test(k));
 
-  console.log(`Phase 1 — search volume (${teluguSeeds.length} TE + ${englishSeeds.length} EN seeds)...`);
+  console.log(`Phase 1 - search volume (${teluguSeeds.length} TE + ${englishSeeds.length} EN seeds)...`);
   const volTE = teluguSeeds.length ? await searchVolume(teluguSeeds, LANGUAGE_CODE_TE) : [];
   const volEN = englishSeeds.length ? await searchVolume(englishSeeds, LANGUAGE_CODE_EN) : [];
   const allVolumes = [...volTE, ...volEN].sort((a: any, b: any) => (b.search_volume || 0) - (a.search_volume || 0));
@@ -172,7 +172,7 @@ async function main() {
   }
 
   // Phase 2: related keywords for top 5 EN + top 5 TE
-  console.log(`\nPhase 2 — related keywords (top 5 each language)...`);
+  console.log(`\nPhase 2 - related keywords (top 5 each language)...`);
   const topEN = volEN.filter((x: any) => x.search_volume).sort((a: any, b: any) => b.search_volume - a.search_volume).slice(0, 5);
   const topTE = volTE.filter((x: any) => x.search_volume).sort((a: any, b: any) => b.search_volume - a.search_volume).slice(0, 5);
   const related: Record<string, any[]> = {};
@@ -188,7 +188,7 @@ async function main() {
   }
 
   // Phase 3: SERP snapshot for top 3 brand + 3 district keywords
-  console.log(`\nPhase 3 — SERP snapshots for top brand + district keywords...`);
+  console.log(`\nPhase 3 - SERP snapshots for top brand + district keywords...`);
   const serpQueries = [
     "rayalaseema news",
     "rayalaseema news telugu",

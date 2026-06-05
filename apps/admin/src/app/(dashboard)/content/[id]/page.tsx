@@ -309,10 +309,10 @@ export default function ContentEditorPage() {
     if (!hasContent) {
       setError(
         action === "headline"
-          ? "Write the article body (or a summary) first — headline ideas are generated from the content."
+          ? "Write the article body (or a summary) first - headline ideas are generated from the content."
           : action === "summarize"
-            ? "Write the article body first — the summary is generated from it."
-            : "No content to process — type or paste something in the Body first."
+            ? "Write the article body first - the summary is generated from it."
+            : "No content to process - type or paste something in the Body first."
       );
       return;
     }
@@ -378,7 +378,7 @@ export default function ContentEditorPage() {
           }
           setSuccess(
             data.fromBrief
-              ? "Draft written from your brief — please verify all facts (names, dates, quotes) before publishing."
+              ? "Draft written from your brief - please verify all facts (names, dates, quotes) before publishing."
               : `Done. Tokens used: ${data.tokens?.total_tokens || data.tokens?.total || 0}`,
           );
         }
@@ -884,7 +884,7 @@ export default function ContentEditorPage() {
                   <>
                     <VideoUpload value={featuredVideo} onChange={(v) => { setFeaturedVideo(v); if (v) clearFieldError("featuredMedia"); }} />
                     <p className="text-xs text-muted-foreground">
-                      Paste a YouTube link or upload an MP4/WebM. The video plays as the article hero — no separate image is used.
+                      Paste a YouTube link or upload an MP4/WebM. The video plays as the article hero - no separate image is used.
                     </p>
                   </>
                 ) : (
@@ -927,7 +927,7 @@ export default function ContentEditorPage() {
                         size="sm"
                         onClick={() => quickFixImage(b.op)}
                         disabled={enhancing !== null}
-                        title={`Quick fix '${b.op}' — sharp-backed, free, ~200ms`}
+                        title={`Quick fix '${b.op}' - sharp-backed, free, ~200ms`}
                         className={`gap-1 bg-emerald-600 text-white hover:bg-emerald-700 ${enhancing && enhancing !== b.op ? "opacity-50" : ""}`}
                       >
                         {enhancing === b.op ? "…" : b.label}
@@ -946,7 +946,7 @@ export default function ContentEditorPage() {
                         size="sm"
                         onClick={() => enhanceImage(b.op)}
                         disabled={enhancing !== null}
-                        title={`AI '${b.op}' — gpt-image-2, ~15s, ~$0.06`}
+                        title={`AI '${b.op}' - gpt-image-2, ~15s, ~$0.06`}
                         className={`gap-1 bg-violet-600 text-white hover:bg-violet-700 ${enhancing && enhancing !== b.op ? "opacity-50" : ""}`}
                       >
                         <Sparkles className="h-3.5 w-3.5" />
@@ -1108,7 +1108,7 @@ export default function ContentEditorPage() {
                   </Button>
                 </div>
                 <p className="text-[11px] text-muted-foreground">
-                  No source URL? Type a short brief or idea in the Body, then click తెలుగులో రాయండి — the AI expands it into a draft for you to verify.
+                  No source URL? Type a short brief or idea in the Body, then click తెలుగులో రాయండి - the AI expands it into a draft for you to verify.
                 </p>
               </div>
             )}

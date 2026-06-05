@@ -4,7 +4,7 @@
  * Walks the SharePoint Media-Library + Video-Social drives and
  * back-fills MediaMirror rows for files the editor uploaded manually
  * via the SP UI (drag-and-drop into a folder, copy-paste from Outlook,
- * etc). Those won't have a blob URL — they exist only on SP — so we
+ * etc). Those won't have a blob URL - they exist only on SP - so we
  * synthesize a `sp-only://<spItemId>` placeholder blobUrl and set
  * status="external". The /api/media/sp-picker route returns these
  * when called with ?includeExternal=true so the media-library page
@@ -135,7 +135,7 @@ async function reconcileDrive(driveId: string, driveLabel: string, dryRun: boole
       }
       continue;
     }
-    // New item not seen before — treat as manual SP upload.
+    // New item not seen before - treat as manual SP upload.
     const synthBlob = `sp-only://${item.id}`;
     if (dryRun) {
       console.log(`[dry] CREATE  ${folderPath}/${item.name}  (${item.file?.mimeType || "?"})`);
@@ -163,7 +163,7 @@ async function reconcileDrive(driveId: string, driveLabel: string, dryRun: boole
       created++;
     } catch (e: any) {
       // Unique-constraint clashes if we reconcile twice in quick
-      // succession — safe to skip silently.
+      // succession - safe to skip silently.
       if (!String(e?.message || "").includes("Unique constraint")) {
         console.warn(`  ingest failed for ${folderPath}/${item.name}: ${e?.message || e}`);
       }

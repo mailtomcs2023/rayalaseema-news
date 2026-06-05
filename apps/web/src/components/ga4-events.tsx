@@ -1,23 +1,23 @@
 "use client";
 
-// Spec #4 H1 (#234) — GA4 custom events for editorial signal.
+// Spec #4 H1 (#234) - GA4 custom events for editorial signal.
 //
 // web-vitals reporter (E2 #221) already fires `web_vital` per-page.
 // This component adds three more events the editorial team cares about:
 //
-//   article_read          — fires once per article view, with category +
+//   article_read          - fires once per article view, with category +
 //                           constituency + author metadata so GA4 funnels
 //                           can slice "which districts read which topics".
-//   scroll_depth          — 50% + 100% reads. Fires at most twice per page.
+//   scroll_depth          - 50% + 100% reads. Fires at most twice per page.
 //                           Lets editors see if leads are working (bounce
 //                           rate ≠ scroll depth; long scroll on a low-CTR
 //                           hero means the page IS good, the hero is the
 //                           problem).
-//   hub_view              — fires on district/constituency/category/tag
+//   hub_view              - fires on district/constituency/category/tag
 //                           hub pages; carries the slug so GA4 reports
 //                           "which hubs convert into article clicks".
 //
-// Rendered conditionally — only when window.gtag exists (GA4 loaded).
+// Rendered conditionally - only when window.gtag exists (GA4 loaded).
 // If SiteConfig.google_analytics_id is empty, layout.tsx skips the GA
 // loader entirely and this component no-ops cleanly.
 

@@ -358,7 +358,7 @@ export function AboveFold({
           transition: transform 0.25s ease;
         }
         .af-dist-lead:hover .af-dist-thumb { transform: scale(1.02); }
-        /* Logo fallback when article has no featuredImage — soft gradient,
+        /* Logo fallback when article has no featuredImage - soft gradient,
            subtle inset shadow, square brand icon at low opacity. */
         .af-dist-fallback {
           background: linear-gradient(135deg, #f8f9fa 0%, #eef0f2 60%, #e5e7eb 100%);
@@ -391,7 +391,7 @@ export function AboveFold({
         .af-dist-lead:hover h3 { color: var(--brand-dark, #B91414); }
         .af-dist-sub {
           /* flex so the bullet prefix sits next to the headline as a
-             clear separator — without it the supporting headlines blurred
+             clear separator - without it the supporting headlines blurred
              into a paragraph that looked like a single excerpt under the
              lead story. */
           display: flex;

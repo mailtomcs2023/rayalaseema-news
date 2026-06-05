@@ -1,5 +1,5 @@
 /**
- * Shared Google auth helper — JWT-bearer flow for service account JSON.
+ * Shared Google auth helper - JWT-bearer flow for service account JSON.
  *
  * Usage:
  *   import { getAccessToken } from "./auth.ts";

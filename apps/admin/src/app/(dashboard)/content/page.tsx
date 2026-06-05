@@ -355,7 +355,7 @@ export default function ContentListPage() {
         enableSorting: false,
         cell: ({ row }) => (
           <span className="text-[13px] text-muted-foreground">
-            {row.original.author?.name ?? "—"}
+            {row.original.author?.name ?? "-"}
           </span>
         ),
       },

@@ -151,12 +151,12 @@ export default function HoroscopePage() {
                       { l: "నక్షత్రం", v: panchangam.today.nakshatra },
                       { l: "యోగం", v: panchangam.today.yoga },
                       { l: "కరణం", v: panchangam.today.karana },
-                      { l: "సూర్యోదయం / అస్తమయం", v: (panchangam.today.sunrise || panchangam.today.sunset) ? `${panchangam.today.sunrise ?? "—"} / ${panchangam.today.sunset ?? "—"}` : "" },
+                      { l: "సూర్యోదయం / అస్తమయం", v: (panchangam.today.sunrise || panchangam.today.sunset) ? `${panchangam.today.sunrise ?? "-"} / ${panchangam.today.sunset ?? "-"}` : "" },
                       { l: "రాహు కాలం", v: panchangam.today.rahuKalam },
                     ].map((item, i) => (
                       <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: i < 6 ? "1px solid #f5f5f5" : "none" }}>
                         <span style={{ fontSize: 12, color: "#888" }}>{item.l}</span>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "#222", textAlign: "right", maxWidth: "55%" }}>{item.v || "—"}</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#222", textAlign: "right", maxWidth: "55%" }}>{item.v || "-"}</span>
                       </div>
                     ))}
                   </div>

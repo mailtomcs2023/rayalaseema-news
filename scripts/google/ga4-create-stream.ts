@@ -8,7 +8,7 @@ import { api } from "./auth";
 
 const PROPERTY = "properties/539770425";
 const DOMAIN_URL = "https://rayalaseemanews.com";
-const STREAM_NAME = "rayalaseemanews.com — web";
+const STREAM_NAME = "rayalaseemanews.com - web";
 
 const SCOPES = ["https://www.googleapis.com/auth/analytics.edit"];
 

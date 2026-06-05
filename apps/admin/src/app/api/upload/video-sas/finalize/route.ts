@@ -1,6 +1,6 @@
 // POST /api/upload/video-sas/finalize { blobUrl, contentId?, role?, sizeBytes?, mimeType? }
 //
-// Companion to POST /api/upload/video-sas — that issues a short-lived
+// Companion to POST /api/upload/video-sas - that issues a short-lived
 // write-only SAS so the browser can stream a video file directly to
 // Azure Blob without going through the Next server (videos are too
 // large to route through here). After the client's PUT succeeds, it
@@ -8,7 +8,7 @@
 // with the right article context + role. Without this, videos would
 // land in Azure Blob but never make it into SP / MediaMirror.
 //
-// We don't re-verify the upload — the blob URL is the source of truth
+// We don't re-verify the upload - the blob URL is the source of truth
 // and queueMirror() fetches it back when running the mirror task.
 
 import { NextRequest, NextResponse } from "next/server";

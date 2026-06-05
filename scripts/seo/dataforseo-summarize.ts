@@ -6,14 +6,14 @@
  *
  * Strategy:
  *  - Pool = seed keywords + all "related" keywords from Phase 2.
- *  - Score = search_volume / (1 + 10 * competition_index)  — favor low comp.
+ *  - Score = search_volume / (1 + 10 * competition_index)  - favor low comp.
  *  - Cluster by regex into categories (district, topic, personality, service).
  *  - Pick top N per category until 100 KWs cover at least 50,000 total monthly
  *    searches (rough rule of thumb to hit 10K monthly visits at ~20% blended CTR).
  *
  * Outputs:
- *   docs/seo/keyword-shortlist-YYYY-MM-DD.md  — categorized table for editors
- *   docs/seo/keyword-shortlist-YYYY-MM-DD.csv — flat list for spreadsheets
+ *   docs/seo/keyword-shortlist-YYYY-MM-DD.md  - categorized table for editors
+ *   docs/seo/keyword-shortlist-YYYY-MM-DD.csv - flat list for spreadsheets
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
@@ -45,18 +45,18 @@ const MIN_VOLUME = 100;
 const MAX_COMPETITION_INDEX = 0.6;
 
 const CATEGORIES: Array<[string, RegExp]> = [
-  ["District — Kurnool/Nandyal",  /\b(kurnool|nandyal|కర్నూలు|నంద్యాల)\b/i],
-  ["District — Anantapur/SSS",    /\b(anantapur|anantapuram|sri\s*sathya\s*sai|hindupur|penukonda|అనంతపురం|హిందూపురం)\b/i],
-  ["District — Kadapa/Annamayya", /\b(kadapa|ysr|annamayya|rajampet|proddatur|కడప|అన్నమయ్య|రాజంపేట|ప్రొద్దుటూరు)\b/i],
-  ["District — Chittoor/Tirupati", /\b(chittoor|tirupati|tirumala|sri\s*kalahasti|చిత్తూరు|తిరుపతి|తిరుమల)\b/i],
-  ["Politics — AP",                 /\b(ysrcp|tdp|jana\s*sena|janasena|jagan|chandrababu|pawan\s*kalyan|nara\s*lokesh|ఆపార్టీ|వైసీపీ|టీడీపీ|జనసేన|జగన్|చంద్రబాబు|పవన్)\b/i],
-  ["Cinema — Telugu",               /\b(telugu\s*(movie|cinema|film)|tollywood|prabhas|allu\s*arjun|chiranjeevi|mahesh\s*babu|jr\s*ntr|rashmika|samantha|తెలుగు\s*సినిమా|టాలీవుడ్)\b/i],
+  ["District - Kurnool/Nandyal",  /\b(kurnool|nandyal|కర్నూలు|నంద్యాల)\b/i],
+  ["District - Anantapur/SSS",    /\b(anantapur|anantapuram|sri\s*sathya\s*sai|hindupur|penukonda|అనంతపురం|హిందూపురం)\b/i],
+  ["District - Kadapa/Annamayya", /\b(kadapa|ysr|annamayya|rajampet|proddatur|కడప|అన్నమయ్య|రాజంపేట|ప్రొద్దుటూరు)\b/i],
+  ["District - Chittoor/Tirupati", /\b(chittoor|tirupati|tirumala|sri\s*kalahasti|చిత్తూరు|తిరుపతి|తిరుమల)\b/i],
+  ["Politics - AP",                 /\b(ysrcp|tdp|jana\s*sena|janasena|jagan|chandrababu|pawan\s*kalyan|nara\s*lokesh|ఆపార్టీ|వైసీపీ|టీడీపీ|జనసేన|జగన్|చంద్రబాబు|పవన్)\b/i],
+  ["Cinema - Telugu",               /\b(telugu\s*(movie|cinema|film)|tollywood|prabhas|allu\s*arjun|chiranjeevi|mahesh\s*babu|jr\s*ntr|rashmika|samantha|తెలుగు\s*సినిమా|టాలీవుడ్)\b/i],
   ["Cricket / Sports",              /\b(cricket|ipl|t20|csk|rcb|క్రికెట్|ఐపీఎల్|ఐపీఎల్|sports|క్రీడలు)\b/i],
-  ["Religion — Temples",            /\b(tirupati\s*(temple|darshan|tickets)|tirumala|venkateswara|srisailam|lepakshi|mahanandi|yaganti|temple|ttd|దర్శనం|ఆలయం|గుడి|శ్రీశైలం)\b/i],
+  ["Religion - Temples",            /\b(tirupati\s*(temple|darshan|tickets)|tirumala|venkateswara|srisailam|lepakshi|mahanandi|yaganti|temple|ttd|దర్శనం|ఆలయం|గుడి|శ్రీశైలం)\b/i],
   ["Weather / Agriculture",         /\b(weather|rains?|monsoon|mandi|crop|farmer|tungabhadra|krishna|వాతావరణం|వర్షం|మండి|రైతు|తుంగభద్ర)\b/i],
   ["Markets / Economy",             /\b(gold\s*rate|silver\s*rate|petrol|diesel|stock|share|బంగారం|వెండి|పెట్రోల్|డీజిల్)\b/i],
   ["Education / Exams",             /\b(exam|result|tet|eamcet|intermediate|ssc|university|board|పరీక్ష|ఫలితాలు)\b/i],
-  ["Brand — Rayalaseema",           /\brayalaseema|seema|రాయలసీమ|సీమ/i],
+  ["Brand - Rayalaseema",           /\brayalaseema|seema|రాయలసీమ|సీమ/i],
   ["General Telugu News",           /telugu\s*news|breaking\s*news\s*telugu|తెలుగు\s*వార్తలు|తాజా\s*వార్తలు|ఆంధ్ర.*వార్తలు/i],
 ];
 
@@ -158,7 +158,7 @@ async function main() {
   const totalVol = picked.reduce((s, k) => s + k.vol, 0);
   console.log(`Selected ${picked.length} keywords | total monthly volume = ${totalVol.toLocaleString()}`);
   if (totalVol < TARGET_TOTAL_VOLUME) {
-    console.warn(`  Warning: below target of ${TARGET_TOTAL_VOLUME.toLocaleString()} — broaden seeds or relax MAX_COMPETITION_INDEX.`);
+    console.warn(`  Warning: below target of ${TARGET_TOTAL_VOLUME.toLocaleString()} - broaden seeds or relax MAX_COMPETITION_INDEX.`);
   }
 
   // Group for markdown
@@ -169,7 +169,7 @@ async function main() {
 
   // Markdown
   const md: string[] = [];
-  md.push(`# Rayalaseema News — Keyword Shortlist (${today})`);
+  md.push(`# Rayalaseema News - Keyword Shortlist (${today})`);
   md.push("");
   md.push(`Pool: ${pool.size} keywords  ·  After filter: ${candidates.length}  ·  Selected: ${picked.length}  ·  Total monthly volume: **${totalVol.toLocaleString()}**`);
   md.push("");

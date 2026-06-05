@@ -1,5 +1,5 @@
 /**
- * SharePoint mirror — Graph API client.
+ * SharePoint mirror - Graph API client.
  *
  * Mirrors Azure-Blob-hosted media into the editorial SharePoint site at
  * repress.sharepoint.com/sites/rayalaseemaexpress so editors can browse the
@@ -19,7 +19,7 @@
  *   Media-Library/_Statewide/_Uploads/<YYYY>/<MM>/<file>   context-less uploads
  *   Video-Social/<Bucket>/<YYYY>/<MM>/<file>               videos / thumbs
  *
- * Mirroring is fire-and-forget by design — see mirrorToSharePoint(). If
+ * Mirroring is fire-and-forget by design - see mirrorToSharePoint(). If
  * Graph throws, the MediaMirror row stays at status="failed" with the
  * error; a reconciler can sweep for retries. Editor uploads never block
  * on SP latency.
@@ -220,7 +220,7 @@ export function resolveMirrorTarget(
   const mm = String(when.getMonth() + 1).padStart(2, "0");
   const safeExt = ext.replace(/[^a-z0-9]/gi, "").toLowerCase().slice(0, 6) || "bin";
 
-  // Sanitize slug — SharePoint forbids: / \ * < > ? : | # %. Replace any
+  // Sanitize slug - SharePoint forbids: / \ * < > ? : | # %. Replace any
   // non-[a-z0-9-] with hyphen and collapse runs. Slug is already kebab-
   // case from the AI pipeline so this is mostly a no-op.
   const safeSlug = (ctx.articleSlug || "")
@@ -316,7 +316,7 @@ async function uploadLarge(
   mimeType: string,
 ): Promise<DriveItem> {
   const safeName = encodeURIComponent(fileName);
-  // Step 1 — create the session.
+  // Step 1 - create the session.
   const session = await graph<{ uploadUrl: string; expirationDateTime: string }>(
     `/drives/${driveId}/items/${parentId}:/${safeName}:/createUploadSession`,
     {
@@ -329,7 +329,7 @@ async function uploadLarge(
       }),
     },
   );
-  // Step 2 — PUT chunks sequentially against session.uploadUrl. No
+  // Step 2 - PUT chunks sequentially against session.uploadUrl. No
   // Authorization header on these PUTs (Graph spec rejects them).
   const total = buf.byteLength;
   let final: DriveItem | null = null;
@@ -410,7 +410,7 @@ export async function queueMirror(args: QueueMirrorArgs): Promise<{ id: string }
     },
   });
 
-  // Background — never await from request paths.
+  // Background - never await from request paths.
   void runMirrorRow(row.id).catch((e) => {
     console.error("[sp-mirror] background run failed:", row.id, e);
   });
@@ -440,7 +440,7 @@ export async function runMirrorRow(rowId: string): Promise<void> {
   if (!row) return;
   if (row.status === "done") return;
 
-  // Acquire — bump attempts, flip to uploading. If another worker beat us
+  // Acquire - bump attempts, flip to uploading. If another worker beat us
   // to it (status already "uploading"), bail.
   const acquired = await prisma.mediaMirror.updateMany({
     where: { id: rowId, status: { in: ["pending", "failed"] } },

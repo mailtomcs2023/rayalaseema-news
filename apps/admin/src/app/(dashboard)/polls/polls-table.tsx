@@ -444,7 +444,7 @@ export function PollsTable({ data: initialData }: { data: PollRow[] }) {
     }
   };
 
-  // Filter column helpers — read current values for the popovers + view toggle.
+  // Filter column helpers - read current values for the popovers + view toggle.
   const statusCol = table.getColumn("active");
   const typeCol = table.getColumn("type");
   const selectedStatus = (statusCol?.getFilterValue() as string[]) ?? [];

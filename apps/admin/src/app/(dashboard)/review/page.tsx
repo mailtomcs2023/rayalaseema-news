@@ -459,7 +459,7 @@ export default function ReviewPage() {
         header: "Category",
         cell: ({ row }) => {
           const c = row.original.category;
-          if (!c) return <span style={{ fontSize: 11, color: "#aaa" }}>—</span>;
+          if (!c) return <span style={{ fontSize: 11, color: "#aaa" }}>-</span>;
           return (
             <span
               style={{
@@ -485,7 +485,7 @@ export default function ReviewPage() {
         id: "author",
         header: "Reporter",
         cell: ({ row }) => (
-          <span style={{ fontSize: 12, color: "#555" }}>{row.original.author?.name ?? "—"}</span>
+          <span style={{ fontSize: 12, color: "#555" }}>{row.original.author?.name ?? "-"}</span>
         ),
         filterFn: (row, _id, value) => {
           if (!value) return true;

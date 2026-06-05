@@ -12,7 +12,7 @@
 //
 // Resolution order:
 //   1. NEXTAUTH_URL env (deploy.yml pins this to https://admin.rayalaseemanews.com)
-//      — most reliable, doesn't depend on nginx forwarding any headers.
+//      - most reliable, doesn't depend on nginx forwarding any headers.
 //   2. x-forwarded-host + x-forwarded-proto headers (if nginx forwards them).
 //   3. The request's own Host header.
 //   4. req.url as last-resort fallback (dev / direct hits to the upstream).

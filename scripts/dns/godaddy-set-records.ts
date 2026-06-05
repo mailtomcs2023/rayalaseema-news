@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * GoDaddy DNS — point rayalaseemanews.com at the Azure VM.
+ * GoDaddy DNS - point rayalaseemanews.com at the Azure VM.
  *
  * Reads creds from .env.local at repo root:
  *   GODADDY_API_KEY, GODADDY_API_SECRET, GODADDY_API_BASE
@@ -9,7 +9,7 @@
  *   bun scripts/dns/godaddy-set-records.ts            # dry-run (default)
  *   bun scripts/dns/godaddy-set-records.ts --apply    # actually PUT records
  *
- * Idempotent — re-running just re-asserts the same record set.
+ * Idempotent - re-running just re-asserts the same record set.
  */
 
 import { readFileSync } from "node:fs";

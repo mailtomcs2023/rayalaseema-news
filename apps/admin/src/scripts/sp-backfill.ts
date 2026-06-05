@@ -3,7 +3,7 @@
  *
  * Walks every PUBLISHED + DRAFT Content row that has a featured image
  * stored on Azure Blob and back-fills the SharePoint mirror so the
- * picker shows historical media too. Idempotent — rows already
+ * picker shows historical media too. Idempotent - rows already
  * present in MediaMirror are skipped.
  *
  * Runs serially with a small inter-upload delay so Graph throttling
@@ -49,7 +49,7 @@ async function main() {
 
   // Pull Content rows that have a hosted image. We're after blob URLs;
   // external publisher URLs that slipped through (no rehost) are
-  // skipped here — the regular auto-fetch path rehosts them later.
+  // skipped here - the regular auto-fetch path rehosts them later.
   const rows = await prisma.content.findMany({
     where: {
       featuredImage: { not: null },
