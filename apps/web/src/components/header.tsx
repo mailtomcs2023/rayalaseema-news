@@ -319,7 +319,7 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
                 <svg className="size-5" fill="none" stroke="var(--n-700, #374151)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/></svg>
                 <span className="masthead-tile-label">Latest</span>
               </Link>
-              <Link href="/" className="masthead-tile masthead-tile-breaking" aria-label="Breaking news">
+              <Link href="/breaking" className="masthead-tile masthead-tile-breaking" aria-label="Breaking news">
                 <svg className="size-5" fill="none" stroke="var(--brand, #E01B1B)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="9"/></svg>
                 <span className="masthead-tile-label">Breaking</span>
               </Link>

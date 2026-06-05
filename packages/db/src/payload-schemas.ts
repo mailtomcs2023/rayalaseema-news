@@ -66,6 +66,10 @@ export const cartoonPayloadSchema = z.object({
 export const breakingNewsPayloadSchema = z.object({
   priority: z.number().int().min(1).max(10),
   expiresAt: z.string().datetime().optional(),
+  // Optional link to the full story (internal path like "/kurnool/..." or an
+  // absolute URL). When set, the /breaking page makes the headline clickable.
+  // Empty/absent => headline-only alert.
+  url: z.string().optional(),
 }).strict();
 
 // ---------- Registry + helpers ----------

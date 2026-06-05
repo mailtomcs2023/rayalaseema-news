@@ -22,7 +22,7 @@ export async function GET() {
         priority: typeof p.priority === "number" ? p.priority : 0,
         active: true,
         expiresAt,
-        url: null,
+        url: typeof p.url === "string" && p.url.trim() ? p.url.trim() : null,
       };
     })
     .filter((b) => !b.expiresAt || b.expiresAt > now)

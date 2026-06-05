@@ -190,8 +190,18 @@ export function ContentPayloadEditor({ type, payload, setPayload }: ContentPaylo
             onChange={(v) => upd({ expiresAt: v ? new Date(v).toISOString() : undefined })}
           />
         </Field>
+        <Field label="Link to full story (optional)">
+          <input
+            type="text"
+            value={(payload.url as string) || ""}
+            onChange={(e) => upd({ url: e.target.value.trim() || undefined })}
+            placeholder="/kurnool/... or https://…"
+            style={inpStyle}
+          />
+        </Field>
         <p style={{ fontSize: 11, color: "#6b7280", marginTop: 6 }}>
-          Breaking news has no body, no slug, no public detail page. The title shows in the ticker only.
+          The title shows in the ticker. Add a link to make it open the full
+          story (on the /breaking page); leave it blank for a headline-only alert.
         </p>
       </SectionBox>
     );
