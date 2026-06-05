@@ -333,7 +333,7 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
           {/* Mobile: hamburger */}
           <div className="lg:hidden ml-auto">
             <button
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -511,8 +511,10 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
               </div>
             </div>
 
-            {/* Bottom safe area */}
-            <div className="h-6" />
+            {/* Bottom safe area - tall enough to clear the fixed mobile-anchor
+                ad (the "WE ARE HIRING" banner pinned to the bottom), so the
+                last menu items can scroll above it instead of hiding under it. */}
+            <div className="h-28" />
           </div>
         </>
       )}
