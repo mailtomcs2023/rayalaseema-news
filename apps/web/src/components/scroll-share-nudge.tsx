@@ -56,28 +56,30 @@ export function ScrollShareNudge({ title, slug, articleUrl }: { title: string; s
 
   return (
     <div style={{
-      position: "fixed", bottom: 80, right: 16, zIndex: 9995,
+      // Sit ABOVE the persistent WhatsAppFloat button (bottom:80, 56px tall)
+      // so the two don't overlap into a jumbled stack in the corner.
+      position: "fixed", bottom: 150, right: 16, zIndex: 9995,
       animation: "nudgeSlide 0.4s ease-out",
     }}>
       <div style={{
-        background: "var(--brand, #E01B1B)", borderRadius: 14, padding: "12px 16px",
-        boxShadow: "0 6px 30px rgba(224,27,27,0.32)",
-        display: "flex", alignItems: "center", gap: 10, maxWidth: 300,
+        background: "#25D366", borderRadius: 14, padding: "10px 12px",
+        boxShadow: "0 6px 24px rgba(0,0,0,0.22)",
+        display: "flex", alignItems: "center", gap: 10, maxWidth: 320,
       }}>
         <a href={waLink} target="_blank" rel="noopener noreferrer" style={{
-          display: "flex", alignItems: "center", gap: 8, textDecoration: "none", color: "#fff",
+          display: "flex", alignItems: "center", gap: 10, textDecoration: "none", color: "#fff", minWidth: 0,
         }}>
-          <svg width="24" height="24" fill="#fff" viewBox="0 0 24 24">
+          <svg width="26" height="26" fill="#fff" viewBox="0 0 24 24" style={{ flexShrink: 0 }} aria-hidden="true">
             <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
           </svg>
-          <div>
+          <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.3, minWidth: 0 }}>
             <span style={{ fontSize: 13, fontWeight: 800 }}>ఇది షేర్ చేయండి!</span>
-            <span style={{ fontSize: 10, display: "block", opacity: 0.85 }}>వాట్సాప్ గ్రూపుల్లో పంపండి</span>
-          </div>
+            <span style={{ fontSize: 11, opacity: 0.9 }}>వాట్సాప్ గ్రూపుల్లో పంపండి</span>
+          </span>
         </a>
-        <button onClick={() => { setDismissed(true); setShow(false); }} style={{
-          background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%",
-          width: 22, height: 22, cursor: "pointer", color: "#fff", fontSize: 12,
+        <button onClick={() => { setDismissed(true); setShow(false); }} aria-label="మూసివేయి" style={{
+          background: "rgba(255,255,255,0.25)", border: "none", borderRadius: "50%",
+          width: 22, height: 22, cursor: "pointer", color: "#fff", fontSize: 12, flexShrink: 0,
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
           ✕
