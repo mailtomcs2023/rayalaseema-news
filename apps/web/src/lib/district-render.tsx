@@ -278,7 +278,10 @@ export async function DistrictView({ slug }: { slug: string }) {
           </div>
 
           {/* RAIL */}
-          <aside style={{ flex: "0 0 290px" }}>
+          {/* Sticky so the constituencies + trending rail follows the reader.
+              alignSelf:start stops the flex item stretching (needed for sticky);
+              scrolls internally if taller than the viewport. */}
+          <aside style={{ flex: "0 0 290px", position: "sticky", top: 56, alignSelf: "flex-start", maxHeight: "calc(100vh - 72px)", overflowY: "auto" }}>
             {/* Constituencies */}
             <div className="cat-rail-head">నియోజకవర్గాలు</div>
             <div style={{ marginBottom: 24 }}>

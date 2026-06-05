@@ -6,7 +6,7 @@
 // full-viewport overlay for immersive reading.
 //
 // Uses react-pageflip (StPageFlip) mounted via dynamic({ ssr:false })
-// — the library measures DOM dimensions on first paint and a server
+// - the library measures DOM dimensions on first paint and a server
 // render with zero-size wrappers triggered framework-level cascades
 // on the previous attempt.
 
@@ -103,7 +103,7 @@ export function GalleryFlipbook({ photos, title }: Props) {
   const total = photos.length + 1; // +1 for cover
 
   const bookNode = (
-    /* @ts-expect-error react-pageflip typings — className+startPage are
+    /* @ts-expect-error react-pageflip typings - className+startPage are
        declared required but library accepts the props as below. */
     <HTMLFlipBook
       className="rsn-flipbook"
@@ -205,7 +205,7 @@ export function GalleryFlipbook({ photos, title }: Props) {
     </HTMLFlipBook>
   );
 
-  // INLINE rendering — fits inside the gallery page column.
+  // INLINE rendering - fits inside the gallery page column.
   if (!fullscreen) {
     return (
       <div
@@ -327,7 +327,7 @@ const overlayToolbarBtn: React.CSSProperties = {
 };
 
 // Each child of HTMLFlipBook must be a single DOM element with a
-// defined size — StPageFlip queries getBoundingClientRect on every
+// defined size - StPageFlip queries getBoundingClientRect on every
 // page during init. Anything that collapses to 0×0 (a Fragment, a
 // purely-styled span, or a flex child with no flex-basis) triggers
 // the "function is not a function" cascade.

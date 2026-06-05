@@ -173,7 +173,7 @@ export default function MediaLibraryPage() {
                   <div style={{ fontWeight: 700, color: "#111", wordBreak: "break-all", lineHeight: 1.3 }}>
                     {it.spFileName || it.blobUrl.split("/").pop()}
                   </div>
-                  <div style={{ color: "#6b7280" }}>{it.spFolderPath || "—"}</div>
+                  <div style={{ color: "#6b7280" }}>{it.spFolderPath || "-"}</div>
                   <div style={{ display: "flex", gap: 4, marginTop: "auto", paddingTop: 4 }}>
                     {spOnly ? (
                       <a href={it.spWebUrl || "#"} target="_blank" rel="noopener noreferrer"

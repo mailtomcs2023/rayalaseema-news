@@ -1,4 +1,4 @@
-// /ads.txt — IAB Tech Lab Authorized Digital Sellers spec.
+// /ads.txt - IAB Tech Lab Authorized Digital Sellers spec.
 // Used by AdSense for site ownership verification and by all programmatic
 // buyers to confirm that this site is authorized to sell ads via the listed
 // reseller relationships. Without this file ad inventory is treated as
@@ -6,7 +6,7 @@
 //
 // Pulls publisher ID from SiteConfig (admin-editable) so we never hardcode
 // the ca-pub identifier. If unset the route serves a minimal empty body
-// (still 200 — IAB spec is OK with an empty ads.txt for now).
+// (still 200 - IAB spec is OK with an empty ads.txt for now).
 
 import { getSiteConfig } from "@/lib/db-queries";
 

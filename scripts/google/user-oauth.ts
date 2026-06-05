@@ -23,7 +23,7 @@ export async function getUserAccessToken(): Promise<string> {
 
   const env = loadEnv();
   const rt = env.GOOGLE_OAUTH_REFRESH_TOKEN;
-  if (!rt) throw new Error("GOOGLE_OAUTH_REFRESH_TOKEN missing in .env.local — run oauth-consent.ts first");
+  if (!rt) throw new Error("GOOGLE_OAUTH_REFRESH_TOKEN missing in .env.local - run oauth-consent.ts first");
 
   const client = JSON.parse(readFileSync(".oauth-client.local.json", "utf8")) as Client;
   const c = client.installed;

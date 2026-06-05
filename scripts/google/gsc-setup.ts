@@ -137,7 +137,7 @@ async function step3_waitAndVerify(token: string): Promise<void> {
       console.log(msg.slice(0, 100));
     }
   }
-  throw new Error("verification did not succeed after 90s — try again in a few minutes");
+  throw new Error("verification did not succeed after 90s - try again in a few minutes");
 }
 
 async function step4_addToSearchConsole(): Promise<void> {

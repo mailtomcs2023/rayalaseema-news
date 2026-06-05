@@ -77,6 +77,6 @@ await emit(SRC_DARK, [
   ["apps/admin/public/logo-inverse.svg", "apps/admin/public/logo-inverse.png"],
 ]);
 
-// Clean up candidates folder — no longer needed once mapped to final names.
+// Clean up candidates folder - no longer needed once mapped to final names.
 rmSync("apps/web/public/logo-candidates", { recursive: true, force: true });
 console.log("\n✓ candidates folder removed; logos mapped to final paths.");

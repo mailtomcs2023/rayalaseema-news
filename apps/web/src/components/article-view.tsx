@@ -325,7 +325,10 @@ export function ArticleView({ article, related, trending, siteUrl }: Props) {
           <DialectGlosser />
 
           <aside className="article-sidebar" style={{ width: 320, flexShrink: 0 }}>
-            <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #eee", padding: 16 }}>
+            {/* Sticky so the Trending card follows the reader down the article.
+                top clears the sticky nav (~40px); it scrolls internally if the
+                list is taller than the viewport. */}
+            <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #eee", padding: 16, position: "sticky", top: 56, maxHeight: "calc(100vh - 72px)", overflowY: "auto" }}>
               <h3 style={{ fontSize: 18, fontWeight: 800, color: "var(--color-brand)", marginBottom: 12, paddingBottom: 8, borderBottom: "2px solid var(--color-brand)" }}>
                 Trending
               </h3>

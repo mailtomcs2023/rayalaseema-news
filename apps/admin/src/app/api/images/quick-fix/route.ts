@@ -6,7 +6,7 @@
 //
 // Why this exists: ~80% of editorial photo edits are "brighten this
 // dark district shot" / "sharpen this slightly soft press conf
-// frame" / "upscale this small wire thumb" — all sub-second sharp
+// frame" / "upscale this small wire thumb" - all sub-second sharp
 // ops that gpt-image-2 was burning ~$0.06 and 15s on.
 //
 // Operations (free, ~150ms each):
@@ -81,7 +81,7 @@ async function applyOp(input: Buffer, op: QuickOp): Promise<Buffer> {
       // The downstream maxWidth (1600 in processImageBuffer) clamps the
       // final dimensions so a 1200-wide source upscales to 2400 here
       // then resamples down to 1600. Net effect = mild sharpen-ish
-      // restoration. We accept that — it's still better than the
+      // restoration. We accept that - it's still better than the
       // original on a hero-sized render.
       s = s.resize({ width: targetW, kernel: "lanczos3" });
       break;
@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `op must be one of ${ALL_OPS.join(", ")}` }, { status: 400 });
     }
 
-    // Same SSRF guard as /api/images/process — block 127.0.0.1, cloud
+    // Same SSRF guard as /api/images/process - block 127.0.0.1, cloud
     // metadata, DNS rebinds, etc.
     const safety = await isUrlSafeToFetch(url);
     if (!safety.safe) {

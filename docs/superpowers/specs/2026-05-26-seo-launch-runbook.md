@@ -5,11 +5,11 @@ spec design doc + research doc.
 
 ---
 
-## Phase H — Manual operator actions
+## Phase H - Manual operator actions
 
-### H2 (#235) — Google Search Console
+### H2 (#235) - Google Search Console
 
-Already verified per memory `project_seo_credentials.md` — property
+Already verified per memory `project_seo_credentials.md` - property
 `rayalaseemanews.com` owned by `rsepress2026@gmail.com`. Action items:
 
 1. Open https://search.google.com/search-console
@@ -24,21 +24,21 @@ Already verified per memory `project_seo_credentials.md` — property
    ~400 URLs (8 districts + 55 constituencies + 250 mandals + ~30
    categories + 12 trust pages + N articles).
 
-### H3 (#236) — Bing Webmaster Tools + News PubHub
+### H3 (#236) - Bing Webmaster Tools + News PubHub
 
 1. Open https://www.bing.com/webmasters
 2. Sign in with the same Gmail (Bing accepts Google sign-in)
 3. Add site → `https://rayalaseemanews.com`
-4. Verify via the meta-tag option — paste the verification string
+4. Verify via the meta-tag option - paste the verification string
    into SiteConfig.bing_webmaster_id via admin → /settings.
    The root layout reads this and renders `<meta name="msvalidate.01">`
    automatically (B2 #198 wiring).
 5. Sitemaps → Submit → `https://rayalaseemanews.com/sitemap-index.xml`
-6. **Bing News PubHub:** https://pubhub.bing.com — apply with the
+6. **Bing News PubHub:** https://pubhub.bing.com - apply with the
    publication name "Rayalaseema Express News", logo, primary language
    `te`, country `IN`. Approval typically takes 2-4 weeks.
 
-### H4 (#237) — Google News Publisher Center
+### H4 (#237) - Google News Publisher Center
 
 1. https://publishercenter.google.com
 2. Sign in as `rsepress2026@gmail.com`
@@ -54,7 +54,7 @@ Already verified per memory `project_seo_credentials.md` — property
 6. Verify ownership via the meta-tag option (or use the GSC-verified
    property as the verification source).
 7. After approval the publication ID appears in the Publisher Center
-   dashboard — paste it into
+   dashboard - paste it into
    SiteConfig.google_news_publisher_id (A4 #195 column).
 
 Approval typically 2-6 weeks. Until then, the news-sitemap.xml is still
@@ -64,11 +64,11 @@ publisher-branded Top Stories carousel.
 
 ---
 
-## Phase I — Manual launch validation
+## Phase I - Manual launch validation
 
-### I1 (#241) — Pre-launch crawler audit
+### I1 (#241) - Pre-launch crawler audit
 
-Use Screaming Frog Free (free tier handles 500 URLs — enough for our
+Use Screaming Frog Free (free tier handles 500 URLs - enough for our
 current corpus). Crawl from `https://rayalaseemanews.com` with depth
 unlimited. Report on:
 
@@ -78,19 +78,19 @@ unlimited. Report on:
 - Missing meta description (target: 0)
 - Missing alt text on images (target: < 5%)
 - Mixed-content warnings (target: 0)
-- Pages with no internal inbound links — orphans (target: 0)
+- Pages with no internal inbound links - orphans (target: 0)
 
 A free alternative is `npx broken-link-checker` against the prod URL.
 
 ---
 
-## Phase K — Ops follow-ups
+## Phase K - Ops follow-ups
 
-### K10 (#255) — Bing PubHub fast-track
+### K10 (#255) - Bing PubHub fast-track
 
 Covered by H3 above. Listed separately in the K-phase because the K-phase
 verticals (gold/mandi/devotional) benefit more from Bing IndexNow than
-from Google indexing — Bing's vertical SERP surfaces respond faster to
+from Google indexing - Bing's vertical SERP surfaces respond faster to
 fresh content than Google's.
 
 ---
@@ -124,5 +124,5 @@ time, before any DB call).
    `https://rayalaseemanews.com`
 4. Copy the Project ID → paste into SiteConfig.clarity_project_id
 5. Layout.tsx already loads the Clarity loader when the ID is present
-   (H5 #238 — code path was shipped pre-spec).
+   (H5 #238 - code path was shipped pre-spec).
 6. Verify in Clarity dashboard: live sessions appear within 10 minutes.

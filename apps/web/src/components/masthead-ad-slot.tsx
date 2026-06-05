@@ -1,14 +1,14 @@
 // Masthead 728x90 leaderboard ad slot.
 //
-// Server component — fetches active LEADERBOARD ad from DB + falls through:
-//   1. DB Ad (admin created in /ads with position=LEADERBOARD) — image+link
+// Server component - fetches active LEADERBOARD ad from DB + falls through:
+//   1. DB Ad (admin created in /ads with position=LEADERBOARD) - image+link
 //      or sanitized htmlContent. Highest priority because it's our own
 //      inventory and doesn't depend on AdSense approval.
 //   2. Google AdSense leaderboard slot (config.google_adsense_id +
-//      config.adsense_slot_header) — only injects the <ins> tag if both IDs
+//      config.adsense_slot_header) - only injects the <ins> tag if both IDs
 //      are set, otherwise AdSense fills with a default empty ad which looks
 //      like a broken pixel.
-//   3. Striped "Advertisement" placeholder — keeps the masthead grid
+//   3. Striped "Advertisement" placeholder - keeps the masthead grid
 //      aligned during early-stage builds with no inventory yet.
 
 import { getAdsByPosition } from "@/lib/db-queries";

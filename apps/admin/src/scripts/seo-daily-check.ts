@@ -1,4 +1,4 @@
-// Spec #4 H7 (#240) — Daily SEO health check.
+// Spec #4 H7 (#240) - Daily SEO health check.
 //
 // Run as a GitHub Actions cron (see .github/workflows/seo-daily-check.yml).
 // Emits a Markdown report listing:
@@ -6,7 +6,7 @@
 //   - Coverage gaps: districts/constituencies with zero published articles
 //   - Articles missing schema-critical fields (no slug, no featured image,
 //     no constituencyId)
-//   - Broken-link count (heuristic — first 50 articles scanned)
+//   - Broken-link count (heuristic - first 50 articles scanned)
 //   - Current SiteConfig analytics-ID readiness (which of the H-phase
 //     accounts are still empty)
 //
@@ -105,7 +105,7 @@ async function main() {
   const missingIds = configReadiness(c.siteConfig);
 
   const lines: string[] = [];
-  lines.push(`# Rayalaseema News — Daily SEO health check (${NOW.toISOString().slice(0, 10)})`);
+  lines.push(`# Rayalaseema News - Daily SEO health check (${NOW.toISOString().slice(0, 10)})`);
   lines.push("");
   lines.push(`**Site:** ${SITE_URL}`);
   lines.push(`**Articles published last 24h:** ${c.publishedLast24h}`);
@@ -117,7 +117,7 @@ async function main() {
   }
   lines.push("");
   if (c.zeroConstituencies.length > 0) {
-    lines.push(`## Coverage gaps — ${c.zeroConstituencies.length} constituencies with zero articles ever`);
+    lines.push(`## Coverage gaps - ${c.zeroConstituencies.length} constituencies with zero articles ever`);
     for (const z of c.zeroConstituencies.slice(0, 25)) {
       lines.push(`- ${z.nameEn} (${z.slug})`);
     }

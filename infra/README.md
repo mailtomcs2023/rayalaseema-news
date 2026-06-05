@@ -1,10 +1,10 @@
 <!--
-  RENAME-SCRIPT GUARD — strings below intentionally include the OLD domain.
+  RENAME-SCRIPT GUARD - strings below intentionally include the OLD domain.
   This file is in the SKIP_FILES list of scripts/rename-brand.mjs so the
   rename script does NOT rewrite it. The runbook describes an OLD -> NEW
   migration; the old name must remain present.
 -->
-# Infra — Rayalaseema News VM setup
+# Infra - Rayalaseema News VM setup
 
 Runbook for migrating production from the OLD domain (rayalaseema&#x2011;express.com) to the NEW domain (rayalaseema&#x2011;news.com).
 
@@ -13,10 +13,10 @@ Production: Azure VM `20.198.2.80` (per memory). The deploy uses GitHub Actions 
 ## 1. DNS (run from local repo)
 
 ```sh
-# Dry-run — prints plan, hits no records
+# Dry-run - prints plan, hits no records
 bun scripts/dns/godaddy-set-records.ts
 
-# Apply — pushes A + CNAME records to GoDaddy for the NEW domain
+# Apply - pushes A + CNAME records to GoDaddy for the NEW domain
 bun scripts/dns/godaddy-set-records.ts --apply
 ```
 
@@ -28,9 +28,9 @@ dig +short www.rayalaseemanews.com       # expect rayalaseemanews.com.
 dig +short admin.rayalaseemanews.com     # expect 20.198.2.80
 ```
 
-## 2. Nginx — new server blocks (on VM)
+## 2. Nginx - new server blocks (on VM)
 
-Two new sites — web (port 3000) and admin (port 3001):
+Two new sites - web (port 3000) and admin (port 3001):
 
 ```sh
 sudo cp rayalaseemanews.com.conf       /etc/nginx/sites-available/rayalaseema-news
@@ -47,7 +47,7 @@ sudo certbot --nginx \
   --non-interactive --agree-tos -m reddygs@medhahosting.com
 ```
 
-## 3. Legacy domains — 301 redirect (on VM)
+## 3. Legacy domains - 301 redirect (on VM)
 
 After the NEW domains serve HTTPS, swap the two OLD server blocks (`rayalaseema` + `rayalaseema-admin`) to pure-redirect blocks:
 
@@ -79,7 +79,7 @@ then runs `pm2 restart all --update-env`. No manual VM env edit needed after mer
 
 ## 5. Google Search Console
 
-1. Add `https://rayalaseemanews.com` as a NEW property (Domain property preferred — verifies via DNS).
+1. Add `https://rayalaseemanews.com` as a NEW property (Domain property preferred - verifies via DNS).
 2. Submit `https://rayalaseemanews.com/sitemap-index.xml`.
 3. Submit `/news-sitemap.xml` (Google News).
 4. In the OLD `rayalaseemaexpress.com` property, use **Settings → Change of Address** → point to the NEW property. Keep BOTH properties verified for at least 6 months so Google can track the migration.
@@ -87,11 +87,11 @@ then runs `pm2 restart all --update-env`. No manual VM env edit needed after mer
 
 ## 6. Other external systems to update manually
 
-- Google Analytics 4 — stream URL → `rayalaseemanews.com`
-- Bing Webmaster — add new site, submit sitemap, set 301
-- Microsoft Clarity — domain whitelist
-- Google AdSense — site approval list
-- Sentry — DSN allowed origins
+- Google Analytics 4 - stream URL → `rayalaseemanews.com`
+- Bing Webmaster - add new site, submit sitemap, set 301
+- Microsoft Clarity - domain whitelist
+- Google AdSense - site approval list
+- Sentry - DSN allowed origins
 - Cloudflare (if/when added)
 - Social handles + bios (Telegram, WhatsApp, X, Instagram, FB, LinkedIn)
 - Email signatures + reply-to

@@ -1,19 +1,19 @@
-// Mobile sticky-bottom anchor ad — server component, DB-first priority.
+// Mobile sticky-bottom anchor ad - server component, DB-first priority.
 //
 // Position is fixed to the bottom of the viewport on mobile (md:hidden) so it
 // stays visible while readers scroll articles. Eenadu/Sakshi/TV9 Telugu all
 // use this pattern as the highest-revenue mobile slot.
 //
 // Priority:
-//   1. DB Ad at MOBILE_ANCHOR — phone-specific inventory the admin uploaded
+//   1. DB Ad at MOBILE_ANCHOR - phone-specific inventory the admin uploaded
 //      at the right 320x100 crop.
-//   2. DB Ad at LEADERBOARD — re-use the masthead ad if no phone variant is
+//   2. DB Ad at LEADERBOARD - re-use the masthead ad if no phone variant is
 //      configured. Saves admins from re-uploading the same hiring/promo banner
 //      twice; CSS scales the leaderboard image to the phone width.
-//   3. AdSense mobile_anchor slot — config.adsense_slot_mobile_anchor.
-//   4. AdSense leaderboard slot — mirrors the desktop masthead AdSense unit
+//   3. AdSense mobile_anchor slot - config.adsense_slot_mobile_anchor.
+//   4. AdSense leaderboard slot - mirrors the desktop masthead AdSense unit
 //      so even an AdSense-only setup fills the phone bottom.
-//   5. null (renders nothing) — no empty white bar.
+//   5. null (renders nothing) - no empty white bar.
 //
 // Mounted in the root layout so it appears on every page automatically.
 
@@ -83,7 +83,7 @@ export async function MobileAnchorSlot({
     }
   }
 
-  // AdSense fallbacks — mobile-specific slot first, then the masthead
+  // AdSense fallbacks - mobile-specific slot first, then the masthead
   // leaderboard slot if mobile_anchor isn't configured. Either fills the
   // 320x90-ish phone bottom; AdSense returns responsive sizing on its end.
   const adSenseClient = config?.google_adsense_id;

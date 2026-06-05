@@ -4,7 +4,7 @@
  *
  * JSON shape: districts[].constituencies[].mandals[] (string array of English names).
  * For each mandal string we upsert by slug. Telugu names start as English
- * placeholders — run packages/db/scripts/backfill-mandal-telugu.ts afterwards
+ * placeholders - run packages/db/scripts/backfill-mandal-telugu.ts afterwards
  * to fill the real Telugu names via Azure OpenAI transliteration.
  *
  * Idempotent: upsert by slug. Safe to re-run.
@@ -94,7 +94,7 @@ async function main() {
       create: {
         slug: op.slug,
         nameEn: op.nameEn,
-        name: op.nameEn, // Telugu placeholder — backfill via backfill-mandal-telugu.ts
+        name: op.nameEn, // Telugu placeholder - backfill via backfill-mandal-telugu.ts
         constituencyId: op.constituencyId,
         sortOrder: op.sortOrder,
         active: true,

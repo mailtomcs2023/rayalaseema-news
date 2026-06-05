@@ -12,7 +12,7 @@ async function updateAd(req: NextRequest, params: Promise<{ id: string }>) {
     for (const key of ["name", "position", "imageUrl", "linkUrl", "htmlContent", "bgColor", "textColor", "active"] as const) {
       if (b[key] !== undefined) data[key] = b[key];
     }
-    // Schedule columns — accept ISO date string or yyyy-mm-dd; nullable.
+    // Schedule columns - accept ISO date string or yyyy-mm-dd; nullable.
     for (const key of ["startDate", "endDate"] as const) {
       if (b[key] !== undefined) data[key] = b[key] ? new Date(b[key]) : null;
     }
@@ -26,7 +26,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   return updateAd(req, params);
 }
 
-// PATCH does the same partial-update semantics as PUT — admin UIs vary on
+// PATCH does the same partial-update semantics as PUT - admin UIs vary on
 // which verb they send, so we accept both rather than forcing one.
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   return updateAd(req, params);

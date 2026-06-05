@@ -13,7 +13,7 @@ const APPLY = process.argv.includes("--apply");
 
 const SKIP_DIRS = new Set([
   ".git", "node_modules", ".next", ".turbo", "dist", "build", ".vercel", ".cache",
-  "mockups",          // old design references — preserve as-is
+  "mockups",          // old design references - preserve as-is
   ".superpowers",     // historical brainstorm artifacts
 ]);
 const SKIP_DIR_PATHS = [
@@ -25,13 +25,13 @@ const SKIP_FILES = new Set([
   join(ROOT, ".env.local"),
   join(ROOT, "packages", "db", "prisma", "rayalaseema-dialect.json"),
   join(ROOT, "scripts", "rename-brand.mjs"),  // do not edit self
-  join(ROOT, ".claude", "settings.json"),     // perm allow-list — contains old creds, handle separately
+  join(ROOT, ".claude", "settings.json"),     // perm allow-list - contains old creds, handle separately
   join(ROOT, ".claude", "settings.local.json"),
   join(ROOT, "docker-compose.yml"),           // DB name rename is a separate ops migration
-  join(ROOT, "infra", "README.md"),           // migration runbook — keeps both old + new names intentionally
+  join(ROOT, "infra", "README.md"),           // migration runbook - keeps both old + new names intentionally
 ]);
 // SVGs intentionally excluded: wordmarks contain binary-encoded font glyphs,
-// not editable text — replacing the literal string in metadata breaks nothing
+// not editable text - replacing the literal string in metadata breaks nothing
 // visible but also doesn't refresh the rendered logo. Logos handled as a
 // separate task with new wordmark artwork.
 const ALLOWED_EXT = new Set([
@@ -48,7 +48,7 @@ const NEWS_TE = "న్యూస్";              // న్యూస్
 
 // Ordered longest-first so a shorter pattern never eats a longer one.
 // NOTE: rayalaseema_express (underscore, the Postgres DB name) is intentionally
-// NOT renamed here — see docker-compose.yml skip + infra/README.md ops migration.
+// NOT renamed here - see docker-compose.yml skip + infra/README.md ops migration.
 const REPLACEMENTS = [
   ["rayalaseemaexpress.com", "rayalaseemanews.com"],
   ["rayalaseema-express",    "rayalaseema-news"],

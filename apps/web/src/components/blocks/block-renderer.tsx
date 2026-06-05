@@ -93,7 +93,7 @@ function PreviewPlaceholder({
       <strong style={{ color: "#475569" }}>{type}</strong>
       <div style={{ fontSize: 11, marginTop: 3, lineHeight: 1.5 }}>
         {note ||
-          "Empty in the editor — this block fills with live data (ads / articles) on the published site."}
+          "Empty in the editor - this block fills with live data (ads / articles) on the published site."}
       </div>
     </div>
   );
@@ -175,7 +175,7 @@ export async function BlockRenderer({
 
   if (!isBuiltinBlockType(block.type)) {
     return preview
-      ? <PreviewPlaceholder id={block.id} type={block.type} cls={cls} note="Unknown block type — nothing to render." />
+      ? <PreviewPlaceholder id={block.id} type={block.type} cls={cls} note="Unknown block type - nothing to render." />
       : null;
   }
 

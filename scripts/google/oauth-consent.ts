@@ -70,7 +70,7 @@ async function captureCode(port: number): Promise<string> {
       const err = u.searchParams.get("error");
       const body = err
         ? `<h1>Auth error</h1><pre>${err}</pre>`
-        : `<h1>Auth complete — you can close this tab.</h1>`;
+        : `<h1>Auth complete - you can close this tab.</h1>`;
       res.writeHead(err ? 400 : 200, { "Content-Type": "text/html" });
       res.end(body);
       srv.close();
@@ -107,7 +107,7 @@ async function main() {
   openBrowser(authUrl.toString());
 
   const code = await captureCode(port);
-  console.log("Got code — exchanging for tokens...");
+  console.log("Got code - exchanging for tokens...");
 
   const tokRes = await fetch(client.token_uri, {
     method: "POST",
@@ -124,7 +124,7 @@ async function main() {
   const tok = (await tokRes.json()) as { refresh_token?: string; access_token: string };
 
   if (!tok.refresh_token) {
-    throw new Error("no refresh_token returned — Google only issues one per (client_id, user) pair. " +
+    throw new Error("no refresh_token returned - Google only issues one per (client_id, user) pair. " +
       "Revoke prior grant at https://myaccount.google.com/permissions, then retry.");
   }
 
@@ -135,7 +135,7 @@ async function main() {
     env = env.replace(/^GOOGLE_OAUTH_REFRESH_TOKEN=.*$/m, `GOOGLE_OAUTH_REFRESH_TOKEN=${tok.refresh_token}`);
     writeFileSync(envPath, env, "utf8");
   } else {
-    appendFileSync(envPath, `\n# Google OAuth (rse-cli desktop client) — added by scripts/google/oauth-consent.ts\nGOOGLE_OAUTH_REFRESH_TOKEN=${tok.refresh_token}\n`, "utf8");
+    appendFileSync(envPath, `\n# Google OAuth (rse-cli desktop client) - added by scripts/google/oauth-consent.ts\nGOOGLE_OAUTH_REFRESH_TOKEN=${tok.refresh_token}\n`, "utf8");
   }
   console.log("✓ Refresh token saved to .env.local");
   console.log(`  Access token (test):  ${tok.access_token.slice(0, 30)}...`);

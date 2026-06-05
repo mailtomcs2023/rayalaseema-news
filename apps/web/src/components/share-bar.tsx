@@ -53,7 +53,7 @@ export function ShareBar({ title, articleUrl, featuredImage: _featuredImage, des
         global button reset (shadcn defaults, browser extensions,
         article-shell CSS) can't strip the brand-red surface and
         leave the icons invisible against a white card. Earlier
-        debug rounds hit exactly that — inline styles were
+        debug rounds hit exactly that - inline styles were
         outranked by a tailwind base rule under certain ancestors. */}
       <style>{`
         .rsn-share-primary { background: #E01B1B !important; color: #ffffff !important; }
@@ -70,7 +70,7 @@ export function ShareBar({ title, articleUrl, featuredImage: _featuredImage, des
         style={{
           display: "inline-flex", alignItems: "center", gap: 8,
           padding: "10px 20px",
-          // Hex literal — some article-shell ancestors weren't propagating
+          // Hex literal - some article-shell ancestors weren't propagating
           // --brand to inline styles, which turned the button white-on-white.
           background: "#E01B1B", color: "#ffffff",
           border: "none", borderRadius: 999,
@@ -125,7 +125,7 @@ export function ShareBar({ title, articleUrl, featuredImage: _featuredImage, des
   );
 }
 
-// Brand-red circle with white icon — uniform with footer + WhatsApp
+// Brand-red circle with white icon - uniform with footer + WhatsApp
 // float + scroll nudge. Earlier white-bg version vanished into the
 // page; this guarantees contrast everywhere ShareBar renders.
 const iconShellStyle: React.CSSProperties = {

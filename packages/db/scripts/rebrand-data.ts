@@ -8,7 +8,7 @@
 // Dry run (default, writes nothing):   bunx tsx scripts/rebrand-data.ts
 // Apply (wrapped in a transaction):    bunx tsx scripts/rebrand-data.ts --apply
 //
-// Connects via DATABASE_URL in the environment — point it at whichever DB you
+// Connects via DATABASE_URL in the environment - point it at whichever DB you
 // intend (local or server). ALWAYS take a pg_dump backup before --apply.
 
 import { PrismaClient } from "@prisma/client";
@@ -59,7 +59,7 @@ async function main() {
   console.log(`site_config: ${cfgHits} row(s) to update\n`);
 
   if (!APPLY) {
-    console.log(`DRY RUN — nothing written. Re-run with --apply (after a backup) to commit ${changes.length} update(s).`);
+    console.log(`DRY RUN - nothing written. Re-run with --apply (after a backup) to commit ${changes.length} update(s).`);
     return;
   }
   if (changes.length === 0) {

@@ -1,4 +1,4 @@
-// Spec #4 H6 (#239) — Sentry client SDK init for apps/web.
+// Spec #4 H6 (#239) - Sentry client SDK init for apps/web.
 //
 // DSN sourced from SiteConfig.sentry_dsn_web (A4 #195) but Sentry's SDK
 // needs the DSN at module-evaluation time, before any DB call can run.
@@ -6,7 +6,7 @@
 // in apps/web/.env (deploy.yml step). If the env is empty Sentry quietly
 // no-ops; nothing is initialised, no requests fly out.
 //
-// Sample rate is intentionally low for V1 — we expect ~zero traffic at
+// Sample rate is intentionally low for V1 - we expect ~zero traffic at
 // launch and don't want a runaway page render to drown the Sentry quota.
 // Bump up post-launch when CWV is settled.
 
@@ -20,7 +20,7 @@ if (dsn) {
     replaysSessionSampleRate: 0,   // session replay off (Clarity covers it)
     replaysOnErrorSampleRate: 0.1, // 10% of error sessions captured
     environment: process.env.NODE_ENV,
-    // Don't ship Sentry's default browser denoise — we want to see all
+    // Don't ship Sentry's default browser denoise - we want to see all
     // errors initially. Tighten when noise becomes a problem.
     integrations: [],
   });

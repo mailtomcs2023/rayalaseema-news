@@ -204,7 +204,7 @@ export function AdsManager({ initialAds }: { initialAds: AdRow[] }) {
             {ads.length === 0 && (
               <tr>
                 <td colSpan={6} style={{ padding: 28, textAlign: "center", color: "#9ca3af" }}>
-                  No ads yet — click <strong>+ New Ad</strong> to create one.
+                  No ads yet - click <strong>+ New Ad</strong> to create one.
                 </td>
               </tr>
             )}

@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Google Indexing API — ping all important URLs on the new domain so Google
+ * Google Indexing API - ping all important URLs on the new domain so Google
  * picks them up faster than waiting on natural crawl.
  *
  * Note: Indexing API is officially supported for JobPosting + BroadcastEvent
@@ -85,7 +85,7 @@ async function main() {
       console.log(`err ${msg.slice(0, 60)}`);
       err++;
       if (msg.includes("429") || msg.toLowerCase().includes("quota")) {
-        console.log("\nQuota exceeded — stopping. Continue tomorrow.");
+        console.log("\nQuota exceeded - stopping. Continue tomorrow.");
         quotaExceeded = true;
         break;
       }
@@ -94,7 +94,7 @@ async function main() {
     await new Promise((r) => setTimeout(r, 50));
   }
   console.log(`\n✓ ok=${ok}  err=${err}${quotaExceeded ? "  (quota hit)" : ""}`);
-  console.log(`  ${all.length - toPing.length} URLs not pinged (over quota — re-run tomorrow)`);
+  console.log(`  ${all.length - toPing.length} URLs not pinged (over quota - re-run tomorrow)`);
 }
 
 main().catch((e) => {

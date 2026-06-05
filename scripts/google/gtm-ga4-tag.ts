@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 /**
  * GTM: create a GA4 Configuration tag inside the rayalaseemanews.com container
- * so GA4 fires via GTM (cleaner long-term — analytics changes don't need
+ * so GA4 fires via GTM (cleaner long-term - analytics changes don't need
  * code deploys, just GTM workspace publishes).
  *
  * Idempotent: skips if a tag named "GA4 Configuration" already exists.
@@ -37,14 +37,14 @@ async function main() {
   const tags = await userApi<any>(`https://www.googleapis.com/tagmanager/v2/${ws.path}/tags`);
   const existing = (tags.tag || []).find((t: any) => t.name === TAG_NAME);
   if (existing) {
-    console.log(`Tag "${TAG_NAME}" already exists (${existing.path}) — skipping create.`);
+    console.log(`Tag "${TAG_NAME}" already exists (${existing.path}) - skipping create.`);
   } else {
     // GA4 Configuration tag needs a trigger - All Pages.
     // Look up the built-in All Pages trigger.
     const triggers = await userApi<any>(`https://www.googleapis.com/tagmanager/v2/${ws.path}/triggers`);
     let allPages = (triggers.trigger || []).find((t: any) => t.type === "pageview" && t.name?.match(/all pages/i));
     if (!allPages) {
-      // built-in "All Pages" trigger has a fixed ID — create one
+      // built-in "All Pages" trigger has a fixed ID - create one
       console.log("Creating 'All Pages' trigger...");
       allPages = await userApi<any>(`https://www.googleapis.com/tagmanager/v2/${ws.path}/triggers`, {
         method: "POST",

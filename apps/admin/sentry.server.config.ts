@@ -1,4 +1,4 @@
-// Spec #4 H6 (#239) — Sentry server SDK init for apps/admin.
+// Spec #4 H6 (#239) - Sentry server SDK init for apps/admin.
 
 import * as Sentry from "@sentry/nextjs";
 
