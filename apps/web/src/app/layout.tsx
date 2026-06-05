@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { getSiteConfig } from "@/lib/db-queries";
 import { buildNewsMediaOrganizationSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
-import { CookieConsent } from "@/components/cookie-consent";
 import { WhatsAppFloat } from "@/components/whatsapp-float";
 import { WebVitalsReporter } from "@/components/web-vitals-reporter";
 import { PushNotifications } from "@/components/push-notifications";
@@ -222,7 +221,6 @@ export default async function RootLayout({
 
         {children}
         <WhatsAppFloat />
-        <CookieConsent />
         <WebVitalsReporter />
         <PushNotifications />
         <SWRegister />
