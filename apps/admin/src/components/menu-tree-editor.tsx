@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { WithTooltip } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   DndContext,
@@ -673,6 +674,7 @@ export function MenuTreeEditor(props: Props) {
             <ItemConfig
               item={sel}
               categories={props.categories}
+              districtSlug={selDistrictSlug}
               recentContent={props.recentContent}
               onChange={(patch) => patchSelected(patch)}
             />
@@ -990,10 +992,68 @@ function MenuRowContent({
   );
 }
 
-function ItemConfig({
-  item, categories, recentContent, onChange,
+// Searchable content picker (shadcn Popover + Input + filtered list - no native
+// <select>). Searches by title or type; the value is the content id.
+function ContentCombobox({
+  rows, value, onChange,
 }: {
-  item: Item; categories: Category[]; recentContent: ContentRow[];
+  rows: ContentRow[];
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const selected = rows.find((r) => r.id === value);
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? rows.filter((r) => r.title.toLowerCase().includes(q) || r.type.toLowerCase().includes(q))
+    : rows;
+  return (
+    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) setQuery(""); }}>
+      <PopoverTrigger asChild>
+        <Button type="button" variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-9 font-normal">
+          <span className={cn("truncate", !selected && "text-muted-foreground")}>
+            {selected ? `[${selected.type}] ${selected.title}` : "Search & pick content"}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="p-0" style={{ width: "var(--radix-popover-trigger-width)" }}>
+        <div className="border-b p-2">
+          <Input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search content…" className="h-8" />
+        </div>
+        <div className="max-h-64 overflow-y-auto p-1">
+          {filtered.length === 0 ? (
+            <p className="px-2 py-6 text-center text-sm text-muted-foreground">No content found.</p>
+          ) : (
+            filtered.slice(0, 100).map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => { onChange(r.id); setOpen(false); setQuery(""); }}
+                className={cn(
+                  "flex w-full items-center justify-between rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent",
+                  r.id === value && "bg-accent",
+                )}
+              >
+                <span className="truncate">
+                  <span className="text-[10px] font-bold uppercase text-muted-foreground mr-1.5">{r.type}</span>
+                  {r.title}
+                </span>
+                {r.id === value && <Check className="ml-2 h-4 w-4 shrink-0" />}
+              </button>
+            ))
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function ItemConfig({
+  item, categories, districtSlug, recentContent, onChange,
+}: {
+  item: Item; categories: Category[]; districtSlug: string; recentContent: ContentRow[];
   onChange: (patch: Partial<Item>) => void;
 }) {
   // Remember the last value of each target type for this item, so toggling the
@@ -1042,9 +1102,23 @@ function ItemConfig({
       {item.target.type === "INTERNAL_URL" && (
         <>
           <Label>Internal URL (must start with /)</Label>
-          <input value={item.target.url}
-            onChange={(e) => onChange({ target: { type: "INTERNAL_URL", url: e.target.value } })}
-            placeholder="/about" style={inp} />
+          {districtSlug ? (
+            // District link: the URL is fixed to the chosen district - slugs are
+            // not renamed from the menu builder (categories rename in Categories;
+            // districts are fixed). Change the district from the District picker.
+            <>
+              <input value={item.target.url} readOnly disabled
+                style={{ ...inp, background: "#f3f4f6", color: "#6b7280", cursor: "not-allowed" }} />
+              <p style={{ fontSize: 11, color: "#6b7280", marginTop: 4, lineHeight: 1.4 }}>
+                District link - URL is fixed to the district. Change which district from the
+                {" "}<b>District</b> picker on the left. (Rename actual section URLs in <b>Categories</b>.)
+              </p>
+            </>
+          ) : (
+            <input value={item.target.url}
+              onChange={(e) => onChange({ target: { type: "INTERNAL_URL", url: e.target.value } })}
+              placeholder="/about" style={inp} />
+          )}
         </>
       )}
 
@@ -1060,24 +1134,25 @@ function ItemConfig({
       {item.target.type === "CONTENT" && (
         <>
           <Label>Content row</Label>
-          <select value={item.target.contentId}
-            onChange={(e) => {
-              const c = recentContent.find((r) => r.id === e.target.value);
-              onChange({ target: { type: "CONTENT", contentId: e.target.value, contentTypeCache: c?.type, contentSlugCache: c?.slug || undefined } });
-            }} style={inp}>
-            <option value="">- pick -</option>
-            {recentContent.slice(0, 50).map((r) => (
-              <option key={r.id} value={r.id}>[{r.type}] {r.title.slice(0, 40)}</option>
-            ))}
-          </select>
+          <ContentCombobox
+            rows={recentContent}
+            value={item.target.contentId}
+            onChange={(id) => {
+              const c = recentContent.find((r) => r.id === id);
+              onChange({ target: { type: "CONTENT", contentId: id, contentTypeCache: c?.type, contentSlugCache: c?.slug || undefined } });
+            }}
+          />
         </>
       )}
 
       <Label>Mobile</Label>
-      <select value={item.mobileVariant} onChange={(e) => onChange({ mobileVariant: e.target.value as any })} style={inp}>
-        <option value="show">Show on mobile</option>
-        <option value="hide">Hide on mobile</option>
-      </select>
+      <Select value={item.mobileVariant} onValueChange={(v) => onChange({ mobileVariant: v as Item["mobileVariant"] })}>
+        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="show">Show on mobile</SelectItem>
+          <SelectItem value="hide">Hide on mobile</SelectItem>
+        </SelectContent>
+      </Select>
 
       {item.target.type === "EXTERNAL_URL" && (
         <label style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10, fontSize: 13 }}>
