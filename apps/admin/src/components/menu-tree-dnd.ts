@@ -11,6 +11,7 @@ import { arrayMove } from "@dnd-kit/sortable";
 export type Target =
   | { type: "NONE" }
   | { type: "CATEGORY"; categorySlug: string }
+  | { type: "DISTRICT"; districtSlug: string }
   | { type: "INTERNAL_URL"; url: string }
   | { type: "EXTERNAL_URL"; url: string }
   | { type: "CONTENT"; contentId: string; contentTypeCache?: string; contentSlugCache?: string };

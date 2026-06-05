@@ -18,6 +18,8 @@ const HOME_ITEM: NavItem = { name: "హోమ్", slug: "/", isHome: true };
 function resolveNavHref(t: any): string {
   if (!t) return "#";
   if (t.type === "CATEGORY") return categoryHref(t.categorySlug);
+  // DISTRICT hubs serve at the bare root slug (/kurnool).
+  if (t.type === "DISTRICT") return `/${t.districtSlug}`;
   // INTERNAL_URL items persist legacy /category|/district paths; the sections
   // now live at the bare slug, so normalize on render.
   if (t.type === "INTERNAL_URL") return normalizeSectionHref(t.url);
@@ -56,7 +58,7 @@ function buildMobileNav(items: any[]): MobileNav | null {
   const categories: MobileLink[] = [];
   for (const it of items) {
     const link = { name: it.label, href: resolveNavHref(it.target) };
-    if (it.target?.type === "INTERNAL_URL") districts.push(link);
+    if (it.target?.type === "DISTRICT" || it.target?.type === "INTERNAL_URL") districts.push(link);
     else if (it.target?.type !== "NONE") categories.push(link);
   }
   if (districts.length === 0 && categories.length === 0) return null;

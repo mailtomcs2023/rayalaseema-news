@@ -507,7 +507,7 @@ export function MenuTreeEditor(props: Props) {
           </Section>
 
           <Section title="District">
-            <DistrictPicker districts={props.districts} onPick={(d) => addItem({ type: "INTERNAL_URL", url: `/${d.slug}` }, d.name)} />
+            <DistrictPicker districts={props.districts} onPick={(d) => addItem({ type: "DISTRICT", districtSlug: d.slug }, d.name)} />
           </Section>
 
           <Section title="Internal URL">
@@ -626,6 +626,7 @@ export function MenuTreeEditor(props: Props) {
             <ItemConfig
               item={sel}
               categories={props.categories}
+              districts={props.districts}
               recentContent={props.recentContent}
               onChange={(patch) => patchSelected(patch)}
             />
@@ -944,9 +945,9 @@ function MenuRowContent({
 }
 
 function ItemConfig({
-  item, categories, recentContent, onChange,
+  item, categories, districts, recentContent, onChange,
 }: {
-  item: Item; categories: Category[]; recentContent: ContentRow[];
+  item: Item; categories: Category[]; districts: Category[]; recentContent: ContentRow[];
   onChange: (patch: Partial<Item>) => void;
 }) {
   return (
@@ -956,17 +957,18 @@ function ItemConfig({
 
       <Label>Target type</Label>
       <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 8 }}>
-        {(["NONE", "CATEGORY", "INTERNAL_URL", "EXTERNAL_URL", "CONTENT"] as const).map((t) => (
+        {(["NONE", "CATEGORY", "DISTRICT", "INTERNAL_URL", "EXTERNAL_URL", "CONTENT"] as const).map((t) => (
           <label key={t} style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
             <input type="radio" checked={item.target.type === t} onChange={() => {
               // Switching type resets the type-specific fields.
               if (t === "NONE") onChange({ target: { type: "NONE" } });
               else if (t === "CATEGORY") onChange({ target: { type: "CATEGORY", categorySlug: "" } });
+              else if (t === "DISTRICT") onChange({ target: { type: "DISTRICT", districtSlug: "" } });
               else if (t === "INTERNAL_URL") onChange({ target: { type: "INTERNAL_URL", url: "/" } });
               else if (t === "EXTERNAL_URL") onChange({ target: { type: "EXTERNAL_URL", url: "https://" } });
               else onChange({ target: { type: "CONTENT", contentId: "" } });
             }} />
-            {t === "NONE" ? "Heading (no link)" : t.replace("_", " ")}
+            {t === "NONE" ? "Heading (no link)" : t === "DISTRICT" ? "District" : t.replace("_", " ")}
           </label>
         ))}
       </div>
@@ -978,6 +980,17 @@ function ItemConfig({
             categories={categories}
             value={item.target.categorySlug}
             onChange={(slug) => onChange({ target: { type: "CATEGORY", categorySlug: slug } })}
+          />
+        </>
+      )}
+
+      {item.target.type === "DISTRICT" && (
+        <>
+          <Label>District</Label>
+          <CategoryCombobox
+            categories={districts}
+            value={item.target.districtSlug}
+            onChange={(slug) => onChange({ target: { type: "DISTRICT", districtSlug: slug } })}
           />
         </>
       )}

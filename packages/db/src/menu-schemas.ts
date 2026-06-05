@@ -18,6 +18,14 @@ const targetSchema = z.discriminatedUnion("type", [
     type: z.literal(MenuItemTargetType.CATEGORY),
     categorySlug: z.string().min(1),
   }).strict(),
+  // DISTRICT = a Rayalaseema district hub, served at the bare root slug
+  // (/kurnool). First-class so the menu builder offers a district picker like
+  // CATEGORY. Stored as JSON, so it doesn't need to be in the Prisma
+  // MenuItemTargetType enum (mirrors NONE above).
+  z.object({
+    type: z.literal("DISTRICT"),
+    districtSlug: z.string().min(1),
+  }).strict(),
   z.object({
     type: z.literal(MenuItemTargetType.INTERNAL_URL),
     url: z.string().regex(/^\/.*/, "Internal URL must start with /"),
@@ -97,6 +105,9 @@ export function resolveItemHref(target: MenuItemTarget): string | null {
       return null;
     case "CATEGORY":
       return `/category/${target.categorySlug}`;
+    case "DISTRICT":
+      // District hubs serve at the bare root slug (SEO migration).
+      return `/${target.districtSlug}`;
     case "INTERNAL_URL":
       return target.url;
     case "EXTERNAL_URL":

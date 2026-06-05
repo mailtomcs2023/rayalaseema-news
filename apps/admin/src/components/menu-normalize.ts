@@ -29,3 +29,24 @@ export function normalizeMenuTreeUrls(items: Item[]): Item[] {
     return top.children?.length ? { ...fixed, children: top.children.map(fix) } : fixed;
   });
 }
+
+// Promote bare INTERNAL_URL items whose slug is a known district to the
+// first-class DISTRICT target type, so legacy/hand-entered district links show
+// up under the District picker (and resolve via the district resolver). Run
+// AFTER normalizeMenuTreeUrls so any /district/<slug> prefix is already a bare
+// /<slug>. Items that aren't districts (/horoscope, /about, …) pass through.
+export function districtizeMenuTree(items: Item[], districtSlugs: Set<string>): Item[] {
+  const fix = (it: Item): Item => {
+    if (it.target.type === "INTERNAL_URL") {
+      const m = it.target.url.match(/^\/([^/?#]+)$/);
+      if (m && districtSlugs.has(m[1])) {
+        return { ...it, target: { type: "DISTRICT", districtSlug: m[1] } };
+      }
+    }
+    return it;
+  };
+  return items.map((top) => {
+    const fixed = fix(top);
+    return top.children?.length ? { ...fixed, children: top.children.map(fix) } : fixed;
+  });
+}
