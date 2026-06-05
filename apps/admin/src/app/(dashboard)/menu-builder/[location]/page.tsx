@@ -7,6 +7,7 @@ import { redirect, notFound } from "next/navigation";
 import { prisma, MenuLocation } from "@rayalaseema/db";
 import { auth } from "@/lib/auth";
 import { MenuTreeEditor } from "@/components/menu-tree-editor";
+import { normalizeMenuTreeUrls } from "@/components/menu-normalize";
 
 export const dynamic = "force-dynamic";
 
@@ -53,8 +54,8 @@ export default async function MenuBuilderPage({ params }: { params: Promise<{ lo
     },
   });
 
-  // Categories + recent Content for the per-item target pickers.
-  const [rawCategories, recentContent] = await Promise.all([
+  // Categories + districts + recent Content for the per-item target pickers.
+  const [rawCategories, recentContent, rawDistricts] = await Promise.all([
     prisma.category.findMany({
       where: { active: true },
       select: { slug: true, name: true, nameEn: true },
@@ -66,8 +67,16 @@ export default async function MenuBuilderPage({ params }: { params: Promise<{ lo
       orderBy: { publishedAt: "desc" },
       take: 200,
     }),
+    prisma.district.findMany({
+      where: { active: true },
+      select: { slug: true, name: true, nameEn: true },
+      orderBy: { name: "asc" },
+    }),
   ]);
   const categories = rawCategories.map((c) => ({ slug: c.slug, name: c.name, nameEn: c.nameEn ?? c.name }));
+  // Districts reuse the {slug,name,nameEn} picker shape. The picker inserts a
+  // clean bare /<slug> link, so districts are now fully menu-builder driven.
+  const districts = rawDistricts.map((d) => ({ slug: d.slug, name: d.name, nameEn: d.nameEn }));
 
   // Spec #3 F1 #185 - broken-link detection. Collect every CATEGORY slug and
   // CONTENT id referenced by the menu (draft view, since editor shows draft),
@@ -114,12 +123,13 @@ export default async function MenuBuilderPage({ params }: { params: Promise<{ lo
           menuId={menu.id}
           location={slug}
           label={LOCATION_LABELS[slug] || slug}
-          items={(menu.draftItems as any) || (menu.items as any) || []}
+          items={normalizeMenuTreeUrls((menu.draftItems as any) || (menu.items as any) || [])}
           publishedItems={(menu.items as any) || []}
           isPublished={menu.isPublished}
           hasUnpublishedDraft={menu.draftItems !== null}
           versionCount={menu._count.versions}
           categories={categories}
+          districts={districts}
           recentContent={JSON.parse(JSON.stringify(recentContent))}
           validCategorySlugs={[...validCategorySlugs]}
           validContentIds={[...validContentIds]}

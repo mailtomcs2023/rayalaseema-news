@@ -53,6 +53,7 @@ import {
   type Target,
   type FlattenedItem,
 } from "./menu-tree-dnd";
+import { normalizeMenuTreeUrls } from "./menu-normalize";
 
 const INDENT = 28; // px per nesting level in the tree pane
 
@@ -69,6 +70,9 @@ interface Props {
   hasUnpublishedDraft: boolean;
   versionCount: number;
   categories: Category[];
+  // Active districts for the District palette picker. Same {slug,name,nameEn}
+  // shape as categories; picking one inserts a clean bare /<slug> link.
+  districts: Category[];
   recentContent: ContentRow[];
   // Spec #3 F1 #185 - broken-link detection. Pre-computed sets of currently
   // valid CATEGORY slugs and CONTENT ids referenced by this menu. Any item
@@ -198,10 +202,11 @@ export function MenuTreeEditor(props: Props) {
       const res = await fetch(`/api/menu-builder/menus/${props.location}/draft`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        // sanitizeTree drops any `children` field off nested items so a tree
-        // touched by drag/reorder (or loaded from older dirty draft data) passes
-        // the strict server schema instead of 400-ing.
-        body: JSON.stringify({ items: sanitizeTree(tree) }),
+        // normalizeMenuTreeUrls rewrites legacy /district|/category internal
+        // URLs to the bare slug the site serves; sanitizeTree drops any
+        // `children` field off nested items so the tree passes the strict server
+        // schema instead of 400-ing.
+        body: JSON.stringify({ items: sanitizeTree(normalizeMenuTreeUrls(tree)) }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -501,6 +506,10 @@ export function MenuTreeEditor(props: Props) {
             <CategoryPicker categories={props.categories} onPick={(c) => addItem({ type: "CATEGORY", categorySlug: c.slug }, c.nameEn)} />
           </Section>
 
+          <Section title="District">
+            <DistrictPicker districts={props.districts} onPick={(d) => addItem({ type: "INTERNAL_URL", url: `/${d.slug}` }, d.name)} />
+          </Section>
+
           <Section title="Internal URL">
             <UrlAdder placeholder="/about" prefix="/" onAdd={(url, label) => addItem({ type: "INTERNAL_URL", url }, label)} />
           </Section>
@@ -703,6 +712,20 @@ function CategoryPicker({ categories, onPick }: { categories: Category[]; onPick
       value=""
       placeholder="Search & add category"
       onChange={(slug) => { const c = categories.find((x) => x.slug === slug); if (c) onPick(c); }}
+    />
+  );
+}
+
+// Palette adder: search a district and add it as a clean bare /<slug> link.
+// Reuses the category combobox (districts share the {slug,name,nameEn} shape);
+// the inserted item's label is the district's Telugu name.
+function DistrictPicker({ districts, onPick }: { districts: Category[]; onPick: (d: Category) => void }) {
+  return (
+    <CategoryCombobox
+      categories={districts}
+      value=""
+      placeholder="Search & add district"
+      onChange={(slug) => { const d = districts.find((x) => x.slug === slug); if (d) onPick(d); }}
     />
   );
 }
