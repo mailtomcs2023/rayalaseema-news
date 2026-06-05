@@ -551,7 +551,7 @@ export function MenuTreeEditor(props: Props) {
           <h3 style={{ fontSize: 13, fontWeight: 700, color: "#111", marginBottom: 10 }}>Add item</h3>
 
           <Section title="Category">
-            <CategoryPicker categories={props.categories} onPick={(c) => addItem({ type: "CATEGORY", categorySlug: c.slug }, c.nameEn)} />
+            <CategoryPicker categories={props.categories} onPick={(c) => addItem({ type: "CATEGORY", categorySlug: c.slug }, c.name)} />
           </Section>
 
           <Section title="District">
@@ -718,8 +718,10 @@ function CategoryCombobox({
     <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) setQuery(""); }}>
       <PopoverTrigger asChild>
         <Button type="button" variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-9 font-normal">
-          <span className={cn("truncate", !selected && "text-muted-foreground")}>
-            {selected ? selected.nameEn : placeholder}
+          <span className={cn("truncate", !selected && !value && "text-muted-foreground", !selected && value && "text-amber-600 font-medium")}>
+            {/* value set but not in the active list => the target was deleted/
+                deactivated. Make that obvious instead of showing the placeholder. */}
+            {selected ? selected.nameEn : value ? `⚠ ${value} (deleted)` : placeholder}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -1012,8 +1014,8 @@ function ContentCombobox({
     <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) setQuery(""); }}>
       <PopoverTrigger asChild>
         <Button type="button" variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-9 font-normal">
-          <span className={cn("truncate", !selected && "text-muted-foreground")}>
-            {selected ? `[${selected.type}] ${selected.title}` : "Search & pick content"}
+          <span className={cn("truncate", !selected && !value && "text-muted-foreground", !selected && value && "text-amber-600 font-medium")}>
+            {selected ? `[${selected.type}] ${selected.title}` : value ? "⚠ content deleted or unpublished" : "Search & pick content"}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -1094,7 +1096,11 @@ function ItemConfig({
           <CategoryCombobox
             categories={categories}
             value={item.target.categorySlug}
-            onChange={(slug) => onChange({ target: { type: "CATEGORY", categorySlug: slug } })}
+            onChange={(slug) => {
+              // Auto-label: keep the menu label in sync with the picked category.
+              const c = categories.find((x) => x.slug === slug);
+              onChange({ label: c?.name ?? c?.nameEn ?? item.label, target: { type: "CATEGORY", categorySlug: slug } });
+            }}
           />
         </>
       )}
@@ -1139,7 +1145,8 @@ function ItemConfig({
             value={item.target.contentId}
             onChange={(id) => {
               const c = recentContent.find((r) => r.id === id);
-              onChange({ target: { type: "CONTENT", contentId: id, contentTypeCache: c?.type, contentSlugCache: c?.slug || undefined } });
+              // Auto-label: keep the menu label in sync with the picked content.
+              onChange({ label: c?.title ?? item.label, target: { type: "CONTENT", contentId: id, contentTypeCache: c?.type, contentSlugCache: c?.slug || undefined } });
             }}
           />
         </>
