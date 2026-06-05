@@ -50,3 +50,19 @@ export function districtizeMenuTree(items: Item[], districtSlugs: Set<string>): 
     return top.children?.length ? { ...fixed, children: top.children.map(fix) } : fixed;
   });
 }
+
+// Inverse of districtize: turn first-class DISTRICT items back into editable
+// INTERNAL_URL links (/slug). Districts are URL-backed so the config panel can
+// show the dynamic URL as an editable field (the District palette picker is
+// just a shortcut that fills it). Run on load so any DISTRICT items saved by an
+// earlier build become editable URLs again.
+export function dedistrictizeMenuTree(items: Item[]): Item[] {
+  const fix = (it: Item): Item =>
+    it.target.type === "DISTRICT"
+      ? { ...it, target: { type: "INTERNAL_URL", url: `/${it.target.districtSlug}` } }
+      : it;
+  return items.map((top) => {
+    const fixed = fix(top);
+    return top.children?.length ? { ...fixed, children: top.children.map(fix) } : fixed;
+  });
+}
