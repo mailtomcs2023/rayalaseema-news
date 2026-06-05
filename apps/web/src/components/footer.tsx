@@ -23,6 +23,7 @@ type FooterColumn = { heading: string; links: FooterLink[] };
 function footerHref(t: any): string {
   if (!t) return "#";
   if (t.type === "CATEGORY") return categoryHref(t.categorySlug);
+  if (t.type === "DISTRICT") return `/${t.districtSlug}`;
   if (t.type === "INTERNAL_URL") return normalizeSectionHref(t.url);
   if (t.type === "EXTERNAL_URL") return t.url;
   if (t.type === "CONTENT" && t.contentSlugCache && t.contentTypeCache) {
