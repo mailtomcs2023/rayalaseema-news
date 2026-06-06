@@ -34,7 +34,12 @@ export interface FeaturedArticle {
 function Slide({ article, priority }: { article: FeaturedArticle; priority?: boolean }) {
   return (
     <div className="af-lead">
-      <Link href={articleHref(article)} className="af-lead-img" aria-label={article.title}>
+      {/* Image link is decorative: the title link below provides the
+          same destination + accessible name. aria-hidden + tabIndex=-1
+          keeps the click target for sighted users but hides the
+          duplicate from screen readers + tab order, satisfying PSI's
+          "Identical links have the same purpose" rule. */}
+      <Link href={articleHref(article)} className="af-lead-img" aria-hidden="true" tabIndex={-1}>
         {article.featuredImage ? (
           // Slide 0 is the LCP. We DON'T use `priority` because Next 16
           // emits a <link rel="preload"> WITHOUT fetchPriority="high"
@@ -82,11 +87,20 @@ export function FeaturedCarousel({ items }: { items: FeaturedArticle[] }) {
   // One story → plain hero, no carousel chrome or Swiper JS.
   if (items.length === 1) return <Slide article={items[0]} priority />;
 
-  // Keep our custom controls in sync with the Swiper instance.
+  // Keep our custom controls in sync with the Swiper instance + flip
+  // `inert` on non-active slides. Swiper's A11y module sets
+  // aria-hidden="true" on inactive slides but does NOT remove their
+  // <a> from the focus order, which triggers PSI's
+  // "aria-hidden contains focusable descendents" rule. inert solves
+  // both (focus order + a11y tree) without a DOM rerender.
   const sync = (s: SwiperClass) => {
     setActive(s.activeIndex);
     setAtStart(s.isBeginning);
     setAtEnd(s.isEnd);
+    s.slides.forEach((slide, i) => {
+      if (i === s.activeIndex) slide.removeAttribute("inert");
+      else slide.setAttribute("inert", "");
+    });
   };
 
   return (
