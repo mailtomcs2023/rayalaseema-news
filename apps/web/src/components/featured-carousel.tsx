@@ -36,6 +36,14 @@ function Slide({ article, priority }: { article: FeaturedArticle; priority?: boo
     <div className="af-lead">
       <Link href={articleHref(article)} className="af-lead-img" aria-label={article.title}>
         {article.featuredImage ? (
+          // Slide 0 is the LCP. We DON'T use `priority` because Next 16
+          // emits a <link rel="preload"> WITHOUT fetchPriority="high"
+          // for priority images, which PSI flagged ("fetchpriority=high
+          // should be applied to the image preload request"). Instead,
+          // AboveFold emits the preload tag manually with the right
+          // fetchPriority + matching imageSrcSet, and we set
+          // loading="eager" + fetchPriority="high" on the <img> so it
+          // matches the preload + skips the lazy-load PSI flag.
           <Image
             src={article.featuredImage}
             alt={article.title}
@@ -43,7 +51,8 @@ function Slide({ article, priority }: { article: FeaturedArticle; priority?: boo
             height={750}
             sizes="(max-width: 768px) 100vw, 680px"
             quality={60}
-            priority={priority}
+            loading={priority ? "eager" : "lazy"}
+            fetchPriority={priority ? "high" : "auto"}
           />
         ) : (
           <div className="af-noimg">RE</div>
