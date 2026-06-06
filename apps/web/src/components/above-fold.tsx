@@ -313,17 +313,28 @@ export function AboveFold({
           margin-top: 12px;
         }
         .af-dot {
-          width: 8px;
-          height: 8px;
+          /* 24x24 hit area for WCAG 2.5.8 / PSI tap-target check.
+             Visible dot is the inset ::after pseudo (8x8). */
+          width: 24px;
+          height: 24px;
           padding: 0;
           border: none;
           border-radius: 999px;
-          background: var(--n-300, #d1d5db);
+          background: transparent;
           cursor: pointer;
-          transition: background 0.15s ease, transform 0.15s ease;
+          position: relative;
+          transition: transform 0.15s ease;
         }
-        .af-dot:hover { background: var(--n-400, #9ca3af); }
-        .af-dot-active {
+        .af-dot::after {
+          content: "";
+          position: absolute;
+          inset: 8px;
+          border-radius: 999px;
+          background: var(--n-300, #d1d5db);
+          transition: background 0.15s ease;
+        }
+        .af-dot:hover::after { background: var(--n-400, #9ca3af); }
+        .af-dot-active::after {
           background: var(--brand, #E01B1B);
           transform: scale(1.25);
         }
