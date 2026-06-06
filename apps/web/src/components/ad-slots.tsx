@@ -26,12 +26,12 @@ function rewriteHtmlImgs(html: string, targetWidth: number, targetHeight: number
   return html.replace(/<img\b([^>]*?)\bsrc=(["'])(https?:\/\/[^"']+)\2([^>]*)>/gi,
     (_match, before, quote, srcUrl, after) => {
       const optimised = `/_next/image?url=${encodeURIComponent(srcUrl)}&w=${targetWidth}&q=60`;
-      // Force explicit width/height so the slot is reserved before the
-      // image arrives. PSI flagged ad images for missing dims (CLS +
-      // forced reflow once they paint). Strip any existing attrs first.
-      const cleanBefore = before.replace(/\s(width|height)=(["'][^"']*["']|\d+)/gi, "");
-      const cleanAfter = after.replace(/\s(width|height)=(["'][^"']*["']|\d+)/gi, "");
-      return `<img${cleanBefore}width="${targetWidth}" height="${targetHeight}" src=${quote}${optimised}${quote} loading="lazy" decoding="async"${cleanAfter}>`;
+      // Inject default width/height only when admin's snippet doesn't
+      // already declare them (preserves the admin's intended aspect
+      // ratio while still reserving a slot for CLS).
+      const hasDims = /\b(width|height)=/i.test(before + after);
+      const dimAttrs = hasDims ? "" : ` width="${targetWidth}" height="${targetHeight}"`;
+      return `<img${before}${dimAttrs} src=${quote}${optimised}${quote} loading="lazy" decoding="async"${after}>`;
     });
 }
 

@@ -55,12 +55,12 @@ export async function MobileAnchorSlot({
       const rewritten = ad.htmlContent.replace(
         /<img\b([^>]*?)\bsrc=(["'])(https?:\/\/[^"']+)\2([^>]*)>/gi,
         (_m, before, q, src, after) => {
-          // Strip any pre-existing width/height so ours win — without
-          // explicit dims the browser can't reserve the 320x90 anchor
-          // slot, triggering CLS + a forced reflow once the ad loads.
-          const cleanBefore = before.replace(/\s(width|height)=(["'][^"']*["']|\d+)/gi, "");
-          const cleanAfter = after.replace(/\s(width|height)=(["'][^"']*["']|\d+)/gi, "");
-          return `<img${cleanBefore}width="320" height="90" src=${q}/_next/image?url=${encodeURIComponent(src)}&w=750&q=60${q} loading="lazy" decoding="async"${cleanAfter}>`;
+          // Preserve admin's width/height if set (their banner may not
+          // be 320x90 ratio). Inject defaults only when missing so the
+          // browser still reserves a slot for CLS.
+          const hasDims = /\b(width|height)=/i.test(before + after);
+          const dimAttrs = hasDims ? "" : ` width="320" height="90"`;
+          return `<img${before}${dimAttrs} src=${q}/_next/image?url=${encodeURIComponent(src)}&w=750&q=60${q} loading="lazy" decoding="async"${after}>`;
         },
       );
       return (

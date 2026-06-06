@@ -27,14 +27,18 @@ function rewriteHtmlImgs(html: string, targetWidth: number, targetHeight: number
   return html.replace(/<img\b([^>]*?)\bsrc=(["'])(https?:\/\/[^"']+)\2([^>]*)>/gi,
     (_match, before, quote, srcUrl, after) => {
       const optimised = `/_next/image?url=${encodeURIComponent(srcUrl)}&w=${targetWidth}&q=60`;
-      // Force explicit width + height even if admin's pasted snippet
-      // didn't include them. Without these the browser can't reserve
-      // the slot, causing CLS + a forced reflow once the image loads
-      // (PSI flagged the hiring banner for this). Strip any existing
-      // width/height attrs first so ours win.
-      const cleanBefore = before.replace(/\s(width|height)=(["'][^"']*["']|\d+)/gi, "");
-      const cleanAfter = after.replace(/\s(width|height)=(["'][^"']*["']|\d+)/gi, "");
-      return `<img${cleanBefore}width="${targetWidth}" height="${targetHeight}" src=${quote}${optimised}${quote} loading="lazy" decoding="async"${cleanAfter}>`;
+      // Inject width/height ONLY when the admin's pasted snippet didn't
+      // already declare them. PSI needs explicit dims to reserve the
+      // slot (avoids CLS + forced reflow on load) but if the source
+      // image's natural aspect differs from the slot (e.g. a 750x193
+      // banner uploaded for a 728x90 slot), forcing 728x90 squashes
+      // it and PSI's "Displays images with incorrect aspect ratio"
+      // check fires. Preserving the admin's dims lets them control
+      // the visual until they re-upload at the right ratio.
+      const combined = before + after;
+      const hasDims = /\b(width|height)=/i.test(combined);
+      const dimAttrs = hasDims ? "" : ` width="${targetWidth}" height="${targetHeight}"`;
+      return `<img${before}${dimAttrs} src=${quote}${optimised}${quote} loading="lazy" decoding="async"${after}>`;
     });
 }
 

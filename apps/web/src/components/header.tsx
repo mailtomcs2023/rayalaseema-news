@@ -356,10 +356,14 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
           {/* Mobile: hamburger */}
           <div className="lg:hidden ml-auto">
             <button
+              type="button"
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label={mobileMenuOpen ? "మెనూ మూసివేయండి" : "మెనూ తెరవండి"}
+              aria-expanded={mobileMenuOpen}
+              aria-controls="rsn-mobile-menu"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 {mobileMenuOpen ? (
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 ) : (
@@ -466,7 +470,7 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
             onClick={() => setMobileMenuOpen(false)}
           />
           {/* Menu panel from bottom */}
-          <div className="lg:hidden fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-2xl shadow-2xl max-h-[85vh] overflow-y-auto mobile-menu-slide">
+          <div id="rsn-mobile-menu" role="dialog" aria-modal="true" aria-label="ప్రధాన మెనూ" className="lg:hidden fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-2xl shadow-2xl max-h-[85vh] overflow-y-auto mobile-menu-slide">
             {/* Handle bar */}
             <div className="flex justify-center pt-3 pb-1">
               <div className="w-10 h-1 bg-gray-300 rounded-full" />
