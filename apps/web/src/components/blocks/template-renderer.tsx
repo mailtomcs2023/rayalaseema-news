@@ -8,9 +8,11 @@
 // template's draftLayout instead of the published layout. The public entry
 // points never set this.
 
+import { Suspense } from "react";
 import { prisma, layoutSchema, resolveAssignment } from "@rayalaseema/db";
 import type { PageContext } from "./types";
 import { BlockRenderer, type CompositeMap } from "./block-renderer";
+import type { Block } from "@rayalaseema/db";
 
 // Cheap composite map: one query that grabs everything referenced (or
 // likely to be referenced) by the rendered template. We pull all
@@ -105,26 +107,20 @@ export async function TemplateRenderer({
   const needsComposites = parsed.data.blocks.some((b) => b.type === "Composite");
   const composites = needsComposites ? await fetchComposites() : undefined;
 
-  // Resolve every block on the server with per-block error isolation. One
-  // crashing fetcher would otherwise 500 the whole page (RSC promises
-  // rejecting at the parent boundary). Catching per block keeps the
-  // homepage rendering even if a single SectionBand / CinemaBand fails.
-  const resolved = await Promise.all(
-    parsed.data.blocks.map(async (block) => {
-      try {
-        const el = await BlockRenderer({ block, ctx: pageCtx, composites, preview: draft });
-        return el;
-      } catch (err) {
-        console.error(`[TemplateRenderer] block ${block.id} (${block.type}) crashed:`, err);
-        return null;
-      }
-    }),
-  );
-
+  // Stream blocks via <Suspense> instead of awaiting them all in a
+  // Promise.all then flushing in one go. Each block becomes an async
+  // RSC the runtime can flush independently: AboveFold (the LCP) ships
+  // out the door as soon as its fetcher resolves, while heavier blocks
+  // (SectionBand / CinemaBand fetching dozens of articles) finish in
+  // the background and arrive on the wire later. PSI's "Maximum
+  // critical path latency" was bound by the slowest single block;
+  // streaming unbinds it.
   return (
     <>
-      {resolved.map((el, i) => (
-        <div key={parsed.data.blocks[i].id}>{el}</div>
+      {parsed.data.blocks.map((block) => (
+        <Suspense key={block.id} fallback={null}>
+          <SafeBlock block={block} ctx={pageCtx} composites={composites} preview={draft} />
+        </Suspense>
       ))}
       <style>{`
         @media (max-width: 768px) {
@@ -133,4 +129,27 @@ export async function TemplateRenderer({
       `}</style>
     </>
   );
+}
+
+// Per-block error boundary: a crashing fetcher inside the Suspense
+// must not bubble up and break the whole page render. Mirrors the
+// previous try/catch in the awaited loop.
+async function SafeBlock({
+  block,
+  ctx,
+  composites,
+  preview,
+}: {
+  block: Block;
+  ctx: PageContext;
+  composites?: CompositeMap;
+  preview: boolean;
+}) {
+  try {
+    const el = await BlockRenderer({ block, ctx, composites, preview });
+    return <div>{el}</div>;
+  } catch (err) {
+    console.error(`[TemplateRenderer] block ${block.id} (${block.type}) crashed:`, err);
+    return null;
+  }
 }
