@@ -34,14 +34,14 @@ const securityHeaders = [
 const nextConfig = {
   typescript: { ignoreBuildErrors: true },
   transpilePackages: ["@rayalaseema/ui", "@rayalaseema/db", "@rayalaseema/seo-schema"],
-  // Inline critical above-fold CSS into the SSR'd <head>, defer the rest.
-  // PSI flagged 3 CSS chunks totaling 29 KiB / 2050ms cumulative render-
-  // blocking on mobile slow-4G - the single biggest LCP gate after we
-  // already deferred AdSense + GTM. Critters (Next's bundled critical-
-  // CSS extractor) reads each page's rendered HTML, picks the styles
-  // that resolve above-fold selectors, and inlines them.
+  // Inline critical CSS into the SSR'd HTML (Next 16). `optimizeCss`
+  // was a Next 14 flag that ran Critters; Next 16 replaced it with
+  // `inlineCss` which uses React 19's built-in stylesheet inlining +
+  // moves the rest of the CSS out of the critical path. PSI's
+  // "Render-blocking requests 1170ms" was the single biggest
+  // remaining LCP gate after AdSense + GTM were deferred.
   experimental: {
-    optimizeCss: true,
+    inlineCss: true,
   },
   images: {
     // Modern formats - Next.js negotiates the best one the browser
