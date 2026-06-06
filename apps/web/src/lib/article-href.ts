@@ -4,12 +4,15 @@
 // (Phase A0).
 
 type ArticleLink = {
-  // Optional because some link sources (e.g. ePaper hotspots whose JSON
-  // payload only stores {slug,x,y,w,h}) don't carry the article id. When
-  // missing we fall back to a slug-only path; callers that need the
-  // canonical id-suffixed URL must pass `id`.
+  // `id` is no longer used to build the URL (slugs are DB-unique, so no id
+  // suffix). Kept optional for back-compat with callers that still pass it.
   id?: string;
   slug: string | null;
+  // Primary category drives the canonical URL when the article isn't geo-tagged
+  // → /telugu-news/<category>/<slug>. Optional because some link sources pass
+  // a thin object; the /telugu-news route 301s any non-canonical path to the
+  // real one, so a missing category just yields a self-healing fallback link.
+  category?: { slug: string } | null;
   constituency?: {
     slug: string;
     district: { slug: string };
@@ -34,30 +37,27 @@ function idSuffix(id: string): string {
 }
 
 /**
- * Builds the canonical public URL for an article.
+ * Builds the canonical public URL for an article. Eenadu-style, all under the
+ * /telugu-news/ prefix (so article URLs never collide with the bare-root
+ * district/category hub routes):
  *
- * - Geo-tagged article (has constituency): `/[district]/[constituency]/<slug>-<id8>`
- * - Untagged article: `/news/<slug>-<id8>` - fallback that will shrink to near-zero
- *   once G2 (NER auto-tagging) lands and editors backfill the existing corpus.
+ * - Geo-tagged (has constituency): `/telugu-news/<district>/<constituency>/<slug>`
+ * - Category (no constituency):    `/telugu-news/<category>/<slug>`
+ * - Neither (rare):                `/telugu-news/<slug>`
  *
- * If `slug` is missing (e.g. BREAKING_NEWS with no public URL), returns `#` so
- * callers can render an inert link rather than crash. Callers should not link to
- * articles without slugs in the first place - guard upstream.
- *
- * Reserved-slug check: if a district happens to share a slug with a reserved
- * root (e.g. someone seeds `about` as a district), we fall through to /news/ to
- * avoid colliding with a static route. In practice the AP seed contains no such
- * collisions, but the guard is here for safety.
+ * No id suffix - Content.slug is DB-unique, so the slug alone is the key.
+ * If `slug` is missing (e.g. BREAKING_NEWS), returns `#`.
  */
 export function articleHref(a: ArticleLink): string {
   if (!a.slug) return "#";
-  const suffix = a.id ? idSuffix(a.id) : "";
-  const tail = suffix ? `${a.slug}-${suffix}` : a.slug;
   const c = a.constituency;
-  if (c?.slug && c.district?.slug && !RESERVED_DISTRICT_SLUGS.has(c.district.slug)) {
-    return `/${c.district.slug}/${c.slug}/${tail}`;
+  if (c?.slug && c.district?.slug) {
+    return `/telugu-news/${c.district.slug}/${c.slug}/${a.slug}`;
   }
-  return `/news/${tail}`;
+  if (a.category?.slug) {
+    return `/telugu-news/${a.category.slug}/${a.slug}`;
+  }
+  return `/telugu-news/${a.slug}`;
 }
 
 /**

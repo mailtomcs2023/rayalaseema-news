@@ -38,6 +38,7 @@ function toAFArticle(c: {
   featuredImage: string | null;
   publishedAt: Date | null;
   category: { name: string; color: string | null; slug: string } | null;
+  constituency?: { slug: string; district: { slug: string } } | null;
 }) {
   return {
     id: c.id,
@@ -49,6 +50,9 @@ function toAFArticle(c: {
     category: c.category
       ? { name: c.category.name, color: c.category.color || "#E01B1B", slug: c.category.slug }
       : { name: "", color: "#E01B1B", slug: "" },
+    // articleHref() prefers constituency (geo URL) over category. Carrying it
+    // here keeps homepage links canonical (no /telugu-news/<slug> -> 301 hop).
+    constituency: c.constituency ?? null,
   };
 }
 
@@ -58,7 +62,8 @@ function toBandArticle(c: {
   slug: string | null;
   summary: string | null;
   featuredImage: string | null;
-  category: { name: string } | null;
+  category: { name: string; slug?: string } | null;
+  constituency?: { slug: string; district: { slug: string } } | null;
 }) {
   return {
     id: c.id,
@@ -67,6 +72,9 @@ function toBandArticle(c: {
     summary: c.summary,
     featuredImage: c.featuredImage,
     label: c.category?.name || null,
+    // For articleHref() -> canonical /telugu-news/<category>/<slug> (or geo).
+    category: c.category?.slug ? { slug: c.category.slug } : null,
+    constituency: c.constituency ?? null,
   };
 }
 
@@ -134,6 +142,7 @@ export async function fetchAboveFold(
       publishedAt: true,
       featured: true,
       category: { select: { name: true, slug: true, color: true } },
+      constituency: { select: { slug: true, district: { select: { slug: true } } } },
     },
   });
 
@@ -242,7 +251,8 @@ function fetchBandCategoryArticles(slug: string) {
       featuredImage: true,
       publishedAt: true,
       viewCount: true,
-      category: { select: { name: true } },
+      category: { select: { name: true, slug: true } },
+      constituency: { select: { slug: true, district: { select: { slug: true } } } },
     },
   });
 }
@@ -264,6 +274,8 @@ function buildBandPanel(
       title: a.title,
       slug: a.slug || "",
       publishedAt: a.publishedAt?.toISOString() || null,
+      category: a.category?.slug ? { slug: a.category.slug } : null,
+      constituency: a.constituency ?? null,
     }));
   return { lead, grid, trending };
 }
@@ -498,6 +510,10 @@ export async function fetchCategoryPair(
           slug: true,
           summary: true,
           featuredImage: true,
+          // article's OWN primary category (not col.slug, which may be a
+          // cross-listed match) + constituency, so links are canonical.
+          category: { select: { slug: true } },
+          constituency: { select: { slug: true, district: { select: { slug: true } } } },
         },
       });
       const toCol = (a: typeof arts[number]) => ({
@@ -506,6 +522,8 @@ export async function fetchCategoryPair(
         slug: a.slug || "",
         summary: a.summary,
         featuredImage: a.featuredImage,
+        category: a.category?.slug ? { slug: a.category.slug } : null,
+        constituency: a.constituency ?? null,
       });
       if (!arts[0]) return null;
       return {

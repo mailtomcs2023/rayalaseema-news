@@ -323,6 +323,7 @@ export async function getTrendingArticles(limit = 10) {
     where: { type: "ARTICLE", status: "PUBLISHED" },
     select: {
       id: true, title: true, slug: true, viewCount: true, publishedAt: true,
+      category: { select: { slug: true } },
       constituency: { select: { slug: true, district: { select: { slug: true } } } },
     },
     orderBy: { viewCount: "desc" },
