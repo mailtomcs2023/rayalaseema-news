@@ -44,7 +44,14 @@ export function SearchBar({ open, onClose }: SearchBarProps) {
 
   return (
     <div
-      aria-hidden={!open}
+      // `inert` (Chrome 102+, Safari 15.5+, Firefox 112+) removes the
+      // panel from the focus order AND the a11y tree while collapsed,
+      // without ripping it from the DOM. Using aria-hidden + focusable
+      // descendants was the PSI a11y flag: aria-hidden hides the panel
+      // from screen readers but leaves the input + close button in the
+      // tab order, which contradicts the aria-hidden state. inert
+      // solves both at once.
+      inert={!open ? "" : undefined}
       className={`rsn-search-panel${open ? " rsn-search-panel--open" : ""} border-b`}
     >
       <div className="rsn-search-inner">

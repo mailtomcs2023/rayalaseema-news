@@ -195,7 +195,11 @@ export function CinemaBand({
           display: inline-flex;
           align-items: center;
           gap: 2px;
-          background: rgba(255,255,255,0.16);
+          /* Darker overlay on the brand-red bar so the white tab labels
+             clear WCAG AA 4.5:1 contrast (PSI flagged the previous
+             rgba(255,255,255,0.16) — that lightened the bar to
+             ~rgb(229,63,63) and the white text only hit ~3.7:1). */
+          background: rgba(0,0,0,0.28);
           border-radius: 9px;
           padding: 3px;
           flex-wrap: wrap;

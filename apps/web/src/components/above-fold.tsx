@@ -177,7 +177,14 @@ export function AboveFold({
 
         /* category label */
         .af-cat {
-          display: inline-block;
+          /* WCAG 2.5.8 / PSI tap-target: badge gets a chip-style box
+             with min-height 24 + horizontal padding so the link target
+             is large enough for accurate touch input. Visual weight
+             stays the same (just a thin red outline at rest). */
+          display: inline-flex;
+          align-items: center;
+          min-height: 24px;
+          padding: 2px 8px;
           font-family: var(--font-telugu-body), sans-serif;
           font-size: 11px;
           font-weight: 800;
@@ -186,7 +193,11 @@ export function AboveFold({
           letter-spacing: 0.06em;
           text-decoration: none;
           margin-bottom: 6px;
+          border: 1px solid var(--brand, #E01B1B);
+          border-radius: 4px;
+          line-height: 1;
         }
+        .af-cat:hover { background: var(--brand, #E01B1B); color: #fff; }
 
         /* LEAD */
         .af-lead {
@@ -259,8 +270,12 @@ export function AboveFold({
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          width: 38px;
-          height: 38px;
+          /* Bumped 38 -> 44 for PSI's tap-target/spacing rule:
+             carousel arrows sit close to the slide edge + image, and
+             at 38 PSI flagged them as too small once spacing was
+             accounted for. 44 hits Apple's 44pt HIG + WCAG AAA. */
+          width: 44px;
+          height: 44px;
           border: none;
           border-radius: 999px;
           color: #fff;
