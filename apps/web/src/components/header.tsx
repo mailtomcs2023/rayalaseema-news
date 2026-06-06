@@ -287,7 +287,6 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
                 width={64}
                 height={64}
                 quality={80}
-                fetchPriority="high"
                 className="h-12 w-auto md:hidden"
                 style={{ height: 48, width: "auto" }}
               />
@@ -297,7 +296,6 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
                 width={320}
                 height={66}
                 quality={85}
-                fetchPriority="high"
                 className="hidden md:block h-16 w-auto"
                 style={{ height: 64, width: "auto" }}
               />
