@@ -16,7 +16,7 @@ interface Constituency {
   slug: string;
 }
 
-export function ConstituencyFilter({ constituencies }: { constituencies: Constituency[] }) {
+export function ConstituencyFilter({ districtSlug, constituencies }: { districtSlug: string; constituencies: Constituency[] }) {
   const router = useRouter();
 
   return (
@@ -26,7 +26,8 @@ export function ConstituencyFilter({ constituencies }: { constituencies: Constit
     // value (it's reserved for "clear"). We just navigate on selection.
     <Select
       onValueChange={(slug) => {
-        if (slug) router.push(`/constituency/${slug}`);
+        // Nested canonical hub URL: /[district]/[constituency].
+        if (slug) router.push(`/${districtSlug}/${slug}`);
       }}
     >
       <SelectTrigger

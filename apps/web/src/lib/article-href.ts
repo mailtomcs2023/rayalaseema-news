@@ -52,6 +52,9 @@ export function articleHref(a: ArticleLink): string {
   if (!a.slug) return "#";
   const c = a.constituency;
   if (c?.slug && c.district?.slug) {
+    // Eponymous district-HQ constituency (slug === district slug, e.g. Kurnool):
+    // collapse to one segment so the URL isn't /telugu-news/kurnool/kurnool/...
+    if (c.slug === c.district.slug) return `/telugu-news/${c.district.slug}/${a.slug}`;
     return `/telugu-news/${c.district.slug}/${c.slug}/${a.slug}`;
   }
   if (a.category?.slug) {

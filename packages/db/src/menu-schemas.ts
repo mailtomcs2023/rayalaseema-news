@@ -56,6 +56,16 @@ const childItemSchema = z.object({
   openInNewTab: z.boolean().default(false),
 }).strict();
 
+// Secondary header (sub-nav). HEADER-only: when `enabled`, this top-level
+// item's nested children render as a horizontal sub-bar below the primary nav on
+// the pages belonging to this section (the section hub + its child pages). The
+// admin "eye" toggle flips `enabled`; `sticky` pins the bar on scroll.
+const secondaryHeaderSchema = z.object({
+  enabled: z.boolean().default(false),
+  sticky: z.boolean().default(false),
+  items: z.array(childItemSchema).max(20).default([]),
+}).strict();
+
 // Top-level items can have up to ~10 children. Depth >2 (a child with its
 // own children) is structurally impossible because childItemSchema doesn't
 // have a `children` field.
@@ -67,6 +77,7 @@ const topItemSchema = z.object({
   mobileVariant: mobileVariantSchema.default("show"),
   openInNewTab: z.boolean().default(false),
   children: z.array(childItemSchema).max(40).default([]),
+  secondaryHeader: secondaryHeaderSchema.optional(),
 }).strict();
 
 // Whole menu = array of top-level items. ~30 max for header (we warn at 10

@@ -63,9 +63,9 @@ export async function GET() {
     urls.push(`  <url><loc>${siteUrl}/${d.slug}</loc><changefreq>hourly</changefreq><priority>0.9</priority></url>`);
   }
   for (const c of constituencies) {
-    // Future hub URL (Phase F1/F2 may migrate /constituency/<slug> to
-    // /[district]/[constituency]). Emit both so crawlers find each.
-    urls.push(`  <url><loc>${siteUrl}/constituency/${c.slug}</loc><changefreq>daily</changefreq><priority>0.85</priority></url>`);
+    // Constituency hubs serve at the nested /[district]/[constituency] path;
+    // old /constituency/<slug> 301s there.
+    urls.push(`  <url><loc>${siteUrl}/${c.district.slug}/${c.slug}</loc><changefreq>daily</changefreq><priority>0.85</priority></url>`);
   }
   for (const t of tags) {
     urls.push(`  <url><loc>${siteUrl}/tag/${t.slug}</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>`);

@@ -9,7 +9,6 @@ import type { Metadata } from "next";
 import { prisma } from "@rayalaseema/db";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
-import { ConstituencyFilter } from "@/app/district/[slug]/filter";
 import { getSiteConfig, getTrendingArticles } from "@/lib/db-queries";
 import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 import { articleHref } from "@/lib/article-href";
@@ -85,7 +84,7 @@ export async function DistrictView({ slug }: { slug: string }) {
       },
       orderBy: { publishedAt: "desc" },
       take: 30,
-      select: { id: true, title: true, slug: true, summary: true, featuredImage: true, category: { select: { name: true } } },
+      select: { id: true, title: true, slug: true, summary: true, featuredImage: true, category: { select: { name: true, slug: true } } },
     }),
     getTrendingArticles(8),
   ]);
@@ -102,7 +101,7 @@ export async function DistrictView({ slug }: { slug: string }) {
       where: { type: "ARTICLE", status: "PUBLISHED" },
       orderBy: { publishedAt: "desc" },
       take: 15,
-      select: { id: true, title: true, slug: true, summary: true, featuredImage: true, category: { select: { name: true } } },
+      select: { id: true, title: true, slug: true, summary: true, featuredImage: true, category: { select: { name: true, slug: true } } },
     });
   }
 
@@ -120,7 +119,7 @@ export async function DistrictView({ slug }: { slug: string }) {
   return (
     <div className="min-h-screen" style={{ background: "#fff" }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: stringifyJsonLd(breadcrumbLd) }} />
-      <SiteHeader config={config} breakingNews={[]} />
+      <SiteHeader config={config} breakingNews={[]} activeSectionSlug={slug} />
 
       {/* District header - plain white bg, title in dark text, matches site shell */}
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: "16px 12px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
@@ -132,9 +131,6 @@ export async function DistrictView({ slug }: { slug: string }) {
             {district.nameEn} · {district.constituencies.length} నియోజకవర్గాలు
           </div>
         </div>
-        <ConstituencyFilter
-          constituencies={district.constituencies.map((c) => ({ id: c.id, name: c.name, nameEn: c.nameEn, slug: c.slug }))}
-        />
       </div>
 
       <main style={{ maxWidth: 1280, margin: "0 auto", padding: "18px 12px 48px" }}>
@@ -281,48 +277,29 @@ export async function DistrictView({ slug }: { slug: string }) {
           {/* Sticky so the constituencies + trending rail follows the reader.
               alignSelf:start stops the flex item stretching (needed for sticky);
               scrolls internally if taller than the viewport. */}
-          <aside style={{ flex: "0 0 290px", position: "sticky", top: 56, alignSelf: "flex-start", maxHeight: "calc(100vh - 72px)", overflowY: "auto" }}>
-            {/* Constituencies */}
-            <div className="cat-rail-head">నియోజకవర్గాలు</div>
-            <div style={{ marginBottom: 24 }}>
-              {district.constituencies.map((c) => (
-                <Link
-                  key={c.id}
-                  href={`/constituency/${c.slug}`}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    padding: "10px 0",
-                    borderBottom: "1px dotted rgba(0,0,0,0.18)",
-                    textDecoration: "none",
-                  }}
-                >
-                  <span style={{ fontFamily: "var(--font-telugu-heading), serif", fontSize: 14, fontWeight: 700, color: "var(--n-900, #111827)" }}>
-                    {c.name}
+          {/* top:96 clears the sticky primary nav (40px) + secondary header
+              (40px) so the Trending card sits below them, not tucked underneath. */}
+          <aside style={{ flex: "0 0 290px", position: "sticky", top: 96, alignSelf: "flex-start", maxHeight: "calc(100vh - 112px)", overflowY: "auto" }}>
+            {/* Constituencies list removed - the secondary header now lists
+                them; clicking one filters to that constituency. */}
+
+            {/* Trending - same card UI as the article page */}
+            <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #eee", padding: 16 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 800, color: "var(--color-brand)", marginBottom: 12, paddingBottom: 8, borderBottom: "2px solid var(--color-brand)" }}>
+                Trending
+              </h3>
+              {trending.map((t, i) => (
+                <Link key={t.id} href={articleHref(t)} style={{ display: "flex", gap: 8, padding: "8px 0", borderBottom: "1px solid #f5f5f5", textDecoration: "none" }}>
+                  <span style={{ fontSize: 20, fontWeight: 900, color: i < 3 ? "var(--color-brand)" : "#ddd", width: 28, flexShrink: 0 }}>
+                    {String(i + 1).padStart(2, "0")}
                   </span>
-                  <span style={{ fontFamily: "var(--font-telugu-body), sans-serif", fontSize: 11, color: "#9ca3af" }}>
-                    {c._count.mandals} మండలాలు
-                  </span>
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: "#111", lineHeight: 1.5 }}>{t.title}</p>
+                    <p style={{ fontSize: 11, color: "#888", marginTop: 2 }}>{t.viewCount.toLocaleString()} views</p>
+                  </div>
                 </Link>
               ))}
             </div>
-
-            {/* Trending */}
-            <div className="cat-rail-head">ట్రెండింగ్</div>
-            {trending.map((t, i) => (
-              <Link
-                key={t.id}
-                href={articleHref(t)}
-                style={{ display: "flex", gap: 10, padding: "11px 0", borderBottom: "1px dotted rgba(0,0,0,0.18)", textDecoration: "none" }}
-              >
-                <span style={{ fontFamily: "var(--font-telugu-heading), sans-serif", fontSize: 23, fontWeight: 800, color: "var(--brand, #E01B1B)", lineHeight: 1, flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <h4 style={{ fontFamily: "var(--font-telugu-heading), serif", fontSize: 14, fontWeight: 700, lineHeight: 1.35, color: "var(--n-900, #111827)", margin: 0 }}>
-                  {t.title}
-                </h4>
-              </Link>
-            ))}
           </aside>
         </div>
       </main>

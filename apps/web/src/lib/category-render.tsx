@@ -54,7 +54,7 @@ export async function CategoryView({ slug }: { slug: string }) {
   return (
     <div className="min-h-screen" style={{ background: "#fff" }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: stringifyJsonLd(breadcrumbLd) }} />
-      <SiteHeader config={config} breakingNews={[]} />
+      <SiteHeader config={config} breakingNews={[]} activeSectionSlug={slug} />
       <main style={{ maxWidth: 1280, margin: "0 auto", padding: "18px 12px 48px" }}>
         {/* Spec #4 F4 (#228) - category header with name + description so
             the hub has its own content surface for crawlers. The

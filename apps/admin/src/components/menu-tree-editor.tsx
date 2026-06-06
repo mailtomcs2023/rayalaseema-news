@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import { useKycGate } from "@/components/kyc-gated-link";
 import { confirm } from "@/components/confirm-dialog";
 import { toast } from "sonner";
-import { ChevronDown, Plus, Trash, ChevronsUpDown, Check } from "lucide-react";
+import { ChevronDown, Plus, Trash, ChevronsUpDown, Check, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WithTooltip } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -86,6 +86,16 @@ interface Props {
 
 function genId() {
   return "itm_" + Math.random().toString(36).slice(2, 11);
+}
+
+// A top-level item can own a secondary header only if it points at a "section"
+// the public site can scope to: a CATEGORY/DISTRICT hub, or an INTERNAL_URL
+// that is a single bare slug. When the eye is on, the item's nested sub-items
+// render as the sub-nav bar on its pages.
+function isSectionTarget(t: Target): boolean {
+  if (t.type === "CATEGORY" || t.type === "DISTRICT") return true;
+  if (t.type === "INTERNAL_URL") return /^\/[^/?#]+$/.test(t.url);
+  return false;
 }
 
 // Turn a 400 response body ({ error, fieldErrors }) from the draft/publish
@@ -340,6 +350,18 @@ export function MenuTreeEditor(props: Props) {
     setCollapsedIds((s) => { const n = new Set(s); n.delete(parentId); persistCollapsed(n); return n; });
   };
 
+  // Flip the secondary-header "eye" on a top-level section item. Seeds an empty
+  // config the first time it's turned on, and selects the item. HEADER only.
+  const toggleSecondary = (id: string) => {
+    if (kycBlocked) { fireKycToast(); return; }
+    const it = findItemDeep(tree, id);
+    if (!it) return;
+    const current = it.secondaryHeader;
+    const next = current ? { ...current, enabled: !current.enabled } : { enabled: true, items: [] };
+    update(patchItemById(tree, id, { secondaryHeader: next }));
+    setSelectedId(id);
+  };
+
   const toggleCollapse = (id: string) => {
     setCollapsedIds((s) => {
       const n = new Set(s);
@@ -412,6 +434,11 @@ export function MenuTreeEditor(props: Props) {
 
   // --- selected item lookup ---
   const sel: Item | null = selectedId ? findItemDeep(tree, selectedId) ?? null : null;
+  // Secondary header is HEADER-only, on top-level section items. Eye on the row;
+  // sticky toggle in the config card when the eye is on.
+  const isHeaderLocation = props.location === "header";
+  const isTopSelected = !!selectedId && tree.some((t) => t.id === selectedId);
+  const showSecondaryControls = isHeaderLocation && isTopSelected && !!sel && isSectionTarget(sel.target) && !!sel.secondaryHeader?.enabled;
 
   // Each item can carry a "district tag" - the district shown in the left
   // picker. It's SEEDED from any item whose internal URL is a district slug,
@@ -610,10 +637,13 @@ export function MenuTreeEditor(props: Props) {
                     isTop={item.depth === 0}
                     childCount={item.children?.length ?? 0}
                     collapsed={collapsedIds.has(item.id)}
+                    canSecondary={isHeaderLocation && item.depth === 0 && isSectionTarget(item.target)}
+                    secondaryOn={!!item.secondaryHeader?.enabled}
                     onSelect={() => setSelectedId(item.id)}
                     onRemove={() => removeById(item.id, item.label)}
                     onAddChild={() => addChild(item.id)}
                     onToggleCollapse={() => toggleCollapse(item.id)}
+                    onToggleSecondary={() => toggleSecondary(item.id)}
                   />
                 ))
               ) : (
@@ -638,10 +668,13 @@ export function MenuTreeEditor(props: Props) {
                         isTop={item.depth === 0}
                         childCount={item.children?.length ?? 0}
                         collapsed={collapsedIds.has(item.id)}
+                        canSecondary={isHeaderLocation && item.depth === 0 && isSectionTarget(item.target)}
+                        secondaryOn={!!item.secondaryHeader?.enabled}
                         onSelect={() => setSelectedId(item.id)}
                         onRemove={() => removeById(item.id, item.label)}
                         onAddChild={() => addChild(item.id)}
                         onToggleCollapse={() => toggleCollapse(item.id)}
+                        onToggleSecondary={() => toggleSecondary(item.id)}
                       />
                     ))}
                   </SortableContext>
@@ -671,13 +704,35 @@ export function MenuTreeEditor(props: Props) {
           {!sel ? (
             <p style={{ fontSize: 13, color: "#888" }}>Select an item to edit.</p>
           ) : (
-            <ItemConfig
-              item={sel}
-              categories={props.categories}
-              districtSlug={selDistrictSlug}
-              recentContent={props.recentContent}
-              onChange={(patch) => patchSelected(patch)}
-            />
+            <>
+              <ItemConfig
+                item={sel}
+                categories={props.categories}
+                districtSlug={selDistrictSlug}
+                recentContent={props.recentContent}
+                onChange={(patch) => patchSelected(patch)}
+              />
+              {showSecondaryControls && (
+                <div style={{ marginTop: 16, paddingTop: 14, borderTop: "2px solid #eff6ff" }}>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: "#1d4ed8" }}>Secondary header</span>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginTop: 8, cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={!!sel.secondaryHeader?.sticky}
+                      onChange={(e) =>
+                        patchSelected({
+                          secondaryHeader: { ...(sel.secondaryHeader ?? { enabled: true, items: [] }), sticky: e.target.checked },
+                        })
+                      }
+                    />
+                    Sticky sub-nav
+                  </label>
+                  <p style={{ fontSize: 11, color: "#6b7280", lineHeight: 1.4, marginTop: 4 }}>
+                    Keeps the sub-nav pinned below the main menu as the reader scrolls. The links are this item&apos;s nested sub-items.
+                  </p>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -834,13 +889,14 @@ function ContentPicker({ rows, search, setSearch, onPick }: { rows: ContentRow[]
 // A single draggable row. Wraps useSortable; the ⠿ handle carries the drag
 // listeners so clicking the rest of the row just selects it.
 function SortableMenuRow({
-  item, depth, broken, selected, isTop, childCount, collapsed,
-  onSelect, onRemove, onAddChild, onToggleCollapse,
+  item, depth, broken, selected, isTop, childCount, collapsed, canSecondary, secondaryOn,
+  onSelect, onRemove, onAddChild, onToggleCollapse, onToggleSecondary,
 }: {
   item: Item; depth: number; broken?: boolean; selected: boolean;
   isTop?: boolean; childCount?: number; collapsed?: boolean;
+  canSecondary?: boolean; secondaryOn?: boolean;
   onSelect: () => void; onRemove: () => void;
-  onAddChild?: () => void; onToggleCollapse?: () => void;
+  onAddChild?: () => void; onToggleCollapse?: () => void; onToggleSecondary?: () => void;
 }) {
   const { setNodeRef, listeners, attributes, transform, transition, isDragging } = useSortable({ id: item.id });
   const style: React.CSSProperties = {
@@ -892,10 +948,13 @@ function SortableMenuRow({
         isTop={isTop}
         childCount={childCount}
         collapsed={collapsed}
+        canSecondary={canSecondary}
+        secondaryOn={secondaryOn}
         onSelect={onSelect}
         onRemove={onRemove}
         onAddChild={onAddChild}
         onToggleCollapse={onToggleCollapse}
+        onToggleSecondary={onToggleSecondary}
         handleProps={{ ...attributes, ...listeners }}
       />
     </div>
@@ -904,14 +963,15 @@ function SortableMenuRow({
 
 // Row visuals - shared by the live list and the DragOverlay clone.
 function MenuRowContent({
-  item, depth, broken, selected, clone, childCount, isTop, collapsed,
-  handleProps, onSelect, onRemove, onAddChild, onToggleCollapse,
+  item, depth, broken, selected, clone, childCount, isTop, collapsed, canSecondary, secondaryOn,
+  handleProps, onSelect, onRemove, onAddChild, onToggleCollapse, onToggleSecondary,
 }: {
   item: Item; depth: number; broken?: boolean; selected: boolean;
   clone?: boolean; childCount?: number; isTop?: boolean; collapsed?: boolean;
+  canSecondary?: boolean; secondaryOn?: boolean;
   handleProps?: any;
   onSelect?: () => void; onRemove?: () => void;
-  onAddChild?: () => void; onToggleCollapse?: () => void;
+  onAddChild?: () => void; onToggleCollapse?: () => void; onToggleSecondary?: () => void;
 }) {
   const hasChildren = (childCount ?? 0) > 0;
   return (
@@ -949,7 +1009,25 @@ function MenuRowContent({
         <span style={{ fontSize: 11, color: "#9ca3af" }}>({childCount})</span>
       )}
       {item.mobileVariant === "hide" && <span title="Hidden on mobile" style={{ fontSize: 10, color: "#6b7280" }}>📱⊘</span>}
+      {!clone && canSecondary && secondaryOn && (
+        <span title="Has a secondary header" style={{ fontSize: 9, fontWeight: 800, color: "#1d4ed8", background: "#dbeafe", borderRadius: 4, padding: "1px 5px", letterSpacing: 0.3 }}>
+          2nd
+        </span>
+      )}
       {clone && childCount ? <span style={{ fontSize: 11, color: "#6b7280", marginRight: 4 }}>+{childCount}</span> : null}
+      {!clone && canSecondary && onToggleSecondary && (
+        <WithTooltip text={secondaryOn ? "Secondary header ON — this item's sub-items show as a sub-nav on its section pages. Click to turn off." : "Turn on a secondary header — add sub-items (＋) and they'll show as a sub-nav on this section's pages"}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className={`h-7 w-7 ${secondaryOn ? "text-blue-600 hover:text-blue-700" : "text-gray-400 hover:text-gray-600"}`}
+            onClick={(e) => { e.stopPropagation(); onToggleSecondary(); }}
+          >
+            {secondaryOn ? <Eye /> : <EyeOff />}
+          </Button>
+        </WithTooltip>
+      )}
       {/* Collapse/expand chevron (leftmost of the action group). Editor-only. */}
       {!clone && hasChildren && (
         <WithTooltip text={collapsed ? "Expand" : "Collapse"}>

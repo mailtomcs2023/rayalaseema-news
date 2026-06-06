@@ -25,7 +25,7 @@ export async function GET() {
     },
     select: {
       id: true, slug: true, title: true, publishedAt: true,
-      category: { select: { nameEn: true } },
+      category: { select: { nameEn: true, slug: true } },
       constituency: { select: { slug: true, district: { select: { slug: true } } } },
     },
     orderBy: { publishedAt: "desc" },

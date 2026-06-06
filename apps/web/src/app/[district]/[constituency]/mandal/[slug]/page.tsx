@@ -146,7 +146,7 @@ export default async function MandalPage({ params }: { params: Params }) {
     items: [
       { name: "Home", url: SITE_URL },
       { name: mandal.constituency.district.name, url: `${SITE_URL}/${p.district}` },
-      { name: mandal.constituency.name, url: `${SITE_URL}/constituency/${p.constituency}` },
+      { name: mandal.constituency.name, url: `${SITE_URL}/${p.district}/${p.constituency}` },
       { name: mandal.name },
     ],
   });
@@ -154,14 +154,14 @@ export default async function MandalPage({ params }: { params: Params }) {
   return (
     <div className="min-h-screen bg-gray-50">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: stringifyJsonLd(breadcrumbLd) }} />
-      <SiteHeader />
+      <SiteHeader activeSectionSlug={p.district} />
       <main style={{ maxWidth: 1280, margin: "0 auto", padding: "20px 12px" }}>
         <nav style={{ fontSize: 13, color: "#888", marginBottom: 12 }}>
           <Link href="/" style={{ color: "#888", textDecoration: "none" }}>Home</Link>
           <span> / </span>
           <Link href={`/${p.district}`} style={{ color: "#888", textDecoration: "none" }}>{mandal.constituency.district.name}</Link>
           <span> / </span>
-          <Link href={`/constituency/${p.constituency}`} style={{ color: "#888", textDecoration: "none" }}>{mandal.constituency.name}</Link>
+          <Link href={`/${p.district}/${p.constituency}`} style={{ color: "#888", textDecoration: "none" }}>{mandal.constituency.name}</Link>
           <span> / </span>
           <span style={{ color: "#333" }}>{mandal.name}</span>
         </nav>
@@ -178,7 +178,7 @@ export default async function MandalPage({ params }: { params: Params }) {
         {displayed.length === 0 ? (
           <p style={{ fontSize: 14, color: "#888", padding: 24, textAlign: "center" }}>
             No articles tagged to {mandal.nameEn} yet. Constituency news at{" "}
-            <Link href={`/constituency/${p.constituency}`} style={{ color: "var(--color-brand)" }}>{mandal.constituency.nameEn}</Link>.
+            <Link href={`/${p.district}/${p.constituency}`} style={{ color: "var(--color-brand)" }}>{mandal.constituency.nameEn}</Link>.
           </p>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>

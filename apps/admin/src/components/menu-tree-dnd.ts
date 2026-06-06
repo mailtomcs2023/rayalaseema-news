@@ -16,6 +16,14 @@ export type Target =
   | { type: "EXTERNAL_URL"; url: string }
   | { type: "CONTENT"; contentId: string; contentTypeCache?: string; contentSlugCache?: string };
 
+// Secondary header config carried on a top-level item. The sub-nav links are
+// the item's nested `children`; this just holds the on/off + sticky flags.
+export interface SecondaryHeaderConfig {
+  enabled: boolean;
+  sticky?: boolean;
+  items: Item[];
+}
+
 export interface Item {
   id: string;
   label: string;
@@ -23,6 +31,7 @@ export interface Item {
   mobileVariant: "show" | "hide";
   openInNewTab?: boolean;
   children?: Item[];
+  secondaryHeader?: SecondaryHeaderConfig;
 }
 
 export interface FlattenedItem extends Item {
@@ -80,7 +89,18 @@ export function sanitizeTree(items: Item[]): Item[] {
       const { children: _drop, ...rest } = child;
       return rest as Item;
     });
-    return { ...top, children: kids };
+    const out: Item = { ...top, children: kids };
+    if (top.secondaryHeader) {
+      out.secondaryHeader = {
+        enabled: !!top.secondaryHeader.enabled,
+        sticky: !!top.secondaryHeader.sticky,
+        items: (top.secondaryHeader.items ?? []).map((it) => {
+          const { children: _d, ...rest } = it;
+          return rest as Item;
+        }),
+      };
+    }
+    return out;
   });
 }
 

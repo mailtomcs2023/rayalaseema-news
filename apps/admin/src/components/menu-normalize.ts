@@ -25,8 +25,12 @@ export function normalizeMenuTreeUrls(items: Item[]): Item[] {
       ? { ...it, target: { type: "INTERNAL_URL", url: normalizeMenuItemUrl(it.target.url) } }
       : it;
   return items.map((top) => {
-    const fixed = fix(top);
-    return top.children?.length ? { ...fixed, children: top.children.map(fix) } : fixed;
+    let out = fix(top);
+    if (top.children?.length) out = { ...out, children: top.children.map(fix) };
+    if (top.secondaryHeader?.items?.length) {
+      out = { ...out, secondaryHeader: { ...top.secondaryHeader, items: top.secondaryHeader.items.map(fix) } };
+    }
+    return out;
   });
 }
 
@@ -62,7 +66,11 @@ export function dedistrictizeMenuTree(items: Item[]): Item[] {
       ? { ...it, target: { type: "INTERNAL_URL", url: `/${it.target.districtSlug}` } }
       : it;
   return items.map((top) => {
-    const fixed = fix(top);
-    return top.children?.length ? { ...fixed, children: top.children.map(fix) } : fixed;
+    let out = fix(top);
+    if (top.children?.length) out = { ...out, children: top.children.map(fix) };
+    if (top.secondaryHeader?.items?.length) {
+      out = { ...out, secondaryHeader: { ...top.secondaryHeader, items: top.secondaryHeader.items.map(fix) } };
+    }
+    return out;
   });
 }

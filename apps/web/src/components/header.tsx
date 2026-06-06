@@ -35,6 +35,38 @@ function resolveNavHref(t: any): string {
   return "#";
 }
 
+// Resolve a CHILD item's href relative to its parent. When the parent is an
+// internal/district section hub (e.g. /kurnool) AND the child is an INTERNAL_URL
+// (e.g. /adoni), the child nests under the parent → /kurnool/adoni (the nested
+// constituency hub). An eponymous child (its link equals the parent hub) or any
+// other child type keeps its own canonical URL.
+function resolveChildNavHref(parentTarget: any, childTarget: any): string {
+  const childHref = resolveNavHref(childTarget);
+  const parentIsSectionHub = parentTarget?.type === "INTERNAL_URL" || parentTarget?.type === "DISTRICT";
+  if (parentIsSectionHub && childTarget?.type === "INTERNAL_URL" && childHref.startsWith("/")) {
+    const parentHref = resolveNavHref(parentTarget); // /kurnool
+    if (parentHref && parentHref !== "#") {
+      if (childHref === parentHref) return parentHref; // eponymous → hub, not /kurnool/kurnool
+      return `${parentHref.replace(/\/+$/, "")}${childHref}`;
+    }
+  }
+  return childHref;
+}
+
+// Build the section sub-nav (secondary header) from an eye-on top item's nested
+// children. The item that links back to the hub renders as a home icon.
+function buildSecondaryNav(items: any[], parentTarget: any): NavItem[] {
+  if (!Array.isArray(items)) return [];
+  const parentHref = resolveNavHref(parentTarget);
+  return items
+    .map((it) => {
+      const slug = resolveChildNavHref(parentTarget, it.target);
+      const isHome = !!parentHref && parentHref !== "#" && slug === parentHref;
+      return { name: it.label as string, slug, isHome };
+    })
+    .filter((x) => x.name && x.slug && x.slug !== "#");
+}
+
 // Mobile bottom-sheet nav, driven by the MOBILE menu location (independent of
 // HEADER). Split into the district chip row + the category grid.
 type MobileLink = { name: string; href: string };
@@ -49,10 +81,11 @@ function buildMobileNav(items: any[]): MobileNav | null {
   if (!Array.isArray(items) || items.length === 0) return null;
   const columns = items.filter((it) => Array.isArray(it.children) && it.children.length > 0);
   if (columns.length > 0) {
-    const toLinks = (arr: any[]): MobileLink[] => arr.map((c) => ({ name: c.label, href: resolveNavHref(c.target) }));
+    // Child hrefs nest under their parent hub (e.g. /kurnool/adoni); see resolveChildNavHref.
+    const toLinks = (col: any): MobileLink[] => col.children.map((c: any) => ({ name: c.label, href: resolveChildNavHref(col.target, c.target) }));
     return {
-      districts: toLinks(columns[0].children),
-      categories: columns.slice(1).flatMap((col) => toLinks(col.children)),
+      districts: toLinks(columns[0]),
+      categories: columns.slice(1).flatMap((col) => toLinks(col)),
     };
   }
   const districts: MobileLink[] = [];
@@ -77,10 +110,14 @@ function buildHeaderNav(items: any[]): { top: NavItem[]; drop: NavItem[] } {
   let hasDropdown = false;
   let dropdownLabel = "";
   for (const it of items) {
-    if (Array.isArray(it.children) && it.children.length > 0) {
+    // An item with the secondary-header eye on uses its children as its section
+    // sub-nav (rendered by SiteHeader), NOT as dropdown entries - so it stays a
+    // plain top-level link here and its children don't leak into "మరిన్ని".
+    const secondaryOn = it.secondaryHeader?.enabled && Array.isArray(it.children) && it.children.length > 0;
+    if (Array.isArray(it.children) && it.children.length > 0 && !secondaryOn) {
       hasDropdown = true;
       if (!dropdownLabel) dropdownLabel = it.label;
-      for (const c of it.children) drop.push({ name: c.label, slug: resolveNavHref(c.target) });
+      for (const c of it.children) drop.push({ name: c.label, slug: resolveChildNavHref(it.target, c.target) });
     } else {
       top.push({ name: it.label, slug: resolveNavHref(it.target) });
     }
@@ -98,6 +135,12 @@ interface HeaderProps {
   // mount fetch below.
   headerItems?: any[];
   mobileItems?: any[];
+  // Section sub-nav (the matched section item's nested children) + its parent
+  // target (so child links nest, e.g. /kurnool/adoni) + sticky flag. SiteHeader
+  // resolves which section the current page belongs to and passes these.
+  secondaryItems?: any[];
+  secondaryParentTarget?: any;
+  secondarySticky?: boolean;
   // Optional pre-rendered live-data strip. Pages that pass <MarketTickerServer />
   // here get a server-rendered bar with zero client-side flash; pages that
   // omit it fall back to the legacy <MarketTicker /> below (data fetched in
@@ -109,7 +152,7 @@ interface HeaderProps {
   mastheadAdSlot?: React.ReactNode;
 }
 
-export function Header({ config: initialConfig = {}, breakingNews: initialBreaking = [], mastheadAdSlot, headerItems, mobileItems }: HeaderProps) {
+export function Header({ config: initialConfig = {}, breakingNews: initialBreaking = [], mastheadAdSlot, headerItems, mobileItems, secondaryItems, secondaryParentTarget, secondarySticky }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -175,6 +218,8 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
   // is always present; the rest fills in after the fetch resolves).
   const activeMain = adminTop;
   const activeDrop = adminDrop;
+  // Section sub-nav. Server-resolved + passed as a prop (stable for the page).
+  const secondaryNav = secondaryItems ? buildSecondaryNav(secondaryItems, secondaryParentTarget) : [];
 
   // Mobile drawer sections: prefer the dedicated MOBILE menu; fall back to the
   // HEADER-derived split so the drawer is never blank.
@@ -460,6 +505,39 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
           </ul>
         </div>
       </nav>
+
+      {/* Secondary header (section sub-nav) - same red-gradient style as the
+          primary nav, shown below it on a section's pages. Desktop-only. Sticky
+          variant pins at top-10 (below the h-10 sticky primary nav); otherwise
+          it scrolls away. Rendered only when SiteHeader matched an enabled
+          secondary header for the current page. */}
+      {secondaryNav.length > 0 && (
+        <nav className={`nav-gradient shadow-md hidden lg:block border-t border-white/15 ${secondarySticky ? "sticky top-10 z-30" : "relative z-30"}`}>
+          <div className="container-news">
+            <ul className="flex items-stretch h-10 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+              {secondaryNav.map((item, i) => (
+                <li key={`sec-${i}-${item.slug}`} className="relative flex">
+                  <Link
+                    href={item.slug}
+                    className={`flex items-center justify-center px-3 text-[13px] leading-none hover:bg-white/20 transition-colors whitespace-nowrap font-telugu border-r border-white/15 ${
+                      isActive(item.slug) ? "bg-white/20" : ""
+                    }`}
+                    style={{ color: "#fff" }}
+                  >
+                    {item.isHome ? (
+                      <svg className="block" width="20" height="20" fill="#fff" viewBox="0 0 24 24" aria-label="Home">
+                        <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                      </svg>
+                    ) : (
+                      item.name
+                    )}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </nav>
+      )}
 
       {/* Mobile Menu - Slides up from bottom like Eenadu */}
       {mobileMenuOpen && (
