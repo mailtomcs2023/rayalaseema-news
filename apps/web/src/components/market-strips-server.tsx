@@ -8,8 +8,6 @@
 // Same /api/tickers data + 5-min cache; the fetch is server-side (absolute URL
 // built from the request host, like market-ticker-server.tsx).
 
-import { headers } from "next/headers";
-
 interface TickerData {
   mandi: any[];
   bullion: any[];
@@ -17,12 +15,17 @@ interface TickerData {
   cricket: any[] | null;
 }
 
+// Build the ticker fetch URL from an env var, NOT from next/headers().
+// headers() opts every page that mounts a strip into dynamic rendering,
+// which killed the home page's `export const revalidate = 30` and kept
+// TTFB at ~400ms. With a static absolute URL the home stays statically
+// renderable + cacheable; the underlying /api/tickers route still has
+// its own 5-min in-memory cache.
+const TICKERS_URL = `${process.env.SITE_URL || "http://localhost:3000"}/api/tickers`;
+
 async function getTickers(): Promise<TickerData | null> {
   try {
-    const hdrs = await headers();
-    const host = hdrs.get("host") ?? "localhost:3000";
-    const protocol = host.startsWith("localhost") ? "http" : "https";
-    const res = await fetch(`${protocol}://${host}/api/tickers`, {
+    const res = await fetch(TICKERS_URL, {
       // Mirror /api/tickers' own 5-min window so heavy traffic never fans out
       // to the external price APIs more than once per window.
       next: { revalidate: 120, tags: ["tickers"] },

@@ -8,18 +8,16 @@
 // across the client boundary still server-render). Pages that don't pass
 // tickerSlot fall back to the legacy client-fetched MarketTicker inside
 // Header so existing pages keep working without per-page edits.
-import { headers } from "next/headers";
 import { MarketTickerView, type TickerData } from "./market-ticker-view";
 
+// Static base URL via env var, NOT next/headers(). headers() opted every
+// page that mounted the ticker into dynamic rendering (revalidate=N was
+// silently ignored). Pages can now stay statically rendered + cacheable.
+const TICKERS_URL = `${process.env.SITE_URL || "http://localhost:3000"}/api/tickers`;
+
 async function getTickerData(): Promise<TickerData | null> {
-  // Build an absolute URL because server-side fetch can't use relative paths.
-  // Using request headers (instead of an env var) keeps this working across
-  // local dev, preview, and prod without configuration.
-  const hdrs = await headers();
-  const host = hdrs.get("host") ?? "localhost:3000";
-  const protocol = host.startsWith("localhost") ? "http" : "https";
   try {
-    const res = await fetch(`${protocol}://${host}/api/tickers`, {
+    const res = await fetch(TICKERS_URL, {
       // Match the in-memory cache window of /api/tickers itself (5 min) so
       // the server fetch never hits external APIs more than once per window
       // even under traffic. The route already has its own cache layer; this
