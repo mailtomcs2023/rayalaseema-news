@@ -51,7 +51,7 @@ export function SearchBar({ open, onClose }: SearchBarProps) {
       // from screen readers but leaves the input + close button in the
       // tab order, which contradicts the aria-hidden state. inert
       // solves both at once.
-      inert={!open ? "" : undefined}
+      inert={!open}
       className={`rsn-search-panel${open ? " rsn-search-panel--open" : ""} border-b`}
     >
       <div className="rsn-search-inner">
