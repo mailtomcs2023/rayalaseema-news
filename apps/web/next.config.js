@@ -75,6 +75,31 @@ const nextConfig = {
       { protocol: "https", hostname: "**.cloudfront.net" },
       { protocol: "https", hostname: "**.eenadu.net" },
       { protocol: "https", hostname: "**.sakshi.com" },
+      // Google image-search thumbnail CDNs - editor pastes these via the
+      // image-search modal. Without the whitelist next/image 400s the
+      // request, leaving the article hero broken until we rehost it.
+      { protocol: "https", hostname: "encrypted-tbn0.gstatic.com" },
+      { protocol: "https", hostname: "encrypted-tbn1.gstatic.com" },
+      { protocol: "https", hostname: "encrypted-tbn2.gstatic.com" },
+      { protocol: "https", hostname: "encrypted-tbn3.gstatic.com" },
+      { protocol: "https", hostname: "**.gstatic.com" },
+      { protocol: "https", hostname: "**.googleusercontent.com" },
+      // Common Telugu/Indian news image hosts the editor pastes via
+      // image-search or external article ingest. ensureBlobHosted now
+      // rehosts on save - this list keeps already-saved external URLs
+      // from 400ing in next/image until backfill runs.
+      { protocol: "https", hostname: "**.cricbuzz.com" },
+      { protocol: "https", hostname: "**.hmtvlive.com" },
+      { protocol: "https", hostname: "**.10tv.in" },
+      { protocol: "https", hostname: "**.asianetnews.com" },
+      { protocol: "https", hostname: "**.telugutimes.net" },
+      { protocol: "https", hostname: "**.siasat.com" },
+      { protocol: "https", hostname: "**.t2blive.com" },
+      { protocol: "https", hostname: "**.langimg.com" },
+      { protocol: "https", hostname: "**.probatsman.com" },
+      { protocol: "https", hostname: "**.deccanchronicle.com" },
+      { protocol: "https", hostname: "**.licdn.com" },
+      { protocol: "https", hostname: "i.ytimg.com" },
     ],
   },
   async headers() {
