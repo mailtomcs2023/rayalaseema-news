@@ -2,10 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { getSiteConfig } from "@/lib/db-queries";
 import { buildNewsMediaOrganizationSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
-import { WhatsAppFloat } from "@/components/whatsapp-float";
-import { WebVitalsReporter } from "@/components/web-vitals-reporter";
-import { PushNotifications } from "@/components/push-notifications";
-import { SWRegister } from "@/components/sw-register";
+import { DeferredFooterClients } from "@/components/deferred-footer-clients";
 import { MobileAnchorSlot } from "@/components/mobile-anchor-slot";
 import "./globals.css";
 import { Geist, Noto_Sans_Telugu, Anek_Telugu } from "next/font/google";
@@ -232,10 +229,11 @@ export default async function RootLayout({
         )}
 
         {children}
-        <WhatsAppFloat />
-        <WebVitalsReporter />
-        <PushNotifications />
-        <SWRegister />
+        {/* Idle-mounted floats (WhatsApp icon, web-vitals reporter,
+            push-notifications, SW register). DeferredFooterClients
+            holds them until requestIdleCallback fires so their script
+            evaluation stays off the LCP critical path. */}
+        <DeferredFooterClients />
         {/* Sticky bottom anchor ad - md:hidden inside the component so it
             only shows on phones. Highest-revenue mobile slot per IAB data. */}
         <MobileAnchorSlot config={config as Record<string, string>} />
