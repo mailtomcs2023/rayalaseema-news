@@ -60,7 +60,7 @@ export async function MobileAnchorSlot({
           // browser still reserves a slot for CLS.
           const hasDims = /\b(width|height)=/i.test(before + after);
           const dimAttrs = hasDims ? "" : ` width="320" height="90"`;
-          return `<img${before}${dimAttrs} src=${q}/_next/image?url=${encodeURIComponent(src)}&w=750&q=60${q} loading="lazy" decoding="async"${after}>`;
+          return `<img${before}${dimAttrs} src=${q}/_next/image?url=${encodeURIComponent(src)}&w=640&q=60${q} loading="lazy" decoding="async"${after}>`;
         },
       );
       return (
@@ -72,7 +72,7 @@ export async function MobileAnchorSlot({
     if (ad.imageUrl) {
       const img = (
         <img
-          src={`/_next/image?url=${encodeURIComponent(ad.imageUrl)}&w=750&q=60`}
+          src={`/_next/image?url=${encodeURIComponent(ad.imageUrl)}&w=640&q=60`}
           alt={ad.name}
           width={320}
           height={90}
