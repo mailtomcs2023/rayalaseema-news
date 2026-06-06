@@ -281,12 +281,20 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
                 resized variants. The icon and wordmark are separate
                 <Image>s with classes that show/hide by breakpoint so
                 only one is visible at a time. */}
+              {/* Both logos load lazy explicitly. Next 16 was emitting
+                a phantom `<link rel="preload" href="/logo.png" as="image">`
+                even with no priority prop, then warning that the
+                preloaded asset wasn't used because the wordmark is
+                `hidden` on mobile via md:block. Forcing loading="lazy"
+                makes Next skip the auto-preload heuristic. The masthead
+                logos aren't LCP candidates either way. */}
               <Image
                 src="/logo-icon.png"
                 alt="రాయలసీమ న్యూస్"
                 width={64}
                 height={64}
                 quality={80}
+                loading="lazy"
                 className="h-12 w-auto md:hidden"
                 style={{ height: 48, width: "auto" }}
               />
@@ -296,6 +304,7 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
                 width={320}
                 height={66}
                 quality={85}
+                loading="lazy"
                 className="hidden md:block h-16 w-auto"
                 style={{ height: 64, width: "auto" }}
               />

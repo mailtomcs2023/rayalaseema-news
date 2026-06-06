@@ -19,7 +19,15 @@ export function SWRegister() {
       setTimeout(reg, 2000);
     }
 
+    // PWA install prompt - only intercept the event on /epaper where
+    // we actually surface an Install button. On every other route we
+    // let Chrome fire its default banner instead of preventDefault'ing
+    // and then never calling prompt() (which logged the
+    // "Banner not shown: preventDefault() called" warning on every
+    // page load).
+    const onEpaper = /^\/epaper(\/|$)/.test(window.location.pathname);
     const onPrompt = (e: Event) => {
+      if (!onEpaper) return;
       e.preventDefault();
       setDeferredPrompt(e);
     };
