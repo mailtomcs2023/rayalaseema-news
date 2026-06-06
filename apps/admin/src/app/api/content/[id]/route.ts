@@ -12,6 +12,7 @@ import {
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 import { canSetStatus } from "@/lib/permissions";
 import { rehostDataUrlFields } from "@/lib/rehost-data-url";
+import { ensureBlobHosted } from "@/lib/blob";
 import { requireKyc } from "@/lib/kyc-guard";
 import { logAudit, diffSummary } from "@/lib/audit";
 import { buildSlugFromTitle, isPlaceholderSlug, sanitizeSlug } from "@/lib/slug";
@@ -132,6 +133,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       if (body[key] !== undefined) data[key] = body[key];
     }
     if (data.constituencyId === "") data.constituencyId = null;
+
+    // Auto-rehost any non-blob featuredImage URL the editor pasted.
+    // Same guard the create endpoint runs (see ensureBlobHosted).
+    if (typeof data.featuredImage === "string") {
+      data.featuredImage = await ensureBlobHosted(data.featuredImage);
+    }
 
     // KYC gate - ANY edit/save by a non-ADMIN with unverified KYC is
     // blocked. ADMINs bypass (see lib/kyc-guard.ts). Previously this only

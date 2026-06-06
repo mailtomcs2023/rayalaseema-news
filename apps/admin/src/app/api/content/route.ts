@@ -15,6 +15,7 @@ import {
 } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 import { rehostDataUrlFields } from "@/lib/rehost-data-url";
+import { ensureBlobHosted } from "@/lib/blob";
 import { requireKyc } from "@/lib/kyc-guard";
 import { logAudit } from "@/lib/audit";
 import { sanitizeSlug } from "@/lib/slug";
@@ -314,6 +315,14 @@ export async function POST(req: NextRequest) {
       constituencyId: constituencyId || null,
     });
 
+    // Auto-rehost external featuredImage URLs to our Blob CDN before
+    // the row hits the DB. Without this guard, news-import flows that
+    // store the publisher's raw thumbnail URL leak into every public
+    // surface that renders the article (homepage rail, category page,
+    // OG tags). PSI flagged 30+ external thumbs on the homepage on
+    // 2026-06-05.
+    const safeFeaturedImage = await ensureBlobHosted(featuredImage?.trim() || null);
+
     // Atomic write: Content row + cross-listed categories + tags all land
     // together or none of them do. Without the transaction, an N+1 .catch()
     // loop could leave a half-tagged article on disk if the DB blipped
@@ -327,7 +336,7 @@ export async function POST(req: NextRequest) {
           slug: cleanSlug,
           summary: summary?.trim() || null,
           body: contentBody || null,
-          featuredImage: featuredImage?.trim() || null,
+          featuredImage: safeFeaturedImage,
           payload: payload ?? undefined,
           categoryId: categoryId || null,
           authorId,

@@ -131,3 +131,28 @@ export async function uploadImageFromUrlWithMeta(
 export async function uploadImageFromUrl(srcUrl: string | null | undefined): Promise<string | null> {
   return (await uploadImageFromUrlWithMeta(srcUrl))?.url ?? null;
 }
+
+/**
+ * Idempotent guard: if `url` is already on our Azure Blob CDN, return
+ * it unchanged. If it's an external http(s) URL, download + re-host
+ * through processImageBuffer (EXIF strip + WebP + brand stamp) and
+ * return the new blob URL. data:/relative/null inputs pass through.
+ *
+ * Used at every Content create/update endpoint so external thumbnails
+ * (10tv.in, asianetnews.com, telugutimes.net, etc) never leak onto the
+ * public homepage — they were the biggest network-payload regression
+ * in the PSI re-audit after the next/image migration.
+ */
+export async function ensureBlobHosted(url: string | null | undefined): Promise<string | null> {
+  if (!url) return null;
+  if (typeof url !== "string") return null;
+  if (url.includes(".blob.core.windows.net/")) return url;
+  if (!/^https?:\/\//i.test(url)) return url;
+  try {
+    const rehosted = await uploadImageFromUrl(url);
+    return rehosted || url;
+  } catch (e) {
+    console.warn("[ensureBlobHosted] rehost failed, keeping original:", e);
+    return url;
+  }
+}

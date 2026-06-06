@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
+import { ensureBlobHosted } from "@/lib/blob";
 import { logAudit } from "@/lib/audit";
 import { sanitizeSlug } from "@/lib/slug";
 import { resolveDeskId } from "@/lib/desk-resolver";
@@ -104,7 +105,8 @@ export async function POST(req: NextRequest) {
         summary: summary?.trim() || null,
         body: articleBody || "",
         categoryId,
-        featuredImage: featuredImage?.trim() || null,
+        // Auto-rehost external URLs to our Blob CDN (see ensureBlobHosted).
+        featuredImage: await ensureBlobHosted(featuredImage?.trim() || null),
         status: finalStatus,
         featured: featured || false,
         constituencyId: constituencyId || null,
