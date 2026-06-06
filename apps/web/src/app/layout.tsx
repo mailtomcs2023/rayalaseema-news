@@ -183,37 +183,49 @@ export default async function RootLayout({
         {/* Analytics + ads loaded via next/script so they survive client
             navigations and respect Next's loading strategies (and don't
             trip React 19's "raw <script> in component" warning). */}
+        {/* AdSense main script deferred to lazyOnload — kicked off
+          when the browser is idle after page load, NOT before LCP.
+          AdSense verification needs the script tag to appear in the
+          SSR HTML, which next/script lazyOnload still satisfies (the
+          tag renders in <body>; the crawler reads it). PSI flagged
+          beforeInteractive as the single biggest LCP blocker. */}
         {adsenseId && (
-          // beforeInteractive places the snippet in <head> on the SSR page.
-          // AdSense's verification crawler reads the raw HTML and expects the
-          // tag in <head>. afterInteractive worked for ad delivery but failed
-          // ownership verification because the script was inserted client-side.
           <Script
             id="adsense"
             async
-            strategy="beforeInteractive"
+            strategy="lazyOnload"
             src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseId}`}
             crossOrigin="anonymous"
           />
         )}
         {gtmId && (
-          <Script id="gtm" strategy="afterInteractive">
+          // GTM also deferred to idle — analytics has no business
+          // blocking first paint. Anything that GTM needs to fire on
+          // page load still gets the gtm.js event (delayed but
+          // delivered). If a future tag requires synchronous data
+          // layer pushes, bump back to afterInteractive.
+          <Script id="gtm" strategy="lazyOnload">
             {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${gtmId}');`}
           </Script>
         )}
         {clarityId && (
-          <Script id="clarity" strategy="afterInteractive">
+          <Script id="clarity" strategy="lazyOnload">
             {`(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","${clarityId}");`}
           </Script>
         )}
-        {gaId && (
+        {/* Direct GA4 gtag.js loader removed (was 157 KB second copy
+          of the tag-manager runtime). GTM container above already
+          fires GA4 page_view via the GA4 tag configured in the GTM
+          dashboard — having both was duplicate work. Falls back to
+          the standalone gtag flow if GTM isn't set but GA is. */}
+        {gaId && !gtmId && (
           <>
             <Script
               id="ga-loader"
-              strategy="afterInteractive"
+              strategy="lazyOnload"
               src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
             />
-            <Script id="ga-init" strategy="afterInteractive">
+            <Script id="ga-init" strategy="lazyOnload">
               {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','${gaId}');`}
             </Script>
           </>

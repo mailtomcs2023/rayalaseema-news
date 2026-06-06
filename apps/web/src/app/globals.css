@@ -1,5 +1,8 @@
-/* BBC look - sans-serif only. Noto Sans Telugu (body) + Noto Serif Telugu (article h1 only) */
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Telugu:wght@400;500;600;700;800;900&family=Noto+Serif+Telugu:wght@400;500;600;700;800;900&display=swap');
+/* BBC look - sans-serif only. Noto Sans Telugu (body) + Noto Serif Telugu (article h1 only).
+   Fonts are now self-hosted via next/font/google in apps/web/src/app/layout.tsx; the
+   render-blocking @import to fonts.googleapis.com (PSI flagged ~750ms blocking
+   on every page) is removed - tokens below resolve via --font-noto-telugu /
+   --font-anek-telugu which next/font sets on the <html> element. */
 
 /* ===== Nova preset (pristine shadcn v4 block) ================================ */
 @import "tailwindcss";

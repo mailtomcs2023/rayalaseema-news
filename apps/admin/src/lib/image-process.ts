@@ -73,10 +73,15 @@ export async function processImageBuffer(
     pipeline = applyEditorialBaseline(pipeline);
   }
 
+  // Output format selection. Default is WebP for opaque sources -
+  // ~30% smaller than mozjpeg at the same perceived quality + browsers
+  // are universal on it (96%+ market). PNG-with-alpha stays PNG so
+  // transparency isn't flattened. Switched from default JPEG on
+  // 2026-06-05 after PSI flagged uploaded banners as oversized PNGs.
   if (hasAlpha) {
     pipeline = pipeline.png({ compressionLevel: 9 });
   } else {
-    pipeline = pipeline.jpeg({ quality, mozjpeg: true });
+    pipeline = pipeline.webp({ quality, effort: 5 });
   }
 
   // withExif stamps only the tags we want; everything else (GPS, camera
@@ -96,7 +101,7 @@ export async function processImageBuffer(
   const origHeight = meta.height ?? 0;
   return hasAlpha
     ? { buffer, contentType: "image/png", ext: "png", origWidth, origHeight }
-    : { buffer, contentType: "image/jpeg", ext: "jpg", origWidth, origHeight };
+    : { buffer, contentType: "image/webp", ext: "webp", origWidth, origHeight };
 }
 
 // Spec #4 E1 (#220) - multi-aspect image pipeline.

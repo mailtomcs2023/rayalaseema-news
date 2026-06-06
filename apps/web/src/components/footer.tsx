@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { categoryHref, normalizeSectionHref } from "@/lib/category-href";
 
 interface FooterProps {
@@ -100,10 +101,14 @@ export function Footer({ config: initialConfig = {}, footerItems }: FooterProps)
             <div className="mb-4 inline-block">
               {/* Footer sits on bg-gray-900; the inverse masthead (white wordmark
                   on transparent) reads cleanly without a white card around it. */}
-              <img
+              <Image
                 src="/logo-inverse.png"
                 alt="రాయలసీమ న్యూస్"
+                width={240}
+                height={48}
+                quality={80}
                 className="h-12 w-auto"
+                style={{ height: 48, width: "auto" }}
               />
             </div>
             <p className="text-sm text-gray-400 font-telugu leading-relaxed mb-4">

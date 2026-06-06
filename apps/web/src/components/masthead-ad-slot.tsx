@@ -11,6 +11,7 @@
 //   3. Striped "Advertisement" placeholder - keeps the masthead grid
 //      aligned during early-stage builds with no inventory yet.
 
+import Image from "next/image";
 import { getAdsByPosition } from "@/lib/db-queries";
 
 export async function MastheadAdSlot({
@@ -32,12 +33,18 @@ export async function MastheadAdSlot({
       );
     }
     if (ad.imageUrl) {
+      // next/image converts the source to AVIF/WebP on the fly and
+      // serves it at the actual display size — was a 1.2 MB raw PNG
+      // until this change (PSI flagged it as the biggest payload).
       const img = (
-        <img
+        <Image
           src={ad.imageUrl}
           alt={ad.name}
-          loading="lazy"
-          style={{ maxWidth: "100%", maxHeight: 90, display: "block", borderRadius: 4 }}
+          width={728}
+          height={90}
+          sizes="(max-width: 768px) 100vw, 728px"
+          quality={75}
+          style={{ maxWidth: "100%", height: "auto", maxHeight: 90, display: "block", borderRadius: 4 }}
         />
       );
       const wrapped = ad.linkUrl ? (

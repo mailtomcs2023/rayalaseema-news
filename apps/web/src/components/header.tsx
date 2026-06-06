@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { SearchBar } from "./search-bar";
 import { categoryHref, normalizeSectionHref } from "@/lib/category-href";
@@ -275,29 +276,44 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
                   guarantees a fresh, light asset; responsive `<picture>` swaps
                   the icon-only square on phones for the full wordmark on
                   tablets+. */}
-              <picture>
-                <source media="(min-width: 768px)" srcSet="/logo.png" />
-                <img
-                  src="/logo-icon.png"
-                  alt="రాయలసీమ న్యూస్"
-                  className="h-12 md:h-16 w-auto"
-                />
-              </picture>
+              {/* Both renderings (icon on phone, wordmark on tablet+) flow
+                through next/image so the source PNGs get AVIF/WebP +
+                resized variants. The icon and wordmark are separate
+                <Image>s with classes that show/hide by breakpoint so
+                only one is visible at a time. */}
+              <Image
+                src="/logo-icon.png"
+                alt="రాయలసీమ న్యూస్"
+                width={64}
+                height={64}
+                quality={80}
+                fetchPriority="high"
+                className="h-12 w-auto md:hidden"
+                style={{ height: 48, width: "auto" }}
+              />
+              <Image
+                src="/logo.png"
+                alt="రాయలసీమ న్యూస్"
+                width={320}
+                height={66}
+                quality={85}
+                fetchPriority="high"
+                className="hidden md:block h-16 w-auto"
+                style={{ height: 64, width: "auto" }}
+              />
             </Link>
             {/* Day + date on ONE line, aligned under the wordmark's first
                 Telugu letter "ర" - not under the map-icon at the start of
                 the logo. The logo's red map glyph occupies roughly the first
                 14% of the wordmark width; padding-left:14% (~44px @ h-16)
                 shifts the date row to start where the wordmark text starts. */}
-            <div className="hidden md:flex items-baseline gap-1.5 mt-0.5 self-stretch" style={{ paddingLeft: "14%" }}>
-              <span className="text-[13px] font-bold text-gray-900 leading-tight whitespace-nowrap" style={{ fontFamily: "var(--font-telugu-heading)" }}>
-                {new Date().toLocaleDateString("te-IN", { weekday: "long" })}
-              </span>
-              <span className="text-[11px] text-gray-400 leading-none">·</span>
-              <span className="text-[12px] font-semibold text-gray-600 leading-tight whitespace-nowrap" style={{ fontFamily: "var(--font-telugu-body)" }}>
-                {new Date().toLocaleDateString("te-IN", { day: "numeric", month: "long", year: "numeric" })}
-              </span>
-            </div>
+            {/* Date strip — populated client-side after hydration to
+              avoid the React #418 mismatch we used to throw on every
+              page load (server's Date in IST and client's Date in any
+              other timezone would produce different weekday names,
+              which React 19 escalates to a hard error). SSR ships
+              empty spans; useEffect fills them in. */}
+            <ClientDateStrip />
           </div>
 
           {/* Center: Masthead ad slot. md:flex (was lg:flex) so tablets at
@@ -603,5 +619,40 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
         }
       `}</style>
     </>
+  );
+}
+
+// Day + date strip rendered client-only to avoid SSR/client mismatch
+// when the server (Azure VM, IST) computes a different weekday string
+// than the visitor's browser. Server emits empty, client fills in
+// after mount. Keeps the masthead grid height stable via a
+// min-height fallback while the value is null.
+function ClientDateStrip() {
+  const [today, setToday] = useState<{ wd: string; full: string } | null>(null);
+  useEffect(() => {
+    const d = new Date();
+    setToday({
+      wd: d.toLocaleDateString("te-IN", { weekday: "long" }),
+      full: d.toLocaleDateString("te-IN", { day: "numeric", month: "long", year: "numeric" }),
+    });
+  }, []);
+  return (
+    <div
+      className="hidden md:flex items-baseline gap-1.5 mt-0.5 self-stretch"
+      style={{ paddingLeft: "14%", minHeight: 20 }}
+      suppressHydrationWarning
+    >
+      {today && (
+        <>
+          <span className="text-[13px] font-bold text-gray-900 leading-tight whitespace-nowrap" style={{ fontFamily: "var(--font-telugu-heading)" }}>
+            {today.wd}
+          </span>
+          <span className="text-[11px] text-gray-400 leading-none">·</span>
+          <span className="text-[12px] font-semibold text-gray-600 leading-tight whitespace-nowrap" style={{ fontFamily: "var(--font-telugu-body)" }}>
+            {today.full}
+          </span>
+        </>
+      )}
+    </div>
   );
 }

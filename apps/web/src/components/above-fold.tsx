@@ -87,10 +87,28 @@ export function AboveFold({
                     <>
                       <Link href={articleHref(top)} className="af-dist-lead">
                         {top.featuredImage ? (
-                          <img src={top.featuredImage} alt="" className="af-dist-thumb" loading="lazy" />
+                          <Image
+                            src={top.featuredImage}
+                            alt=""
+                            width={400}
+                            height={250}
+                            sizes="(max-width: 768px) 50vw, 240px"
+                            quality={70}
+                            loading="lazy"
+                            className="af-dist-thumb"
+                            style={{ width: "100%", height: "auto" }}
+                          />
                         ) : (
                           <div className="af-dist-thumb af-dist-fallback">
-                            <img src="/logo-icon.png" alt="" className="af-dist-fallback-img" loading="lazy" />
+                            <Image
+                              src="/logo-icon.png"
+                              alt=""
+                              width={120}
+                              height={120}
+                              quality={70}
+                              loading="lazy"
+                              className="af-dist-fallback-img"
+                            />
                           </div>
                         )}
                         <h3>{top.title}</h3>
