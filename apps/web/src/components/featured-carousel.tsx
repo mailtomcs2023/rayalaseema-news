@@ -149,9 +149,11 @@ export function FeaturedCarousel({ items }: { items: FeaturedArticle[] }) {
           <button
             key={a.id}
             type="button"
+            role="tab"
             className={`af-dot${i === active ? " af-dot-active" : ""}`}
             aria-label={`స్లైడ్ ${i + 1}`}
             aria-selected={i === active}
+            tabIndex={i === active ? 0 : -1}
             onClick={() => swiperRef.current?.slideTo(i)}
           />
         ))}

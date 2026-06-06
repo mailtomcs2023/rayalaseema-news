@@ -22,15 +22,19 @@ import { getAdsByPosition } from "@/lib/db-queries";
  * LCP regression. Only http(s) absolute URLs are rewritten; data: URIs
  * and relative paths are left as-is.
  */
-function rewriteHtmlImgs(html: string, targetWidth: number): string {
+function rewriteHtmlImgs(html: string, targetWidth: number, targetHeight: number): string {
   if (!html || !html.includes("<img")) return html;
   return html.replace(/<img\b([^>]*?)\bsrc=(["'])(https?:\/\/[^"']+)\2([^>]*)>/gi,
     (_match, before, quote, srcUrl, after) => {
       const optimised = `/_next/image?url=${encodeURIComponent(srcUrl)}&w=${targetWidth}&q=60`;
-      // Keep loading="lazy" + decoding="async" so the optimiser still defers
-      // non-LCP banners; the original attributes are preserved through `before`
-      // + `after` so width/height/style hints (if any) survive.
-      return `<img${before}src=${quote}${optimised}${quote} loading="lazy" decoding="async"${after}>`;
+      // Force explicit width + height even if admin's pasted snippet
+      // didn't include them. Without these the browser can't reserve
+      // the slot, causing CLS + a forced reflow once the image loads
+      // (PSI flagged the hiring banner for this). Strip any existing
+      // width/height attrs first so ours win.
+      const cleanBefore = before.replace(/\s(width|height)=(["'][^"']*["']|\d+)/gi, "");
+      const cleanAfter = after.replace(/\s(width|height)=(["'][^"']*["']|\d+)/gi, "");
+      return `<img${cleanBefore}width="${targetWidth}" height="${targetHeight}" src=${quote}${optimised}${quote} loading="lazy" decoding="async"${cleanAfter}>`;
     });
 }
 
@@ -52,7 +56,7 @@ export async function MastheadAdSlot({
       // because the previous direct-render path bypassed next/image.
       // Use 750 (a valid Next deviceSizes width) instead of 728 — the
       // optimizer 400s on widths that aren't in deviceSizes/imageSizes.
-      const rewritten = rewriteHtmlImgs(ad.htmlContent, 750);
+      const rewritten = rewriteHtmlImgs(ad.htmlContent, 750, 90);
       return (
         <div
           className="masthead-ad-slot"

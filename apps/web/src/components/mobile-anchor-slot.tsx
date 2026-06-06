@@ -54,8 +54,14 @@ export async function MobileAnchorSlot({
       // from the source.
       const rewritten = ad.htmlContent.replace(
         /<img\b([^>]*?)\bsrc=(["'])(https?:\/\/[^"']+)\2([^>]*)>/gi,
-        (_m, before, q, src, after) =>
-          `<img${before}src=${q}/_next/image?url=${encodeURIComponent(src)}&w=750&q=60${q} loading="lazy" decoding="async"${after}>`,
+        (_m, before, q, src, after) => {
+          // Strip any pre-existing width/height so ours win — without
+          // explicit dims the browser can't reserve the 320x90 anchor
+          // slot, triggering CLS + a forced reflow once the ad loads.
+          const cleanBefore = before.replace(/\s(width|height)=(["'][^"']*["']|\d+)/gi, "");
+          const cleanAfter = after.replace(/\s(width|height)=(["'][^"']*["']|\d+)/gi, "");
+          return `<img${cleanBefore}width="320" height="90" src=${q}/_next/image?url=${encodeURIComponent(src)}&w=750&q=60${q} loading="lazy" decoding="async"${cleanAfter}>`;
+        },
       );
       return (
         <div className="md:hidden" style={containerStyle}>
@@ -68,6 +74,8 @@ export async function MobileAnchorSlot({
         <img
           src={`/_next/image?url=${encodeURIComponent(ad.imageUrl)}&w=750&q=60`}
           alt={ad.name}
+          width={320}
+          height={90}
           loading="lazy"
           decoding="async"
           style={{ maxWidth: "100%", height: "auto", maxHeight: 90, display: "inline-block" }}

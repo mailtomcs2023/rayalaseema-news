@@ -21,12 +21,17 @@ interface DbAd {
  * "We Are Hiring" banner. Only http(s) URLs are rewritten; data: and
  * relative paths pass through unchanged.
  */
-function rewriteHtmlImgs(html: string, targetWidth: number): string {
+function rewriteHtmlImgs(html: string, targetWidth: number, targetHeight: number): string {
   if (!html || !html.includes("<img")) return html;
   return html.replace(/<img\b([^>]*?)\bsrc=(["'])(https?:\/\/[^"']+)\2([^>]*)>/gi,
     (_match, before, quote, srcUrl, after) => {
       const optimised = `/_next/image?url=${encodeURIComponent(srcUrl)}&w=${targetWidth}&q=60`;
-      return `<img${before}src=${quote}${optimised}${quote} loading="lazy" decoding="async"${after}>`;
+      // Force explicit width/height so the slot is reserved before the
+      // image arrives. PSI flagged ad images for missing dims (CLS +
+      // forced reflow once they paint). Strip any existing attrs first.
+      const cleanBefore = before.replace(/\s(width|height)=(["'][^"']*["']|\d+)/gi, "");
+      const cleanAfter = after.replace(/\s(width|height)=(["'][^"']*["']|\d+)/gi, "");
+      return `<img${cleanBefore}width="${targetWidth}" height="${targetHeight}" src=${quote}${optimised}${quote} loading="lazy" decoding="async"${cleanAfter}>`;
     });
 }
 
@@ -37,7 +42,7 @@ function DbAdRenderer({ ad }: { ad?: DbAd | null }) {
   // We additionally rewrite any embedded <img> URLs to flow through the
   // Next image optimiser before they hit the reader's network.
   if (ad.htmlContent) {
-    return <div dangerouslySetInnerHTML={{ __html: rewriteHtmlImgs(ad.htmlContent, 1200) }} />;
+    return <div dangerouslySetInnerHTML={{ __html: rewriteHtmlImgs(ad.htmlContent, 1200, 250) }} />;
   }
   if (ad.imageUrl) {
     // imageUrl path now goes through next/image too — matches the
@@ -47,6 +52,8 @@ function DbAdRenderer({ ad }: { ad?: DbAd | null }) {
       <img
         src={`/_next/image?url=${encodeURIComponent(ad.imageUrl)}&w=1200&q=60`}
         alt={ad.name}
+        width={1200}
+        height={250}
         loading="lazy"
         decoding="async"
         style={{ width: "100%", height: "auto", display: "block", borderRadius: 4 }}
