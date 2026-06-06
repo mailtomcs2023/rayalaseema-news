@@ -11,36 +11,47 @@ export function ScrollShareNudge({ title, slug, articleUrl }: { title: string; s
   const firedRef = useRef(false);
 
   useEffect(() => {
+    // Cache the scrollable height once + re-measure on resize/load
+    // instead of reading scrollHeight on every scroll event. Each
+    // scrollHeight read forces a layout pass; for long articles with
+    // lazy-loading images that's a per-event reflow.
+    let docH = 0;
+    let raf = 0;
+    const measure = () => {
+      docH = document.documentElement.scrollHeight - window.innerHeight;
+    };
+    measure();
+    window.addEventListener("resize", measure, { passive: true });
+    window.addEventListener("load", measure);
     const handleScroll = () => {
       if (firedRef.current || dismissed) return;
-
-      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
-      const scrolled = window.scrollY;
-      const percentage = Math.round((scrolled / scrollHeight) * 100);
-
-      // Fire GA4 events at milestones
-      if (typeof (window as any).gtag === "function") {
-        if (percentage >= 25 && percentage < 30) (window as any).gtag("event", "scroll_depth", { depth: 25, article: slug });
-        if (percentage >= 50 && percentage < 55) (window as any).gtag("event", "scroll_depth", { depth: 50, article: slug });
-        if (percentage >= 75 && percentage < 80) (window as any).gtag("event", "scroll_depth", { depth: 75, article: slug });
-      }
-
-      // Show WhatsApp nudge at 80%
-      if (percentage >= 80 && !firedRef.current) {
-        firedRef.current = true;
-        setShow(true);
-
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        if (docH <= 0) return;
+        const percentage = Math.round((window.scrollY / docH) * 100);
         if (typeof (window as any).gtag === "function") {
-          (window as any).gtag("event", "engaged_reader", { article: slug });
+          if (percentage >= 25 && percentage < 30) (window as any).gtag("event", "scroll_depth", { depth: 25, article: slug });
+          if (percentage >= 50 && percentage < 55) (window as any).gtag("event", "scroll_depth", { depth: 50, article: slug });
+          if (percentage >= 75 && percentage < 80) (window as any).gtag("event", "scroll_depth", { depth: 75, article: slug });
         }
-
-        // Auto-dismiss after 8 seconds
-        setTimeout(() => setShow(false), 8000);
-      }
+        if (percentage >= 80 && !firedRef.current) {
+          firedRef.current = true;
+          setShow(true);
+          if (typeof (window as any).gtag === "function") {
+            (window as any).gtag("event", "engaged_reader", { article: slug });
+          }
+          setTimeout(() => setShow(false), 8000);
+        }
+      });
     };
-
     window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("load", measure);
+    };
   }, [slug, dismissed]);
 
   if (!show || dismissed) return null;

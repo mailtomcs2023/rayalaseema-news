@@ -81,22 +81,42 @@ export function Ga4Events(props: Props) {
 
   useEffect(() => {
     if (props.type !== "article_read") return;
+    // Cache document height once; doesn't change during scroll for a
+    // static article. Avoids reading scrollHeight on every scroll
+    // event, which forces a layout reflow each time (PSI flagged this
+    // as unattributed forced reflow on long articles).
+    let docH = 0;
+    let raf = 0;
+    const measure = () => {
+      docH = document.documentElement.scrollHeight - window.innerHeight;
+    };
+    measure();
+    // Re-measure when lazy images load + on resize, NOT on every scroll.
+    window.addEventListener("resize", measure, { passive: true });
+    window.addEventListener("load", measure);
     const onScroll = () => {
-      const docH = document.documentElement.scrollHeight - window.innerHeight;
-      if (docH <= 0) return;
-      const pct = (window.scrollY / docH) * 100;
-      if (!scrolled50.current && pct >= 50) {
-        scrolled50.current = true;
-        gtagSafe("scroll_depth", { percent: 50, content_id: props.contentId });
-      }
-      if (!scrolled100.current && pct >= 95) {
-        scrolled100.current = true;
-        gtagSafe("scroll_depth", { percent: 100, content_id: props.contentId });
-      }
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        if (docH <= 0) return;
+        const pct = (window.scrollY / docH) * 100;
+        if (!scrolled50.current && pct >= 50) {
+          scrolled50.current = true;
+          gtagSafe("scroll_depth", { percent: 50, content_id: props.contentId });
+        }
+        if (!scrolled100.current && pct >= 95) {
+          scrolled100.current = true;
+          gtagSafe("scroll_depth", { percent: 100, content_id: props.contentId });
+        }
+      });
     };
     window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("load", measure);
+    };
   }, [props]);
 
   return null;

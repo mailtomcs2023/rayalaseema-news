@@ -97,7 +97,12 @@ export function FeaturedCarousel({ items }: { items: FeaturedArticle[] }) {
         keyboard={{ enabled: true }}
         slidesPerView={1}
         spaceBetween={0}
-        autoHeight
+        // autoHeight removed: Swiper reads getBoundingClientRect on
+        // every slide for it, which PSI attributed to the home page's
+        // 37ms forced reflow. Slides already share a stable layout
+        // (image aspect-ratio 16/10 + capped title lines via CSS),
+        // so the default flex-stretch behaviour keeps every slide the
+        // same height without measuring the DOM.
       >
         {items.map((a, i) => (
           <SwiperSlide key={a.id}>
