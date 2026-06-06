@@ -192,7 +192,11 @@ export function AboveFold({
           text-transform: uppercase;
           letter-spacing: 0.06em;
           text-decoration: none;
-          margin-bottom: 6px;
+          /* 10px gap to the title link below: PSI's tap-target rule
+             requires 8px minimum spacing between adjacent interactive
+             elements, and the af-cat chip + af-lead-link were
+             stacking with only 6px between them. */
+          margin-bottom: 10px;
           border: 1px solid var(--brand, #E01B1B);
           border-radius: 4px;
           line-height: 1;
@@ -233,7 +237,15 @@ export function AboveFold({
           color: var(--n-300, #d1d5db);
         }
         .af-lead-text { flex: 1 1 44%; min-width: 0; }
-        .af-lead-link { text-decoration: none; }
+        .af-lead-link {
+          /* Block link wrapping the H2: display:block makes the full
+             title row the tap target, padding-block ensures the click
+             box height clears WCAG 2.5.8 24px even on narrow viewports
+             where the title wraps tight. */
+          display: block;
+          padding-block: 2px;
+          text-decoration: none;
+        }
         .af-lead-title {
           font-family: var(--font-telugu-heading), serif;
           font-size: 26px;

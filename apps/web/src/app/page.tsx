@@ -4,6 +4,15 @@
 // wears them; the seed-templates script (#158) populates the default homepage
 // block tree that mirrors the pre-Spec-#2 layout.
 
+// Cache the rendered HTML for 30s. Home page does ~10 Prisma queries
+// (featured carousel + 8 district top-articles + breaking + latest +
+// site config + menu). At ~400ms cold TTFB on the Azure VM, cache-warm
+// requests drop to ~30ms — direct LCP win on Slow 4G PSI runs. 30s
+// freshness is fine for a news front: editors who publish hot stories
+// usually wait > 30s to see them surfaced anyway, and any cache miss
+// after a publish self-resolves on the next revalidate tick.
+export const revalidate = 30;
+
 import { Header } from "@/components/header";
 import { SiteFooter } from "@/components/site-footer";
 import { MastheadAdSlot } from "@/components/masthead-ad-slot";
