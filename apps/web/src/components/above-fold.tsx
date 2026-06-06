@@ -98,8 +98,8 @@ export function AboveFold({
                             alt=""
                             width={400}
                             height={250}
-                            sizes="(max-width: 768px) 50vw, 240px"
-                            quality={70}
+                            sizes="(max-width: 480px) 50vw, (max-width: 768px) 33vw, 240px"
+                            quality={55}
                             loading="lazy"
                             className="af-dist-thumb"
                             style={{ width: "100%", height: "auto" }}
@@ -111,7 +111,7 @@ export function AboveFold({
                               alt=""
                               width={120}
                               height={120}
-                              quality={70}
+                              quality={60}
                               loading="lazy"
                               className="af-dist-fallback-img"
                             />

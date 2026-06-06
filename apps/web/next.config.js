@@ -51,6 +51,12 @@ const nextConfig = {
     // 1-year CDN cache on the optimized variants. Source URL is part of
     // the cache key so swapping a featured image bypasses immediately.
     minimumCacheTTL: 60 * 60 * 24 * 365,
+    // Quality whitelist (Next 16). Any `quality=` value not in this list
+    // is rejected with 400, which is why we keep 75 (Next's historical
+    // default) alongside our news-photo target of 55-60. PSI flagged
+    // 221 KiB savings by dropping quality from 75 → 60 on the featured
+    // carousel + district thumbs; news photos look identical at 60.
+    qualities: [50, 55, 60, 65, 70, 75, 80, 85],
     remotePatterns: [
       // CDNs we've shipped with.
       { protocol: "https", hostname: "res.cloudinary.com" },

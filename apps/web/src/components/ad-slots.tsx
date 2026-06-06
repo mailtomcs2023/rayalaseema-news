@@ -25,7 +25,7 @@ function rewriteHtmlImgs(html: string, targetWidth: number): string {
   if (!html || !html.includes("<img")) return html;
   return html.replace(/<img\b([^>]*?)\bsrc=(["'])(https?:\/\/[^"']+)\2([^>]*)>/gi,
     (_match, before, quote, srcUrl, after) => {
-      const optimised = `/_next/image?url=${encodeURIComponent(srcUrl)}&w=${targetWidth}&q=75`;
+      const optimised = `/_next/image?url=${encodeURIComponent(srcUrl)}&w=${targetWidth}&q=60`;
       return `<img${before}src=${quote}${optimised}${quote} loading="lazy" decoding="async"${after}>`;
     });
 }
@@ -45,7 +45,7 @@ function DbAdRenderer({ ad }: { ad?: DbAd | null }) {
     // attribute lets the optimiser pick the right variant per viewport.
     const img = (
       <img
-        src={`/_next/image?url=${encodeURIComponent(ad.imageUrl)}&w=1200&q=75`}
+        src={`/_next/image?url=${encodeURIComponent(ad.imageUrl)}&w=1200&q=60`}
         alt={ad.name}
         loading="lazy"
         decoding="async"

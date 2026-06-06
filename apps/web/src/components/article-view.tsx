@@ -258,6 +258,7 @@ export function ArticleView({ article, related, trending, siteUrl }: Props) {
                   width={1200}
                   height={675}
                   sizes="(max-width: 768px) 100vw, 800px"
+                  quality={60}
                   priority
                   style={{
                     width: "100%",
@@ -305,6 +306,7 @@ export function ArticleView({ article, related, trending, siteUrl }: Props) {
                           alt=""
                           width={100}
                           height={70}
+                          quality={55}
                           style={{ borderRadius: 6, objectFit: "cover", flexShrink: 0 }}
                         />
                       )}

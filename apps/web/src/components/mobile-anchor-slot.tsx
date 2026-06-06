@@ -55,7 +55,7 @@ export async function MobileAnchorSlot({
       const rewritten = ad.htmlContent.replace(
         /<img\b([^>]*?)\bsrc=(["'])(https?:\/\/[^"']+)\2([^>]*)>/gi,
         (_m, before, q, src, after) =>
-          `<img${before}src=${q}/_next/image?url=${encodeURIComponent(src)}&w=750&q=75${q} loading="lazy" decoding="async"${after}>`,
+          `<img${before}src=${q}/_next/image?url=${encodeURIComponent(src)}&w=750&q=60${q} loading="lazy" decoding="async"${after}>`,
       );
       return (
         <div className="md:hidden" style={containerStyle}>
@@ -66,7 +66,7 @@ export async function MobileAnchorSlot({
     if (ad.imageUrl) {
       const img = (
         <img
-          src={`/_next/image?url=${encodeURIComponent(ad.imageUrl)}&w=750&q=75`}
+          src={`/_next/image?url=${encodeURIComponent(ad.imageUrl)}&w=750&q=60`}
           alt={ad.name}
           loading="lazy"
           decoding="async"

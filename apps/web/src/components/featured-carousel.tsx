@@ -42,6 +42,7 @@ function Slide({ article, priority }: { article: FeaturedArticle; priority?: boo
             width={1200}
             height={750}
             sizes="(max-width: 768px) 100vw, 680px"
+            quality={60}
             priority={priority}
           />
         ) : (

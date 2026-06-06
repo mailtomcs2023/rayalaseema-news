@@ -26,7 +26,7 @@ function rewriteHtmlImgs(html: string, targetWidth: number): string {
   if (!html || !html.includes("<img")) return html;
   return html.replace(/<img\b([^>]*?)\bsrc=(["'])(https?:\/\/[^"']+)\2([^>]*)>/gi,
     (_match, before, quote, srcUrl, after) => {
-      const optimised = `/_next/image?url=${encodeURIComponent(srcUrl)}&w=${targetWidth}&q=75`;
+      const optimised = `/_next/image?url=${encodeURIComponent(srcUrl)}&w=${targetWidth}&q=60`;
       // Keep loading="lazy" + decoding="async" so the optimiser still defers
       // non-LCP banners; the original attributes are preserved through `before`
       // + `after` so width/height/style hints (if any) survive.
@@ -71,7 +71,7 @@ export async function MastheadAdSlot({
           width={728}
           height={90}
           sizes="(max-width: 768px) 100vw, 728px"
-          quality={75}
+          quality={60}
           style={{ maxWidth: "100%", height: "auto", maxHeight: 90, display: "block", borderRadius: 4 }}
         />
       );
