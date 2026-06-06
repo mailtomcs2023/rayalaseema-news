@@ -14,6 +14,26 @@
 import Image from "next/image";
 import { getAdsByPosition } from "@/lib/db-queries";
 
+/**
+ * Server-side rewrite: replace every <img src="X"> in an HTML snippet
+ * with <img src="/_next/image?url=X&w=W&q=75"> so the Next image
+ * optimiser handles it. Used for admin-pasted ad HTML, where dropping
+ * raw multi-MB PNGs into masthead/banner slots was the single biggest
+ * LCP regression. Only http(s) absolute URLs are rewritten; data: URIs
+ * and relative paths are left as-is.
+ */
+function rewriteHtmlImgs(html: string, targetWidth: number): string {
+  if (!html || !html.includes("<img")) return html;
+  return html.replace(/<img\b([^>]*?)\bsrc=(["'])(https?:\/\/[^"']+)\2([^>]*)>/gi,
+    (_match, before, quote, srcUrl, after) => {
+      const optimised = `/_next/image?url=${encodeURIComponent(srcUrl)}&w=${targetWidth}&q=75`;
+      // Keep loading="lazy" + decoding="async" so the optimiser still defers
+      // non-LCP banners; the original attributes are preserved through `before`
+      // + `after` so width/height/style hints (if any) survive.
+      return `<img${before}src=${quote}${optimised}${quote} loading="lazy" decoding="async"${after}>`;
+    });
+}
+
 export async function MastheadAdSlot({
   config,
 }: {
@@ -24,11 +44,17 @@ export async function MastheadAdSlot({
 
   if (ad) {
     if (ad.htmlContent) {
-      // Pre-sanitized by sanitizeAdRow in db-queries.
+      // Pre-sanitized by sanitizeAdRow in db-queries. We further rewrite any
+      // raw <img src="X"> inside the snippet to /_next/image?url=X so the
+      // Next image optimizer serves AVIF/WebP at the right size instead of
+      // letting publishers (or the admin) ship multi-MB PNGs straight from
+      // blob storage. PSI flagged the masthead hiring banner as 1.2 MB
+      // because the previous direct-render path bypassed next/image.
+      const rewritten = rewriteHtmlImgs(ad.htmlContent, 728);
       return (
         <div
           className="masthead-ad-slot"
-          dangerouslySetInnerHTML={{ __html: ad.htmlContent }}
+          dangerouslySetInnerHTML={{ __html: rewritten }}
         />
       );
     }

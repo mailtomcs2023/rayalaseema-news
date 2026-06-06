@@ -13,15 +13,45 @@ interface DbAd {
   name: string;
 }
 
+/**
+ * Rewrite any absolute-URL <img> inside an ad's pasted HTML to route
+ * through /_next/image. Without this the admin can drop a 1.2 MB raw
+ * PNG into a leaderboard slot and Lighthouse flags it as the single
+ * biggest LCP regression — happened on rayalaseemanews.com's
+ * "We Are Hiring" banner. Only http(s) URLs are rewritten; data: and
+ * relative paths pass through unchanged.
+ */
+function rewriteHtmlImgs(html: string, targetWidth: number): string {
+  if (!html || !html.includes("<img")) return html;
+  return html.replace(/<img\b([^>]*?)\bsrc=(["'])(https?:\/\/[^"']+)\2([^>]*)>/gi,
+    (_match, before, quote, srcUrl, after) => {
+      const optimised = `/_next/image?url=${encodeURIComponent(srcUrl)}&w=${targetWidth}&q=75`;
+      return `<img${before}src=${quote}${optimised}${quote} loading="lazy" decoding="async"${after}>`;
+    });
+}
+
 function DbAdRenderer({ ad }: { ad?: DbAd | null }) {
   if (!ad) return null;
   // htmlContent is pre-sanitized by sanitizeAdRow in apps/web/src/lib/db-queries.ts
   // (drops <script>, on* handlers, javascript: URLs, iframe/object/embed/form).
-  // If you ever surface an Ad row from a different query, route it through
-  // sanitizeAdHtml in lib/sanitize.ts before rendering.
-  if (ad.htmlContent) return <div dangerouslySetInnerHTML={{ __html: ad.htmlContent }} />;
+  // We additionally rewrite any embedded <img> URLs to flow through the
+  // Next image optimiser before they hit the reader's network.
+  if (ad.htmlContent) {
+    return <div dangerouslySetInnerHTML={{ __html: rewriteHtmlImgs(ad.htmlContent, 1200) }} />;
+  }
   if (ad.imageUrl) {
-    const img = <img src={ad.imageUrl} alt={ad.name} style={{ width: "100%", display: "block", borderRadius: 4 }} />;
+    // imageUrl path now goes through next/image too — matches the
+    // masthead-ad-slot pattern. Width 1200 is the upper bound; sizes
+    // attribute lets the optimiser pick the right variant per viewport.
+    const img = (
+      <img
+        src={`/_next/image?url=${encodeURIComponent(ad.imageUrl)}&w=1200&q=75`}
+        alt={ad.name}
+        loading="lazy"
+        decoding="async"
+        style={{ width: "100%", height: "auto", display: "block", borderRadius: 4 }}
+      />
+    );
     return ad.linkUrl ? <a href={ad.linkUrl} target="_blank" rel="noopener noreferrer">{img}</a> : img;
   }
   return null;

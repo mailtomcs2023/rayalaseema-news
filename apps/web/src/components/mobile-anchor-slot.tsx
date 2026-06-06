@@ -49,19 +49,28 @@ export async function MobileAnchorSlot({
 
   if (ad) {
     if (ad.htmlContent) {
+      // Re-route any embedded <img> through the Next image optimiser so
+      // admin-pasted ad banners don't ship raw multi-MB PNGs straight
+      // from the source.
+      const rewritten = ad.htmlContent.replace(
+        /<img\b([^>]*?)\bsrc=(["'])(https?:\/\/[^"']+)\2([^>]*)>/gi,
+        (_m, before, q, src, after) =>
+          `<img${before}src=${q}/_next/image?url=${encodeURIComponent(src)}&w=728&q=75${q} loading="lazy" decoding="async"${after}>`,
+      );
       return (
         <div className="md:hidden" style={containerStyle}>
-          <div dangerouslySetInnerHTML={{ __html: ad.htmlContent }} />
+          <div dangerouslySetInnerHTML={{ __html: rewritten }} />
         </div>
       );
     }
     if (ad.imageUrl) {
       const img = (
         <img
-          src={ad.imageUrl}
+          src={`/_next/image?url=${encodeURIComponent(ad.imageUrl)}&w=728&q=75`}
           alt={ad.name}
           loading="lazy"
-          style={{ maxWidth: "100%", maxHeight: 90, display: "inline-block" }}
+          decoding="async"
+          style={{ maxWidth: "100%", height: "auto", maxHeight: 90, display: "inline-block" }}
         />
       );
       const wrapped = ad.linkUrl ? (
