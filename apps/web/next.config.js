@@ -34,6 +34,15 @@ const securityHeaders = [
 const nextConfig = {
   typescript: { ignoreBuildErrors: true },
   transpilePackages: ["@rayalaseema/ui", "@rayalaseema/db", "@rayalaseema/seo-schema"],
+  // Inline critical above-fold CSS into the SSR'd <head>, defer the rest.
+  // PSI flagged 3 CSS chunks totaling 29 KiB / 2050ms cumulative render-
+  // blocking on mobile slow-4G - the single biggest LCP gate after we
+  // already deferred AdSense + GTM. Critters (Next's bundled critical-
+  // CSS extractor) reads each page's rendered HTML, picks the styles
+  // that resolve above-fold selectors, and inlines them.
+  experimental: {
+    optimizeCss: true,
+  },
   images: {
     // Modern formats - Next.js negotiates the best one the browser
     // supports. AVIF is ~30% smaller than WebP and ~50% smaller than JPEG
