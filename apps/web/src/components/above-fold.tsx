@@ -177,14 +177,18 @@ export function AboveFold({
 
         /* category label */
         .af-cat {
-          /* WCAG 2.5.8 / PSI tap-target: badge gets a chip-style box
-             with min-height 24 + horizontal padding so the link target
-             is large enough for accurate touch input. Visual weight
-             stays the same (just a thin red outline at rest). */
-          display: inline-flex;
+          /* Block-level chip with fixed 28px height + width:fit-content
+             so the bounding rect axe-core measures matches the visible
+             tap target (inline-flex was reporting a smaller bbox than
+             min-height, keeping the PSI tap-target rule failing even
+             after the chip was visibly 24px+). 12px horizontal padding
+             gives ~12px gap-to-edge on each side. */
+          display: flex;
           align-items: center;
-          min-height: 24px;
-          padding: 2px 8px;
+          justify-content: center;
+          width: fit-content;
+          height: 28px;
+          padding: 0 12px;
           font-family: var(--font-telugu-body), sans-serif;
           font-size: 11px;
           font-weight: 800;
@@ -192,11 +196,9 @@ export function AboveFold({
           text-transform: uppercase;
           letter-spacing: 0.06em;
           text-decoration: none;
-          /* 10px gap to the title link below: PSI's tap-target rule
-             requires 8px minimum spacing between adjacent interactive
-             elements, and the af-cat chip + af-lead-link were
-             stacking with only 6px between them. */
-          margin-bottom: 10px;
+          /* 12px gap to the title link below — exceeds PSI's 8px
+             minimum spacing between adjacent interactive elements. */
+          margin-bottom: 12px;
           border: 1px solid var(--brand, #E01B1B);
           border-radius: 4px;
           line-height: 1;
