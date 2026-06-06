@@ -60,8 +60,29 @@ export function AboveFold({
   breaking: AFBreaking[];
   latest: AFArticle[];
 }) {
+  // Carousel slide 0 IS the LCP — its source is known at SSR time so
+  // we emit an explicit <link rel="preload" fetchpriority="high"> for
+  // the exact URL next/image will request. Earlier attempts at
+  // page.tsx preloaded the wrong image (different query than
+  // fetchAboveFold uses); doing it here guarantees the URL matches.
+  // The imageSrcSet/imageSizes pair mirrors the FeaturedCarousel's
+  // Image props so the browser picks the right variant per viewport.
+  const lcpSrc = featured[0]?.featuredImage || null;
+  const buildOptUrl = (raw: string, w: number) =>
+    `/_next/image?url=${encodeURIComponent(raw)}&w=${w}&q=75`;
   return (
     <section className="af">
+      {lcpSrc && (
+        <link
+          rel="preload"
+          as="image"
+          href={buildOptUrl(lcpSrc, 1080)}
+          // @ts-expect-error fetchpriority is valid in React 19+
+          fetchpriority="high"
+          imageSrcSet={[640, 750, 828, 1080, 1200].map((w) => `${buildOptUrl(lcpSrc, w)} ${w}w`).join(", ")}
+          imageSizes="(max-width: 768px) 100vw, 680px"
+        />
+      )}
       <div className="af-body">
         {/* MAIN - lead + district grid */}
         <div className="af-main">
