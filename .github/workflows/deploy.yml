@@ -126,6 +126,11 @@ jobs:
             # SectionBand tabs. This backfills each tab's categorySlug and fixes
             # the politics AP tab (was → /category/politics). No-ops once correct.
             bunx tsx scripts/patch-section-band-tabs.ts
+            echo "=== Merge homepage CategoryPair blocks into 4-across rows (idempotent) ==="
+            # seed-templates is skip-if-exists, so it can't reshape an already-
+            # seeded homepage. This merges the 2-column CategoryPair blocks into
+            # 4-column rows in place. No-ops once a CategoryPair already has >2 cols.
+            bunx tsx scripts/merge-homepage-4up.ts
             echo "=== Seed menus (Spec #3: header + footer + mobile) ==="
             bunx tsx scripts/seed-menus.ts
             echo "=== Patch HEADER/MOBILE menus: add రాశి ఫలాలు (/horoscope) if missing (idempotent) ==="
