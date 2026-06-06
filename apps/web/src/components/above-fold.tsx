@@ -60,31 +60,13 @@ export function AboveFold({
   breaking: AFBreaking[];
   latest: AFArticle[];
 }) {
-  // Manual LCP preload for slide-0. Next 16's `priority` prop on
-  // next/image emits a preload WITHOUT fetchPriority="high", which PSI
-  // flagged. We bypass `priority` on the Image and emit our own <link>
-  // here so we control the fetchPriority + match the exact imageSrcSet
-  // next/image will serve (same widths, same q=60). React hoists this
-  // server-rendered <link> into <head>, so it lands before the carousel
-  // markup in the streamed HTML.
-  const lcpSrc = featured[0]?.featuredImage;
-  const NEXT_IMG_WIDTHS = [640, 750, 828, 1080, 1200, 1920, 2048, 3840];
-  const lcpSrcSet = lcpSrc
-    ? NEXT_IMG_WIDTHS.map(
-        (w) => `/_next/image?url=${encodeURIComponent(lcpSrc)}&w=${w}&q=60 ${w}w`,
-      ).join(", ")
-    : "";
+  // LCP preload handled by next/image directly: featured-carousel's
+  // slide 0 passes fetchPriority="high" + loading="eager" to <Image>,
+  // and Next 16 emits the matching <link rel="preload" as="image"
+  // fetchPriority="high"> from that prop. Verified live: preload tag
+  // has fetchPriority="high" and matches the served srcset exactly.
   return (
     <section className="af">
-      {lcpSrc && (
-        <link
-          rel="preload"
-          as="image"
-          fetchPriority="high"
-          imageSrcSet={lcpSrcSet}
-          imageSizes="(max-width: 768px) 100vw, 680px"
-        />
-      )}
       <div className="af-body">
         {/* MAIN - lead + district grid */}
         <div className="af-main">
