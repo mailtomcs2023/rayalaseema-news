@@ -38,11 +38,15 @@ jobs:
 
       - uses: treosh/lighthouse-ci-action@v12
         with:
+          # `/district/<slug>` 301s to `/<slug>` (post-Eenadu-style redirect),
+          # so test against the canonical /kurnool. The article URL pulls from
+          # /telugy-sitemap because the legacy /news/<slug> path retired with
+          # the 2026-06-01 rename.
           urls: |
             https://rayalaseemanews.com/
-            https://rayalaseemanews.com/district/kurnool
+            https://rayalaseemanews.com/kurnool
             https://rayalaseemanews.com/constituency/kurnool-137
-            https://rayalaseemanews.com/news/test-untagged-fallback-53bc53aa
+            https://rayalaseemanews.com/telugu-news/nandyal/srisailam-135/srisailam-dam-bus-stuck
           uploadArtifacts: true
           temporaryPublicStorage: true
           configPath: ./.github/lighthouse-ci.json
