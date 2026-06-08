@@ -110,11 +110,13 @@ function buildHeaderNav(items: any[]): { top: NavItem[]; drop: NavItem[] } {
   let hasDropdown = false;
   let dropdownLabel = "";
   for (const it of items) {
-    // An item with the secondary-header eye on uses its children as its section
-    // sub-nav (rendered by SiteHeader), NOT as dropdown entries - so it stays a
-    // plain top-level link here and its children don't leak into "మరిన్ని".
-    const secondaryOn = it.secondaryHeader?.enabled && Array.isArray(it.children) && it.children.length > 0;
-    if (Array.isArray(it.children) && it.children.length > 0 && !secondaryOn) {
+    // ONLY a Heading (NONE target, e.g. "మరిన్ని") feeds the dropdown. Section
+    // items (district/category/internal) are ALWAYS plain top-level links; their
+    // children are the section's secondary sub-nav (rendered by SiteHeader when
+    // the eye is on), never dropdown entries. So toggling a district's secondary
+    // off just hides its constituencies - it never dumps them into "మరిన్ని".
+    const isHeadingDropdown = it.target?.type === "NONE" && Array.isArray(it.children) && it.children.length > 0;
+    if (isHeadingDropdown) {
       hasDropdown = true;
       if (!dropdownLabel) dropdownLabel = it.label;
       for (const c of it.children) drop.push({ name: c.label, slug: resolveChildNavHref(it.target, c.target) });
