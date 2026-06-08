@@ -8,6 +8,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma, layoutSchema } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 
+// (touch) layoutSchema now includes the Columns container block.
+
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(session)) return session;

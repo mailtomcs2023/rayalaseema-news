@@ -114,6 +114,44 @@ export async function BlockRenderer({
   // blocks that would render nothing show a placeholder instead of vanishing.
   preview?: boolean;
 }): Promise<React.ReactElement | null> {
+  if (block.type === "Columns") {
+    // Container block: lay out N columns side by side, each recursing into its
+    // own ordered list of (leaf) blocks. Stacks vertically on mobile via CSS.
+    const cfg = block.config as {
+      columns: { id: string; blocks: Block[] }[];
+      gap?: number;
+      stackMobile?: boolean;
+    };
+    const cls = variantClass(block.mobileVariant);
+    const stackCls = cfg.stackMobile === false ? "" : " pb-columns-stack";
+    return (
+      <div
+        data-block-id={block.id}
+        data-block-type="Columns"
+        className={`pb-columns${stackCls}${cls ? " " + cls : ""}`}
+        style={{ display: "flex", gap: cfg.gap ?? 24, alignItems: "flex-start" }}
+      >
+        {(cfg.columns || []).map((col) => (
+          <div key={col.id} data-column-id={col.id} className="pb-column" style={{ flex: "1 1 0", minWidth: 0 }}>
+            {(col.blocks || []).map((inner) => (
+              <BlockRenderer
+                key={inner.id}
+                block={inner as Block}
+                ctx={ctx}
+                composites={composites}
+                visited={visited}
+                preview={preview}
+              />
+            ))}
+            {preview && (!col.blocks || col.blocks.length === 0) && (
+              <PreviewPlaceholder id={col.id} type="Column" cls="" note="Empty column — add blocks in the editor." />
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   if (block.type === "Composite") {
     const compositeId = block.compositeId;
     if (!compositeId) return <CompositeError id={block.id} message="no compositeId set" />;

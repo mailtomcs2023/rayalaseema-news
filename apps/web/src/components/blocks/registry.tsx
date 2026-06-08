@@ -57,7 +57,10 @@ interface RegistryEntry {
   hideWhenEmpty?: (data: unknown) => boolean;
 }
 
-export const REGISTRY: Record<BuiltinBlockType, RegistryEntry> = {
+// Columns (container) is NOT registered here - like Composite, BlockRenderer
+// handles it directly (it lays out + recurses into its columns' blocks rather
+// than fetching data).
+export const REGISTRY: Record<Exclude<BuiltinBlockType, "Columns">, RegistryEntry> = {
   AdHeaderLeaderboard: {
     component: AdHeaderLeaderboard as AnyComponent,
     fetcher: (config) => F.fetchAdHeaderLeaderboard(config as never) as never,
@@ -112,6 +115,8 @@ export const REGISTRY: Record<BuiltinBlockType, RegistryEntry> = {
   },
 };
 
-export function isBuiltinBlockType(type: BlockType): type is BuiltinBlockType {
-  return type !== "Composite" && type in REGISTRY;
+export function isBuiltinBlockType(
+  type: BlockType,
+): type is Exclude<BuiltinBlockType, "Columns"> {
+  return type !== "Composite" && type !== "Columns" && type in REGISTRY;
 }

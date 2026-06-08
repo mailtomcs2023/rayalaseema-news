@@ -15,6 +15,10 @@ import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { WithTooltip } from "@/components/ui/tooltip";
 import { confirm } from "@/components/confirm-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 interface Initial {
   id: string;
@@ -79,6 +83,68 @@ const DEFAULT_CONFIG: Record<string, Record<string, unknown>> = {
   AdLeaderboard: { position: "LEADERBOARD" },
   AdInFeedBanner: { position: "IN_FEED" },
 };
+
+// --- Columns container helpers (one level of nesting) ---
+// A Columns block stores its columns under config.columns: each column has an
+// id + an ordered list of (leaf) blocks. These helpers find / update / remove a
+// block by id ANYWHERE in the tree (top level or inside a column) so the editor
+// can edit nested blocks with the same selection model.
+type Col = { id: string; blocks: Block[] };
+function getCols(b: Block): Col[] {
+  return b.type === "Columns" && b.config ? ((b.config.columns as Col[]) || []) : [];
+}
+function findBlockDeep(blocks: Block[], id: string | null): Block | null {
+  if (!id) return null;
+  for (const b of blocks) {
+    if (b.id === id) return b;
+    for (const col of getCols(b)) {
+      const f = col.blocks.find((x) => x.id === id);
+      if (f) return f;
+    }
+  }
+  return null;
+}
+function mapBlockDeep(blocks: Block[], id: string, fn: (b: Block) => Block): Block[] {
+  return blocks.map((b) => {
+    if (b.id === id) return fn(b);
+    if (b.type === "Columns") {
+      const cols = getCols(b);
+      if (cols.some((col) => col.blocks.some((x) => x.id === id))) {
+        const next = cols.map((col) => ({
+          ...col,
+          blocks: col.blocks.map((x) => (x.id === id ? fn(x) : x)),
+        }));
+        return { ...b, config: { ...b.config, columns: next } };
+      }
+    }
+    return b;
+  });
+}
+function removeBlockDeep(blocks: Block[], id: string): Block[] {
+  return blocks
+    .filter((b) => b.id !== id)
+    .map((b) => {
+      if (b.type === "Columns" && getCols(b).some((col) => col.blocks.some((x) => x.id === id))) {
+        return {
+          ...b,
+          config: {
+            ...b.config,
+            columns: getCols(b).map((col) => ({ ...col, blocks: col.blocks.filter((x) => x.id !== id) })),
+          },
+        };
+      }
+      return b;
+    });
+}
+function findParentColumnsId(blocks: Block[], childId: string | null): string | null {
+  if (!childId) return null;
+  for (const b of blocks) {
+    if (b.type === "Columns" && getCols(b).some((col) => col.blocks.some((x) => x.id === childId))) {
+      return b.id;
+    }
+  }
+  return null;
+}
 
 export function EditorShell({
   initial,
@@ -165,8 +231,15 @@ export function EditorShell({
     }
   }, [selectedId]);
 
+  // Deep lookup so blocks nested inside a Columns container are selectable too.
   const selected = useMemo(
-    () => layout.blocks.find((b) => b.id === selectedId) || null,
+    () => findBlockDeep(layout.blocks, selectedId),
+    [layout.blocks, selectedId],
+  );
+  // When the selected block lives inside a Columns container, this is that
+  // container's id (used for a "back to Columns" breadcrumb).
+  const parentColumnsId = useMemo(
+    () => findParentColumnsId(layout.blocks, selectedId),
     [layout.blocks, selectedId],
   );
 
@@ -196,10 +269,24 @@ export function EditorShell({
       if (res.ok) {
         lastSavedJson.current = snapshot;
         setSavedAt(new Date());
+        // Our own write - keep the presence baseline current so the poll
+        // doesn't flag it as "someone else saved".
+        openedAtRef.current = Date.now();
+        setOtherEditorWarning(null);
+        // Re-render the canvas so newly added/edited blocks (e.g. Columns and
+        // their children) actually appear without requiring a manual Save.
+        refreshPreview();
       } else {
         // Bubble the validation error up to the manual error banner so the
         // operator sees what went wrong (Zod issues from invalid configs).
-        setError((await res.json().catch(() => ({}))).error || "Auto-save failed");
+        const body = await res.json().catch(() => ({} as { error?: string; details?: { fieldErrors?: Record<string, unknown> } }));
+        const fe = body?.details?.fieldErrors;
+        const detail = fe && Object.keys(fe).length
+          ? " — " + JSON.stringify(fe)
+          : body?.details
+          ? " — " + JSON.stringify(body.details)
+          : "";
+        setError((body?.error || "Auto-save failed") + detail);
       }
     }, 5000);
     return () => {
@@ -218,11 +305,43 @@ export function EditorShell({
     return () => window.removeEventListener("beforeunload", before);
   }, []);
 
-  function persistLocal(next: Layout) {
+  // Immediately persist a layout to the draft endpoint + reload the canvas, so
+  // STRUCTURAL changes (column count, add/remove/move/replace blocks) reflect
+  // right away instead of waiting for the 5s auto-save.
+  async function flushLayout(next: Layout) {
+    const snapshot = JSON.stringify(next);
+    if (snapshot === lastSavedJson.current) {
+      refreshPreview();
+      return;
+    }
+    setAutoSaving(true);
+    const res = await fetch(`/api/page-builder/templates/${initial.id}/draft`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: `{"draftLayout":${snapshot}}`,
+    });
+    setAutoSaving(false);
+    if (res.ok) {
+      lastSavedJson.current = snapshot;
+      setSavedAt(new Date());
+      // Our own write - don't let the presence poll flag it as a foreign edit.
+      openedAtRef.current = Date.now();
+      setOtherEditorWarning(null);
+      refreshPreview();
+    } else {
+      const body = await res.json().catch(() => ({} as { error?: string; details?: { fieldErrors?: Record<string, unknown> } }));
+      const fe = body?.details?.fieldErrors;
+      const detail = fe && Object.keys(fe).length ? " — " + JSON.stringify(fe) : body?.details ? " — " + JSON.stringify(body.details) : "";
+      setError((body?.error || "Save failed") + detail);
+    }
+  }
+
+  function persistLocal(next: Layout, flush = false) {
     undoStack.current.push(layout);
     if (undoStack.current.length > MAX_HISTORY) undoStack.current.shift();
     redoStack.current = [];
     setLayout(next);
+    if (flush) flushLayout(next);
   }
 
   function undo() {
@@ -288,6 +407,20 @@ export function EditorShell({
     const block: Block =
       type === "Composite"
         ? { id, type, compositeId: compositeId!, mobileVariant: "show" }
+        : type === "Columns"
+        ? {
+            id,
+            type,
+            config: {
+              columns: [
+                { id: makeId("col"), blocks: [] },
+                { id: makeId("col"), blocks: [] },
+              ],
+              gap: 24,
+              stackMobile: true,
+            },
+            mobileVariant: "show",
+          }
         : { id, type, config: { ...(DEFAULT_CONFIG[type] || {}) }, mobileVariant: "show" };
     const next = [...layout.blocks];
     if (position === undefined || position < 0 || position > next.length) {
@@ -295,7 +428,7 @@ export function EditorShell({
     } else {
       next.splice(position, 0, block);
     }
-    persistLocal({ ...layout, blocks: next });
+    persistLocal({ ...layout, blocks: next }, true);
     setSelectedId(id);
   }
 
@@ -308,7 +441,7 @@ export function EditorShell({
     // downward so the visual drop position matches the array slot.
     const adjusted = toIndex > fromIdx ? toIndex - 1 : toIndex;
     next.splice(Math.max(0, Math.min(adjusted, next.length)), 0, item);
-    persistLocal({ ...layout, blocks: next });
+    persistLocal({ ...layout, blocks: next }, true);
   }
 
   function moveBlock(id: string, dir: -1 | 1) {
@@ -318,17 +451,107 @@ export function EditorShell({
     if (j < 0 || j >= layout.blocks.length) return;
     const next = [...layout.blocks];
     [next[idx], next[j]] = [next[j], next[idx]];
-    persistLocal({ ...layout, blocks: next });
+    persistLocal({ ...layout, blocks: next }, true);
   }
 
   function deleteBlock(id: string) {
-    persistLocal({ ...layout, blocks: layout.blocks.filter((b) => b.id !== id) });
+    persistLocal({ ...layout, blocks: removeBlockDeep(layout.blocks, id) }, true);
     if (selectedId === id) setSelectedId(null);
   }
 
   function updateBlock(id: string, patch: Partial<Block>) {
-    const next = layout.blocks.map((b) => (b.id === id ? { ...b, ...patch } : b));
-    persistLocal({ ...layout, blocks: next });
+    persistLocal({ ...layout, blocks: mapBlockDeep(layout.blocks, id, (b) => ({ ...b, ...patch })) });
+  }
+
+  // --- Columns container ops ---
+  // Change a Columns block's column count - grows with empty columns, or trims
+  // trailing columns (and their blocks) when shrinking.
+  function setColumnCount(colsId: string, count: number) {
+    persistLocal({
+      ...layout,
+      blocks: mapBlockDeep(layout.blocks, colsId, (b) => {
+        const cols = getCols(b);
+        let next = cols;
+        if (count > cols.length) {
+          next = [...cols];
+          while (next.length < count) next.push({ id: makeId("col"), blocks: [] });
+        } else if (count < cols.length) {
+          next = cols.slice(0, count);
+        }
+        return { ...b, config: { ...b.config, columns: next } };
+      }),
+    }, true);
+  }
+
+  // Append a new leaf block into a specific column.
+  function addBlockToColumn(colsId: string, colId: string, type: string) {
+    if (type === "Columns" || type === "Composite") return; // leaf blocks only
+    const leaf: Block = {
+      id: makeId(type.slice(0, 3).toLowerCase()),
+      type,
+      config: { ...(DEFAULT_CONFIG[type] || {}) },
+      mobileVariant: "show",
+    };
+    persistLocal({
+      ...layout,
+      blocks: mapBlockDeep(layout.blocks, colsId, (b) => ({
+        ...b,
+        config: {
+          ...b.config,
+          columns: getCols(b).map((col) => (col.id === colId ? { ...col, blocks: [...col.blocks, leaf] } : col)),
+        },
+      })),
+    }, true);
+    setSelectedId(leaf.id);
+  }
+
+  // Replace a block in a column with a fresh block of a different type (keeps
+  // its position + mobile variant). Lets the operator swap a column's block
+  // without delete-then-add.
+  function replaceBlockInColumn(colsId: string, colId: string, blockId: string, newType: string) {
+    if (newType === "Columns" || newType === "Composite") return;
+    persistLocal({
+      ...layout,
+      blocks: mapBlockDeep(layout.blocks, colsId, (b) => ({
+        ...b,
+        config: {
+          ...b.config,
+          columns: getCols(b).map((col) => {
+            if (col.id !== colId) return col;
+            return {
+              ...col,
+              blocks: col.blocks.map((x) =>
+                x.id === blockId
+                  ? { id: makeId(newType.slice(0, 3).toLowerCase()), type: newType, config: { ...(DEFAULT_CONFIG[newType] || {}) }, mobileVariant: x.mobileVariant }
+                  : x,
+              ),
+            };
+          }),
+        },
+      })),
+    }, true);
+  }
+
+  // Reorder a block within its column.
+  function moveBlockInColumn(colsId: string, colId: string, blockId: string, dir: -1 | 1) {
+    persistLocal({
+      ...layout,
+      blocks: mapBlockDeep(layout.blocks, colsId, (b) => ({
+        ...b,
+        config: {
+          ...b.config,
+          columns: getCols(b).map((col) => {
+            if (col.id !== colId) return col;
+            const i = col.blocks.findIndex((x) => x.id === blockId);
+            const j = i + dir;
+            if (i === -1 || j < 0 || j >= col.blocks.length) return col;
+            const nb = [...col.blocks];
+            [nb[i], nb[j]] = [nb[j], nb[i]];
+            return { ...col, blocks: nb };
+          }),
+        },
+      })),
+    }, true);
   }
 
   function toggleMultiSelect(id: string) {
@@ -381,7 +604,7 @@ export function EditorShell({
     };
     const next = [...remaining];
     next.splice(firstIdx, 0, newBlock);
-    persistLocal({ ...layout, blocks: next });
+    persistLocal({ ...layout, blocks: next }, true);
 
     setMultiSelectedIds(new Set());
     setSelectedId(newBlock.id);
@@ -616,13 +839,36 @@ export function EditorShell({
         <aside style={paneRight}>
           {!selected ? (
             <div style={paletteHint}>Select a block in the canvas (or in the outline above) to edit its config.</div>
-          ) : (
-            <ConfigPanel
+          ) : selected.type === "Columns" ? (
+            <ColumnsConfig
               block={selected}
-              composites={composites}
+              leafTypes={builtinBlockTypes.filter((t) => t !== "Columns")}
               onChange={(patch) => updateBlock(selected.id, patch)}
+              onSetCount={(n) => setColumnCount(selected.id, n)}
+              onAddToColumn={(colId, type) => addBlockToColumn(selected.id, colId, type)}
+              onReplaceChild={(colId, childId, type) => replaceBlockInColumn(selected.id, colId, childId, type)}
+              onSelectChild={(childId) => setSelectedId(childId)}
+              onMoveChild={(colId, childId, dir) => moveBlockInColumn(selected.id, colId, childId, dir)}
+              onDeleteChild={(childId) => deleteBlock(childId)}
               onDelete={() => deleteBlock(selected.id)}
             />
+          ) : (
+            <>
+              {parentColumnsId && (
+                <button
+                  onClick={() => setSelectedId(parentColumnsId)}
+                  style={{ ...btnSecondary, marginBottom: 10, width: "100%" }}
+                >
+                  ↑ Back to Columns
+                </button>
+              )}
+              <ConfigPanel
+                block={selected}
+                composites={composites}
+                onChange={(patch) => updateBlock(selected.id, patch)}
+                onDelete={() => deleteBlock(selected.id)}
+              />
+            </>
           )}
         </aside>
       </div>
@@ -721,22 +967,20 @@ function PaletteItem({
   dragPayload: { type: string; compositeId?: string };
 }) {
   return (
-    <WithTooltip text="Click to add at end, or drag onto the outline at the desired position">
-      <button
-        onClick={onClick}
-        draggable
-        onDragStart={(e) => {
-          e.dataTransfer.effectAllowed = "copy";
-          e.dataTransfer.setData(
-            "application/page-builder",
-            JSON.stringify({ kind: "new", ...dragPayload }),
-          );
-        }}
-        style={paletteItem}
-      >
-        + {label}
-      </button>
-    </WithTooltip>
+    <button
+      onClick={onClick}
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = "copy";
+        e.dataTransfer.setData(
+          "application/page-builder",
+          JSON.stringify({ kind: "new", ...dragPayload }),
+        );
+      }}
+      style={paletteItem}
+    >
+      + {label}
+    </button>
   );
 }
 
@@ -970,6 +1214,132 @@ function ConfigPanel({
       <button onClick={onDelete} style={{ ...btnSecondary, color: "#B91C1C" }}>
         Delete block
       </button>
+    </div>
+  );
+}
+
+// Columns container editor: column count + gap + per-column block management.
+// Each column lists its blocks (click to edit, ▲▼ reorder, ✕ remove) and has an
+// "+ Add block" picker. Selecting a nested block swaps the panel to that block's
+// own config (with a "Back to Columns" breadcrumb in the parent shell).
+function ColumnsConfig({
+  block,
+  leafTypes,
+  onChange,
+  onSetCount,
+  onAddToColumn,
+  onReplaceChild,
+  onSelectChild,
+  onMoveChild,
+  onDeleteChild,
+  onDelete,
+}: {
+  block: Block;
+  leafTypes: string[];
+  onChange: (patch: Partial<Block>) => void;
+  onSetCount: (n: number) => void;
+  onAddToColumn: (colId: string, type: string) => void;
+  onReplaceChild: (colId: string, childId: string, type: string) => void;
+  onSelectChild: (childId: string) => void;
+  onMoveChild: (colId: string, childId: string, dir: -1 | 1) => void;
+  onDeleteChild: (childId: string) => void;
+  onDelete: () => void;
+}) {
+  const cfg = (block.config || {}) as { columns?: Col[]; gap?: number; stackMobile?: boolean };
+  const cols = cfg.columns || [];
+  return (
+    <div>
+      <div style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", marginBottom: 4 }}>Selected</div>
+      <div style={{ fontSize: 15, fontWeight: 700, color: "#111827", marginBottom: 4 }}>▦ Columns</div>
+      <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 12 }}>{block.id}</div>
+
+      <Label>Number of columns</Label>
+      <Select value={String(cols.length)} onValueChange={(v) => onSetCount(Number(v))}>
+        <SelectTrigger className="w-full mb-2"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          {[1, 2, 3, 4].map((n) => (
+            <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Label>Gap (px)</Label>
+      <Input
+        type="number"
+        min={0}
+        max={64}
+        value={cfg.gap ?? 24}
+        onChange={(e) => onChange({ config: { ...block.config, gap: Number(e.target.value) } })}
+        className="mb-2"
+      />
+
+      <label className="flex items-center gap-2 text-sm mb-3 mt-1 cursor-pointer">
+        <Checkbox
+          checked={cfg.stackMobile !== false}
+          onCheckedChange={(v) => onChange({ config: { ...block.config, stackMobile: v === true } })}
+        />
+        Stack columns on mobile
+      </label>
+
+      <Label>Mobile variant</Label>
+      <Select value={block.mobileVariant} onValueChange={(v) => onChange({ mobileVariant: v as Block["mobileVariant"] })}>
+        <SelectTrigger className="w-full mb-2"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="show">Show</SelectItem>
+          <SelectItem value="hide">Hide on mobile</SelectItem>
+          <SelectItem value="stack-below">Stack below</SelectItem>
+          <SelectItem value="compact">Compact</SelectItem>
+        </SelectContent>
+      </Select>
+
+      <hr style={{ border: "none", borderTop: "1px solid #e5e7eb", margin: "14px 0" }} />
+
+      {cols.map((col, ci) => (
+        <div key={col.id} style={{ border: "1px solid #e5e7eb", borderRadius: 6, padding: 8, marginBottom: 10, background: "#fafafa" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#374151", marginBottom: 6 }}>
+            Column {ci + 1} · {col.blocks.length} block{col.blocks.length === 1 ? "" : "s"}
+          </div>
+          {col.blocks.length === 0 && <div style={{ ...paletteHint, padding: 4 }}>No blocks yet.</div>}
+          {col.blocks.map((cb, bi) => (
+            <div key={cb.id} className="flex items-center gap-1 mb-1.5">
+              {/* Swap the block's type in place (replace) */}
+              <Select value={cb.type} onValueChange={(v) => onReplaceChild(col.id, cb.id, v)}>
+                <SelectTrigger className="h-8 flex-1 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {leafTypes.map((t) => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <WithTooltip text="Edit settings">
+                <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => onSelectChild(cb.id)}>⚙</Button>
+              </WithTooltip>
+              <WithTooltip text="Move up">
+                <Button type="button" variant="ghost" size="icon" className="h-7 w-7" disabled={bi === 0} onClick={() => onMoveChild(col.id, cb.id, -1)}>▲</Button>
+              </WithTooltip>
+              <WithTooltip text="Move down">
+                <Button type="button" variant="ghost" size="icon" className="h-7 w-7" disabled={bi === col.blocks.length - 1} onClick={() => onMoveChild(col.id, cb.id, 1)}>▼</Button>
+              </WithTooltip>
+              <WithTooltip text="Remove">
+                <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => onDeleteChild(cb.id)}>✕</Button>
+              </WithTooltip>
+            </div>
+          ))}
+          <Select value="" onValueChange={(v) => { if (v) onAddToColumn(col.id, v); }}>
+            <SelectTrigger className="h-8 w-full text-xs mt-1"><SelectValue placeholder="+ Add block…" /></SelectTrigger>
+            <SelectContent>
+              {leafTypes.map((t) => (
+                <SelectItem key={t} value={t}>{t}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      ))}
+
+      <hr style={{ border: "none", borderTop: "1px solid #e5e7eb", margin: "16px 0" }} />
+      <Button type="button" variant="outline" className="w-full text-destructive hover:text-destructive" onClick={onDelete}>
+        Delete Columns block
+      </Button>
     </div>
   );
 }

@@ -129,24 +129,54 @@ const baseBlock = {
   mobileVariant: mobileVariantSchema.default("show"),
 };
 
+// Leaf block members - everything EXCEPT the Columns container. A Columns block
+// may only hold leaf blocks (one level of nesting; no Columns-in-Columns), which
+// keeps the schema non-recursive and the renderer/editor simple.
+const adHeaderLeaderboardBlock = z.object({ ...baseBlock, type: z.literal("AdHeaderLeaderboard"), config: adHeaderLeaderboardConfig });
+const aboveFoldBlock = z.object({ ...baseBlock, type: z.literal("AboveFold"), config: aboveFoldConfig });
+const adBannerMidBlock = z.object({ ...baseBlock, type: z.literal("AdBannerMid"), config: adBannerMidConfig });
+const sectionBandBlock = z.object({ ...baseBlock, type: z.literal("SectionBand"), config: sectionBandConfig });
+const cinemaBandBlock = z.object({ ...baseBlock, type: z.literal("CinemaBand"), config: cinemaBandConfig });
+const videoSectionBlock = z.object({ ...baseBlock, type: z.literal("VideoSection"), config: videoSectionConfig });
+const categoryPairBlock = z.object({ ...baseBlock, type: z.literal("CategoryPair"), config: categoryPairConfig });
+const webStoriesBlock = z.object({ ...baseBlock, type: z.literal("WebStories"), config: webStoriesConfig });
+const photoGalleryBlock = z.object({ ...baseBlock, type: z.literal("PhotoGallery"), config: photoGalleryConfig });
+const adLeaderboardBlock = z.object({ ...baseBlock, type: z.literal("AdLeaderboard"), config: adLeaderboardConfig });
+const adInFeedBannerBlock = z.object({ ...baseBlock, type: z.literal("AdInFeedBanner"), config: adInFeedBannerConfig });
+// Synthetic: inlines a CompositeBlock.blocks at render time.
+const compositeBlock = z.object({ ...baseBlock, type: z.literal("Composite"), compositeId: z.string().min(1) });
+
+export const leafBlockSchema = z.discriminatedUnion("type", [
+  adHeaderLeaderboardBlock, aboveFoldBlock, adBannerMidBlock, sectionBandBlock,
+  cinemaBandBlock, videoSectionBlock, categoryPairBlock, webStoriesBlock,
+  photoGalleryBlock, adLeaderboardBlock, adInFeedBannerBlock, compositeBlock,
+]);
+export type LeafBlock = z.infer<typeof leafBlockSchema>;
+
+// Columns container - N columns, each an ordered list of leaf blocks. Rendered
+// as a flex/grid row; stacks vertically on mobile when stackMobile is set.
+export const columnSchema = z
+  .object({
+    id: z.string().min(1),
+    blocks: z.array(leafBlockSchema).default([]),
+  })
+  .strict();
+
+export const columnsConfig = z
+  .object({
+    columns: z.array(columnSchema).min(1).max(4),
+    gap: z.number().int().min(0).max(64).default(24),
+    stackMobile: z.boolean().default(true),
+  })
+  .strict();
+
+const columnsBlock = z.object({ ...baseBlock, type: z.literal("Columns"), config: columnsConfig });
+
 export const blockSchema = z.discriminatedUnion("type", [
-  z.object({ ...baseBlock, type: z.literal("AdHeaderLeaderboard"), config: adHeaderLeaderboardConfig }),
-  z.object({ ...baseBlock, type: z.literal("AboveFold"), config: aboveFoldConfig }),
-  z.object({ ...baseBlock, type: z.literal("AdBannerMid"), config: adBannerMidConfig }),
-  z.object({ ...baseBlock, type: z.literal("SectionBand"), config: sectionBandConfig }),
-  z.object({ ...baseBlock, type: z.literal("CinemaBand"), config: cinemaBandConfig }),
-  z.object({ ...baseBlock, type: z.literal("VideoSection"), config: videoSectionConfig }),
-  z.object({ ...baseBlock, type: z.literal("CategoryPair"), config: categoryPairConfig }),
-  z.object({ ...baseBlock, type: z.literal("WebStories"), config: webStoriesConfig }),
-  z.object({ ...baseBlock, type: z.literal("PhotoGallery"), config: photoGalleryConfig }),
-  z.object({ ...baseBlock, type: z.literal("AdLeaderboard"), config: adLeaderboardConfig }),
-  z.object({ ...baseBlock, type: z.literal("AdInFeedBanner"), config: adInFeedBannerConfig }),
-  // Synthetic: inlines a CompositeBlock.blocks at render time.
-  z.object({
-    ...baseBlock,
-    type: z.literal("Composite"),
-    compositeId: z.string().min(1),
-  }),
+  adHeaderLeaderboardBlock, aboveFoldBlock, adBannerMidBlock, sectionBandBlock,
+  cinemaBandBlock, videoSectionBlock, categoryPairBlock, webStoriesBlock,
+  photoGalleryBlock, adLeaderboardBlock, adInFeedBannerBlock, compositeBlock,
+  columnsBlock,
 ]);
 
 export type Block = z.infer<typeof blockSchema>;
@@ -181,6 +211,7 @@ export const BUILTIN_BLOCK_TYPES = [
   "PhotoGallery",
   "AdLeaderboard",
   "AdInFeedBanner",
+  "Columns",
 ] as const satisfies readonly BlockType[];
 
 export type BuiltinBlockType = (typeof BUILTIN_BLOCK_TYPES)[number];

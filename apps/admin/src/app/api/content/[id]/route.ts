@@ -19,6 +19,7 @@ import { buildSlugFromTitle, isPlaceholderSlug, sanitizeSlug } from "@/lib/slug"
 import { resolveDeskId } from "@/lib/desk-resolver";
 import { pickLeastLoadedReviewer } from "@/lib/reviewer-assignment";
 import { pingIndexNow } from "@/lib/indexnow";
+import { pingWebRevalidate } from "@/lib/revalidate-web";
 import { tagContentLocations } from "@/lib/location-ner-hook";
 import { injectInternalLinks } from "@/lib/internal-linker";
 
@@ -53,6 +54,14 @@ async function pingArticlePublish(contentId: string, slug: string) {
     if (districtSlug) urls.push(`${siteUrl}/district/${districtSlug}`);
     if (constituencySlug) urls.push(`${siteUrl}/constituency/${constituencySlug}`);
     await pingIndexNow(urls);
+
+    // Bust apps/web's ISR page cache for the pages that surface this article so
+    // it appears immediately rather than after the page's TTL (home = 30s). The
+    // endpoint always revalidates "/"; we add the article + its hub paths.
+    const paths = [buildArticleUrl("", contentId, slug, districtSlug, constituencySlug)];
+    if (districtSlug) paths.push(`/district/${districtSlug}`);
+    if (constituencySlug) paths.push(`/constituency/${constituencySlug}`);
+    pingWebRevalidate(paths);
   } catch (err) {
     console.warn("[content publish] IndexNow ping failed (non-fatal):", (err as Error).message);
   }

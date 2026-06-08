@@ -125,6 +125,8 @@ export async function TemplateRenderer({
       <style>{`
         @media (max-width: 768px) {
           .pb-mobile-hide { display: none !important; }
+          .pb-columns-stack { flex-direction: column !important; }
+          .pb-columns-stack > .pb-column { width: 100% !important; }
         }
       `}</style>
     </>

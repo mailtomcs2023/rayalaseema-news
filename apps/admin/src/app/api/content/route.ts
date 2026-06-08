@@ -18,6 +18,7 @@ import { rehostDataUrlFields } from "@/lib/rehost-data-url";
 import { ensureBlobHosted } from "@/lib/blob";
 import { requireKyc } from "@/lib/kyc-guard";
 import { logAudit } from "@/lib/audit";
+import { pingWebRevalidate } from "@/lib/revalidate-web";
 import { sanitizeSlug } from "@/lib/slug";
 import { resolveDeskId } from "@/lib/desk-resolver";
 
@@ -395,6 +396,10 @@ export async function POST(req: NextRequest) {
       actor: { id: session.user.id, email: session.user.email, role: (session.user as any).role },
       req,
     });
+
+    // Created directly as PUBLISHED - refresh the public homepage so it shows
+    // up immediately instead of after the page's ISR TTL.
+    if (finalStatus === "PUBLISHED") pingWebRevalidate();
 
     return NextResponse.json(content, { status: 201 });
   } catch (error) {

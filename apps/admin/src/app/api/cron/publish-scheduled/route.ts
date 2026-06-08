@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { logAudit } from "@/lib/audit";
+import { pingWebRevalidate } from "@/lib/revalidate-web";
 
 // POST /api/cron/publish-scheduled
 //
@@ -69,6 +70,11 @@ export async function POST(req: NextRequest) {
         })
       )
     );
+
+    // Scheduled posts just went live - refresh the public homepage so they
+    // surface immediately instead of after its ISR TTL. (Home-only: the cron
+    // batch can span many articles; the homepage is the page that lists them.)
+    if (ok > 0) pingWebRevalidate();
 
     return NextResponse.json({ published: ok, failed: items.length - ok, items });
   } catch (error: any) {
