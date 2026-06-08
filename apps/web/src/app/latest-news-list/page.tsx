@@ -49,8 +49,7 @@ export default async function LatestNewsListPage() {
     <div className="min-h-screen bg-gray-50">
       <SiteHeader />
       <main style={{ maxWidth: 1100, margin: "0 auto", padding: "20px 12px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
-          <span style={{ width: 5, height: 24, background: "#E01B1B", borderRadius: 3 }} aria-hidden="true" />
+        <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 18 }}>
           <h1 style={{ fontSize: 24, fontWeight: 900, color: "#111" }}>తాజా వార్తలు</h1>
           <span style={{ fontSize: 13, color: "#94a3b8", fontWeight: 600 }}>Latest News</span>
         </div>
@@ -88,9 +87,9 @@ export default async function LatestNewsListPage() {
         .lnl-card {
           display: flex; gap: 12px; padding: 10px;
           background: #fff; border: 1px solid #eef0f2; border-radius: 10px;
-          text-decoration: none; transition: box-shadow 0.15s, transform 0.15s, border-color 0.15s;
+          text-decoration: none; transition: border-color 0.15s;
         }
-        .lnl-card:hover { box-shadow: 0 6px 18px rgba(2,8,20,0.08); border-color: #e2e5e9; transform: translateY(-1px); }
+        .lnl-card:hover { border-color: #d1d5db; }
         .lnl-thumb {
           flex: 0 0 116px; width: 116px; height: 80px; border-radius: 8px;
           overflow: hidden; background: #f3f4f6; display: block;
