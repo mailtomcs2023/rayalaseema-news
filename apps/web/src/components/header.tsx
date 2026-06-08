@@ -385,7 +385,7 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
               Breaking on top row, E-PAPER full-width below. */}
           <div className="hidden lg:flex flex-col items-end gap-1 shrink-0">
             <div className="flex gap-1">
-              <Link href="/" className="masthead-tile" aria-label="Latest news">
+              <Link href="/latest-news-list" className="masthead-tile" aria-label="Latest news">
                 <svg className="size-5" fill="none" stroke="var(--n-700, #374151)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/></svg>
                 <span className="masthead-tile-label">Latest</span>
               </Link>
