@@ -9,6 +9,7 @@
 import { prisma, AdPosition } from "@rayalaseema/db";
 import type { PageContext } from "./types";
 import { categoryHref, normalizeCategoryHref } from "@/lib/category-href";
+import { articleHref } from "@/lib/article-href";
 import type {
   aboveFoldConfig,
   adBannerMidConfig,
@@ -17,6 +18,8 @@ import type {
   adLeaderboardConfig,
   categoryPairConfig,
   cinemaBandConfig,
+  latestNewsConfig,
+  loopConfig,
   photoGalleryConfig,
   sectionBandConfig,
   videoSectionConfig,
@@ -441,6 +444,73 @@ export async function fetchCinemaBand(
 }
 
 // --- VideoSection ---
+
+export async function fetchLoopItems(
+  config: z.infer<typeof loopConfig>,
+): Promise<import("./types").LoopItem[]> {
+  const rows = await prisma.content.findMany({
+    where: {
+      type: "ARTICLE",
+      status: "PUBLISHED",
+      ...(config.categorySlug ? { category: { slug: config.categorySlug } } : {}),
+    },
+    orderBy: { publishedAt: "desc" },
+    take: config.count,
+    select: {
+      id: true,
+      title: true,
+      summary: true,
+      slug: true,
+      featuredImage: true,
+      publishedAt: true,
+      category: { select: { name: true, slug: true } },
+      constituency: { select: { slug: true, district: { select: { slug: true } } } },
+    },
+  });
+  return rows.map((r) => ({
+    id: r.id,
+    title: r.title,
+    summary: r.summary,
+    featuredImage: r.featuredImage,
+    publishedAtIso: r.publishedAt ? r.publishedAt.toISOString() : null,
+    categoryName: r.category?.name ?? null,
+    href: articleHref(r as never),
+  }));
+}
+
+export async function fetchLatestNews(
+  config: z.infer<typeof latestNewsConfig>,
+  _ctx: PageContext,
+) {
+  const rows = await prisma.content.findMany({
+    where: {
+      type: "ARTICLE",
+      status: "PUBLISHED",
+      ...(config.categorySlug ? { category: { slug: config.categorySlug } } : {}),
+    },
+    orderBy: { publishedAt: "desc" },
+    take: config.count,
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      featuredImage: true,
+      publishedAt: true,
+      category: { select: { name: true, slug: true } },
+      constituency: { select: { slug: true, district: { select: { slug: true } } } },
+    },
+  });
+  return {
+    articles: rows.map((r) => ({
+      id: r.id,
+      title: r.title,
+      href: articleHref(r as never),
+      featuredImage: r.featuredImage,
+      categoryName: r.category?.name ?? null,
+      publishedAtIso: r.publishedAt ? r.publishedAt.toISOString() : null,
+    })),
+  };
+}
 
 export async function fetchVideoSection(
   config: z.infer<typeof videoSectionConfig>,

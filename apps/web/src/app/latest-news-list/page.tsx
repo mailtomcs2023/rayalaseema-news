@@ -20,15 +20,6 @@ export const metadata: Metadata = {
   alternates: { canonical: `${SITE_URL}/latest-news-list` },
 };
 
-function timeAgo(d: Date): string {
-  const m = Math.floor((Date.now() - d.getTime()) / 60000);
-  if (m < 1) return "ఇప్పుడే";
-  if (m < 60) return `${m} నిమి. క్రితం`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h} గం. క్రితం`;
-  return `${Math.floor(h / 24)} రోజుల క్రితం`;
-}
-
 export default async function LatestNewsListPage() {
   const rows = await prisma.content.findMany({
     where: { type: "ARTICLE", status: "PUBLISHED" },
@@ -70,7 +61,6 @@ export default async function LatestNewsListPage() {
                 <span className="lnl-body">
                   <span className="lnl-meta">
                     {a.category?.name && <span className="lnl-cat">{a.category.name}</span>}
-                    {a.publishedAt && <span className="lnl-time">{timeAgo(a.publishedAt)}</span>}
                   </span>
                   <span className="lnl-title">{a.title}</span>
                 </span>
@@ -105,7 +95,6 @@ export default async function LatestNewsListPage() {
           font-size: 10px; font-weight: 800; color: var(--brand, #E01B1B);
           text-transform: uppercase; letter-spacing: 0.04em;
         }
-        .lnl-time { font-size: 11px; color: #9aa3af; font-weight: 600; }
         .lnl-title {
           font-family: var(--font-telugu-heading), serif;
           font-size: 14.5px; font-weight: 700; line-height: 1.45; color: #111827;

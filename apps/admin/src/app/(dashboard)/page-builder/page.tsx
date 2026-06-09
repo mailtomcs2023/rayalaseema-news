@@ -20,12 +20,13 @@ interface Card {
 }
 
 export default async function PageBuilderHome() {
-  let tplCount = 0, assignCount = 0, compCount = 0;
+  let tplCount = 0, assignCount = 0, compCount = 0, visualCount = 0;
   try {
-    [tplCount, assignCount, compCount] = await Promise.all([
+    [tplCount, assignCount, compCount, visualCount] = await Promise.all([
       prisma.template.count(),
       prisma.templateAssignment.count({ where: { active: true } }),
       prisma.compositeBlock.count(),
+      (prisma as unknown as { visualPage: { count: () => Promise<number> } }).visualPage.count(),
     ]);
   } catch {
     // Schema may be in flux on first deploy after a migration; degrade gracefully.
@@ -52,6 +53,13 @@ export default async function PageBuilderHome() {
       blurb: "Reusable named groups of blocks (e.g. Election Day hero) usable inside any template.",
       count: compCount,
       icon: "M3 3h7v7H3V3zm0 11h7v7H3v-7zm11-11h7v7h-7V3zm0 11h7v7h-7v-7z",
+    },
+    {
+      href: "/page-builder/visual",
+      title: "Visual Pages",
+      blurb: "Free-form pages built in the GrapesJS visual editor — drag in divs, grids, headings, images, text. Render at /page/<slug>.",
+      count: visualCount,
+      icon: "M4 5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm2 3h5v5H6V8zm7 0h5v3h-5V8zm0 5h5v3h-5v-3zM6 15h5v3H6v-3z",
     },
   ];
 

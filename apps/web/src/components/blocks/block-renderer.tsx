@@ -11,9 +11,29 @@
 // references itself (directly or indirectly) renders an error block
 // instead of stack-overflowing.
 
+import Link from "next/link";
 import { blockSchema, type Block } from "@rayalaseema/db";
 import { REGISTRY, isBuiltinBlockType } from "./registry";
-import type { PageContext } from "./types";
+import { fetchLoopItems } from "./fetchers";
+import type { PageContext, LoopItem } from "./types";
+
+// Resolve a primitive's bound field from the current loop item to a string
+// (for Heading/Text) or an image URL (for Image).
+function resolveBinding(item: LoopItem | null | undefined, binding: string): string {
+  if (!item) return "";
+  switch (binding) {
+    case "title": return item.title;
+    case "summary": return item.summary ?? "";
+    case "image": return item.featuredImage ?? "";
+    case "category": return item.categoryName ?? "";
+    case "link": return item.href;
+    case "date":
+      return item.publishedAtIso
+        ? new Date(item.publishedAtIso).toLocaleDateString("te-IN", { day: "numeric", month: "short", year: "numeric" })
+        : "";
+    default: return "";
+  }
+}
 
 function variantClass(v: Block["mobileVariant"]): string {
   switch (v) {
@@ -105,6 +125,7 @@ export async function BlockRenderer({
   composites,
   visited,
   preview = false,
+  loopItem,
 }: {
   block: Block;
   ctx: PageContext;
@@ -113,7 +134,73 @@ export async function BlockRenderer({
   // True only inside the page-builder editor preview (draft render). When set,
   // blocks that would render nothing show a placeholder instead of vanishing.
   preview?: boolean;
+  // The current item when rendering inside a Loop - primitives bind to it.
+  loopItem?: LoopItem | null;
 }): Promise<React.ReactElement | null> {
+  // --- Loop: fetch the data source + repeat the inner primitives per item ---
+  if (block.type === "Loop") {
+    const cfg = block.config as { count: number; categorySlug?: string; columns?: number; gap?: number };
+    const items = await fetchLoopItems(cfg as never);
+    const inner = ((block as { blocks?: Block[] }).blocks || []) as Block[];
+    const cls = variantClass(block.mobileVariant);
+    if (items.length === 0 || inner.length === 0) {
+      return preview
+        ? <PreviewPlaceholder id={block.id} type="Loop" cls={cls} note={inner.length === 0 ? "Empty loop — add Heading/Image/Text inside it." : "No items match this loop's source."} />
+        : null;
+    }
+    return (
+      <div
+        data-block-id={block.id}
+        data-block-type="Loop"
+        className={`pb-columns-stack ${cls}`.trim()}
+        style={{ display: "grid", gridTemplateColumns: `repeat(${cfg.columns ?? 1}, minmax(0, 1fr))`, gap: cfg.gap ?? 16 }}
+      >
+        {items.map((item) => (
+          <div key={item.id} data-loop-item={item.id} className="pb-column">
+            {inner.map((child) => (
+              <BlockRenderer key={`${item.id}:${child.id}`} block={child} ctx={ctx} composites={composites} visited={visited} preview={preview} loopItem={item} />
+            ))}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // --- Dynamic primitives (bind to the current loop item, or render static) ---
+  if (block.type === "Heading") {
+    const cfg = block.config as { binding: string; staticText?: string; level?: "h2" | "h3" | "h4"; linkToItem?: boolean };
+    const text = cfg.binding === "static" ? (cfg.staticText ?? "") : resolveBinding(loopItem, cfg.binding);
+    if (!text) return preview ? <PreviewPlaceholder id={block.id} type="Heading" cls="" note={`bound to ${cfg.binding}`} /> : null;
+    const Tag = (cfg.level ?? "h3") as "h2" | "h3" | "h4";
+    const inner = <Tag style={{ margin: 0, fontFamily: "var(--font-telugu-heading), serif", fontWeight: 700, lineHeight: 1.35, color: "#111827" }}>{text}</Tag>;
+    return (
+      <div data-block-id={block.id} data-block-type="Heading">
+        {cfg.linkToItem && loopItem?.href ? <Link href={loopItem.href} style={{ textDecoration: "none", color: "inherit" }}>{inner}</Link> : inner}
+      </div>
+    );
+  }
+  if (block.type === "Text") {
+    const cfg = block.config as { binding: string; staticText?: string };
+    const text = cfg.binding === "static" ? (cfg.staticText ?? "") : resolveBinding(loopItem, cfg.binding);
+    if (!text) return preview ? <PreviewPlaceholder id={block.id} type="Text" cls="" note={`bound to ${cfg.binding}`} /> : null;
+    return (
+      <div data-block-id={block.id} data-block-type="Text">
+        <p style={{ margin: "4px 0", fontFamily: "var(--font-telugu-body), sans-serif", fontSize: 13, lineHeight: 1.6, color: "#4b5563" }}>{text}</p>
+      </div>
+    );
+  }
+  if (block.type === "Image") {
+    const cfg = block.config as { binding: string; staticUrl?: string; linkToItem?: boolean };
+    const src = cfg.binding === "static" ? (cfg.staticUrl ?? "") : resolveBinding(loopItem, cfg.binding);
+    if (!src) return preview ? <PreviewPlaceholder id={block.id} type="Image" cls="" note={`bound to ${cfg.binding}`} /> : null;
+    const img = <img src={src} alt="" loading="lazy" style={{ width: "100%", height: "auto", display: "block", borderRadius: 8, aspectRatio: "16 / 10", objectFit: "cover" }} />;
+    return (
+      <div data-block-id={block.id} data-block-type="Image">
+        {cfg.linkToItem && loopItem?.href ? <Link href={loopItem.href}>{img}</Link> : img}
+      </div>
+    );
+  }
+
   if (block.type === "Columns") {
     // Container block: lay out N columns side by side, each recursing into its
     // own ordered list of (leaf) blocks. Stacks vertically on mobile via CSS.

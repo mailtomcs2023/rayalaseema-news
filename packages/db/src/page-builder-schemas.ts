@@ -91,6 +91,16 @@ export const videoSectionConfig = z
   })
   .strict();
 
+// Latest-news feed: newest published articles, optionally scoped to a category.
+// Renders an auto-fitting card grid (works at any width, incl. inside Columns).
+export const latestNewsConfig = z
+  .object({
+    count: z.number().int().min(1).max(60).default(12),
+    // Blank ⇒ latest across all categories. Set to scope to one category.
+    categorySlug: z.string().optional(),
+  })
+  .strict();
+
 export const categoryPairColumn = z
   .object({
     title: z.string().min(1),
@@ -122,6 +132,47 @@ export const adInFeedBannerConfig = z
   .object({ position: adPositionSchema.default("IN_FEED") })
   .strict();
 
+// --- Dynamic primitives + Loop (Breakdance/Bricks-style query loop) ---
+// A Loop fetches a list (latest news) and repeats its inner primitive blocks
+// once per item. Heading/Image/Text primitives bind to a field of the current
+// loop item (or render a static value).
+export const BINDING_FIELDS = ["static", "title", "summary", "image", "date", "category", "link"] as const;
+export const bindingFieldSchema = z.enum(BINDING_FIELDS);
+
+export const headingConfig = z
+  .object({
+    binding: bindingFieldSchema.default("title"),
+    staticText: z.string().optional(),
+    level: z.enum(["h2", "h3", "h4"]).default("h3"),
+    linkToItem: z.boolean().default(true),
+  })
+  .strict();
+
+export const imageConfig = z
+  .object({
+    binding: bindingFieldSchema.default("image"),
+    staticUrl: z.string().optional(),
+    linkToItem: z.boolean().default(true),
+  })
+  .strict();
+
+export const textConfig = z
+  .object({
+    binding: bindingFieldSchema.default("summary"),
+    staticText: z.string().optional(),
+  })
+  .strict();
+
+export const loopConfig = z
+  .object({
+    source: z.literal("latest-news").default("latest-news"),
+    count: z.number().int().min(1).max(60).default(12),
+    categorySlug: z.string().optional(),
+    columns: z.number().int().min(1).max(4).default(1),
+    gap: z.number().int().min(0).max(64).default(16),
+  })
+  .strict();
+
 // --- Block discriminated union ---
 
 const baseBlock = {
@@ -138,6 +189,7 @@ const adBannerMidBlock = z.object({ ...baseBlock, type: z.literal("AdBannerMid")
 const sectionBandBlock = z.object({ ...baseBlock, type: z.literal("SectionBand"), config: sectionBandConfig });
 const cinemaBandBlock = z.object({ ...baseBlock, type: z.literal("CinemaBand"), config: cinemaBandConfig });
 const videoSectionBlock = z.object({ ...baseBlock, type: z.literal("VideoSection"), config: videoSectionConfig });
+const latestNewsBlock = z.object({ ...baseBlock, type: z.literal("LatestNews"), config: latestNewsConfig });
 const categoryPairBlock = z.object({ ...baseBlock, type: z.literal("CategoryPair"), config: categoryPairConfig });
 const webStoriesBlock = z.object({ ...baseBlock, type: z.literal("WebStories"), config: webStoriesConfig });
 const photoGalleryBlock = z.object({ ...baseBlock, type: z.literal("PhotoGallery"), config: photoGalleryConfig });
@@ -148,7 +200,7 @@ const compositeBlock = z.object({ ...baseBlock, type: z.literal("Composite"), co
 
 export const leafBlockSchema = z.discriminatedUnion("type", [
   adHeaderLeaderboardBlock, aboveFoldBlock, adBannerMidBlock, sectionBandBlock,
-  cinemaBandBlock, videoSectionBlock, categoryPairBlock, webStoriesBlock,
+  cinemaBandBlock, videoSectionBlock, latestNewsBlock, categoryPairBlock, webStoriesBlock,
   photoGalleryBlock, adLeaderboardBlock, adInFeedBannerBlock, compositeBlock,
 ]);
 export type LeafBlock = z.infer<typeof leafBlockSchema>;
@@ -172,11 +224,30 @@ export const columnsConfig = z
 
 const columnsBlock = z.object({ ...baseBlock, type: z.literal("Columns"), config: columnsConfig });
 
+// Dynamic primitives - only meaningful inside a Loop (they bind to the current
+// item). They're valid blockSchema members so the renderer/types accept them,
+// but they're NOT in BUILTIN_BLOCK_TYPES, so the palette doesn't offer them at
+// top level; they're added via the Loop's panel.
+const headingBlock = z.object({ ...baseBlock, type: z.literal("Heading"), config: headingConfig });
+const imageBlock = z.object({ ...baseBlock, type: z.literal("Image"), config: imageConfig });
+const textBlock = z.object({ ...baseBlock, type: z.literal("Text"), config: textConfig });
+
+export const primitiveBlockSchema = z.discriminatedUnion("type", [headingBlock, imageBlock, textBlock]);
+export type PrimitiveBlock = z.infer<typeof primitiveBlockSchema>;
+
+// Loop container - holds primitive blocks as its per-item template.
+const loopBlock = z.object({
+  ...baseBlock,
+  type: z.literal("Loop"),
+  config: loopConfig,
+  blocks: z.array(primitiveBlockSchema).default([]),
+});
+
 export const blockSchema = z.discriminatedUnion("type", [
   adHeaderLeaderboardBlock, aboveFoldBlock, adBannerMidBlock, sectionBandBlock,
-  cinemaBandBlock, videoSectionBlock, categoryPairBlock, webStoriesBlock,
+  cinemaBandBlock, videoSectionBlock, latestNewsBlock, categoryPairBlock, webStoriesBlock,
   photoGalleryBlock, adLeaderboardBlock, adInFeedBannerBlock, compositeBlock,
-  columnsBlock,
+  columnsBlock, headingBlock, imageBlock, textBlock, loopBlock,
 ]);
 
 export type Block = z.infer<typeof blockSchema>;
@@ -206,12 +277,14 @@ export const BUILTIN_BLOCK_TYPES = [
   "SectionBand",
   "CinemaBand",
   "VideoSection",
+  "LatestNews",
   "CategoryPair",
   "WebStories",
   "PhotoGallery",
   "AdLeaderboard",
   "AdInFeedBanner",
   "Columns",
+  "Loop",
 ] as const satisfies readonly BlockType[];
 
 export type BuiltinBlockType = (typeof BUILTIN_BLOCK_TYPES)[number];

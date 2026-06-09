@@ -14,6 +14,7 @@ import { AboveFold } from "@/components/above-fold";
 import { SectionBand } from "@/components/section-band";
 import { CinemaBand } from "@/components/cinema-band";
 import { VideoSection } from "@/components/video-section";
+import { LatestNews } from "@/components/latest-news";
 import { CategoryColumn, CategoryPair } from "@/components/category-column";
 import { WebStories } from "@/components/web-stories";
 import { PhotoGallery } from "@/components/photo-gallery";
@@ -57,10 +58,10 @@ interface RegistryEntry {
   hideWhenEmpty?: (data: unknown) => boolean;
 }
 
-// Columns (container) is NOT registered here - like Composite, BlockRenderer
-// handles it directly (it lays out + recurses into its columns' blocks rather
-// than fetching data).
-export const REGISTRY: Record<Exclude<BuiltinBlockType, "Columns">, RegistryEntry> = {
+// Columns + Loop (containers) and the Heading/Image/Text primitives are NOT
+// registered here - like Composite, BlockRenderer handles them directly (layout
+// + recursion / dynamic binding rather than a data fetch).
+export const REGISTRY: Record<Exclude<BuiltinBlockType, "Columns" | "Loop">, RegistryEntry> = {
   AdHeaderLeaderboard: {
     component: AdHeaderLeaderboard as AnyComponent,
     fetcher: (config) => F.fetchAdHeaderLeaderboard(config as never) as never,
@@ -86,6 +87,12 @@ export const REGISTRY: Record<Exclude<BuiltinBlockType, "Columns">, RegistryEntr
     fetcher: (config, ctx) => F.fetchVideoSection(config as never, ctx) as never,
     hideWhenEmpty: (data) =>
       !data || (Array.isArray((data as { videos?: unknown[] }).videos) && (data as { videos: unknown[] }).videos.length === 0),
+  },
+  LatestNews: {
+    component: LatestNews as AnyComponent,
+    fetcher: (config, ctx) => F.fetchLatestNews(config as never, ctx) as never,
+    hideWhenEmpty: (data) =>
+      !data || (data as { articles: unknown[] }).articles.length === 0,
   },
   CategoryPair: {
     component: CategoryPairBlock as unknown as AnyComponent,
@@ -117,6 +124,6 @@ export const REGISTRY: Record<Exclude<BuiltinBlockType, "Columns">, RegistryEntr
 
 export function isBuiltinBlockType(
   type: BlockType,
-): type is Exclude<BuiltinBlockType, "Columns"> {
-  return type !== "Composite" && type !== "Columns" && type in REGISTRY;
+): type is Exclude<BuiltinBlockType, "Columns" | "Loop"> {
+  return type !== "Composite" && type !== "Columns" && type !== "Loop" && type in REGISTRY;
 }

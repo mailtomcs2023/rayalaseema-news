@@ -63,14 +63,16 @@ export function SectionHeading({
         .sh-ribbon {
           position: relative;
           display: inline-flex;
-          align-items: center;
+          /* Baseline-align: the icon's bottom sits on the Telugu text baseline,
+             so the icon and the visible glyphs share a bottom line (Telugu
+             reserves big descent space, so flex-end would dip the icon below
+             the visible text instead). */
+          align-items: baseline;
           justify-content: center;
           gap: 8px;
           background: var(--brand, #E01B1B);
           color: #fff;
-          /* symmetric vertical padding so the icon + label sit dead-center in
-             the ribbon (no upward drift) */
-          padding: 10px 32px 10px 16px;
+          padding: 9px 32px 9px 16px;
           font-family: var(--font-telugu-heading), sans-serif;
           font-weight: 800;
           font-size: 17px;
@@ -81,9 +83,7 @@ export function SectionHeading({
           clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 50%, calc(100% - 13px) 100%, 0 100%);
         }
         .sh-ribbon-ic { flex-shrink: 0; }
-        /* Noto/Anek Telugu reserve large descent space, so glyphs sit high in a
-           line-height:1 box; nudge down ~1px to optically center on the icon. */
-        .sh-ribbon-tx { display: inline-block; transform: translateY(1px); }
+        .sh-ribbon-tx { display: inline-block; }
         .sh-ribbon-wrap { position: relative; display: inline-block; }
         .sh-ribbon-link { text-decoration: none; display: inline-block; }
       `}</style>

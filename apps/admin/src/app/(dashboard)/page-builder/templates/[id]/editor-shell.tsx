@@ -48,8 +48,22 @@ interface Block {
   type: string;
   config?: Record<string, unknown>;
   compositeId?: string;
+  // Loop blocks store their per-item primitive template here.
+  blocks?: Block[];
   mobileVariant: "show" | "hide" | "stack-below" | "compact";
 }
+
+// Dynamic primitives addable inside a Loop (not top-level palette items).
+const LOOP_PRIMITIVES = ["Heading", "Image", "Text"] as const;
+const BINDING_OPTIONS = [
+  { value: "static", label: "Static (type it)" },
+  { value: "title", label: "Article title" },
+  { value: "summary", label: "Article summary" },
+  { value: "image", label: "Featured image" },
+  { value: "date", label: "Published date" },
+  { value: "category", label: "Category" },
+  { value: "link", label: "Article link" },
+];
 
 function makeId(prefix: string): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
@@ -72,6 +86,7 @@ const DEFAULT_CONFIG: Record<string, Record<string, unknown>> = {
   },
   CinemaBand: { leadCount: 1, gridCount: 4, reviewsCount: 4, includeMovieReviews: true },
   VideoSection: { count: 6, featuredOnly: false },
+  LatestNews: { count: 12, categorySlug: "" },
   CategoryPair: {
     columns: [
       { title: "Column 1", slug: "", leadCount: 1, itemsCount: 4 },
@@ -82,6 +97,10 @@ const DEFAULT_CONFIG: Record<string, Record<string, unknown>> = {
   PhotoGallery: { count: 6 },
   AdLeaderboard: { position: "LEADERBOARD" },
   AdInFeedBanner: { position: "IN_FEED" },
+  Loop: { source: "latest-news", count: 12, categorySlug: "", columns: 1, gap: 16 },
+  Heading: { binding: "title", level: "h3", linkToItem: true },
+  Image: { binding: "image", linkToItem: true },
+  Text: { binding: "summary" },
 };
 
 // --- Columns container helpers (one level of nesting) ---
@@ -93,6 +112,10 @@ type Col = { id: string; blocks: Block[] };
 function getCols(b: Block): Col[] {
   return b.type === "Columns" && b.config ? ((b.config.columns as Col[]) || []) : [];
 }
+// A Loop stores its per-item primitive template in block.blocks.
+function getLoopBlocks(b: Block): Block[] {
+  return b.type === "Loop" ? (b.blocks || []) : [];
+}
 function findBlockDeep(blocks: Block[], id: string | null): Block | null {
   if (!id) return null;
   for (const b of blocks) {
@@ -101,6 +124,8 @@ function findBlockDeep(blocks: Block[], id: string | null): Block | null {
       const f = col.blocks.find((x) => x.id === id);
       if (f) return f;
     }
+    const lf = getLoopBlocks(b).find((x) => x.id === id);
+    if (lf) return lf;
   }
   return null;
 }
@@ -110,12 +135,15 @@ function mapBlockDeep(blocks: Block[], id: string, fn: (b: Block) => Block): Blo
     if (b.type === "Columns") {
       const cols = getCols(b);
       if (cols.some((col) => col.blocks.some((x) => x.id === id))) {
-        const next = cols.map((col) => ({
-          ...col,
-          blocks: col.blocks.map((x) => (x.id === id ? fn(x) : x)),
-        }));
-        return { ...b, config: { ...b.config, columns: next } };
+        return {
+          ...b,
+          config: { ...b.config, columns: cols.map((col) => ({ ...col, blocks: col.blocks.map((x) => (x.id === id ? fn(x) : x)) })) },
+        };
       }
+    }
+    if (b.type === "Loop") {
+      const lb = getLoopBlocks(b);
+      if (lb.some((x) => x.id === id)) return { ...b, blocks: lb.map((x) => (x.id === id ? fn(x) : x)) };
     }
     return b;
   });
@@ -133,15 +161,17 @@ function removeBlockDeep(blocks: Block[], id: string): Block[] {
           },
         };
       }
+      if (b.type === "Loop" && getLoopBlocks(b).some((x) => x.id === id)) {
+        return { ...b, blocks: getLoopBlocks(b).filter((x) => x.id !== id) };
+      }
       return b;
     });
 }
-function findParentColumnsId(blocks: Block[], childId: string | null): string | null {
+function findParentContainerId(blocks: Block[], childId: string | null): string | null {
   if (!childId) return null;
   for (const b of blocks) {
-    if (b.type === "Columns" && getCols(b).some((col) => col.blocks.some((x) => x.id === childId))) {
-      return b.id;
-    }
+    if (b.type === "Columns" && getCols(b).some((col) => col.blocks.some((x) => x.id === childId))) return b.id;
+    if (b.type === "Loop" && getLoopBlocks(b).some((x) => x.id === childId)) return b.id;
   }
   return null;
 }
@@ -238,8 +268,8 @@ export function EditorShell({
   );
   // When the selected block lives inside a Columns container, this is that
   // container's id (used for a "back to Columns" breadcrumb).
-  const parentColumnsId = useMemo(
-    () => findParentColumnsId(layout.blocks, selectedId),
+  const parentContainerId = useMemo(
+    () => findParentContainerId(layout.blocks, selectedId),
     [layout.blocks, selectedId],
   );
 
@@ -421,6 +451,8 @@ export function EditorShell({
             },
             mobileVariant: "show",
           }
+        : type === "Loop"
+        ? { id, type, config: { ...(DEFAULT_CONFIG.Loop || {}) }, blocks: [], mobileVariant: "show" }
         : { id, type, config: { ...(DEFAULT_CONFIG[type] || {}) }, mobileVariant: "show" };
     const next = [...layout.blocks];
     if (position === undefined || position < 0 || position > next.length) {
@@ -552,6 +584,41 @@ export function EditorShell({
         },
       })),
     }, true);
+  }
+
+  // --- Loop container ops ---
+  // Append a primitive (Heading/Image/Text) to a Loop's per-item template.
+  function addBlockToLoop(loopId: string, type: string) {
+    if (!LOOP_PRIMITIVES.includes(type as (typeof LOOP_PRIMITIVES)[number])) return;
+    const prim: Block = {
+      id: makeId(type.slice(0, 3).toLowerCase()),
+      type,
+      config: { ...(DEFAULT_CONFIG[type] || {}) },
+      mobileVariant: "show",
+    };
+    persistLocal(
+      { ...layout, blocks: mapBlockDeep(layout.blocks, loopId, (b) => ({ ...b, blocks: [...getLoopBlocks(b), prim] })) },
+      true,
+    );
+    setSelectedId(prim.id);
+  }
+
+  // Reorder a primitive within its Loop's template.
+  function moveBlockInLoop(loopId: string, blockId: string, dir: -1 | 1) {
+    persistLocal(
+      {
+        ...layout,
+        blocks: mapBlockDeep(layout.blocks, loopId, (b) => {
+          const lb = [...getLoopBlocks(b)];
+          const i = lb.findIndex((x) => x.id === blockId);
+          const j = i + dir;
+          if (i === -1 || j < 0 || j >= lb.length) return b;
+          [lb[i], lb[j]] = [lb[j], lb[i]];
+          return { ...b, blocks: lb };
+        }),
+      },
+      true,
+    );
   }
 
   function toggleMultiSelect(id: string) {
@@ -852,14 +919,24 @@ export function EditorShell({
               onDeleteChild={(childId) => deleteBlock(childId)}
               onDelete={() => deleteBlock(selected.id)}
             />
+          ) : selected.type === "Loop" ? (
+            <LoopConfig
+              block={selected}
+              onChange={(patch) => updateBlock(selected.id, patch)}
+              onAdd={(type) => addBlockToLoop(selected.id, type)}
+              onSelectChild={(childId) => setSelectedId(childId)}
+              onMoveChild={(childId, dir) => moveBlockInLoop(selected.id, childId, dir)}
+              onDeleteChild={(childId) => deleteBlock(childId)}
+              onDelete={() => deleteBlock(selected.id)}
+            />
           ) : (
             <>
-              {parentColumnsId && (
+              {parentContainerId && (
                 <button
-                  onClick={() => setSelectedId(parentColumnsId)}
+                  onClick={() => setSelectedId(parentContainerId)}
                   style={{ ...btnSecondary, marginBottom: 10, width: "100%" }}
                 >
-                  ↑ Back to Columns
+                  ↑ Back to container
                 </button>
               )}
               <ConfigPanel
@@ -1218,6 +1295,101 @@ function ConfigPanel({
   );
 }
 
+// Loop container editor: data source (count/category) + grid columns + the
+// per-item primitive template (Heading/Image/Text). Selecting a primitive opens
+// its binding config (with a "Back to container" breadcrumb).
+function LoopConfig({
+  block,
+  onChange,
+  onAdd,
+  onSelectChild,
+  onMoveChild,
+  onDeleteChild,
+  onDelete,
+}: {
+  block: Block;
+  onChange: (patch: Partial<Block>) => void;
+  onAdd: (type: string) => void;
+  onSelectChild: (childId: string) => void;
+  onMoveChild: (childId: string, dir: -1 | 1) => void;
+  onDeleteChild: (childId: string) => void;
+  onDelete: () => void;
+}) {
+  const cfg = (block.config || {}) as { count?: number; categorySlug?: string; columns?: number; gap?: number };
+  const items = block.blocks || [];
+  return (
+    <div>
+      <div style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", marginBottom: 4 }}>Selected</div>
+      <div style={{ fontSize: 15, fontWeight: 700, color: "#111827", marginBottom: 4 }}>🔁 Loop · Latest news</div>
+      <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 12 }}>{block.id}</div>
+
+      <Label>How many articles</Label>
+      <Input type="number" min={1} max={60} value={cfg.count ?? 12} onChange={(e) => onChange({ config: { ...block.config, count: Number(e.target.value) } })} className="mb-2" />
+
+      <Label>Category slug (blank = all)</Label>
+      <Input value={cfg.categorySlug ?? ""} onChange={(e) => onChange({ config: { ...block.config, categorySlug: e.target.value } })} placeholder="blank = all latest news" className="mb-2" />
+
+      <Label>Grid columns</Label>
+      <Select value={String(cfg.columns ?? 1)} onValueChange={(v) => onChange({ config: { ...block.config, columns: Number(v) } })}>
+        <SelectTrigger className="w-full mb-2"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          {[1, 2, 3, 4].map((n) => (
+            <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Label>Gap (px)</Label>
+      <Input type="number" min={0} max={64} value={cfg.gap ?? 16} onChange={(e) => onChange({ config: { ...block.config, gap: Number(e.target.value) } })} className="mb-2" />
+
+      <Label>Mobile variant</Label>
+      <Select value={block.mobileVariant} onValueChange={(v) => onChange({ mobileVariant: v as Block["mobileVariant"] })}>
+        <SelectTrigger className="w-full mb-2"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="show">Show</SelectItem>
+          <SelectItem value="hide">Hide on mobile</SelectItem>
+          <SelectItem value="stack-below">Stack below</SelectItem>
+          <SelectItem value="compact">Compact</SelectItem>
+        </SelectContent>
+      </Select>
+
+      <hr style={{ border: "none", borderTop: "1px solid #e5e7eb", margin: "14px 0" }} />
+
+      <div style={{ fontSize: 11, fontWeight: 700, color: "#374151", marginBottom: 6 }}>
+        Item template · {items.length} block{items.length === 1 ? "" : "s"} (repeats per article)
+      </div>
+      {items.length === 0 && (
+        <div style={{ ...paletteHint, padding: 4 }}>No blocks yet. Add Heading / Image / Text — bind each to an article field.</div>
+      )}
+      {items.map((cb, i) => (
+        <div key={cb.id} className="flex items-center gap-1 mb-1.5">
+          <span onClick={() => onSelectChild(cb.id)} style={{ flex: 1, fontWeight: 600, fontSize: 12, cursor: "pointer" }}>
+            {cb.type}
+            <span style={{ color: "#6b7280", fontWeight: 400 }}> · {((cb.config as { binding?: string })?.binding) ?? ""}</span>
+          </span>
+          <WithTooltip text="Edit binding"><Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => onSelectChild(cb.id)}>⚙</Button></WithTooltip>
+          <WithTooltip text="Move up"><Button type="button" variant="ghost" size="icon" className="h-7 w-7" disabled={i === 0} onClick={() => onMoveChild(cb.id, -1)}>▲</Button></WithTooltip>
+          <WithTooltip text="Move down"><Button type="button" variant="ghost" size="icon" className="h-7 w-7" disabled={i === items.length - 1} onClick={() => onMoveChild(cb.id, 1)}>▼</Button></WithTooltip>
+          <WithTooltip text="Remove"><Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => onDeleteChild(cb.id)}>✕</Button></WithTooltip>
+        </div>
+      ))}
+      <Select value="" onValueChange={(v) => { if (v) onAdd(v); }}>
+        <SelectTrigger className="h-8 w-full text-xs mt-1"><SelectValue placeholder="+ Add Heading / Image / Text…" /></SelectTrigger>
+        <SelectContent>
+          {LOOP_PRIMITIVES.map((t) => (
+            <SelectItem key={t} value={t}>{t}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <hr style={{ border: "none", borderTop: "1px solid #e5e7eb", margin: "16px 0" }} />
+      <Button type="button" variant="outline" className="w-full text-destructive hover:text-destructive" onClick={onDelete}>
+        Delete Loop block
+      </Button>
+    </div>
+  );
+}
+
 // Columns container editor: column count + gap + per-column block management.
 // Each column lists its blocks (click to edit, ▲▼ reorder, ✕ remove) and has an
 // "+ Add block" picker. Selecting a nested block swaps the panel to that block's
@@ -1390,6 +1562,18 @@ function BlockConfigForm({
           <SmallCheckbox label="Featured only" value={Boolean(cfg.featuredOnly)} onChange={(v) => setCfg({ featuredOnly: v })} />
         </>
       );
+    case "LatestNews":
+      return (
+        <>
+          <SmallNumber label="Count" value={(cfg.count as number) ?? 12} onChange={(v) => setCfg({ count: v })} min={1} max={60} />
+          <SmallText
+            label="Category slug (blank = all)"
+            value={(cfg.categorySlug as string) || ""}
+            onChange={(v) => setCfg({ categorySlug: v })}
+            placeholder="leave blank for all latest news"
+          />
+        </>
+      );
     case "WebStories":
       return <SmallNumber label="Count" value={(cfg.count as number) ?? 8} onChange={(v) => setCfg({ count: v })} min={0} max={20} />;
     case "PhotoGallery":
@@ -1432,6 +1616,36 @@ function BlockConfigForm({
           value={Array.isArray(cfg.columns) ? cfg.columns : []}
           onChange={(v) => setCfg({ columns: v })}
         />
+      );
+    case "Heading":
+      return (
+        <>
+          <SmallSelect label="Bind to" value={(cfg.binding as string) || "title"} onChange={(v) => setCfg({ binding: v })} options={BINDING_OPTIONS} />
+          {cfg.binding === "static" && (
+            <SmallText label="Static text" value={(cfg.staticText as string) || ""} onChange={(v) => setCfg({ staticText: v })} />
+          )}
+          <SmallSelect label="Level" value={(cfg.level as string) || "h3"} onChange={(v) => setCfg({ level: v })} options={[{ value: "h2", label: "H2" }, { value: "h3", label: "H3" }, { value: "h4", label: "H4" }]} />
+          <SmallCheckbox label="Link to article" value={cfg.linkToItem !== false} onChange={(v) => setCfg({ linkToItem: v })} />
+        </>
+      );
+    case "Text":
+      return (
+        <>
+          <SmallSelect label="Bind to" value={(cfg.binding as string) || "summary"} onChange={(v) => setCfg({ binding: v })} options={BINDING_OPTIONS} />
+          {cfg.binding === "static" && (
+            <SmallText label="Static text" value={(cfg.staticText as string) || ""} onChange={(v) => setCfg({ staticText: v })} />
+          )}
+        </>
+      );
+    case "Image":
+      return (
+        <>
+          <SmallSelect label="Bind to" value={(cfg.binding as string) || "image"} onChange={(v) => setCfg({ binding: v })} options={BINDING_OPTIONS} />
+          {cfg.binding === "static" && (
+            <SmallText label="Static image URL" value={(cfg.staticUrl as string) || ""} onChange={(v) => setCfg({ staticUrl: v })} placeholder="https://…" />
+          )}
+          <SmallCheckbox label="Link to article" value={cfg.linkToItem !== false} onChange={(v) => setCfg({ linkToItem: v })} />
+        </>
       );
     default:
       return (

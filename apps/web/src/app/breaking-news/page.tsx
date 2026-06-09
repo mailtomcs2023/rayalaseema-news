@@ -7,6 +7,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { Button } from "@/components/ui/button";
 import { prisma } from "@rayalaseema/db";
 
 // Breaking news changes fast - revalidate often.
@@ -54,17 +55,57 @@ export default async function BreakingPage() {
       <SiteHeader />
       <main style={{ maxWidth: 900, margin: "0 auto", padding: "20px 12px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-          <span style={{ background: "#E01B1B", color: "#fff", fontWeight: 900, fontSize: 12, padding: "5px 12px", borderRadius: 4, letterSpacing: "0.06em", display: "inline-flex", alignItems: "center", gap: 6 }}>
-            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#fff", display: "inline-block" }} className="animate-pulse" aria-hidden="true" />
+          <span style={{ background: "#E01B1B", color: "#fff", fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif', fontWeight: 900, fontSize: 12, lineHeight: 1, padding: "6px 12px", borderRadius: 4, letterSpacing: "0.06em", display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#fff", display: "block", flexShrink: 0 }} className="animate-pulse" aria-hidden="true" />
             BREAKING
           </span>
           <h1 style={{ fontSize: 24, fontWeight: 900, color: "#111" }}>బ్రేకింగ్ న్యూస్</h1>
         </div>
 
         {items.length === 0 ? (
-          <p style={{ color: "#666", padding: "48px 0", textAlign: "center", fontSize: 15 }}>
-            ప్రస్తుతం బ్రేకింగ్ న్యూస్ ఏమీ లేదు.
-          </p>
+          <div className="bn-empty">
+            <div className="bn-empty-ic" aria-hidden="true">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+            </div>
+            <h2 className="bn-empty-t">ప్రస్తుతం బ్రేకింగ్ న్యూస్ లేదు</h2>
+            <p className="bn-empty-s">
+              ముఖ్యమైన అప్‌డేట్‌లు వచ్చిన వెంటనే ఇక్కడ కనిపిస్తాయి. అప్పటివరకు తాజా వార్తలు చదవండి.
+            </p>
+            <div className="bn-empty-cta">
+              <Button asChild size="lg" className="h-11 rounded-xl px-6 text-sm font-bold">
+                <Link href="/latest-news-list">తాజా వార్తలు చూడండి</Link>
+              </Button>
+              <Button asChild size="lg" variant="outline" className="h-11 rounded-xl px-6 text-sm font-bold">
+                <Link href="/">హోమ్‌కి వెళ్లండి</Link>
+              </Button>
+            </div>
+            <style>{`
+              .bn-empty {
+                display: flex; flex-direction: column; align-items: center; text-align: center;
+                padding: 56px 24px 64px; margin-top: 4px;
+                background: #fff; border: 1px solid #eef0f2; border-radius: 16px;
+              }
+              .bn-empty-ic {
+                width: 88px; height: 88px; border-radius: 50%; margin-bottom: 22px;
+                display: flex; align-items: center; justify-content: center;
+                color: var(--brand, #E01B1B);
+                background: linear-gradient(180deg, #fff5f5, #fee2e2);
+                box-shadow: 0 10px 30px rgba(224,27,27,0.16), inset 0 0 0 1px rgba(224,27,27,0.06);
+              }
+              .bn-empty-t {
+                font-family: var(--font-telugu-heading), serif;
+                font-size: 20px; font-weight: 800; color: #0f172a; margin: 0 0 8px;
+              }
+              .bn-empty-s {
+                font-size: 13.5px; color: #64748b; line-height: 1.75;
+                max-width: 380px; margin: 0 auto 24px;
+              }
+              .bn-empty-cta { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+            `}</style>
+          </div>
         ) : (
           <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #eee", overflow: "hidden" }}>
             {items.map((item, i) => {
