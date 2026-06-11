@@ -12,7 +12,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@rayalaseema/db";
-import { buildCategoryMetadata, CategoryView } from "@/lib/category-render";
+import { buildCategoryMetadata, CategoryHubView } from "@/lib/category-render";
 import { buildDistrictMetadata, DistrictView } from "@/lib/district-render";
 
 // Re-render at most once a minute so newly tagged/published articles appear on
@@ -51,7 +51,9 @@ export default async function RootSectionPage({
 }) {
   const { district: slug } = await params;
   const kind = await classify(slug);
-  if (kind === "category") return <CategoryView slug={slug} />;
+  // All category hubs use the same district-hub layout (lead + 2-col card grid
+  // + Trending rail) as /kurnool and /district-news.
+  if (kind === "category") return <CategoryHubView slug={slug} />;
   if (kind === "district") return <DistrictView slug={slug} />;
   return notFound();
 }

@@ -361,7 +361,7 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
                 the logo. The logo's red map glyph occupies roughly the first
                 14% of the wordmark width; padding-left:14% (~44px @ h-16)
                 shifts the date row to start where the wordmark text starts. */}
-            {/* Date strip — populated client-side after hydration to
+            {/* Date strip - populated client-side after hydration to
               avoid the React #418 mismatch we used to throw on every
               page load (server's Date in IST and client's Date in any
               other timezone would produce different weekday names,

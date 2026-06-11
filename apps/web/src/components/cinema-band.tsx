@@ -197,7 +197,7 @@ export function CinemaBand({
           gap: 2px;
           /* Darker overlay on the brand-red bar so the white tab labels
              clear WCAG AA 4.5:1 contrast (PSI flagged the previous
-             rgba(255,255,255,0.16) — that lightened the bar to
+             rgba(255,255,255,0.16) - that lightened the bar to
              ~rgb(229,63,63) and the white text only hit ~3.7:1). */
           background: rgba(0,0,0,0.28);
           border-radius: 9px;
@@ -296,9 +296,7 @@ export function CinemaBand({
           aspect-ratio: 16/10;
           object-fit: contain;
           display: block;
-          transition: transform 0.4s ease;
         }
-        .cb-lead-img:hover img { transform: scale(1.03); }
         .cb-noimg {
           width: 100%;
           aspect-ratio: 16/10;

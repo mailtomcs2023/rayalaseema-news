@@ -9,7 +9,7 @@ const db = prisma as unknown as {
   visualPage: {
     findMany: (a: unknown) => Promise<unknown[]>;
     create: (a: unknown) => Promise<{ id: string }>;
-    findUnique: (a: unknown) => Promise<unknown | null>;
+    findUnique: (a: unknown) => Promise<{ name: string; html: string | null; css: string | null; projectData: unknown } | null>;
   };
 };
 
@@ -36,8 +36,27 @@ export async function POST(req: NextRequest) {
   if (isAuthError(session)) return session;
   try {
     const body = await req.json();
-    const name = String(body?.name || "").trim();
-    if (!name) return NextResponse.json({ error: "name required" }, { status: 400 });
+
+    // Clone: copy an existing page's design into a fresh DRAFT with a new
+    // name/slug. Everything else (html/css/projectData) is duplicated.
+    const cloneFromId = body?.cloneFromId ? String(body.cloneFromId) : "";
+    let name: string;
+    const data: Record<string, unknown> = {};
+    if (cloneFromId) {
+      const src = await db.visualPage.findUnique({
+        where: { id: cloneFromId },
+        select: { name: true, html: true, css: true, projectData: true },
+      });
+      if (!src) return NextResponse.json({ error: "source page not found" }, { status: 404 });
+      name = String(body?.name || "").trim() || `${src.name} (copy)`;
+      data.html = src.html;
+      data.css = src.css;
+      data.projectData = src.projectData ?? undefined;
+    } else {
+      name = String(body?.name || "").trim();
+      if (!name) return NextResponse.json({ error: "name required" }, { status: 400 });
+    }
+
     const base = (body?.slug ? slugify(String(body.slug)) : slugify(name)) || "page";
     let slug = base;
     let n = 2;
@@ -45,7 +64,7 @@ export async function POST(req: NextRequest) {
     while (await db.visualPage.findUnique({ where: { slug } })) {
       slug = `${base}-${n++}`;
     }
-    const page = await db.visualPage.create({ data: { name, slug } });
+    const page = await db.visualPage.create({ data: { ...data, name, slug } });
     return NextResponse.json(page);
   } catch (e) {
     return apiError(e);

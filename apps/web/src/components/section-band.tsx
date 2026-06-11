@@ -231,19 +231,24 @@ export function SectionBand({
       </div>
 
       <style>{`
+        /* Floating white card (BBC look): soft layered shadow instead of a hard
+           border, rounder corners, and a touch more breathing room. */
         .sb {
           background: #fff;
-          border: 1px solid var(--paper-edge, rgba(0,0,0,0.06));
-          border-radius: 8px;
-          padding: 14px 18px 18px;
-          margin-top: 8px;
+          border: 1px solid rgba(0,0,0,0.04);
+          border-radius: 12px;
+          padding: 18px 22px 22px;
+          margin-top: 14px;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 8px 28px rgba(0,0,0,0.05);
         }
+        /* Header: drop the heavy 2px black rule for a clean light divider - the
+           red SectionHeading already carries the section identity. */
         .sb-head {
           display: flex; align-items: center; justify-content: space-between;
-          flex-wrap: wrap; gap: 8px;
-          padding-bottom: 10px;
-          border-bottom: 2px solid var(--n-900, #111827);
-          margin-bottom: 14px;
+          flex-wrap: wrap; gap: 10px;
+          padding-bottom: 12px;
+          border-bottom: 1px solid var(--n-200, #e5e7eb);
+          margin-bottom: 18px;
         }
         .sb-brand {
           font-family: var(--font-telugu-heading), serif;
@@ -339,7 +344,7 @@ export function SectionBand({
         .sb-lead-img {
           flex: 1 1 58%;
           display: block; overflow: hidden;
-          border-radius: 4px;
+          border-radius: 6px;
           /* Dark letterbox so the FULL image shows (no crop), matching the
              article page. object-fit:contain leaves bars - fill them black. */
           background: #000;
@@ -347,9 +352,7 @@ export function SectionBand({
         .sb-lead-img img {
           width: 100%; aspect-ratio: 16/10;
           object-fit: contain; display: block;
-          transition: transform 0.4s ease;
         }
-        .sb-lead-img:hover img { transform: scale(1.03); }
         .sb-noimg {
           width: 100%; aspect-ratio: 16/10;
           display: flex; align-items: center; justify-content: center;
@@ -364,9 +367,11 @@ export function SectionBand({
           display: flex; gap: 12px;
           padding: 14px 16px;
           text-decoration: none;
-          border-bottom: 1px solid var(--paper-edge, rgba(0,0,0,0.08));
-          border-right: 1px solid var(--paper-edge, rgba(0,0,0,0.08));
+          border-bottom: 1px solid var(--paper-edge, rgba(0,0,0,0.06));
+          border-right: 1px solid var(--paper-edge, rgba(0,0,0,0.06));
+          transition: background 0.15s ease;
         }
+        .sb-grid-item:hover { background: var(--brand-soft, #FFF1F1); }
         .sb-grid-item:nth-child(2n) { border-right: none; padding-right: 0; }
         .sb-grid-item:nth-child(2n+1) { padding-left: 0; }
         .sb-grid-item:nth-child(n+3) { border-bottom: none; }
@@ -381,7 +386,7 @@ export function SectionBand({
         .sb-grid-item:hover .sb-grid-title { color: var(--brand-dark, #B91414); }
         .sb-grid-thumb {
           flex: 0 0 96px; height: 64px;
-          overflow: hidden; border-radius: 4px;
+          overflow: hidden; border-radius: 6px;
           background: var(--n-100, #f3f4f6);
         }
         .sb-grid-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -391,17 +396,21 @@ export function SectionBand({
           font-size: 14px; font-weight: 800;
           color: var(--n-900, #111827);
           padding-bottom: 8px;
-          border-bottom: 2px solid var(--n-900, #111827);
+          border-bottom: 2px solid var(--brand, #E01B1B);
           margin-bottom: 4px;
           display: flex; align-items: baseline; gap: 6px;
         }
         .sb-rail-head span { color: var(--brand, #E01B1B); }
         .sb-rail-item {
-          display: flex; gap: 10px;
+          display: flex; gap: 11px;
           text-decoration: none;
-          padding: 11px 0;
-          border-bottom: 1px dotted var(--paper-edge, rgba(0,0,0,0.18));
+          padding: 11px 6px;
+          margin: 0 -6px;
+          border-bottom: 1px solid var(--paper-edge, rgba(0,0,0,0.07));
+          border-radius: 6px;
+          transition: background 0.15s ease;
         }
+        .sb-rail-item:hover { background: var(--brand-soft, #FFF1F1); }
         .sb-rail-item:last-child { border-bottom: none; }
         .sb-rail-num {
           font-family: var(--font-telugu-heading), sans-serif;

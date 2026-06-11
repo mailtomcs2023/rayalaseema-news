@@ -2,7 +2,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@rayalaseema/db";
 import { auth } from "@/lib/auth";
-import { VisualPagesManager } from "@/components/visual-pages-manager";
+import { VisualPagesTable } from "@/components/visual-pages-table";
 
 export const dynamic = "force-dynamic";
 
@@ -18,9 +18,11 @@ export default async function VisualPagesListPage() {
     orderBy: { updatedAt: "desc" },
   });
 
+  const webUrl = process.env.WEB_URL || process.env.NEXT_PUBLIC_WEB_URL || "http://localhost:3000";
+
   return (
     <div style={{ marginLeft: 240, padding: 24, background: "#f3f4f6", minHeight: "100vh" }}>
-      <VisualPagesManager initial={JSON.parse(JSON.stringify(pages))} />
+      <VisualPagesTable data={JSON.parse(JSON.stringify(pages))} webUrl={webUrl} />
     </div>
   );
 }

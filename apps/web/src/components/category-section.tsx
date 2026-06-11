@@ -57,7 +57,7 @@ function ArticleCardLarge({ article, color }: { article: Article; color: string 
           <img
             src={article.featuredImage}
             alt={article.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-full object-cover"
             loading="lazy"
           />
         ) : (
@@ -94,7 +94,7 @@ function ArticleCardSmall({ article, color }: { article: Article; color: string 
           <img
             src={article.featuredImage}
             alt={article.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-full object-cover"
             loading="lazy"
           />
         ) : (
@@ -127,7 +127,7 @@ function ArticleCardList({ article, color }: { article: Article; color: string }
           <img
             src={article.featuredImage}
             alt={article.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-full object-cover"
             loading="lazy"
           />
         ) : (

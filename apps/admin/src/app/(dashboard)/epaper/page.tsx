@@ -12,7 +12,6 @@
 //   6. Render button → /api/epaper/render-v2 builds the vector PDF
 
 import { useState, useEffect, useCallback, useRef, useMemo, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
 import { ToastViewport, useToasts } from "@/components/toast";
 import GridLayout, { type Layout as RGLLayout } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
@@ -23,6 +22,11 @@ import { PreflightPanel, PreflightChip } from "@/components/epaper/preflight-pan
 import { InlineTextEditor } from "@/components/epaper/inline-text-editor";
 import { WithTooltip } from "@/components/ui/tooltip";
 import { DatePicker } from "@/components/ui/date-picker";
+import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useKycGate } from "@/components/kyc-gated-link";
 
@@ -156,6 +160,138 @@ function EpaperEditorPage() {
   const [preflightOpen, setPreflightOpen] = useState(false);
   const [preflightReload, setPreflightReload] = useState(0);
 
+  // "Recent editions" archive panel - lists existing editions across all dates
+  // so the operator can jump to one instead of guessing dates in the picker.
+  type RecentEdition = { id: string; date: string; edition: string; status: string; workflowState: string; pageCount: number; pdfUrl: string | null };
+  const [recentEditions, setRecentEditions] = useState<RecentEdition[]>([]);
+  const [editionsPanelOpen, setEditionsPanelOpen] = useState(false);
+  const [selEditions, setSelEditions] = useState<Set<string>>(new Set());
+  const loadRecentEditions = useCallback(async () => {
+    try {
+      const res = await fetch("/api/epaper/editions?limit=60");
+      const data = await res.json();
+      setRecentEditions(Array.isArray(data.editions) ? data.editions : []);
+    } catch {
+      setRecentEditions([]);
+    }
+  }, []);
+  useEffect(() => { loadRecentEditions(); }, [loadRecentEditions]);
+
+  // Jump to an existing edition from the Recent-editions panel (changing
+  // date/variant triggers the load effect above).
+  const openEdition = (e: { date: string; edition: string }) => {
+    setVariant(e.edition || "main");
+    setDate(e.date);
+    setEditionsPanelOpen(false);
+  };
+
+  // Bulk-delete selected editions (pages/ads/comments/snapshots cascade).
+  const deleteEditions = async (ids: string[]) => {
+    if (!ids.length) return;
+    const ok = await confirm({
+      title: `Delete ${ids.length} edition${ids.length > 1 ? "s" : ""}?`,
+      description: "This permanently removes the edition(s) and all their pages, ads, comments and snapshots. This cannot be undone.",
+      confirmText: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
+    const results = await Promise.all(
+      ids.map((id) => fetch(`/api/epaper/edition/${id}`, { method: "DELETE" }).then((r) => r.ok).catch(() => false)),
+    );
+    const okCount = results.filter(Boolean).length;
+    setSelEditions(new Set());
+    await loadRecentEditions();
+    if (edition && ids.includes(edition.id)) await loadEdition(date, variant);
+    if (okCount === ids.length) toast("success", `Deleted ${okCount} edition${okCount > 1 ? "s" : ""}.`);
+    else toast("error", `Deleted ${okCount} of ${ids.length}.`);
+  };
+
+  const renderEditionsTable = () => {
+    if (recentEditions.length === 0) {
+      return <div style={{ fontSize: 13, color: "#94a3b8", padding: "8px 2px" }}>No editions yet. Generate one to see it here.</div>;
+    }
+    const ids = recentEditions.map((e) => e.id);
+    const selected = ids.filter((id) => selEditions.has(id));
+    const allSelected = selected.length === ids.length;
+    const someSelected = selected.length > 0 && !allSelected;
+    const toggleAll = () => setSelEditions(allSelected ? new Set() : new Set(ids));
+    const toggleOne = (id: string) =>
+      setSelEditions((prev) => {
+        const n = new Set(prev);
+        if (n.has(id)) n.delete(id); else n.add(id);
+        return n;
+      });
+    return (
+      <div className="shadcn-scope">
+        {/* Bulk action bar - appears when rows are selected */}
+        {selected.length > 0 && (
+          <div className="mb-2 flex items-center gap-3 rounded-md border bg-muted/40 px-3 py-2">
+            <span className="text-sm font-medium">{selected.length} selected</span>
+            <Button
+              variant="outline" size="sm"
+              className="border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+              onClick={() => deleteEditions(selected)}
+            >
+              Delete {selected.length}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setSelEditions(new Set())}>Clear</Button>
+          </div>
+        )}
+        <div className="overflow-x-auto rounded-md border bg-background">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="w-10">
+                  <Checkbox aria-label="Select all" checked={allSelected || (someSelected && "indeterminate")} onCheckedChange={toggleAll} />
+                </TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Variant</TableHead>
+                <TableHead className="text-center">Pages</TableHead>
+                <TableHead>Workflow</TableHead>
+                <TableHead>Render</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {recentEditions.map((e) => {
+                const isOpen = e.date === date && e.edition === variant;
+                const color = (WORKFLOW_COLOR as Record<string, string>)[e.workflowState] || "#475569";
+                return (
+                  <TableRow key={e.id} data-state={selEditions.has(e.id) ? "selected" : undefined} className={cn(isOpen && "bg-indigo-50/60")}>
+                    <TableCell>
+                      <Checkbox aria-label="Select edition" checked={selEditions.has(e.id)} onCheckedChange={() => toggleOne(e.id)} />
+                    </TableCell>
+                    <TableCell className="font-semibold">
+                      {e.date}
+                      {e.date === today && <Badge variant="outline" className="ml-2 border-indigo-200 bg-indigo-50 text-[10px] text-indigo-700">Today</Badge>}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{e.edition === "main" ? "Main" : `📰 ${e.edition}`}</TableCell>
+                    <TableCell className="text-center tabular-nums">{e.pageCount}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-[11px]" style={{ background: color + "22", color, borderColor: color + "55" }}>
+                        {(WORKFLOW_LABEL as Record<string, string>)[e.workflowState] || e.workflowState}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{e.status || "-"}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {e.pdfUrl && (
+                          <a href={e.pdfUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-indigo-600 hover:underline">PDF ↗</a>
+                        )}
+                        <Button size="sm" className="h-7" onClick={() => openEdition(e)}>Open</Button>
+                        <Button size="sm" variant="ghost" className="h-7 px-2 text-red-600 hover:bg-red-50 hover:text-red-700" onClick={() => deleteEditions([e.id])}>Delete</Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    );
+  };
+
   const loadEdition = useCallback(async (d: string, v: string = "main") => {
     setError(""); setBusy("loading");
     try {
@@ -245,6 +381,7 @@ function EpaperEditorPage() {
         return;
       }
       await loadEdition(date);
+      loadRecentEditions();
       toast("success", "Edition generated.");
     } catch (e: any) {
       toast("error", e.message || "Generate failed");
@@ -298,17 +435,10 @@ function EpaperEditorPage() {
 
   const activePage = edition?.pages?.[activePageIdx];
 
-  // Editor version flag. v1 (legacy RGL) is the stable default; v2 is
-  // available behind ?editor=v2 for testing while bugs get worked out.
-  // Toolbar chip flips the flag via the router.
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const editorVersion = searchParams.get("editor") === "v2" ? "v2" : "v1";
-  const flipEditor = () => {
-    const next = new URLSearchParams(searchParams);
-    next.set("editor", editorVersion === "v2" ? "v1" : "v2");
-    router.replace(`?${next.toString()}`);
-  };
+  // Layout engine locked to v1 (legacy RGL) - the stable, production editor.
+  // The v2 (mm-canvas BETA) toggle was removed; the v2 code paths below remain
+  // dead-but-harmless behind this constant.
+  const editorVersion = "v1" as "v1" | "v2";
 
   // v2 reads blocks in mm-v2 shape - auto-migrate legacy grid-v1 layouts
   // on the fly so an operator can flip ?editor=v2 on any existing edition
@@ -736,19 +866,14 @@ function EpaperEditorPage() {
     localStorage.setItem("re-epaper-tour-seen", "1");
   };
 
-  // Dark mode toggle for night-shift operators. Persists to localStorage;
-  // canvas itself stays light because it represents the printed paper.
-  const [darkMode, setDarkMode] = useState(false);
+  // Dark mode removed - the editor is light only (the canvas always represents
+  // the printed paper). Clear any previously-persisted dark flag on mount.
   useEffect(() => {
-    const stored = typeof window !== "undefined" ? localStorage.getItem("re-epaper-dark") : null;
-    if (stored === "1") { setDarkMode(true); document.documentElement.dataset.reEpaperDark = "1"; }
+    if (typeof window !== "undefined") {
+      delete document.documentElement.dataset.reEpaperDark;
+      localStorage.removeItem("re-epaper-dark");
+    }
   }, []);
-  const toggleDark = () => {
-    const next = !darkMode;
-    setDarkMode(next);
-    if (next) { document.documentElement.dataset.reEpaperDark = "1"; localStorage.setItem("re-epaper-dark", "1"); }
-    else { delete document.documentElement.dataset.reEpaperDark; localStorage.removeItem("re-epaper-dark"); }
-  };
 
   // View mode: edit canvas / split (canvas + preview iframe) / preview-only.
   // Live preview hits /api/epaper/page/[id]/preview which reuses
@@ -1653,14 +1778,18 @@ function EpaperEditorPage() {
         </div>
       )}
       <main style={{ marginLeft: 240, flex: 1, padding: 24, display: "flex", flexDirection: "column", gap: 16, height: "100vh", overflow: "hidden", minHeight: 0 }}>
-        {/* Top bar */}
-        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#111" }}>ePaper Editor (v2)</h1>
+        {/* Top bar - clean toolbar card */}
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: "12px 16px", boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}>
+          <div style={{ marginRight: 6 }}>
+            <h1 style={{ fontSize: 19, fontWeight: 800, color: "#0f172a", margin: 0, lineHeight: 1.15 }}>ePaper Editor</h1>
+            <div style={{ fontSize: 11.5, color: "#64748b", marginTop: 2 }}>Design &amp; render the daily edition</div>
+          </div>
           <div className="shadcn-scope" style={{ minWidth: 170 }}>
             <DatePicker
               value={date}
               onChange={(v) => { setDate(v); setVariant("main"); }}
               placeholder="Pick edition date"
+              max={today}
             />
           </div>
           {variants.length > 0 && (
@@ -1687,6 +1816,12 @@ function EpaperEditorPage() {
             style={{ padding: "8px 16px", background: "#4f46e5", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
             {busy === "generating" ? "Generating…" : edition ? "Regenerate" : "Generate"}
           </button>
+          <WithTooltip text="Browse all existing editions">
+            <button onClick={() => { setEditionsPanelOpen((o) => !o); loadRecentEditions(); }}
+              style={{ padding: "8px 14px", background: editionsPanelOpen ? "#eef2ff" : "#fff", color: "#4f46e5", border: "1px solid #c7d2fe", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+              🗂 Editions{recentEditions.length ? ` (${recentEditions.length})` : ""}
+            </button>
+          </WithTooltip>
           {edition && (
             <button onClick={renderEdition} disabled={busy === "rendering"}
               style={{ padding: "8px 16px", background: "#16a34a", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
@@ -1718,25 +1853,12 @@ function EpaperEditorPage() {
           )}
           {/* Preflight chip (#139) - opens side panel listing every issue. */}
           {edition && <PreflightChip editionId={edition.id} onClick={() => setPreflightOpen(true)} reloadKey={preflightReload} />}
-          {/* v2 editor flag chip (#135). Click to flip between v1 (RGL) and v2 (mm canvas + moveable). */}
-          <WithTooltip text={editorVersion === "v2" ? "Switch back to legacy editor" : "Try the new mm-coord editor (BETA)"}>
-            <button onClick={flipEditor}
-              style={{ padding: "6px 12px", background: editorVersion === "v2" ? "#db2777" : "#fff", color: editorVersion === "v2" ? "#fff" : "#db2777", border: "1px solid #db2777", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-              editor: {editorVersion}{editorVersion === "v2" ? " BETA" : ""}
-            </button>
-          </WithTooltip>
           {edition && (
             <button onClick={() => setCommentsOpen(true)}
               style={{ padding: "8px 16px", background: "#fff", color: "#0891b2", border: "1px solid #0891b2", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
               💬 Comments {comments.filter((c) => !c.resolved).length > 0 ? `(${comments.filter((c) => !c.resolved).length})` : ""}
             </button>
           )}
-          <WithTooltip text="Toggle dark mode">
-            <button onClick={toggleDark}
-              style={{ padding: "6px 10px", background: "transparent", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 13, cursor: "pointer" }}>
-              {darkMode ? "☀️" : "🌙"}
-            </button>
-          </WithTooltip>
           {activePage && (
             <div style={{ display: "inline-flex", border: "1px solid #d1d5db", borderRadius: 8, overflow: "hidden" }}>
               {(["edit", "split", "preview"] as const).map((m) => (
@@ -1795,6 +1917,8 @@ function EpaperEditorPage() {
               </div>
             </>
           )}
+          {/* Spacer: pushes the status cluster (workflow / render / save) to the right edge. */}
+          <div style={{ marginLeft: "auto" }} />
           {edition && (
             <WithTooltip text={edition.workflowNote ? `Last note: ${edition.workflowNote}` : null}>
               <span style={{ fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 6, background: WORKFLOW_COLOR[edition.workflowState] + "22", color: WORKFLOW_COLOR[edition.workflowState] }}>
@@ -1820,10 +1944,38 @@ function EpaperEditorPage() {
           {error && <span style={{ color: "#dc2626", fontSize: 12 }}>{error}</span>}
         </div>
 
-        {!edition && busy === "loading" && <p style={{ color: "#888" }}>Loading…</p>}
+        {/* Recent editions panel (toggled from the toolbar) - works even while
+            an edition is open, so you can jump between dates. */}
+        {editionsPanelOpen && (
+          <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: 16, boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <h3 style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", margin: 0 }}>Recent editions</h3>
+              <button onClick={() => setEditionsPanelOpen(false)} style={{ width: 26, height: 26, border: "none", background: "#f3f4f6", borderRadius: 6, cursor: "pointer", color: "#6b7280", fontSize: 15 }}>×</button>
+            </div>
+            {renderEditionsTable()}
+          </div>
+        )}
+
+        {!edition && busy === "loading" && (
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8", fontSize: 14 }}>Loading…</div>
+        )}
         {!edition && busy !== "loading" && (
-          <div style={{ padding: 40, textAlign: "center", color: "#666", background: "#fff", borderRadius: 8 }}>
-            No edition for {date}. Click <b>Generate</b> to auto-fill 13 pages from today's articles.
+          <div style={{ flex: 1, minHeight: 0, overflowY: "auto", width: "100%" }}>
+            <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: 16, width: "100%", boxSizing: "border-box" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
+                <div>
+                  <h3 style={{ fontSize: 15, fontWeight: 800, color: "#0f172a", margin: 0 }}>Recent editions</h3>
+                  <p style={{ fontSize: 12.5, color: "#64748b", margin: "2px 0 0" }}>
+                    No edition for <b>{date}</b> yet - pick a date and click Generate, or open one below.
+                  </p>
+                </div>
+                <button onClick={generate} disabled={busy === "generating"}
+                  style={{ padding: "9px 18px", background: "#4f46e5", color: "#fff", border: "none", borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
+                  {busy === "generating" ? "Generating…" : "Generate edition"}
+                </button>
+              </div>
+              {renderEditionsTable()}
+            </div>
           </div>
         )}
 

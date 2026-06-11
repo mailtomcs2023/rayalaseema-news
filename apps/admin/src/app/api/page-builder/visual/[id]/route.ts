@@ -21,7 +21,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (body?.projectData !== undefined) data.projectData = body.projectData;
     if (typeof body?.html === "string") data.html = body.html;
     if (typeof body?.css === "string") data.css = body.css;
-    if (body?.publish) {
+    // `publish` accepts a boolean: true → publish (stamp publishedAt),
+    // false → unpublish (clear it). Backward compatible with the old truthy use.
+    if (typeof body?.publish === "boolean") {
+      data.isPublished = body.publish;
+      data.publishedAt = body.publish ? new Date() : null;
+    } else if (body?.publish) {
       data.isPublished = true;
       data.publishedAt = new Date();
     }

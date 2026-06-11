@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { articleHref } from "@/lib/article-href";
 
-interface Hotspot { slug: string; x: number; y: number; w: number; h: number; }
+interface Hotspot { slug: string; href?: string; x: number; y: number; w: number; h: number; }
 interface EpaperPage {
   pageNumber: number;
   label: string;
@@ -35,7 +35,37 @@ export function EpaperViewer({
   const [clipUrl, setClipUrl] = useState<string | null>(null);
   const [clipBusy, setClipBusy] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
   const dragStart = useRef<{ x: number; y: number } | null>(null);
+  const pinch = useRef<{ startDist: number; startZoom: number } | null>(null);
+  const zoomRef = useRef(zoom);
+  useEffect(() => { zoomRef.current = zoom; }, [zoom]);
+
+  // Touch pinch-to-zoom. Panning is handled natively by the stage's
+  // overflow:auto once the page is wider than the viewport, so we only need to
+  // intercept two-finger gestures and feed them into the same `zoom` state the
+  // toolbar buttons use. Listeners are non-passive so we can preventDefault and
+  // stop the browser zooming the whole page instead of the e-paper page.
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+    const dist = (t: TouchList) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+    const onStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) { pinch.current = { startDist: dist(e.touches), startZoom: zoomRef.current }; e.preventDefault(); }
+    };
+    const onMove = (e: TouchEvent) => {
+      if (e.touches.length === 2 && pinch.current) {
+        const ratio = dist(e.touches) / pinch.current.startDist;
+        setZoom(Math.max(1, Math.min(4, +(pinch.current.startZoom * ratio).toFixed(2))));
+        e.preventDefault();
+      }
+    };
+    const onEnd = (e: TouchEvent) => { if (e.touches.length < 2) pinch.current = null; };
+    el.addEventListener("touchstart", onStart, { passive: false });
+    el.addEventListener("touchmove", onMove, { passive: false });
+    el.addEventListener("touchend", onEnd);
+    return () => { el.removeEventListener("touchstart", onStart); el.removeEventListener("touchmove", onMove); el.removeEventListener("touchend", onEnd); };
+  }, []);
 
   // Analytics ping - fire when the current page changes. Fire-and-forget;
   // never blocks UI.
@@ -161,7 +191,7 @@ export function EpaperViewer({
       <div className="ev-stage-wrap">
         <button className="ev-stage-arrow left" onClick={() => go(idx - 1)} disabled={idx === 0} aria-label="Previous">‹</button>
 
-        <div className="ev-stage">
+        <div className="ev-stage" ref={stageRef}>
           <div
             className="ev-pagewrap"
             style={{ width: `${zoom * 100}%`, cursor: clipMode ? "crosshair" : "default" }}
@@ -173,7 +203,7 @@ export function EpaperViewer({
 
             {!clipMode &&
               cur.hotspots.map((h, i) => (
-                <a key={i} className="ev-hotspot" href={articleHref(h)}
+                <a key={i} className="ev-hotspot" href={h.href || articleHref(h)}
                   onClick={() => {
                     if (editionId) {
                       fetch("/api/epaper/track", {
@@ -291,14 +321,23 @@ export function EpaperViewer({
           background: #2a2a2a; padding: 28px 12px; overflow: auto;
           display: flex; justify-content: center; align-items: flex-start;
           max-height: 78vh;
+          /* Allow native one-finger pan/scroll; two-finger pinch is handled in JS. */
+          touch-action: pan-x pan-y;
         }
         .ev-pagewrap { position: relative; user-select: none; max-width: 1000px; }
         .ev-page { width: 100%; height: auto; display: block; box-shadow: 0 8px 30px rgba(0,0,0,0.5); background: #fff; }
         .ev-hotspot {
           position: absolute; display: block;
           background: rgba(0,120,255,0); transition: background 0.15s;
+          -webkit-tap-highlight-color: rgba(0,120,255,0.25);
         }
         .ev-hotspot:hover { background: rgba(0,120,255,0.16); outline: 1px solid rgba(0,120,255,0.6); }
+        .ev-hotspot:active { background: rgba(0,120,255,0.22); }
+        /* On touch devices (no hover) make tappable stories faintly visible so
+           readers know where to tap, the way Eenadu/Sakshi hint article zones. */
+        @media (hover: none) {
+          .ev-hotspot { background: rgba(0,120,255,0.05); outline: 1px solid rgba(0,120,255,0.18); }
+        }
         .ev-sel {
           position: absolute; border: 2px dashed #FFD400;
           background: rgba(255,212,0,0.18); pointer-events: none;

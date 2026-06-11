@@ -390,6 +390,46 @@ export default function ContentEditorPage() {
     setTimeout(() => setSuccess(""), 5000);
   };
 
+  // Breaking news has no body - it's a one-line ticker headline. This rewrites
+  // whatever rough line the editor typed in the Title into a crisp Telugu
+  // flash-news headline (Eenadu/Sakshi style) and puts it back in the Title.
+  const runBreakingAI = async () => {
+    const src = title.trim();
+    if (!src) {
+      setError("Type the breaking-news line in the Title first - the AI will rewrite it in clean Telugu.");
+      return;
+    }
+    setAiLoading("breaking");
+    setError("");
+    setSuccess("");
+    try {
+      const res = await fetch("/api/ai/rewrite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: src, action: "breaking" }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        setError(data.error);
+      } else if (data.result) {
+        const line = String(data.result)
+          .replace(/<[^>]+>/g, "")
+          .split(/\r?\n/)[0]
+          .replace(/^\s*["'“”]+|["'“”]+\s*$/g, "")
+          .trim();
+        if (line) {
+          setTitle(line);
+          clearFieldError("title");
+          setSuccess("Breaking headline rewritten in Telugu.");
+        }
+      }
+    } catch (e: any) {
+      setError(e.message || "AI request failed");
+    }
+    setAiLoading(null);
+    setTimeout(() => setSuccess(""), 5000);
+  };
+
   const fetchFromUrl = async () => {
     if (!pasteUrl.trim()) return;
     setAiLoading("fetch");
@@ -1001,6 +1041,19 @@ export default function ContentEditorPage() {
                       </PopoverContent>
                     </Popover>
                   )}
+                  {type === "BREAKING_NEWS" && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={runBreakingAI}
+                      disabled={aiLoading !== null}
+                      className="h-7 gap-1 px-2 text-xs text-slate-600 hover:text-slate-900"
+                    >
+                      <Sparkles className="h-3.5 w-3.5 text-red-600" />
+                      {aiLoading === "breaking" ? "Writing…" : "తెలుగులో రాయండి"}
+                    </Button>
+                  )}
                 </div>
                 <Input
                   id="title-input"
@@ -1011,6 +1064,15 @@ export default function ContentEditorPage() {
                   className="h-12 bg-white text-lg font-bold md:text-lg"
                 />
                 {fieldErrors.title && <p className="mt-1 text-xs font-medium text-red-500">{fieldErrors.title}</p>}
+                {/* Soft length hint: the public hero carousel shows only the
+                    first 80 chars of the title (rest gets an ellipsis), so
+                    nudge authors to keep the headline tight. */}
+                {title.trim().length > 0 && (
+                  <p className={`mt-1 text-xs ${title.trim().length > 80 ? "font-medium text-amber-600" : "text-slate-400"}`}>
+                    {title.trim().length} characters
+                    {title.trim().length > 80 && " - only the first 80 show on the homepage carousel"}
+                  </p>
+                )}
               </div>
 
               {/* Slug is hidden for REPORTER role - the auto-generation

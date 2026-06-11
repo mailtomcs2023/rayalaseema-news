@@ -162,12 +162,16 @@ async function loadCandidatePool(input: AutofillInput): Promise<ScoredArticle[]>
  * adds up to +15 to popular categories so the auto-fill steers toward what
  * readers actually consume.
  */
-function scoreFit(slot: BlockSlot, a: ScoredArticle, heat?: Record<string, number>, templateSlug?: string): number {
+function scoreFit(slot: BlockSlot, a: ScoredArticle, heat?: Record<string, number>, templateSlug?: string, relaxCategory = false): number {
   const f = slot.slotFilter || {};
 
-  // Hard disqualifiers
-  if (f.categorySlug && f.categorySlug !== a.categorySlug) return -1;
-  if (f.districtSlug && f.districtSlug !== a.districtSlug) return -1;
+  // Hard disqualifiers. `relaxCategory` (fallback fill) ignores the category/
+  // district match so an under-filled section page can top up from the general
+  // pool; the image/length filters still apply so quality stays consistent.
+  if (!relaxCategory) {
+    if (f.categorySlug && f.categorySlug !== a.categorySlug) return -1;
+    if (f.districtSlug && f.districtSlug !== a.districtSlug) return -1;
+  }
   if (f.minImages && f.minImages > 0 && !a.hasImage) return -1;
   if (f.minWords && a.wordCount < f.minWords) return -1;
   if (f.maxWords && a.wordCount > f.maxWords) return -1;
@@ -181,11 +185,13 @@ function scoreFit(slot: BlockSlot, a: ScoredArticle, heat?: Record<string, numbe
       s += a.featured ? 30 : 0;
       s += a.breaking ? 25 : 0;
       s += a.hasImage ? 20 : 0;
-      s += Math.min(a.wordCount / 50, 15);  // longer copy fills lead
+      // Lead slots are tall - strongly prefer long copy so the block fills with
+      // body text instead of leaving white space under the headline/photo.
+      s += Math.min(a.wordCount / 25, 40);
       break;
     case "major":
       s += a.hasImage ? 15 : 0;
-      s += Math.min(a.wordCount / 80, 10);
+      s += Math.min(a.wordCount / 40, 20);  // majors are tall too - reward length
       break;
     case "secondary":
       s += a.hasImage ? 8 : 0;
@@ -269,6 +275,12 @@ export async function autofillTemplate(input: AutofillInput): Promise<AutofillRe
     }
   }
 
+  // NOTE: an earlier version topped up under-filled section pages from the
+  // general pool ("fill more"), but with a limited article pool that just made
+  // the first few section pages hog every story and starved later sections
+  // (fewer total pages, less variety). Pages already read full via continuation
+  // blocks + body-flow, so we keep autofill strictly on-category here and let
+  // the empty-page pruner drop genuinely thin pages.
   return {
     blocks: input.templateLayout.blocks,
     filledCount: filled,

@@ -100,9 +100,7 @@ export function VideoGrid({ videos }: { videos: VideoItem[] }) {
           aspect-ratio: 16/9;
           object-fit: cover;
           display: block;
-          transition: transform 0.4s ease, opacity 0.2s ease;
         }
-        .vg-thumb:hover img { transform: scale(1.04); opacity: 0.9; }
         .vg-play {
           position: absolute;
           top: 50%; left: 50%;

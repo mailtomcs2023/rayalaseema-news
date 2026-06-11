@@ -140,7 +140,7 @@ export async function uploadImageFromUrl(srcUrl: string | null | undefined): Pro
  *
  * Used at every Content create/update endpoint so external thumbnails
  * (10tv.in, asianetnews.com, telugutimes.net, etc) never leak onto the
- * public homepage — they were the biggest network-payload regression
+ * public homepage - they were the biggest network-payload regression
  * in the PSI re-audit after the next/image migration.
  */
 export async function ensureBlobHosted(url: string | null | undefined): Promise<string | null> {

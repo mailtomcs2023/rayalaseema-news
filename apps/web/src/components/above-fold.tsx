@@ -196,7 +196,7 @@ export function AboveFold({
           text-transform: uppercase;
           letter-spacing: 0.06em;
           text-decoration: none;
-          /* 12px gap to the title link below — exceeds PSI's 8px
+          /* 12px gap to the title link below - exceeds PSI's 8px
              minimum spacing between adjacent interactive elements. */
           margin-bottom: 12px;
           border: 1px solid var(--brand, #E01B1B);
@@ -224,9 +224,7 @@ export function AboveFold({
           aspect-ratio: 16/10;
           object-fit: cover;
           display: block;
-          transition: transform 0.4s ease;
         }
-        .af-lead-img:hover img { transform: scale(1.03); }
         .af-noimg {
           width: 100%;
           aspect-ratio: 16/10;
@@ -238,7 +236,7 @@ export function AboveFold({
           font-size: 36px;
           color: var(--n-300, #d1d5db);
         }
-        .af-lead-text { flex: 1 1 44%; min-width: 0; }
+        .af-lead-text { flex: 1 1 44%; min-width: 0; padding-top: 4px; }
         .af-lead-link {
           /* Block link wrapping the H2: display:block makes the full
              title row the tap target, padding-block ensures the click
@@ -252,7 +250,9 @@ export function AboveFold({
           font-family: var(--font-telugu-heading), serif;
           font-size: 26px;
           font-weight: 800;
-          line-height: 1.25;
+          /* Telugu's tall top vowel marks overflow a tight line box and get
+             clipped on the first line. 1.5 gives each line enough headroom. */
+          line-height: 1.5;
           color: var(--n-900, #111827);
           margin: 0 0 10px;
         }
@@ -263,6 +263,13 @@ export function AboveFold({
           line-height: 1.6;
           color: var(--n-600, #4b5563);
           margin: 0;
+          /* Cap the excerpt at 3 lines so the card height stays stable
+             regardless of how long the dek is. */
+          display: -webkit-box;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 3;
+          line-clamp: 3;
+          overflow: hidden;
         }
 
         /* HERO CAROUSEL (Swiper, manual nav). The carousel wrapper owns the
@@ -437,11 +444,6 @@ export function AboveFold({
           height: auto;
           opacity: 0.55;
           filter: grayscale(15%) drop-shadow(0 1px 2px rgba(0,0,0,0.1));
-          transition: opacity 0.18s, transform 0.18s;
-        }
-        .af-dist-lead:hover .af-dist-fallback-img {
-          opacity: 0.78;
-          transform: scale(1.04);
         }
         .af-dist-lead h3 {
           font-family: var(--font-telugu-heading), serif;

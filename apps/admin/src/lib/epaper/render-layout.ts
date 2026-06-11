@@ -86,6 +86,7 @@ interface ResolvedArticle {
   bodyText: string;    // plain-text body for continuation rendering
   categoryName: string;
   deskName: string | null;
+  hrefPath: string;    // canonical public path (/telugu-news/...) for links + hotspots
 }
 
 interface RenderInput {
@@ -124,13 +125,34 @@ function bodyEsc(s: string | null | undefined): string {
   return esc(hyphenateTelugu(s || ""));
 }
 
-function articleHref(slug: string): string {
-  return `${SITE_URL}/article/${slug}`;
+// Build the canonical public path for an article, mirroring apps/web
+// src/lib/article-href.ts so e-paper PDF links + viewer hotspots land on the
+// live /telugu-news/... URL in a single hop (no 301 redirect). Content.slug is
+// globally unique, so the bare-slug fallback still resolves correctly.
+function buildArticlePath(a: {
+  slug: string;
+  categorySlug: string | null;
+  constituencySlug: string | null;
+  districtSlug: string | null;
+}): string {
+  if (!a.slug) return "#";
+  if (a.constituencySlug && a.districtSlug) {
+    // Eponymous district-HQ constituency collapses to /district/slug.
+    if (a.constituencySlug === a.districtSlug) return `/telugu-news/${a.districtSlug}/${a.slug}`;
+    return `/telugu-news/${a.districtSlug}/${a.constituencySlug}/${a.slug}`;
+  }
+  if (a.categorySlug) return `/telugu-news/${a.categorySlug}/${a.slug}`;
+  return `/telugu-news/${a.slug}`;
+}
+
+function articleHref(a: ResolvedArticle): string {
+  return `${SITE_URL}${a.hrefPath}`;
 }
 
 function articleLink(a: ResolvedArticle, inner: string): string {
   // The href becomes a real PDF link annotation under Playwright `page.pdf`.
-  return `<a class="story-link" href="${esc(articleHref(a.slug))}">${inner}</a>`;
+  // The "story-link" class is also how render-v2 harvests clickable hotspots.
+  return `<a class="story-link" href="${esc(articleHref(a))}">${inner}</a>`;
 }
 
 // Module-scoped layout flag - set by renderLayoutToHtml before iterating
@@ -183,7 +205,12 @@ function imageOrFallback(url: string | null | undefined, className: string, crop
       const offsetY = -crop.y * 100 * scaleY;
       imgStyle = ` style="transform: translate(${offsetX}%, ${offsetY}%) scale(${scaleX}, ${scaleY}); transform-origin: 0 0;"`;
     }
-    return `<div class="ph ${className}"><img src="${esc(url)}" alt="" loading="eager" crossorigin="anonymous" referrerpolicy="no-referrer"${imgStyle} /></div>`;
+    // NB: do NOT set crossorigin="anonymous" here. The render is captured
+    // server-side by Playwright (page.pdf / screenshot) - there is no canvas
+    // pixel read, so CORS is irrelevant. But if the image CDN omits the
+    // Access-Control-Allow-Origin header, crossorigin="anonymous" makes the
+    // browser BLOCK the image outright → blank grey boxes instead of photos.
+    return `<div class="ph ${className}"><img src="${esc(url)}" alt="" loading="eager" referrerpolicy="no-referrer"${imgStyle} /></div>`;
   }
   return `<div class="ph ${className} noimg">రాయలసీమ న్యూస్</div>`;
 }
@@ -271,9 +298,13 @@ function leadBlock(b: Block, a: ResolvedArticle): string {
       const text = a.bodyText || a.summary || "";
       const splitAt = findApproxSplit(text, 1400);
       const head = text.slice(0, splitAt).trim();
-      return `<p class="${dekClass}"${dekStyle}>${wrapImageMarkup}${bodyEsc(head)}<a class="jump-link" href="#page=${target}"> &nbsp;→ మిగతా కథనం పేజీ ${target}</a></p>`;
+      return `<div class="${dekClass}"${dekStyle}>${wrapImageMarkup}${bodyParas(head)}<p class="jump-p"><a class="jump-link" href="#page=${target}">→ మిగతా కథనం పేజీ ${target}</a></p></div>`;
     }
-    return displaySummary ? `<p class="${dekClass}"${dekStyle}>${wrapImageMarkup}${bodyEsc(displaySummary)}</p>` : "";
+    // No continuation → flow the full article body so the tall lead block reads
+    // like a real newspaper column instead of a headline floating in whitespace.
+    // (overflow:hidden on .lead-dek clips the tail.)
+    const content = bodyParas(a.bodyText) || (displaySummary ? `<p>${bodyEsc(displaySummary)}</p>` : "");
+    return content ? `<div class="${dekClass}"${dekStyle}>${wrapImageMarkup}${content}</div>` : "";
   })();
   // For default top-position render the image as a direct child of block-inner
   // so the `.lead-img { flex:0 0 300px }` rule keeps its height contract.
@@ -304,9 +335,10 @@ function majorBlock(b: Block, a: ResolvedArticle): string {
       const text = a.bodyText || a.summary || "";
       const splitAt = findApproxSplit(text, 280);
       const head = text.slice(0, splitAt).trim();
-      return `<p class="maj-dek">${bodyEsc(head)}<a class="jump-link" href="#page=${b.continuesToPage}"> →పేజీ ${b.continuesToPage}</a></p>`;
+      return `<div class="maj-dek">${bodyParas(head)}<p class="jump-p"><a class="jump-link" href="#page=${b.continuesToPage}">→పేజీ ${b.continuesToPage}</a></p></div>`;
     }
-    return displaySummary ? `<p class="maj-dek">${bodyEsc(displaySummary)}</p>` : "";
+    const content = bodyParas(a.bodyText) || (displaySummary ? `<p>${bodyEsc(displaySummary)}</p>` : "");
+    return content ? `<div class="maj-dek">${content}</div>` : "";
   })();
   const hlStyle = hlInlineStyle(b.style, 22);
   const inner = `
@@ -337,6 +369,27 @@ function findApproxSplit(text: string, target: number): number {
   return Math.min(best, text.length);
 }
 
+/**
+ * Render an article's plain-text body as a sequence of <p> paragraphs suitable
+ * for column-flow inside a story block. Real paragraph breaks are honored;
+ * when the source has none (stripHtml collapsed them) we group ~3 sentences per
+ * paragraph so the column still reads like a newspaper. Output is capped - the
+ * block's `overflow: hidden` clips the tail (a continuation block carries the
+ * rest to a later page when one was wired by buildContinuations).
+ */
+function bodyParas(text: string | null | undefined, max = 8000): string {
+  const t = (text || "").trim().slice(0, max);
+  if (!t) return "";
+  let paras = t.split(/\n{2,}/).map((p) => p.replace(/\s+/g, " ").trim()).filter(Boolean);
+  if (paras.length <= 1) {
+    const flat = t.replace(/\s+/g, " ").trim();
+    const sentences = flat.split(/(?<=[.।?!])\s+/);
+    paras = [];
+    for (let i = 0; i < sentences.length; i += 3) paras.push(sentences.slice(i, i + 3).join(" "));
+  }
+  return paras.map((p) => `<p>${bodyEsc(p)}</p>`).join("");
+}
+
 function continuationBlock(b: Block, a: ResolvedArticle): string {
   const from = b.continuesFromPage ?? 0;
   const start = typeof b.bodyStart === "number" ? b.bodyStart : 0;
@@ -357,10 +410,14 @@ function continuationBlock(b: Block, a: ResolvedArticle): string {
 function secondaryBlock(b: Block, a: ResolvedArticle): string {
   const displayTitle = b.overrideTitle?.trim() || a.title;
   const hlStyle = hlInlineStyle(b.style, 17);
+  const body = bodyParas(a.bodyText) || (a.summary ? `<p>${bodyEsc(a.summary)}</p>` : "");
+  const dek = body ? `<div class="sec-dek">${body}</div>` : "";
   const inner = `
     <div class="block-inner">
       ${imageOrFallback(a.featuredImage, "sec-img", b.imageCrop)}
+      <div class="kicker sm">${esc(a.categoryName)}</div>
       <h3 class="sec-hl"${hlStyle}>${esc(displayTitle)}</h3>
+      ${dek}
     </div>`;
   return `<article class="secondary block" style="${blockStyle(b)}">${articleLink(a, inner)}</article>`;
 }
@@ -467,21 +524,29 @@ async function resolveArticles(blocks: Block[]): Promise<Map<string, ResolvedArt
       summary: true,
       body: true,
       featuredImage: true,
-      category: { select: { name: true } },
+      category: { select: { name: true, slug: true } },
+      constituency: { select: { slug: true, district: { select: { slug: true } } } },
       desk: { select: { name: true } },
     },
   });
   const map = new Map<string, ResolvedArticle>();
   for (const r of rows) {
+    const slug = r.slug ?? "";
     map.set(r.id, {
       id: r.id,
-      slug: r.slug ?? "",
+      slug,
       title: r.title,
       summary: r.summary,
       featuredImage: r.featuredImage,
       bodyText: stripHtml(r.body || ""),
       categoryName: r.category?.name ?? "",
       deskName: r.desk?.name ?? null,
+      hrefPath: buildArticlePath({
+        slug,
+        categorySlug: r.category?.slug ?? null,
+        constituencySlug: r.constituency?.slug ?? null,
+        districtSlug: r.constituency?.district?.slug ?? null,
+      }),
     });
   }
   return map;
@@ -684,8 +749,12 @@ export async function renderLayoutToHtml(input: RenderInput): Promise<string> {
      (e.g. a full-resolution logo image) blew the row past its declared
      height. Force min-height: 0 so the row sticks to its grid track. */
   .block { overflow: hidden; min-height: 0; min-width: 0; max-height: 100%; max-width: 100%; }
-  .block .block-inner { width:100%; height:100%; display:flex; flex-direction:column; overflow: hidden; }
-  .block a.story-link { color: inherit; text-decoration: none; display:block; height:100%; overflow: hidden; }
+  /* Story content sizes to its own height and is clipped by the parent .block
+     (which has a definite grid-track height + overflow:hidden). Do NOT put
+     height:100% here: in the grid-v1 path a percentage-height chain on the
+     anchor + inner collapsed tall blocks (lead/major) to invisible content. */
+  .block .block-inner { width:100%; display:flex; flex-direction:column; overflow: hidden; }
+  .block a.story-link { color: inherit; text-decoration: none; display:block; overflow: hidden; }
   /* Belt-and-braces: any image anywhere inside a block can't exceed the block. */
   .block img { max-width: 100%; max-height: 100%; object-fit: cover; }
 
@@ -741,23 +810,30 @@ export async function renderLayoutToHtml(input: RenderInput): Promise<string> {
   .lead-text { display: flex; flex-direction: column; min-width: 0; }
   .lead { padding: 6px 0; border-right: 1px solid #c9c1ad; padding-right: 12px; }
   .lead-hl{font-family:'Noto Serif Telugu',serif;font-weight:900;font-size:42px;line-height:1.18;margin-bottom:10px}
-  .lead-img{flex:0 0 300px;margin-bottom:10px}
+  .lead-img{flex:0 0 380px;margin-bottom:10px}
   .lead-dek{
-    font-size:15px;line-height:1.6;color:#34302a;text-align:justify;
+    font-size:15.5px;line-height:1.72;color:#34302a;text-align:justify;
     column-count:2;column-gap:18px;column-rule:1px solid #d8d0bd;
     flex: 1 1 auto; overflow: hidden;
   }
+  .lead-dek p{ margin:0 0 8px; }
+  .lead-dek p:last-child{ margin-bottom:0; }
+  .jump-p{ margin:0; break-inside:avoid; }
 
   /* Major */
   .major { padding: 6px 0; border-bottom: 1px dotted #c9c1ad; }
   .maj-img{flex:0 0 160px;margin-bottom:8px}
   .maj-hl{font-family:'Noto Serif Telugu',serif;font-weight:800;font-size:22px;line-height:1.25;margin-bottom:5px}
   .maj-dek{font-size:13px;line-height:1.5;color:#4a443c;text-align:justify;flex:1 1 auto;overflow:hidden}
+  .maj-dek p{ margin:0 0 6px; }
+  .maj-dek p:last-child{ margin-bottom:0; }
 
   /* Secondary */
   .secondary { padding: 6px 0; border-right: 1px solid #c9c1ad; padding-right: 10px;}
   .sec-img{flex:0 0 130px;margin-bottom:6px}
-  .sec-hl{font-family:'Noto Serif Telugu',serif;font-weight:800;font-size:17px;line-height:1.3;flex:1 1 auto;overflow:hidden}
+  .sec-hl{font-family:'Noto Serif Telugu',serif;font-weight:800;font-size:17px;line-height:1.3;flex:0 0 auto;margin-bottom:5px}
+  .sec-dek{font-size:12.5px;line-height:1.5;color:#4a443c;text-align:justify;flex:1 1 auto;overflow:hidden}
+  .sec-dek p{ margin:0 0 5px; }
 
   /* Images */
   .ph{width:100%;overflow:hidden;background:#e9e3d4;border:1px solid #d3cab5;height:100%}

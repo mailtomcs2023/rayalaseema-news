@@ -25,7 +25,9 @@ import { useEffect, useRef } from "react";
 
 declare global {
   interface Window {
-    gtag?: (cmd: string, name: string, params?: Record<string, unknown>) => void;
+    // Must match the other global gtag declaration in the app
+    // (variadic) or TS errors on conflicting Window augmentations.
+    gtag?: (...args: unknown[]) => void;
   }
 }
 

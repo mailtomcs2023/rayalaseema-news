@@ -39,7 +39,7 @@ export default async function LatestNewsListPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <SiteHeader />
-      <main style={{ maxWidth: 1100, margin: "0 auto", padding: "20px 12px" }}>
+      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "20px 12px" }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 18 }}>
           <h1 style={{ fontSize: 24, fontWeight: 900, color: "#111" }}>తాజా వార్తలు</h1>
           <span style={{ fontSize: 13, color: "#94a3b8", fontWeight: 600 }}>Latest News</span>
@@ -72,8 +72,8 @@ export default async function LatestNewsListPage() {
       <SiteFooter />
 
       <style>{`
-        .lnl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        @media (max-width: 720px) { .lnl-grid { grid-template-columns: 1fr; } }
+        .lnl-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        @media (max-width: 640px) { .lnl-grid { grid-template-columns: 1fr; } }
         .lnl-card {
           display: flex; gap: 12px; padding: 10px;
           background: #fff; border: 1px solid #eef0f2; border-radius: 10px;
@@ -97,7 +97,7 @@ export default async function LatestNewsListPage() {
         }
         .lnl-title {
           font-family: var(--font-telugu-heading), serif;
-          font-size: 14.5px; font-weight: 700; line-height: 1.45; color: #111827;
+          font-size: 14.5px; font-weight: 700; line-height: 1.7; color: #111827;
           display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
         }
         .lnl-card:hover .lnl-title { color: var(--brand-dark, #B91414); }

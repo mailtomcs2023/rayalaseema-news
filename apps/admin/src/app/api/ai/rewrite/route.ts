@@ -484,6 +484,20 @@ ${fullText}`,
       dialect: `Add slight Rayalaseema dialect flavor to this article. Only change headlines and quotes, keep body in standard Telugu:\n\n${fullText}`,
       summarize: `Summarize this in Telugu in about 60 words (2-3 complete sentences). Always finish the last sentence - never stop mid-sentence or mid-word. Return only the summary, no HTML:\n\n${fullText}`,
       headline: `Suggest 5 catchy Telugu headlines for this article. Return as numbered list:\n\n${fullText}`,
+      // Breaking-news ticker line - ONE crisp Telugu flash headline (Eenadu /
+      // Sakshi style). Plain text, one line, no body. Used by the breaking-news
+      // editor's "తెలుగులో రాయండి" button.
+      breaking: `Rewrite this into ONE crisp Telugu breaking-news ticker headline, in the style of Eenadu / Sakshi flash news ("బ్రేకింగ్").
+RULES:
+- ONE single line of plain text only - no HTML, no surrounding quotes, no numbering, no explanation
+- 6 to 14 words, urgent and punchy but strictly factual
+- Standard Telugu (Eenadu/Sakshi quality); transliterate proper nouns (people, places, parties), do NOT translate them
+- Do NOT invent facts, numbers, names, dates or places that are not in the input
+- No clickbait or sensationalism beyond what the facts support
+- Return ONLY the headline line
+
+INPUT:
+${fullText}`,
       // Telugu (or any-language) headline → short SEO-friendly English URL slug.
       // 3-5 words, hyphenated, ASCII only. Used by the article editor to fill
       // the slug field as the user types the title.

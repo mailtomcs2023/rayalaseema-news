@@ -145,7 +145,7 @@ export async function BlockRenderer({
     const cls = variantClass(block.mobileVariant);
     if (items.length === 0 || inner.length === 0) {
       return preview
-        ? <PreviewPlaceholder id={block.id} type="Loop" cls={cls} note={inner.length === 0 ? "Empty loop — add Heading/Image/Text inside it." : "No items match this loop's source."} />
+        ? <PreviewPlaceholder id={block.id} type="Loop" cls={cls} note={inner.length === 0 ? "Empty loop - add Heading/Image/Text inside it." : "No items match this loop's source."} />
         : null;
     }
     return (
@@ -231,7 +231,7 @@ export async function BlockRenderer({
               />
             ))}
             {preview && (!col.blocks || col.blocks.length === 0) && (
-              <PreviewPlaceholder id={col.id} type="Column" cls="" note="Empty column — add blocks in the editor." />
+              <PreviewPlaceholder id={col.id} type="Column" cls="" note="Empty column - add blocks in the editor." />
             )}
           </div>
         ))}

@@ -70,8 +70,9 @@ export function DistrictNews({ articles }: { articles: DistrictArticle[] }) {
                   loading="lazy"
                 />
               ) : (
-                <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                  <span className="text-gray-300 text-xs font-bold">RE</span>
+                <div className="w-full h-full bg-gray-50 flex items-center justify-center">
+                  {/* No featured image - show the brand logo instead of "RE" text */}
+                  <img src="/logo-icon.png" alt="Rayalaseema News" className="h-9 w-auto object-contain opacity-60" loading="lazy" />
                 </div>
               )}
             </div>

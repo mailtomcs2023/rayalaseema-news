@@ -14,7 +14,10 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import grapesjs, { type Editor } from "grapesjs";
 import presetWebpage from "grapesjs-preset-webpage";
+import { registerDynamicBlocks } from "./grapes-dynamic-blocks";
+import { DynamicCardProps } from "./grapes-dynamic-props";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { WithTooltip } from "@/components/ui/tooltip";
 import { Info } from "lucide-react";
 import "grapesjs/dist/css/grapes.min.css";
@@ -26,12 +29,14 @@ interface Props {
   name: string;
   slug: string;
   initialProject: unknown | null;
+  html?: string | null;
+  css?: string | null;
   webUrl: string;
 }
 
 // Block palette. preset-webpage 1.0.3 only ships 3 blocks, so we register the
 // full set ourselves (Layout / Basic / Media / Forms / Navigation) as plain
-// HTML blocks — no extra plugins/deps needed. Each gets an inline SVG icon.
+// HTML blocks - no extra plugins/deps needed. Each gets an inline SVG icon.
 // Lucide icon paths (https://lucide.dev), the same set shadcn uses. GrapesJS
 // block `media` expects an SVG string, so we wrap the official path data.
 const svg = (path: string) =>
@@ -102,13 +107,28 @@ function registerBlocks(editor: Editor) {
 
   // ---- Navigation ----
   add("rsn-navbar", "Navbar", "Navigation", `<nav style="display:flex;align-items:center;justify-content:space-between;padding:14px 28px;background:#fff;border-bottom:1px solid #eee"><div style="font-weight:800;font-size:18px">Brand</div><div style="display:flex;gap:20px"><a href="#" style="color:#374151;text-decoration:none">Home</a><a href="#" style="color:#374151;text-decoration:none">About</a><a href="#" style="color:#374151;text-decoration:none">Contact</a></div></nav>`, ICON.navbar);
+
+  // ---- Sections (pre-built, ready to drop & edit) ----
+  add("rsn-hero", "Hero", "Sections", `<section style="padding:72px 24px;text-align:center;background:#fff7f7"><div style="max-width:720px;margin:0 auto"><h1 style="font-size:42px;line-height:1.15;font-weight:800;margin:0 0 16px;color:#111827">Your headline goes here</h1><p style="font-size:18px;line-height:1.6;color:#4b5563;margin:0 0 28px">A short supporting sentence that explains the value in one or two lines.</p><a href="#" style="display:inline-block;padding:14px 28px;background:#FF2C2C;color:#fff;border-radius:8px;text-decoration:none;font-weight:700;font-size:16px">Get started</a></div></section>`, ICON.section);
+  add("rsn-features", "Feature Grid", "Sections", `<section style="padding:56px 24px;background:#fff"><div style="max-width:1100px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:28px"><div style="text-align:center;padding:8px"><div style="font-size:32px;color:#FF2C2C;margin-bottom:12px">★</div><h3 style="font-size:18px;font-weight:700;margin:0 0 8px;color:#111827">Feature one</h3><p style="font-size:14px;line-height:1.6;color:#6b7280;margin:0">Describe the feature in a sentence or two so readers know what they get.</p></div><div style="text-align:center;padding:8px"><div style="font-size:32px;color:#FF2C2C;margin-bottom:12px">★</div><h3 style="font-size:18px;font-weight:700;margin:0 0 8px;color:#111827">Feature two</h3><p style="font-size:14px;line-height:1.6;color:#6b7280;margin:0">Describe the feature in a sentence or two so readers know what they get.</p></div><div style="text-align:center;padding:8px"><div style="font-size:32px;color:#FF2C2C;margin-bottom:12px">★</div><h3 style="font-size:18px;font-weight:700;margin:0 0 8px;color:#111827">Feature three</h3><p style="font-size:14px;line-height:1.6;color:#6b7280;margin:0">Describe the feature in a sentence or two so readers know what they get.</p></div></div></section>`, ICON.grid);
+  add("rsn-cardrow", "Card Row", "Sections", `<section style="padding:48px 24px;background:#f9fafb"><div style="max-width:1100px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:24px"><div style="background:#fff;border:1px solid #eee;border-radius:10px;overflow:hidden"><div style="aspect-ratio:16/9;background:#e5e7eb"></div><div style="padding:16px"><h3 style="font-size:16px;font-weight:700;margin:0 0 6px;color:#111827">Card title here</h3><p style="font-size:13px;line-height:1.6;color:#6b7280;margin:0 0 10px">A short description for this card goes right here.</p><a href="#" style="color:#FF2C2C;font-weight:600;font-size:13px;text-decoration:none">Read more →</a></div></div><div style="background:#fff;border:1px solid #eee;border-radius:10px;overflow:hidden"><div style="aspect-ratio:16/9;background:#e5e7eb"></div><div style="padding:16px"><h3 style="font-size:16px;font-weight:700;margin:0 0 6px;color:#111827">Card title here</h3><p style="font-size:13px;line-height:1.6;color:#6b7280;margin:0 0 10px">A short description for this card goes right here.</p><a href="#" style="color:#FF2C2C;font-weight:600;font-size:13px;text-decoration:none">Read more →</a></div></div><div style="background:#fff;border:1px solid #eee;border-radius:10px;overflow:hidden"><div style="aspect-ratio:16/9;background:#e5e7eb"></div><div style="padding:16px"><h3 style="font-size:16px;font-weight:700;margin:0 0 6px;color:#111827">Card title here</h3><p style="font-size:13px;line-height:1.6;color:#6b7280;margin:0 0 10px">A short description for this card goes right here.</p><a href="#" style="color:#FF2C2C;font-weight:600;font-size:13px;text-decoration:none">Read more →</a></div></div></div></section>`, ICON.grid);
+  add("rsn-cta", "CTA Band", "Sections", `<section style="padding:56px 24px;background:#FF2C2C;text-align:center"><h2 style="font-size:28px;font-weight:800;color:#fff;margin:0 0 18px">Ready to get started?</h2><a href="#" style="display:inline-block;padding:13px 28px;background:#fff;color:#FF2C2C;border-radius:8px;text-decoration:none;font-weight:700">Contact us</a></section>`, ICON.button);
+  add("rsn-twocol", "Text + Image", "Sections", `<section style="padding:56px 24px;background:#fff"><div style="max-width:1100px;margin:0 auto;display:flex;gap:40px;align-items:center;flex-wrap:wrap"><div style="flex:1;min-width:280px"><h2 style="font-size:30px;font-weight:800;margin:0 0 14px;color:#111827">A section heading</h2><p style="font-size:16px;line-height:1.7;color:#4b5563;margin:0 0 20px">Two or three sentences of supporting copy that sit beside the image and explain the point clearly.</p><a href="#" style="display:inline-block;padding:12px 24px;background:#FF2C2C;color:#fff;border-radius:8px;text-decoration:none;font-weight:700">Learn more</a></div><div style="flex:1;min-width:280px;aspect-ratio:4/3;background:#e5e7eb;border-radius:12px"></div></div></section>`, ICON.col2);
+  add("rsn-stats", "Stats", "Sections", `<section style="padding:48px 24px;background:#fff7f7"><div style="max-width:1000px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:24px;text-align:center"><div><div style="font-size:36px;font-weight:800;color:#FF2C2C">10k+</div><div style="font-size:14px;color:#6b7280">Readers</div></div><div><div style="font-size:36px;font-weight:800;color:#FF2C2C">8</div><div style="font-size:14px;color:#6b7280">Districts</div></div><div><div style="font-size:36px;font-weight:800;color:#FF2C2C">24/7</div><div style="font-size:14px;color:#6b7280">Coverage</div></div><div><div style="font-size:36px;font-weight:800;color:#FF2C2C">500+</div><div style="font-size:14px;color:#6b7280">Stories</div></div></div></section>`, ICON.icon);
+  add("rsn-newsletter", "Newsletter", "Sections", `<section style="padding:48px 24px;background:#111827;text-align:center"><h2 style="font-size:24px;font-weight:800;color:#fff;margin:0 0 8px">Subscribe to our newsletter</h2><p style="color:#9ca3af;margin:0 0 20px">Get the latest news in your inbox.</p><form style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><input type="email" placeholder="your@email.com" style="padding:12px 14px;border:none;border-radius:8px;min-width:260px"/><button type="submit" style="padding:12px 24px;background:#FF2C2C;color:#fff;border:none;border-radius:8px;font-weight:700">Subscribe</button></form></section>`, ICON.input);
+  add("rsn-footer", "Footer", "Sections", `<footer style="padding:48px 24px 28px;background:#111827;color:#d1d5db"><div style="max-width:1100px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:32px"><div><div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:10px">Brand</div><p style="font-size:13px;line-height:1.6;margin:0;color:#9ca3af">A short line about the brand or publication and what it covers.</p></div><div><div style="font-weight:700;color:#fff;margin-bottom:10px;font-size:14px">Company</div><div style="display:flex;flex-direction:column;gap:8px;font-size:13px"><a href="#" style="color:#9ca3af;text-decoration:none">About</a><a href="#" style="color:#9ca3af;text-decoration:none">Contact</a><a href="#" style="color:#9ca3af;text-decoration:none">Careers</a></div></div><div><div style="font-weight:700;color:#fff;margin-bottom:10px;font-size:14px">Legal</div><div style="display:flex;flex-direction:column;gap:8px;font-size:13px"><a href="#" style="color:#9ca3af;text-decoration:none">Privacy</a><a href="#" style="color:#9ca3af;text-decoration:none">Terms</a></div></div><div><div style="font-weight:700;color:#fff;margin-bottom:10px;font-size:14px">Follow</div><div style="display:flex;flex-direction:column;gap:8px;font-size:13px"><a href="#" style="color:#9ca3af;text-decoration:none">Facebook</a><a href="#" style="color:#9ca3af;text-decoration:none">Twitter</a><a href="#" style="color:#9ca3af;text-decoration:none">YouTube</a></div></div></div><div style="max-width:1100px;margin:28px auto 0;padding-top:18px;border-top:1px solid #374151;font-size:12px;color:#6b7280;text-align:center">© 2026 Brand. All rights reserved.</div></footer>`, ICON.navbar);
 }
 
 // Light theme override: GrapesJS ships a dark UI; recolor its four theme
 // classes (one-bg/two-color/three-bg/four-color) + key components to the brand
 // (white panels, slate text, #FF2C2C red accent). Scoped under .rsn-gjs.
 const GJS_THEME = `
-/* Hide only the native SELECTION overlay (.gjs-highlighter-sel) — we draw the
+/* Hide number-input spinners inside our custom style panel. */
+.rsn-gjs input[type=number]::-webkit-outer-spin-button,
+.rsn-gjs input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.rsn-gjs input[type=number] { -moz-appearance: textfield; }
+
+/* Hide only the native SELECTION overlay (.gjs-highlighter-sel) - we draw the
    persistent selection border ourselves via .rsn-active (see load handler), so
    keeping it would double up. Keep the native HOVER overlay (.gjs-highlighter)
    and color it blue for hover feedback. */
@@ -120,7 +140,7 @@ const GJS_THEME = `
 .rsn-gjs .gjs-three-bg { background-color: #FF2C2C; color: #fff; }
 .rsn-gjs .gjs-four-color, .rsn-gjs .gjs-four-color-h:hover { color: #FF2C2C; }
 
-/* Studio-like gray canvas. NOTE: do not override the top/height here — GrapesJS
+/* Studio-like gray canvas. NOTE: do not override the top/height here - GrapesJS
    offsets the canvas below its top command toolbar; forcing top:0 slides the
    canvas under the toolbar and hides the first component. */
 .rsn-gjs .gjs-cv-canvas { background-color: #e9eaee; }
@@ -172,12 +192,12 @@ const GJS_THEME = `
 .rsn-gjs .gjs-badge, .rsn-gjs .gjs-toolbar { background-color: #FF2C2C; }
 .rsn-gjs .gjs-resizer-h { border-color: #FF2C2C; background-color: #FF2C2C; }
 
-/* Hide the preset's built-in device buttons — we provide our own working
+/* Hide the preset's built-in device buttons - we provide our own working
    switcher in the React top bar (the preset's buttons were unreliable). */
 .rsn-gjs .gjs-pn-devices-c { display: none; }
 
 /* Remove the preset's redundant right-side panel buttons (open styles / traits
-   / layers / blocks) and the empty reserved right dock they toggle — those
+   / layers / blocks) and the empty reserved right dock they toggle - those
    managers already live in our own left/right docks. The canvas width is
    calc(100% - --gjs-left-width); that 15% is what the empty dock reserved, so
    zeroing it lets the canvas span the full width (the blank gap is reclaimed). */
@@ -186,7 +206,7 @@ const GJS_THEME = `
 .rsn-gjs .gjs-pn-views-container { display: none; }
 `;
 
-// Our own device list — paired with the custom switcher buttons below so the
+// Our own device list - paired with the custom switcher buttons below so the
 // names always match what setDevice() is called with.
 const DEVICES = [
   { id: "Desktop", name: "Desktop", width: "" },
@@ -198,7 +218,7 @@ const DEVICES = [
 // General/Dimension/Typography/Decorations/Extra sectors. Each `buildProps`
 // name resolves to GrapesJS's built-in control for that CSS property (0.23
 // ships flexbox + opacity etc. built in).
-// NOTE: the "Layout" sector is intentionally omitted — it's rendered by our own
+// NOTE: the "Layout" sector is intentionally omitted - it's rendered by our own
 // shadcn <LayoutPanel> above the GrapesJS style manager (custom dropdowns).
 const STYLE_SECTORS = [
   { name: "Size",       open: false, buildProps: ["width", "height", "min-width", "max-width", "min-height", "max-height"] },
@@ -210,7 +230,7 @@ const STYLE_SECTORS = [
   { name: "Effects",    open: false, buildProps: ["opacity", "box-shadow", "transition", "transform", "cursor"] },
 ];
 
-export function GrapesEditor({ id, name, slug, initialProject, webUrl }: Props) {
+export function GrapesEditor({ id, name, slug, initialProject, html, css, webUrl }: Props) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const blocksRef = useRef<HTMLDivElement>(null);
   const layersRef = useRef<HTMLDivElement>(null);
@@ -225,9 +245,13 @@ export function GrapesEditor({ id, name, slug, initialProject, webUrl }: Props) 
   const [showBlocks, setShowBlocks] = useState(false);
   const [rightTab, setRightTab] = useState<"style" | "settings">("style");
   const [device, setDevice] = useState("Desktop");
+  const [ed, setEd] = useState<Editor | null>(null);
   // Bumped whenever the selection / its styles / the device change, so the
   // custom shadcn LayoutPanel re-reads the current values from the editor.
   const [styleTick, setStyleTick] = useState(0);
+  // Bumped on every undoable change so the top-bar Undo/Redo buttons re-read
+  // hasUndo()/hasRedo() for their enabled state.
+  const [, setHistTick] = useState(0);
 
   useEffect(() => {
     if (!canvasRef.current || editorRef.current) return;
@@ -258,7 +282,9 @@ export function GrapesEditor({ id, name, slug, initialProject, webUrl }: Props) 
       pluginsOpts: { "grapesjs-preset-webpage": {} },
     });
     editorRef.current = editor;
+    setEd(editor);
     registerBlocks(editor);
+    registerDynamicBlocks(editor);
 
     // ROOT CAUSE of the duplicate "Classes / Selected" block: with the selector
     // and style managers docked separately via appendTo, GrapesJS mounts the
@@ -283,13 +309,22 @@ export function GrapesEditor({ id, name, slug, initialProject, webUrl }: Props) 
     // A MutationObserver collapses it back to one whenever the dock DOM changes.
     const clmObserver = new MutationObserver(() => dedupeClassManager());
 
+    // The selected-component toolbar (move/copy/delete) is right-aligned to the
+    // element with no lower bound, and the canvas is overflow:hidden - so for an
+    // element flush against the left edge its left icons get a negative offset
+    // and are clipped under the left dock. Clamp the toolbar's left back into
+    // view whenever GrapesJS repositions it (selection, scroll, zoom).
+    let toolbarObserver: MutationObserver | null = null;
+
     editor.on("load", () => {
       // Show component outlines in the editor by default (View components).
       editor.runCommand("sw-visibility");
       // Trim the canvas toolbar (preset "options" panel) to the actions we want
-      // - keep the outlines toggle / undo / redo / clear. Remove preview (eye),
-      // fullscreen, code view (</>), and import (download): redundant here.
-      ["preview", "fullscreen", "export-template", "gjs-open-import-webpage"].forEach((b) =>
+      // - keep the outlines toggle / clear. Remove preview (eye), fullscreen,
+      // code view (</>), and import (download): redundant here. Undo/redo are
+      // removed too - they render as a canvas overlay that didn't reliably take
+      // clicks; we provide our own top-bar Undo/Redo wired to the UndoManager.
+      ["preview", "fullscreen", "export-template", "gjs-open-import-webpage", "undo", "redo"].forEach((b) =>
         editor.Panels.removeButton("options", b),
       );
       // Light-gray editor-only borders on every block so empty divs/grids are
@@ -320,6 +355,18 @@ export function GrapesEditor({ id, name, slug, initialProject, webUrl }: Props) 
       dedupeClassManager();
       const dock = styleDock();
       if (dock) clmObserver.observe(dock, { childList: true, subtree: true });
+
+      // Watch the canvas tools layer; re-clamp the toolbar's left whenever its
+      // inline style changes so it never hides under the dock (min 6px gutter).
+      const toolsRoot = (editor.Canvas as unknown as { getToolsEl?: () => HTMLElement }).getToolsEl?.() ?? canvasRef.current;
+      if (toolsRoot) {
+        const clampToolbar = () => {
+          const tb = toolsRoot.querySelector<HTMLElement>(".gjs-toolbar");
+          if (tb && parseFloat(tb.style.left || "0") < 6) tb.style.left = "6px";
+        };
+        toolbarObserver = new MutationObserver(clampToolbar);
+        toolbarObserver.observe(toolsRoot, { attributes: true, subtree: true, attributeFilter: ["style"] });
+      }
     });
 
     // Jump to the Styles tab when a component is selected, and tag the selected
@@ -339,6 +386,8 @@ export function GrapesEditor({ id, name, slug, initialProject, webUrl }: Props) 
       bumpStyle();
     });
     editor.on("component:deselected", () => { setActive(null); bumpStyle(); });
+    // Keep the top-bar Undo/Redo enabled state in sync with the history stack.
+    editor.on("change:changesCount undo redo", () => setHistTick((t) => t + 1));
     // Re-read the custom Layout panel when styles change, classes change, or the
     // device switches (each can change the resolved value of display/flex props).
     editor.on("component:update:classes style:target component:styleUpdate change:device", bumpStyle);
@@ -349,9 +398,19 @@ export function GrapesEditor({ id, name, slug, initialProject, webUrl }: Props) 
       } catch {
         /* corrupt/empty project - start blank */
       }
+    } else if (html) {
+      // No saved GrapesJS project yet, but the page was seeded with exported
+      // HTML/CSS - import it so the page opens editable instead of blank.
+      try {
+        editor.setComponents(html);
+        if (css) editor.addStyle(css);
+      } catch {
+        /* ignore malformed seed html */
+      }
     }
     return () => {
       clmObserver.disconnect();
+      toolbarObserver?.disconnect();
       editor.destroy();
       editorRef.current = null;
       // Clear the dock containers too - destroy() leaves the appendTo'd manager
@@ -419,6 +478,20 @@ export function GrapesEditor({ id, name, slug, initialProject, webUrl }: Props) 
         </div>
 
         <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 2 }}>
+            <HistoryBtn
+              title="Undo"
+              disabled={!(ed?.UndoManager as { hasUndo?: () => boolean } | undefined)?.hasUndo?.()}
+              onClick={() => (ed?.UndoManager as { undo?: () => void } | undefined)?.undo?.()}
+              path="M3 7v6h6M3 13a9 9 0 1 0 3-7.7L3 8"
+            />
+            <HistoryBtn
+              title="Redo"
+              disabled={!(ed?.UndoManager as { hasRedo?: () => boolean } | undefined)?.hasRedo?.()}
+              onClick={() => (ed?.UndoManager as { redo?: () => void } | undefined)?.redo?.()}
+              path="M21 7v6h-6M21 13a9 9 0 1 1-3-7.7L21 8"
+            />
+          </div>
           {error && <span style={{ fontSize: 12, color: "#B91C1C" }}>{error}</span>}
           {savedAt && !error && <span style={{ fontSize: 12, color: "#6b7280" }}>Saved {savedAt}</span>}
           <a href={`${webUrl}/page/${slug}`} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "#374151", border: "1px solid #d1d5db", borderRadius: 6, padding: "6px 12px", textDecoration: "none" }}>Preview</a>
@@ -469,10 +542,15 @@ export function GrapesEditor({ id, name, slug, initialProject, webUrl }: Props) 
           <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
             <div style={{ display: rightTab === "style" ? "block" : "none" }}>
               <div ref={selectorRef} style={{ padding: "10px 12px", borderBottom: "1px solid #f1f2f4" }} />
-              <LayoutPanel editor={editorRef.current} tick={styleTick} />
-              <div ref={styleRef} />
+              <StylePanel editor={editorRef.current} tick={styleTick} />
+              {/* Native GrapesJS style manager kept mounted but hidden - our
+                  shadcn StylePanel above is the actual UI. */}
+              <div ref={styleRef} style={{ display: "none" }} />
             </div>
-            <div ref={traitRef} style={{ display: rightTab === "settings" ? "block" : "none", padding: "8px 0" }} />
+            <div style={{ display: rightTab === "settings" ? "block" : "none" }}>
+              {ed && <DynamicCardProps editor={ed} />}
+              <div ref={traitRef} style={{ padding: "8px 0" }} />
+            </div>
           </div>
         </div>
       </div>
@@ -489,7 +567,7 @@ const DISPLAY_OPTIONS: { value: string; label: string; desc: string }[] = [
   { value: "inline-block", label: "Inline block", desc: "Flows with surrounding content like inline, but you can set width/height like a block." },
   { value: "flex", label: "Flex", desc: "Makes the element a flex container, laying out its direct children along an axis." },
   { value: "grid", label: "Grid", desc: "Makes the element a grid container for two-dimensional layouts." },
-  { value: "none", label: "None", desc: "Removes the element from the layout — it is not rendered." },
+  { value: "none", label: "None", desc: "Removes the element from the layout - it is not rendered." },
 ];
 const FLEX_DIRECTION = ["row", "row-reverse", "column", "column-reverse"];
 const JUSTIFY = ["flex-start", "center", "flex-end", "space-between", "space-around", "space-evenly"];
@@ -520,69 +598,255 @@ function readProp(editor: Editor | null, model: StyleModel | null, prop: string)
   return "";
 }
 
-function LayoutPanel({ editor, tick }: { editor: Editor | null; tick: number }) {
-  const [open, setOpen] = useState(true);
+// Option lists for the select-type fields.
+const POSITION = ["static", "relative", "absolute", "fixed", "sticky"];
+const FLOAT = ["none", "left", "right"];
+const FONT_WEIGHT = ["100", "200", "300", "400", "500", "600", "700", "800", "900"];
+const TEXT_ALIGN = ["left", "center", "right", "justify"];
+const TEXT_TRANSFORM = ["none", "uppercase", "lowercase", "capitalize"];
+const TEXT_DECORATION = ["none", "underline", "line-through", "overline"];
+const BORDER_STYLE = ["none", "solid", "dashed", "dotted", "double"];
+const CURSOR = ["auto", "default", "pointer", "text", "move", "grab", "not-allowed"];
+
+type Getter = (prop: string) => string;
+type Setter = (prop: string, val: string) => void;
+
+// The whole right-side style editor: one custom shadcn panel per sector.
+function StylePanel({ editor, tick }: { editor: Editor | null; tick: number }) {
   const [, force] = useState(0);
-  void tick; // re-render trigger (parent bumps it on selection/style/device change)
+  void tick; // parent bumps it on selection/style/device change
 
   const model = getStyleModel(editor);
-  const has = !!model;
-  const display = has ? (readProp(editor, model, "display") || "block") : "";
-  const isFlex = display === "flex" || display === "inline-flex";
-
-  const set = (prop: string, val: string) => {
-    if (!model) return;
-    model.setStyle({ ...model.getStyle(), [prop]: val });
+  if (!model) {
+    return <div style={{ padding: 18, fontSize: 12.5, color: "#9ca3af", lineHeight: 1.6 }}>Select an element on the canvas to edit its styles.</div>;
+  }
+  const get: Getter = (prop) => readProp(editor, model, prop);
+  const set: Setter = (prop, val) => {
+    const cur = model.getStyle() || {};
+    if (val === "") { const next = { ...cur }; delete next[prop]; model.setStyle(next); }
+    else model.setStyle({ ...cur, [prop]: val });
     force((n) => n + 1);
   };
 
+  const display = get("display") || "block";
+  const isFlex = display === "flex" || display === "inline-flex";
+
+  return (
+    <>
+      <SectionShell title="Layout" defaultOpen>
+        <FieldRow label="Display" tip={DISPLAY_OPTIONS.find((o) => o.value === display)?.desc}>
+          <Select value={display} onValueChange={(v) => set("display", v)}>
+            <SelectTrigger className="h-8 text-xs w-[140px]"><SelectValue /></SelectTrigger>
+            <SelectContent>{DISPLAY_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>)}</SelectContent>
+          </Select>
+        </FieldRow>
+        {isFlex && (
+          <>
+            <FieldRow label="Direction"><OptSelect value={get("flex-direction") || "row"} options={FLEX_DIRECTION} onChange={(v) => set("flex-direction", v)} /></FieldRow>
+            <FieldRow label="Justify"><OptSelect value={get("justify-content") || "flex-start"} options={JUSTIFY} onChange={(v) => set("justify-content", v)} /></FieldRow>
+            <FieldRow label="Align"><OptSelect value={get("align-items") || "stretch"} options={ALIGN} onChange={(v) => set("align-items", v)} /></FieldRow>
+            <FieldRow label="Wrap"><OptSelect value={get("flex-wrap") || "nowrap"} options={FLEX_WRAP} onChange={(v) => set("flex-wrap", v)} /></FieldRow>
+          </>
+        )}
+      </SectionShell>
+
+      <SectionShell title="Size">
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: "12px 12px" }}>
+          <MiniUnit label="Width" value={get("width")} onChange={(v) => set("width", v)} />
+          <MiniUnit label="Height" value={get("height")} onChange={(v) => set("height", v)} />
+          <MiniUnit label="Min Width" value={get("min-width")} onChange={(v) => set("min-width", v)} />
+          <MiniUnit label="Min Height" value={get("min-height")} onChange={(v) => set("min-height", v)} />
+          <MiniUnit label="Max Width" value={get("max-width")} onChange={(v) => set("max-width", v)} />
+          <MiniUnit label="Max Height" value={get("max-height")} onChange={(v) => set("max-height", v)} />
+        </div>
+      </SectionShell>
+
+      <SectionShell title="Space">
+        <SpacingBox label="Padding" prefix="padding" get={get} set={set} />
+        <SpacingBox label="Margin" prefix="margin" get={get} set={set} />
+      </SectionShell>
+
+      <SectionShell title="Position">
+        <FieldRow label="Position"><OptSelect value={get("position") || "static"} options={POSITION} onChange={(v) => set("position", v)} /></FieldRow>
+        <UnitField label="Top" value={get("top")} onChange={(v) => set("top", v)} />
+        <UnitField label="Right" value={get("right")} onChange={(v) => set("right", v)} />
+        <UnitField label="Bottom" value={get("bottom")} onChange={(v) => set("bottom", v)} />
+        <UnitField label="Left" value={get("left")} onChange={(v) => set("left", v)} />
+        <FieldRow label="Float"><OptSelect value={get("float") || "none"} options={FLOAT} onChange={(v) => set("float", v)} /></FieldRow>
+        <NumberField label="Z-index" value={get("z-index")} onChange={(v) => set("z-index", v)} />
+      </SectionShell>
+
+      <SectionShell title="Typography">
+        <TextField label="Font family" value={get("font-family")} onChange={(v) => set("font-family", v)} placeholder="inherit" />
+        <UnitField label="Font size" value={get("font-size")} onChange={(v) => set("font-size", v)} />
+        <FieldRow label="Weight"><OptSelect value={get("font-weight") || "400"} options={FONT_WEIGHT} onChange={(v) => set("font-weight", v)} /></FieldRow>
+        <UnitField label="Letter spacing" value={get("letter-spacing")} onChange={(v) => set("letter-spacing", v)} />
+        <TextField label="Line height" value={get("line-height")} onChange={(v) => set("line-height", v)} placeholder="1.5" />
+        <ColorField label="Color" value={get("color")} onChange={(v) => set("color", v)} />
+        <FieldRow label="Align"><OptSelect value={get("text-align") || "left"} options={TEXT_ALIGN} onChange={(v) => set("text-align", v)} /></FieldRow>
+        <FieldRow label="Transform"><OptSelect value={get("text-transform") || "none"} options={TEXT_TRANSFORM} onChange={(v) => set("text-transform", v)} /></FieldRow>
+        <FieldRow label="Decoration"><OptSelect value={get("text-decoration") || "none"} options={TEXT_DECORATION} onChange={(v) => set("text-decoration", v)} /></FieldRow>
+      </SectionShell>
+
+      <SectionShell title="Background">
+        <ColorField label="Background" value={get("background-color")} onChange={(v) => set("background-color", v)} />
+        <TextField label="Image / gradient" value={get("background-image")} onChange={(v) => set("background-image", v)} placeholder="url(...)" />
+      </SectionShell>
+
+      <SectionShell title="Borders">
+        <UnitField label="Radius" value={get("border-radius")} onChange={(v) => set("border-radius", v)} />
+        <UnitField label="Width" value={get("border-width")} onChange={(v) => set("border-width", v)} />
+        <FieldRow label="Style"><OptSelect value={get("border-style") || "none"} options={BORDER_STYLE} onChange={(v) => set("border-style", v)} /></FieldRow>
+        <ColorField label="Color" value={get("border-color")} onChange={(v) => set("border-color", v)} />
+      </SectionShell>
+
+      <SectionShell title="Effects">
+        <NumberField label="Opacity" value={get("opacity")} onChange={(v) => set("opacity", v)} step={0.1} min={0} max={1} />
+        <TextField label="Box shadow" value={get("box-shadow")} onChange={(v) => set("box-shadow", v)} placeholder="0 2px 8px rgba(0,0,0,.1)" />
+        <TextField label="Transition" value={get("transition")} onChange={(v) => set("transition", v)} placeholder="all .2s ease" />
+        <TextField label="Transform" value={get("transform")} onChange={(v) => set("transform", v)} placeholder="rotate(5deg)" />
+        <FieldRow label="Cursor"><OptSelect value={get("cursor") || "auto"} options={CURSOR} onChange={(v) => set("cursor", v)} /></FieldRow>
+      </SectionShell>
+    </>
+  );
+}
+
+function SectionShell({ title, defaultOpen, children }: { title: string; defaultOpen?: boolean; children: ReactNode }) {
+  const [open, setOpen] = useState(!!defaultOpen);
   return (
     <div style={{ borderBottom: "1px solid #f1f2f4" }}>
       <button
         onClick={() => setOpen((o) => !o)}
-        style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", background: "#fff", border: "none", borderBottom: open ? "1px solid #f1f2f4" : "none", cursor: "pointer", padding: "11px 12px", font: "600 12px system-ui,sans-serif", color: "#111827" }}
+        style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", background: "#fff", border: "none", cursor: "pointer", padding: "11px 12px", font: "600 12px system-ui,sans-serif", color: "#111827" }}
       >
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} style={{ transform: open ? "rotate(90deg)" : "none", transition: "transform .15s", color: "#9ca3af" }}><path d="M9 18l6-6-6-6" /></svg>
-        Layout
+        {title}
       </button>
-      {open && (
-        <div style={{ padding: "10px 12px 14px" }}>
-          {!has ? (
-            <div style={{ fontSize: 12, color: "#9ca3af" }}>Select an element to edit its layout.</div>
-          ) : (
-            <>
-              <FieldRow label="Display" tip={DISPLAY_OPTIONS.find((o) => o.value === display)?.desc}>
-                <Select value={display} onValueChange={(v) => set("display", v)}>
-                  <SelectTrigger className="h-8 text-xs w-[140px]"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {DISPLAY_OPTIONS.map((o) => (
-                      <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FieldRow>
+      {open && <div style={{ padding: "10px 12px 14px" }}>{children}</div>}
+    </div>
+  );
+}
 
-              {isFlex && (
-                <>
-                  <FieldRow label="Direction">
-                    <OptSelect value={readProp(editor, model, "flex-direction") || "row"} options={FLEX_DIRECTION} onChange={(v) => set("flex-direction", v)} />
-                  </FieldRow>
-                  <FieldRow label="Justify">
-                    <OptSelect value={readProp(editor, model, "justify-content") || "flex-start"} options={JUSTIFY} onChange={(v) => set("justify-content", v)} />
-                  </FieldRow>
-                  <FieldRow label="Align">
-                    <OptSelect value={readProp(editor, model, "align-items") || "stretch"} options={ALIGN} onChange={(v) => set("align-items", v)} />
-                  </FieldRow>
-                  <FieldRow label="Wrap">
-                    <OptSelect value={readProp(editor, model, "flex-wrap") || "nowrap"} options={FLEX_WRAP} onChange={(v) => set("flex-wrap", v)} />
-                  </FieldRow>
-                </>
-              )}
-            </>
-          )}
+const UNITS = ["px", "%", "em", "rem", "vh", "vw", "auto"];
+
+// Single combined value+unit control: borderless number + inline unit picker
+// inside one bordered box (type the number, change the unit from the dropdown).
+function UnitInput({ value, onChange, full }: { value: string; onChange: (v: string) => void; full?: boolean }) {
+  const raw = (value || "").trim();
+  const isAuto = raw === "auto";
+  const m = /^(-?[\d.]+)(px|%|em|rem|vh|vw)?$/.exec(raw);
+  const num = m ? m[1] : "";
+  const unit = (m && m[2]) || "px";
+  return (
+    <div style={{ display: "flex", alignItems: "center", border: "1px solid #d1d5db", borderRadius: 6, height: 32, background: "#fff", width: full ? "100%" : 140, boxSizing: "border-box", overflow: "hidden" }}>
+      <input
+        type="number" disabled={isAuto}
+        value={isAuto ? "" : num} placeholder={isAuto ? "auto" : "0"}
+        onChange={(e) => onChange(e.target.value === "" ? "" : `${e.target.value}${unit === "auto" ? "px" : unit}`)}
+        style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "transparent", fontSize: 12, color: "#111827", padding: "0 8px" }}
+      />
+      <Select
+        value={isAuto ? "auto" : unit}
+        onValueChange={(v) => (v === "auto" ? onChange("auto") : onChange(`${num || 0}${v}`))}
+      >
+        <SelectTrigger className="h-full w-auto min-w-0 shrink-0 gap-1 rounded-none border-0 border-l border-[#eef0f2] bg-transparent px-2 text-[11px] text-[#6b7280] focus:ring-0 focus:ring-offset-0">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent className="min-w-[4rem]">
+          {UNITS.map((u) => <SelectItem key={u} value={u} className="text-xs">{u}</SelectItem>)}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+function UnitField({ label, tip, value, onChange }: { label: string; tip?: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <FieldRow label={label} tip={tip}>
+      <UnitInput value={value} onChange={onChange} />
+    </FieldRow>
+  );
+}
+
+function NumberField({ label, tip, value, onChange, step, min, max }: { label: string; tip?: string; value: string; onChange: (v: string) => void; step?: number; min?: number; max?: number }) {
+  return (
+    <FieldRow label={label} tip={tip}>
+      <Input className="h-8 text-xs w-[140px]" type="number" step={step} min={min} max={max} value={value} onChange={(e) => onChange(e.target.value)} />
+    </FieldRow>
+  );
+}
+
+function TextField({ label, tip, value, onChange, placeholder }: { label: string; tip?: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+  return (
+    <FieldRow label={label} tip={tip}>
+      <Input className="h-8 text-xs w-[140px]" value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
+    </FieldRow>
+  );
+}
+
+function ColorField({ label, tip, value, onChange }: { label: string; tip?: string; value: string; onChange: (v: string) => void }) {
+  const hex = /^#([0-9a-f]{3,8})$/i.test((value || "").trim()) ? value : "#000000";
+  return (
+    <FieldRow label={label} tip={tip}>
+      <div style={{ display: "flex", gap: 4, width: 140, alignItems: "center" }}>
+        <input type="color" value={hex} onChange={(e) => onChange(e.target.value)} style={{ width: 32, height: 32, padding: 2, border: "1px solid #d1d5db", borderRadius: 6, background: "#fff", cursor: "pointer", flexShrink: 0 }} />
+        <Input className="h-8 text-xs flex-1" value={value} placeholder="-" onChange={(e) => onChange(e.target.value)} />
+      </div>
+    </FieldRow>
+  );
+}
+
+// Compact value+unit field with a label above (used in the Size grid + spacing).
+function MiniUnit({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <div>
+      <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 4 }}>{label}</div>
+      <UnitInput value={value} onChange={onChange} full />
+    </div>
+  );
+}
+
+// Padding / Margin editor: "All" mode (one value → all four sides) or per-side
+// cross layout (Top / Left·Right / Bottom), Studio-style.
+function SpacingBox({ label, prefix, get, set }: { label: string; prefix: "margin" | "padding"; get: Getter; set: Setter }) {
+  const sides = ["top", "right", "bottom", "left"] as const;
+  const vals = sides.map((s) => get(`${prefix}-${s}`));
+  const allEqual = vals.every((v) => v === vals[0]);
+  const [mode, setMode] = useState<"all" | "custom">(allEqual ? "all" : "custom");
+  const setAll = (v: string) => sides.forEach((s) => set(`${prefix}-${s}`, v));
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+        <span style={{ fontSize: 12, color: "#374151", fontWeight: 500 }}>{label}</span>
+        <div style={{ display: "flex", gap: 2, background: "#f3f4f6", borderRadius: 6, padding: 2 }}>
+          <ToggleBtn active={mode === "all"} onClick={() => setMode("all")} title="All sides">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><rect x="4" y="4" width="16" height="16" rx="2" /></svg>
+          </ToggleBtn>
+          <ToggleBtn active={mode === "custom"} onClick={() => setMode("custom")} title="Per side">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><rect x="4" y="4" width="16" height="16" rx="2" strokeDasharray="3 3" /></svg>
+          </ToggleBtn>
+        </div>
+      </div>
+      {mode === "all" ? (
+        <MiniUnit label="All sides" value={get(`${prefix}-top`)} onChange={setAll} />
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: "8px 10px" }}>
+          <div style={{ gridColumn: "1 / -1" }}><MiniUnit label="Top" value={get(`${prefix}-top`)} onChange={(v) => set(`${prefix}-top`, v)} /></div>
+          <MiniUnit label="Left" value={get(`${prefix}-left`)} onChange={(v) => set(`${prefix}-left`, v)} />
+          <MiniUnit label="Right" value={get(`${prefix}-right`)} onChange={(v) => set(`${prefix}-right`, v)} />
+          <div style={{ gridColumn: "1 / -1" }}><MiniUnit label="Bottom" value={get(`${prefix}-bottom`)} onChange={(v) => set(`${prefix}-bottom`, v)} /></div>
         </div>
       )}
     </div>
+  );
+}
+
+function ToggleBtn({ active, onClick, title, children }: { active: boolean; onClick: () => void; title: string; children: ReactNode }) {
+  return (
+    <button title={title} onClick={onClick} style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 24, borderRadius: 5, border: "none", cursor: "pointer", background: active ? "#fff" : "transparent", color: active ? "#FF2C2C" : "#6b7280", boxShadow: active ? "0 1px 2px rgba(0,0,0,.08)" : "none" }}>
+      {children}
+    </button>
   );
 }
 
@@ -614,6 +878,23 @@ function OptSelect({ value, options, onChange }: { value: string; options: strin
         ))}
       </SelectContent>
     </Select>
+  );
+}
+
+function HistoryBtn({ title, path, disabled, onClick }: { title: string; path: string; disabled?: boolean; onClick: () => void }) {
+  return (
+    <button
+      title={title}
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center",
+        borderRadius: 6, border: "1px solid #e5e7eb", background: "#fff",
+        color: disabled ? "#d1d5db" : "#374151", cursor: disabled ? "default" : "pointer",
+      }}
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d={path} /></svg>
+    </button>
   );
 }
 

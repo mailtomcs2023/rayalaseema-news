@@ -17,7 +17,7 @@ interface DbAd {
  * Rewrite any absolute-URL <img> inside an ad's pasted HTML to route
  * through /_next/image. Without this the admin can drop a 1.2 MB raw
  * PNG into a leaderboard slot and Lighthouse flags it as the single
- * biggest LCP regression — happened on rayalaseemanews.com's
+ * biggest LCP regression - happened on rayalaseemanews.com's
  * "We Are Hiring" banner. Only http(s) URLs are rewritten; data: and
  * relative paths pass through unchanged.
  */
@@ -45,7 +45,7 @@ function DbAdRenderer({ ad }: { ad?: DbAd | null }) {
     return <div dangerouslySetInnerHTML={{ __html: rewriteHtmlImgs(ad.htmlContent, 1200, 250) }} />;
   }
   if (ad.imageUrl) {
-    // imageUrl path now goes through next/image too — matches the
+    // imageUrl path now goes through next/image too - matches the
     // masthead-ad-slot pattern. Width 1200 is the upper bound; sizes
     // attribute lets the optimiser pick the right variant per viewport.
     const img = (

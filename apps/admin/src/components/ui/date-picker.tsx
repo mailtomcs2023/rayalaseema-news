@@ -34,6 +34,8 @@ export function DatePicker({
   disabled,
   fromYear,
   toYear,
+  max,
+  min,
   className,
 }: {
   value: string;
@@ -42,10 +44,16 @@ export function DatePicker({
   disabled?: boolean;
   fromYear?: number;
   toYear?: number;
+  /** Latest selectable date as "YYYY-MM-DD" (inclusive). */
+  max?: string;
+  /** Earliest selectable date as "YYYY-MM-DD" (inclusive). */
+  min?: string;
   className?: string;
 }) {
   const [open, setOpen] = React.useState(false);
   const date = parseISO(value);
+  const maxDate = parseISO(max);
+  const minDate = parseISO(min);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -69,6 +77,8 @@ export function DatePicker({
           selected={date}
           fromYear={fromYear}
           toYear={toYear}
+          maxDate={maxDate}
+          minDate={minDate}
           onSelect={(d) => {
             onChange(toISO(d));
             setOpen(false);

@@ -1016,7 +1016,7 @@ function MenuRowContent({
       )}
       {clone && childCount ? <span style={{ fontSize: 11, color: "#6b7280", marginRight: 4 }}>+{childCount}</span> : null}
       {!clone && canSecondary && onToggleSecondary && (
-        <WithTooltip text={secondaryOn ? "Secondary header ON — this item's sub-items show as a sub-nav on its section pages. Click to turn off." : "Turn on a secondary header — add sub-items (＋) and they'll show as a sub-nav on this section's pages"}>
+        <WithTooltip text={secondaryOn ? "Secondary header ON - this item's sub-items show as a sub-nav on its section pages. Click to turn off." : "Turn on a secondary header - add sub-items (＋) and they'll show as a sub-nav on this section's pages"}>
           <Button
             type="button"
             variant="ghost"

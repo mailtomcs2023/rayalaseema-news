@@ -265,8 +265,6 @@ export default function NotFound() {
           box-shadow: 0 8px 16px rgba(224, 27, 27, 0.18);
         }
         .rsn-chip:active { transform: translateY(-1px) scale(1.02); }
-        .rsn-logo img { transition: transform 0.25s ease; }
-        .rsn-logo:hover img { transform: scale(1.04); }
 
         @media (prefers-reduced-motion: reduce) {
           .rsn-pin, .rsn-pin-shadow, .rsn-heart { animation: none !important; }

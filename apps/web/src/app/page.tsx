@@ -7,7 +7,7 @@
 // Cache the rendered HTML for 30s. Home page does ~10 Prisma queries
 // (featured carousel + 8 district top-articles + breaking + latest +
 // site config + menu). At ~400ms cold TTFB on the Azure VM, cache-warm
-// requests drop to ~30ms — direct LCP win on Slow 4G PSI runs. 30s
+// requests drop to ~30ms - direct LCP win on Slow 4G PSI runs. 30s
 // freshness is fine for a news front: editors who publish hot stories
 // usually wait > 30s to see them surfaced anyway, and any cache miss
 // after a publish self-resolves on the next revalidate tick.

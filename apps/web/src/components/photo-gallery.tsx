@@ -51,9 +51,7 @@ export function PhotoGallery({ photos }: { photos: Photo[] }) {
           aspect-ratio: 4/3;
           object-fit: cover;
           display: block;
-          transition: transform 0.5s ease;
         }
-        .pg-item:hover .pg-img img { transform: scale(1.05); }
         .pg-shade {
           position: absolute; inset: 0;
           background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 55%);

@@ -7,6 +7,7 @@ import { findDuplicateArticles } from "@/lib/epaper/continuity";
 import { findQualityWarnings } from "@/lib/epaper/quality";
 import { uploadBuffer } from "@/lib/blob";
 import { chromium } from "playwright";
+import sharp from "sharp";
 import { PDFDocument, PDFName, PDFArray, PDFDict, type PDFRef } from "pdf-lib";
 
 // POST /api/epaper/render-v2
@@ -142,23 +143,69 @@ async function renderEditionAttempt(
         // the Eenadu trim 381×578mm; grid-v1 keeps the legacy size for
         // bit-identical re-renders of the published archive).
         const page = await browser.newPage({ viewport });
-        await page.setContent(html, { waitUntil: "networkidle" });
-        // Wait until every <img> has actually decoded (networkidle alone races on
-        // Azure Blob CDN-served featured images), then a 300 ms tick for fonts.
+        // NOTE: do NOT use waitUntil:"networkidle" here - the Google Fonts CDN
+        // (<link> in the rendered HTML) can keep a connection alive and stall
+        // networkidle for the full navigation timeout, hanging the whole render.
+        // domcontentloaded + the explicit per-image/font settle below is both
+        // faster and deterministic.
+        await page.setContent(html, { waitUntil: "domcontentloaded" });
+        // Wait until every <img> has actually decoded, then for fonts. Each
+        // wait is capped so a single slow/broken asset can't stall the render.
+        // All callbacks below are anonymous arrows on purpose: a named helper
+        // (e.g. `const withTimeout = ...`) gets wrapped by the bundler's
+        // keepNames transform into `__name(...)`, which is undefined in the
+        // page context and throws "ReferenceError: __name is not defined".
         await page.evaluate(async () => {
           await Promise.all(
             Array.from(document.images).map((img) =>
               img.complete && img.naturalHeight !== 0
                 ? Promise.resolve()
-                : new Promise<void>((resolve) => {
-                    img.addEventListener("load", () => resolve(), { once: true });
-                    img.addEventListener("error", () => resolve(), { once: true });
-                  })
+                : Promise.race([
+                    new Promise<void>((resolve) => {
+                      img.addEventListener("load", () => resolve(), { once: true });
+                      img.addEventListener("error", () => resolve(), { once: true });
+                    }),
+                    new Promise<void>((resolve) => setTimeout(resolve, 8000)),
+                  ])
             )
           );
-          if ((document as any).fonts?.ready) await (document as any).fonts.ready;
+          if ((document as any).fonts?.ready) {
+            await Promise.race([(document as any).fonts.ready, new Promise((r) => setTimeout(r, 5000))]);
+          }
         });
         await page.waitForTimeout(300);
+
+        // Harvest clickable article hotspots from the rendered DOM. The layout
+        // renderer wraps every story in <a class="story-link" href="...">; we
+        // read each anchor's box, normalize to fractional page coords (the web
+        // viewer positions hotspots as % of the page image, which is captured
+        // at this exact viewport), and store the canonical href + slug. Without
+        // this the public viewer shows pages but no tappable articles.
+        const hotspots = await page.$$eval(
+          "a.story-link",
+          (els, dims) =>
+            els
+              .map((el) => {
+                const r = el.getBoundingClientRect();
+                const raw = el.getAttribute("href") || "";
+                // Strip origin → relative /telugu-news/... path; derive slug
+                // from the last path segment for analytics.
+                let href = raw;
+                try { href = new URL(raw, "http://x").pathname; } catch { /* keep raw */ }
+                const slug = href.split("/").filter(Boolean).pop() || "";
+                return {
+                  slug,
+                  href,
+                  x: +(r.x / dims.w).toFixed(4),
+                  y: +(r.y / dims.h).toFixed(4),
+                  w: +(r.width / dims.w).toFixed(4),
+                  h: +(r.height / dims.h).toFixed(4),
+                };
+              })
+              .filter((b) => b.slug && b.w > 0 && b.h > 0 && b.x >= 0 && b.y >= 0),
+          { w: viewport.width, h: viewport.height }
+        );
+
         const pdfBytes = await page.pdf({
           width: pdfDims.width,
           height: pdfDims.height,
@@ -169,18 +216,21 @@ async function renderEditionAttempt(
           margin: { top: "0", right: "0", bottom: "0", left: "0" },
         });
 
-        // Also capture a PNG. The web ePaper viewer renders this directly as
-        // <img>; the PDF is the download/print artifact. Saving both gives us
-        // instant on-screen pages plus crisp print output.
+        // Capture the on-screen page image for the web viewer (the PDF is the
+        // download/print artifact). Convert PNG → WebP: a full broadsheet page
+        // is ~300-500KB as PNG but ~60-120KB as WebP q86, with no visible loss
+        // of text crispness - a big win for mobile viewer load time. Hotspots
+        // are fractional coords, so the image format/resolution doesn't matter.
         const pngBytes = await page.screenshot({ type: "png", fullPage: false });
         await page.close();
+        const webpBytes = await sharp(pngBytes).webp({ quality: 86 }).toBuffer();
 
-        // Upload per-page PDF + PNG artifacts.
+        // Upload per-page PDF + WebP artifacts.
         const pageUrl = await uploadBuffer(Buffer.from(pdfBytes), "pdf", "application/pdf");
-        const imageUrl = await uploadBuffer(Buffer.from(pngBytes), "png", "image/png");
+        const imageUrl = await uploadBuffer(Buffer.from(webpBytes), "webp", "image/webp");
         await prisma.epaperPage.update({
           where: { id: ep.id },
-          data: { pdfUrl: pageUrl, imageUrl },
+          data: { pdfUrl: pageUrl, imageUrl, hotspots },
         });
 
         const merged = await PDFDocument.load(pdfBytes);

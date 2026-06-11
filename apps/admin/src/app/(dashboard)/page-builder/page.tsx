@@ -57,7 +57,7 @@ export default async function PageBuilderHome() {
     {
       href: "/page-builder/visual",
       title: "Visual Pages",
-      blurb: "Free-form pages built in the GrapesJS visual editor — drag in divs, grids, headings, images, text. Render at /page/<slug>.",
+      blurb: "Free-form pages built in the GrapesJS visual editor - drag in divs, grids, headings, images, text. Render at /page/<slug>.",
       count: visualCount,
       icon: "M4 5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm2 3h5v5H6V8zm7 0h5v3h-5V8zm0 5h5v3h-5v-3zM6 15h5v3H6v-3z",
     },

@@ -4,6 +4,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@rayalaseema/db";
+import { expandDynamicBlocks } from "@/lib/visual-dynamic-blocks";
 
 export const revalidate = 60;
 
@@ -27,10 +28,15 @@ export default async function VisualPageRender({ params }: { params: Promise<{ s
     select: { name: true, html: true, css: true, isPublished: true } as unknown as undefined,
   });
   if (!page || !page.isPublished) return notFound();
+  // Expand any dynamic blocks (e.g. Latest News markers) into live content.
+  const { html, css: dynamicCss } = await expandDynamicBlocks(page.html || "");
   return (
     <>
+      {/* Base card styling first, then the page's own CSS so the admin's
+          Style-Manager edits override the defaults. */}
+      {dynamicCss ? <style dangerouslySetInnerHTML={{ __html: dynamicCss }} /> : null}
       {page.css ? <style dangerouslySetInnerHTML={{ __html: page.css }} /> : null}
-      <div dangerouslySetInnerHTML={{ __html: page.html || "" }} />
+      <div dangerouslySetInnerHTML={{ __html: html }} />
     </>
   );
 }

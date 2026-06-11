@@ -331,6 +331,21 @@ export async function getTrendingArticles(limit = 10) {
   });
 }
 
+// Trending within a single category - same shape as getTrendingArticles but
+// scoped to one categoryId, so a category hub's rail shows only its own stories.
+export async function getCategoryTrending(categoryId: string, limit = 8) {
+  return prisma.content.findMany({
+    where: { type: "ARTICLE", status: "PUBLISHED", categoryId },
+    select: {
+      id: true, title: true, slug: true, viewCount: true, publishedAt: true,
+      category: { select: { slug: true } },
+      constituency: { select: { slug: true, district: { select: { slug: true } } } },
+    },
+    orderBy: { viewCount: "desc" },
+    take: limit,
+  });
+}
+
 export async function incrementViewCount(contentId: string) {
   return prisma.content.update({
     where: { id: contentId },

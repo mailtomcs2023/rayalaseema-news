@@ -143,7 +143,6 @@ export function WebStories({ items }: { items: { id: string; title: string; imag
                 <img
                   src={story.image}
                   alt={story.title}
-                  className="group-hover:scale-105 transition-transform duration-500"
                   style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                   loading="lazy"
                 />

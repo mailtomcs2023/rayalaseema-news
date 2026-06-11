@@ -41,6 +41,12 @@ export async function POST(req: NextRequest) {
     if (isNaN(date.getTime())) {
       return NextResponse.json({ error: "Invalid date" }, { status: 400 });
     }
+    // No future-dated editions: an edition is filled from already-published
+    // articles, so a future date would silently fill with today's news.
+    const todayUtc = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`);
+    if (date.getTime() > todayUtc.getTime()) {
+      return NextResponse.json({ error: "Cannot create a future-dated edition. Pick today or an earlier date." }, { status: 400 });
+    }
 
     const templates = await prisma.epaperTemplate.findMany({
       where: { active: true },
@@ -74,8 +80,15 @@ export async function POST(req: NextRequest) {
     // Wipe any existing pages from a previous generate run.
     await prisma.epaperPage.deleteMany({ where: { editionId: edition.id } });
 
+    // On thin-content days most section/district templates fill 0-1 slots.
+    // Publishing 30+ near-blank pages looks broken, so we PRUNE any page that
+    // doesn't reach this many filled stories. The front page is always kept.
+    const MIN_FILL_PER_PAGE = 3;
+
     const usedArticles = new Set<string>();
     const summary: Array<{ pageNumber: number; templateSlug: string; label: string; filled: number; unfilled: number }> = [];
+    const skipped: Array<{ templateSlug: string; filled: number }> = [];
+    let pageNumber = 0;
 
     for (let i = 0; i < templates.length; i++) {
       const t = templates[i];
@@ -88,12 +101,21 @@ export async function POST(req: NextRequest) {
         excludeArticleIds: usedArticles,
       });
 
+      // Skip near-empty pages (keep the front no matter what). Articles that
+      // were tentatively assigned to a skipped page are NOT marked used, so
+      // they stay available for later pages that do make the cut.
+      if (t.slug !== "front" && result.filledCount < MIN_FILL_PER_PAGE) {
+        skipped.push({ templateSlug: t.slug, filled: result.filledCount });
+        continue;
+      }
+
       for (const id of result.usedArticleIds) usedArticles.add(id);
+      pageNumber++;
 
       await prisma.epaperPage.create({
         data: {
           editionId: edition.id,
-          pageNumber: i + 1,
+          pageNumber,
           label: t.defaultLabel || t.name,
           templateSlug: t.slug,
           layout: { blocks: result.blocks } as any,
@@ -102,13 +124,16 @@ export async function POST(req: NextRequest) {
       });
 
       summary.push({
-        pageNumber: i + 1,
+        pageNumber,
         templateSlug: t.slug,
         label: t.defaultLabel || t.name,
         filled: result.filledCount,
         unfilled: result.unfilledSlotIds.length,
       });
     }
+
+    // Final page count reflects the pruned set (not template count).
+    await prisma.epaperEdition.update({ where: { id: edition.id }, data: { pageCount: pageNumber } });
 
     // Post-process: scan the freshly autofilled pages, wire continuation
     // blocks on later pages for lead/major articles that overflow their slots.
@@ -117,7 +142,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       editionId: edition.id,
       date: dateStr,
-      pageCount: templates.length,
+      pageCount: pageNumber,
+      templatesEvaluated: templates.length,
+      skipped,
       usedArticles: usedArticles.size,
       continuationsCreated,
       pages: summary,

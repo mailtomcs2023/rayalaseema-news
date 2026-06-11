@@ -85,17 +85,13 @@ export async function ConstituencyView({ districtSlug, constituencySlug }: { dis
 
       <div style={{ background: "#fff", borderBottom: "3px solid var(--color-brand)" }}>
         <div style={{ maxWidth: 1280, margin: "0 auto", padding: "16px 12px" }}>
-          <nav style={{ fontSize: 13, color: "#888", marginBottom: 8 }}>
-            <Link href="/" style={{ color: "#888", textDecoration: "none" }}>Home</Link>
-            <span> / </span>
-            <Link href={`/${constituency.district.slug}`} style={{ color: "#888", textDecoration: "none" }}>{constituency.district.name}</Link>
-            <span> / </span>
-            <span style={{ color: "#333" }}>{constituency.name}</span>
-          </nav>
-          <h1 style={{ fontSize: 28, fontWeight: 900, color: "var(--color-brand)" }}>{constituency.name}</h1>
-          <p style={{ fontSize: 14, color: "#888", marginTop: 4 }}>
-            {constituency.nameEn} | {constituency.district.nameEn} District | {constituency.mandals.length} Mandals | Lok Sabha: {constituency.loksabha}
-          </p>
+          {/* Telugu name big, English meta inline to its right. Font sizes unchanged. */}
+          <div style={{ display: "flex", alignItems: "baseline", flexWrap: "wrap", gap: 10 }}>
+            <h1 style={{ fontSize: 28, fontWeight: 900, color: "var(--color-brand)", margin: 0 }}>{constituency.name}</h1>
+            <p style={{ fontSize: 14, color: "#888", margin: 0 }}>
+              {constituency.nameEn} | {constituency.district.nameEn} District | {constituency.mandals.length} Mandals | Lok Sabha: {constituency.loksabha}
+            </p>
+          </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 12 }}>
             {constituency.mandals.map((m) => (
               <span key={m.id} style={{ padding: "4px 12px", borderRadius: 16, fontSize: 12, fontWeight: 600, background: "#f3f4f6", color: "#555", border: "1px solid #e5e7eb" }}>

@@ -13,9 +13,9 @@ export default async function VisualEditorPage({ params }: { params: Promise<{ i
   if (!["ADMIN", "EDITOR"].includes((session.user as { role?: string }).role || "")) redirect("/");
 
   const { id } = await params;
-  const page = await (prisma as unknown as { visualPage: { findUnique: (a: unknown) => Promise<{ id: string; name: string; slug: string; projectData: unknown } | null> } }).visualPage.findUnique({
+  const page = await (prisma as unknown as { visualPage: { findUnique: (a: unknown) => Promise<{ id: string; name: string; slug: string; projectData: unknown; html: string | null; css: string | null } | null> } }).visualPage.findUnique({
     where: { id },
-    select: { id: true, name: true, slug: true, projectData: true },
+    select: { id: true, name: true, slug: true, projectData: true, html: true, css: true },
   });
   if (!page) notFound();
 
@@ -28,6 +28,8 @@ export default async function VisualEditorPage({ params }: { params: Promise<{ i
         name={page.name}
         slug={page.slug}
         initialProject={page.projectData ?? null}
+        html={page.html}
+        css={page.css}
         webUrl={webUrl}
       />
     </div>

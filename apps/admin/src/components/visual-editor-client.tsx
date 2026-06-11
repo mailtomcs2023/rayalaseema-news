@@ -14,6 +14,8 @@ export function VisualEditorClient(props: {
   name: string;
   slug: string;
   initialProject: unknown | null;
+  html?: string | null;
+  css?: string | null;
   webUrl: string;
 }) {
   return <GrapesEditor {...props} />;

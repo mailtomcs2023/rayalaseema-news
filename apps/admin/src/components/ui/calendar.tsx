@@ -31,12 +31,18 @@ export function Calendar({
   onSelect,
   fromYear = 1940,
   toYear = new Date().getFullYear() + 5,
+  maxDate,
+  minDate,
   className,
 }: {
   selected?: Date;
   onSelect: (date: Date) => void;
   fromYear?: number;
   toYear?: number;
+  /** Latest selectable day (inclusive). Days after it are disabled. */
+  maxDate?: Date;
+  /** Earliest selectable day (inclusive). Days before it are disabled. */
+  minDate?: Date;
   className?: string;
 }) {
   const today = new Date();
@@ -44,11 +50,23 @@ export function Calendar({
   const year = view.getFullYear();
   const month = view.getMonth();
 
+  // Normalize the bounds to day precision for comparisons.
+  const dayOnly = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const maxDay = maxDate ? dayOnly(maxDate) : null;
+  const minDay = minDate ? dayOnly(minDate) : null;
+
   const firstWeekday = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
+  // Don't offer years beyond the max bound.
+  const effToYear = maxDate ? Math.min(toYear, maxDate.getFullYear()) : toYear;
+  const effFromYear = minDate ? Math.max(fromYear, minDate.getFullYear()) : fromYear;
   const years: number[] = [];
-  for (let y = toYear; y >= fromYear; y--) years.push(y);
+  for (let y = effToYear; y >= effFromYear; y--) years.push(y);
+
+  // Disable month navigation past the bounds.
+  const nextDisabled = maxDay != null && dayOnly(new Date(year, month + 1, 1)) > maxDay;
+  const prevDisabled = minDay != null && dayOnly(new Date(year, month, 0)) < minDay;
 
   const cells: (number | null)[] = [];
   for (let i = 0; i < firstWeekday; i++) cells.push(null);
@@ -62,6 +80,7 @@ export function Calendar({
           variant="outline"
           size="icon"
           className="size-7 shrink-0"
+          disabled={prevDisabled}
           onClick={() => setView(new Date(year, month - 1, 1))}
         >
           <ChevronLeft className="size-4" />
@@ -95,6 +114,7 @@ export function Calendar({
           variant="outline"
           size="icon"
           className="size-7 shrink-0"
+          disabled={nextDisabled}
           onClick={() => setView(new Date(year, month + 1, 1))}
         >
           <ChevronRight className="size-4" />
@@ -113,17 +133,21 @@ export function Calendar({
         {cells.map((d, i) => {
           if (d === null) return <div key={`blank-${i}`} className="h-8 w-8" />;
           const cellDate = new Date(year, month, d);
+          const cellDay = cellDate.getTime();
+          const outOfRange = (maxDay != null && cellDay > maxDay) || (minDay != null && cellDay < minDay);
           const isSelected = sameDay(cellDate, selected);
           const isToday = sameDay(cellDate, today);
           return (
             <button
               key={d}
               type="button"
-              onClick={() => onSelect(cellDate)}
+              disabled={outOfRange}
+              onClick={() => { if (!outOfRange) onSelect(cellDate); }}
               className={cn(
                 "flex h-8 w-8 items-center justify-center rounded-md text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
                 isToday && !isSelected && "bg-accent text-accent-foreground",
                 isSelected && "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
+                outOfRange && "cursor-not-allowed text-muted-foreground/40 hover:bg-transparent hover:text-muted-foreground/40",
               )}
             >
               {d}

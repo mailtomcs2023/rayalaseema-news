@@ -6,7 +6,7 @@
 // root resolver in @/lib/category-render.
 
 import type { Metadata } from "next";
-import { buildCategoryMetadata, CategoryView } from "@/lib/category-render";
+import { buildCategoryMetadata, CategoryHubView } from "@/lib/category-render";
 
 export async function generateMetadata({
   params,
@@ -23,5 +23,5 @@ export default async function CategoryPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  return <CategoryView slug={slug} />;
+  return <CategoryHubView slug={slug} />;
 }

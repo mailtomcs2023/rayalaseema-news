@@ -312,9 +312,9 @@ export function EditorShell({
         const body = await res.json().catch(() => ({} as { error?: string; details?: { fieldErrors?: Record<string, unknown> } }));
         const fe = body?.details?.fieldErrors;
         const detail = fe && Object.keys(fe).length
-          ? " — " + JSON.stringify(fe)
+          ? " - " + JSON.stringify(fe)
           : body?.details
-          ? " — " + JSON.stringify(body.details)
+          ? " - " + JSON.stringify(body.details)
           : "";
         setError((body?.error || "Auto-save failed") + detail);
       }
@@ -361,7 +361,7 @@ export function EditorShell({
     } else {
       const body = await res.json().catch(() => ({} as { error?: string; details?: { fieldErrors?: Record<string, unknown> } }));
       const fe = body?.details?.fieldErrors;
-      const detail = fe && Object.keys(fe).length ? " — " + JSON.stringify(fe) : body?.details ? " — " + JSON.stringify(body.details) : "";
+      const detail = fe && Object.keys(fe).length ? " - " + JSON.stringify(fe) : body?.details ? " - " + JSON.stringify(body.details) : "";
       setError((body?.error || "Save failed") + detail);
     }
   }
@@ -1359,7 +1359,7 @@ function LoopConfig({
         Item template · {items.length} block{items.length === 1 ? "" : "s"} (repeats per article)
       </div>
       {items.length === 0 && (
-        <div style={{ ...paletteHint, padding: 4 }}>No blocks yet. Add Heading / Image / Text — bind each to an article field.</div>
+        <div style={{ ...paletteHint, padding: 4 }}>No blocks yet. Add Heading / Image / Text - bind each to an article field.</div>
       )}
       {items.map((cb, i) => (
         <div key={cb.id} className="flex items-center gap-1 mb-1.5">

@@ -23,8 +23,12 @@ function cdata(s: string): string {
   return `<![CDATA[${s.replace(/]]>/g, "]]]]><![CDATA[>")}]]>`;
 }
 
-export async function GET(_req: Request, ctx: { params: Promise<{ slug: string }> }) {
+// params typed with optional slug: the `[slug].xml` partial segment makes
+// Next's generated route validator infer empty params, so a required `slug`
+// fails typecheck. Guard for the (runtime-impossible) undefined case.
+export async function GET(_req: Request, ctx: { params: Promise<{ slug?: string }> }) {
   const { slug: rawSlug } = await ctx.params;
+  if (!rawSlug) return notFound();
   const slug = rawSlug.endsWith(".xml") ? rawSlug.slice(0, -4) : rawSlug;
 
   const category = await prisma.category.findUnique({

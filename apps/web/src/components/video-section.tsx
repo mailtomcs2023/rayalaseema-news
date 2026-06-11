@@ -200,9 +200,7 @@ export function VideoSection({ videos }: { videos: VideoItem[] }) {
           aspect-ratio: 16/9;
           object-fit: cover;
           display: block;
-          transition: transform 0.4s ease, opacity 0.2s ease;
         }
-        .vs-hero-thumb:hover img { transform: scale(1.03); opacity: 0.92; }
 
         .vs-play {
           position: absolute;
@@ -275,9 +273,7 @@ export function VideoSection({ videos }: { videos: VideoItem[] }) {
           aspect-ratio: 16/9;
           object-fit: cover;
           display: block;
-          transition: transform 0.4s ease, opacity 0.2s ease;
         }
-        .vs-rail-thumb:hover img { transform: scale(1.04); opacity: 0.9; }
         .vs-frame-sm { border-radius: 5px; }
         .vs-rail-title {
           display: block;

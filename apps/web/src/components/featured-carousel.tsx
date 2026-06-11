@@ -12,7 +12,6 @@
 
 import { useRef, useState } from "react";
 import { articleHref } from "@/lib/article-href";
-import { categoryHref } from "@/lib/category-href";
 import Link from "next/link";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -64,11 +63,12 @@ function Slide({ article, priority }: { article: FeaturedArticle; priority?: boo
         )}
       </Link>
       <div className="af-lead-text">
-        <Link href={categoryHref(article.category.slug)} className="af-cat">
-          {article.category.name}
-        </Link>
-        <Link href={articleHref(article)} className="af-lead-link">
-          <h2 className="af-lead-title">{article.title}</h2>
+        <Link href={articleHref(article)} className="af-lead-link" aria-label={article.title}>
+          {/* Cut the visible headline at 80 chars (…) so the hero stays tidy;
+              the full title is kept on the link's aria-label for a11y/SEO. */}
+          <h2 className="af-lead-title" title={article.title}>
+            {article.title.length > 80 ? `${article.title.slice(0, 80).trimEnd()}…` : article.title}
+          </h2>
         </Link>
         {article.summary && <p className="af-lead-dek">{article.summary}</p>}
       </div>
@@ -80,8 +80,6 @@ export function FeaturedCarousel({ items }: { items: FeaturedArticle[] }) {
   // Hooks first (Rules of Hooks) - called every render regardless of count.
   const swiperRef = useRef<SwiperClass | null>(null);
   const [active, setActive] = useState(0);
-  const [atStart, setAtStart] = useState(true);
-  const [atEnd, setAtEnd] = useState(false);
 
   if (items.length === 0) return null;
   // One story → plain hero, no carousel chrome or Swiper JS.
@@ -94,9 +92,9 @@ export function FeaturedCarousel({ items }: { items: FeaturedArticle[] }) {
   // "aria-hidden contains focusable descendents" rule. inert solves
   // both (focus order + a11y tree) without a DOM rerender.
   const sync = (s: SwiperClass) => {
-    setActive(s.activeIndex);
-    setAtStart(s.isBeginning);
-    setAtEnd(s.isEnd);
+    // realIndex maps clones back to the original slide so the counter/dots
+    // track the true position in loop mode.
+    setActive(s.realIndex);
     s.slides.forEach((slide, i) => {
       if (i === s.activeIndex) slide.removeAttribute("inert");
       else slide.setAttribute("inert", "");
@@ -118,6 +116,7 @@ export function FeaturedCarousel({ items }: { items: FeaturedArticle[] }) {
         onSwiper={(s) => { swiperRef.current = s; sync(s); }}
         onSlideChange={sync}
         keyboard={{ enabled: true }}
+        loop={true}
         slidesPerView={1}
         spaceBetween={0}
         // autoHeight removed: Swiper reads getBoundingClientRect on
@@ -140,11 +139,8 @@ export function FeaturedCarousel({ items }: { items: FeaturedArticle[] }) {
         type="button"
         className="af-nav af-nav-prev"
         aria-label="మునుపటి స్లైడ్"
-        // aria-disabled (not the native `disabled` attr) so the dimmed arrow
-        // still captures hover - shows the not-allowed cursor and blocks the
-        // article link beneath. onClick is guarded to a no-op at the boundary.
-        aria-disabled={atStart}
-        onClick={() => { if (!atStart) swiperRef.current?.slidePrev(); }}
+        // Loop mode: arrows wrap around, so they're never disabled.
+        onClick={() => swiperRef.current?.slidePrev()}
       >
         <ChevronLeft size={22} strokeWidth={2.75} aria-hidden="true" />
       </button>
@@ -152,8 +148,7 @@ export function FeaturedCarousel({ items }: { items: FeaturedArticle[] }) {
         type="button"
         className="af-nav af-nav-next"
         aria-label="తదుపరి స్లైడ్"
-        aria-disabled={atEnd}
-        onClick={() => { if (!atEnd) swiperRef.current?.slideNext(); }}
+        onClick={() => swiperRef.current?.slideNext()}
       >
         <ChevronRight size={22} strokeWidth={2.75} aria-hidden="true" />
       </button>
@@ -168,7 +163,7 @@ export function FeaturedCarousel({ items }: { items: FeaturedArticle[] }) {
             aria-label={`స్లైడ్ ${i + 1}`}
             aria-selected={i === active}
             tabIndex={i === active ? 0 : -1}
-            onClick={() => swiperRef.current?.slideTo(i)}
+            onClick={() => swiperRef.current?.slideToLoop(i)}
           />
         ))}
       </div>

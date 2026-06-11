@@ -153,7 +153,7 @@ export async function fetchAboveFold(
   // Hero carousel: all editor-"featured" stories, newest-first (pool is
   // ordered publishedAt desc), capped. Fall back to the single newest article
   // when nothing is featured, so the hero is never empty.
-  const FEATURED_MAX = 6;
+  const FEATURED_MAX = 12;
   let featuredSrc = filtered.filter((c) => c.featured).slice(0, FEATURED_MAX);
   if (featuredSrc.length === 0 && filtered[0]) featuredSrc = [filtered[0]];
   if (featuredSrc.length === 0) return null;

@@ -14,9 +14,10 @@ import { prisma } from "@rayalaseema/db";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { TemplateRenderer } from "@/components/blocks/template-renderer";
-import { getSiteConfig } from "@/lib/db-queries";
+import { getSiteConfig, getCategoryTrending } from "@/lib/db-queries";
 import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 import { categoryHref } from "@/lib/category-href";
+import { SectionHub } from "@/lib/section-hub";
 
 function siteUrl(): string {
   return process.env.SITE_URL || "https://rayalaseemanews.com";
@@ -37,6 +38,41 @@ export async function buildCategoryMetadata(slug: string): Promise<Metadata> {
       locale: "te_IN",
     },
   };
+}
+
+// District-page-style category hub (same layout as /kurnool): header → lead +
+// 2-col grid + rest list → sticky Trending rail, fed by this category's own
+// published articles. Used for the జిల్లా వార్తలు / district-news category so it
+// reads like a district hub instead of the page-builder template grid.
+export async function CategoryHubView({ slug }: { slug: string }) {
+  const category = await prisma.category.findUnique({ where: { slug } });
+  if (!category) return notFound();
+
+  const [config, articles, trending] = await Promise.all([
+    getSiteConfig(),
+    prisma.content.findMany({
+      where: { categoryId: category.id, type: "ARTICLE", status: "PUBLISHED" },
+      orderBy: { publishedAt: "desc" },
+      take: 30,
+      select: { id: true, title: true, slug: true, summary: true, featuredImage: true, category: { select: { name: true, slug: true } } },
+    }),
+    // Trending scoped to THIS category only (not site-wide).
+    getCategoryTrending(category.id, 8),
+  ]);
+
+  return (
+    <SectionHub
+      config={config}
+      slug={slug}
+      title={category.name}
+      subtitle={category.nameEn}
+      breadcrumbName={category.name}
+      emptyLabel={category.name}
+      articles={articles}
+      trending={trending}
+      siteUrl={siteUrl()}
+    />
+  );
 }
 
 export async function CategoryView({ slug }: { slug: string }) {
@@ -60,10 +96,14 @@ export async function CategoryView({ slug }: { slug: string }) {
             the hub has its own content surface for crawlers. The
             TemplateRenderer-rendered article grid follows below. */}
         <header style={{ marginBottom: 18, paddingBottom: 12, borderBottom: "1px solid #e5e7eb" }}>
-          <h1 style={{ fontSize: 28, fontWeight: 900, color: "#111" }}>{category.name}</h1>
-          {category.nameEn && (
-            <p style={{ fontSize: 13, color: "#888", marginTop: 2 }}>{category.nameEn}</p>
-          )}
+          {/* "Telugu - English" on one line. Font sizes unchanged: Telugu big,
+              English small/grey, separated by a dash. */}
+          <h1 style={{ display: "flex", alignItems: "baseline", flexWrap: "wrap", gap: 8, margin: 0 }}>
+            <span style={{ fontSize: 28, fontWeight: 900, color: "#111" }}>{category.name}</span>
+            {category.nameEn && (
+              <span style={{ fontSize: 13, fontWeight: 400, color: "#888" }}>- {category.nameEn}</span>
+            )}
+          </h1>
           {category.description && (
             <p style={{ fontSize: 15, color: "#444", marginTop: 8, lineHeight: 1.7, maxWidth: 720 }}>
               {category.description}

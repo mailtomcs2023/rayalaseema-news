@@ -58,7 +58,7 @@ export async function MastheadAdSlot({
       // letting publishers (or the admin) ship multi-MB PNGs straight from
       // blob storage. PSI flagged the masthead hiring banner as 1.2 MB
       // because the previous direct-render path bypassed next/image.
-      // Use 750 (a valid Next deviceSizes width) instead of 728 — the
+      // Use 750 (a valid Next deviceSizes width) instead of 728 - the
       // optimizer 400s on widths that aren't in deviceSizes/imageSizes.
       const rewritten = rewriteHtmlImgs(ad.htmlContent, 750, 90);
       return (
@@ -70,7 +70,7 @@ export async function MastheadAdSlot({
     }
     if (ad.imageUrl) {
       // next/image converts the source to AVIF/WebP on the fly and
-      // serves it at the actual display size — was a 1.2 MB raw PNG
+      // serves it at the actual display size - was a 1.2 MB raw PNG
       // until this change (PSI flagged it as the biggest payload).
       const img = (
         <Image

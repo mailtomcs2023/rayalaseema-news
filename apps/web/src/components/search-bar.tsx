@@ -17,7 +17,7 @@ interface SearchBarProps {
 
 // Top-of-page search panel. Smooth reveal via plain CSS
 // grid-template-rows transition (0fr → 1fr animates height with NO
-// JS animation lib) — previously used framer-motion at ~75KB per
+// JS animation lib) - previously used framer-motion at ~75KB per
 // page just for this collapsible. Form submits on Enter to /search?q=…
 export function SearchBar({ open, onClose }: SearchBarProps) {
   const id = useId();

@@ -115,7 +115,6 @@ export function TrendingReels({ items }: { items: { id: string; title: string; i
                   <img
                     src={reel.image}
                     alt={reel.title}
-                    className="group-hover:scale-110 transition-transform duration-500"
                     style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     loading="lazy"
                   />

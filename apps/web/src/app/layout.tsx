@@ -180,7 +180,7 @@ export default async function RootLayout({
         {/* Analytics + ads loaded via next/script so they survive client
             navigations and respect Next's loading strategies (and don't
             trip React 19's "raw <script> in component" warning). */}
-        {/* AdSense main script deferred to lazyOnload — kicked off
+        {/* AdSense main script deferred to lazyOnload - kicked off
           when the browser is idle after page load, NOT before LCP.
           AdSense verification needs the script tag to appear in the
           SSR HTML, which next/script lazyOnload still satisfies (the
@@ -196,7 +196,7 @@ export default async function RootLayout({
           />
         )}
         {gtmId && (
-          // GTM also deferred to idle — analytics has no business
+          // GTM also deferred to idle - analytics has no business
           // blocking first paint. Anything that GTM needs to fire on
           // page load still gets the gtm.js event (delayed but
           // delivered). If a future tag requires synchronous data
@@ -213,7 +213,7 @@ export default async function RootLayout({
         {/* Direct GA4 gtag.js loader removed (was 157 KB second copy
           of the tag-manager runtime). GTM container above already
           fires GA4 page_view via the GA4 tag configured in the GTM
-          dashboard — having both was duplicate work. Falls back to
+          dashboard - having both was duplicate work. Falls back to
           the standalone gtag flow if GTM isn't set but GA is. */}
         {gaId && !gtmId && (
           <>

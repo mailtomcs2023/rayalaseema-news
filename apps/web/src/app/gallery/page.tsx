@@ -186,9 +186,7 @@ export default async function GalleryIndexPage({
           aspect-ratio: 4/3;
           object-fit: cover;
           display: block;
-          transition: transform 0.5s ease;
         }
-        .gi-item:hover .gi-img img { transform: scale(1.05); }
         .gi-placeholder {
           width: 100%;
           aspect-ratio: 4/3;
