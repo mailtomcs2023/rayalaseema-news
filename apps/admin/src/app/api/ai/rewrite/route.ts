@@ -291,7 +291,7 @@ export async function POST(req: NextRequest) {
     // warning). Refuse and point them to paste the real text. Real pasted text
     // (>= ~40 words) still works; scrapable sites still work (hasScrapedContent).
     const ARTICLE_BUILD_ACTIONS = new Set([
-      "full-import", "translate", "editorial", "dialect", "expand", "rewrite",
+      "full-import", "breaking-import", "translate", "editorial", "dialect", "expand", "rewrite",
     ]);
     if (ARTICLE_BUILD_ACTIONS.has(action) && !hasScrapedContent) {
       const meaningfulWords = (text || "")
@@ -459,6 +459,150 @@ ${text}`,
         }
         return NextResponse.json({ error: e?.message || "Pipeline failed" }, { status: 500 });
       }
+    }
+
+    // action="breaking-rewrite" - the BREAKING_NEWS "rewrite" button. Takes the
+    // editor's current Title + Summary and rewrites BOTH into crisp, broadcast-
+    // grade professional Telugu (Eenadu / Sakshi / TV9 style), returning JSON
+    // {title, summary}. Works on the editor's own text (no source URL), so it is
+    // deliberately NOT in ARTICLE_BUILD_ACTIONS - polishing existing short text
+    // is intentional, not a fabrication risk.
+    if (action === "breaking-rewrite") {
+      const brRes = await fetch(
+        `${ENDPOINT}openai/deployments/${DEPLOYMENT}/chat/completions?api-version=${API_VERSION}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "api-key": KEY },
+          body: JSON.stringify({
+            messages: [
+              { role: "system", content: NEWS_PROMPT },
+              {
+                role: "user",
+                content: `You are a Telugu breaking-news editor for a top TV channel / newspaper (Eenadu, Sakshi, TV9 quality). Rewrite the given headline and summary into crisp, professional, broadcast-grade Telugu. Return STRICT JSON (no markdown, no code fences) with exactly these keys:
+{
+  "title": "ONE punchy Telugu breaking headline, 6-14 words, flash-news style, plain text, no surrounding quotes",
+  "summary": "2 to 3 complete, professional Telugu sentences (~50 words). Always finish the last sentence."
+}
+STRICT RULES:
+- Improve clarity, flow and impact, but keep it STRICTLY factual - do NOT add facts, numbers, names, dates or claims that are not in the input.
+- Telugu only; transliterate proper nouns (people, places, parties), do NOT translate them.
+- If the input summary is empty, return an empty string for "summary" - do NOT invent one.
+- Return ONLY the JSON object.
+
+INPUT:
+${fullText}`,
+              },
+            ],
+            max_completion_tokens: 700,
+            temperature: 0.4,
+          }),
+        },
+      );
+      const brData = await brRes.json();
+      const brFiltered = detectContentFilter(brData);
+      if (brFiltered) {
+        return NextResponse.json(
+          { error: contentFilterUserMessage(brFiltered), code: "content_filter" },
+          { status: 422 },
+        );
+      }
+      if (brData.error) return NextResponse.json({ error: brData.error.message }, { status: 500 });
+
+      const raw: string = brData.choices?.[0]?.message?.content || "";
+      let parsed: { title?: string; summary?: string } = {};
+      try {
+        const start = raw.indexOf("{");
+        const end = raw.lastIndexOf("}");
+        if (start >= 0 && end > start) parsed = JSON.parse(raw.slice(start, end + 1));
+      } catch {
+        parsed = {};
+      }
+      const title = String(parsed.title || "").replace(/<[^>]+>/g, "").trim();
+      const summary = String(parsed.summary || "").replace(/<[^>]+>/g, "").trim();
+      if (!title && !summary) {
+        return NextResponse.json(
+          { error: "Couldn't rewrite that - try adding a bit more text in the Title or Summary first." },
+          { status: 422 },
+        );
+      }
+      return NextResponse.json({ title, summary });
+    }
+
+    // action="breaking-import" - paste a news URL on the BREAKING_NEWS form and
+    // get back the three ticker fields {title, slug, summary} in ONE light call.
+    // Unlike full-import this skips the article pipeline (no body, no fact-check)
+    // because a breaking entry is a one-line headline + short summary, so the
+    // heavy compose/repair loop would be wasted tokens and latency.
+    if (action === "breaking-import") {
+      const sourceForModel = scrapedOgTitle
+        ? `Original headline: ${scrapedOgTitle}\n\n${fullText}`
+        : fullText;
+      const biRes = await fetch(
+        `${ENDPOINT}openai/deployments/${DEPLOYMENT}/chat/completions?api-version=${API_VERSION}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "api-key": KEY },
+          body: JSON.stringify({
+            messages: [
+              { role: "system", content: NEWS_PROMPT },
+              {
+                role: "user",
+                content: `From the SOURCE ARTICLE below, produce a breaking-news entry as STRICT JSON (no markdown, no code fences) with exactly these keys:
+{
+  "title": "ONE crisp Telugu breaking-news ticker headline, 6-14 words, Eenadu/Sakshi flash style, plain text, no surrounding quotes",
+  "summary": "2 to 3 complete Telugu sentences (~50 words) summarising the news. Always finish the last sentence.",
+  "slug": "short English SEO url slug, 3-5 lowercase words, hyphen-separated, ASCII only, no Telugu"
+}
+STRICT RULES:
+- Telugu for title and summary; transliterate proper nouns (people, places, parties), do NOT translate them.
+- Do NOT invent facts, numbers, names, dates or places that are not in the source.
+- Return ONLY the JSON object.
+
+SOURCE ARTICLE:
+${sourceForModel}`,
+              },
+            ],
+            max_completion_tokens: 700,
+            temperature: 0.3,
+          }),
+        },
+      );
+      const biData = await biRes.json();
+      const biFiltered = detectContentFilter(biData);
+      if (biFiltered) {
+        return NextResponse.json(
+          { error: contentFilterUserMessage(biFiltered), code: "content_filter" },
+          { status: 422 },
+        );
+      }
+      if (biData.error) return NextResponse.json({ error: biData.error.message }, { status: 500 });
+
+      const raw: string = biData.choices?.[0]?.message?.content || "";
+      let parsed: { title?: string; summary?: string; slug?: string } = {};
+      try {
+        const start = raw.indexOf("{");
+        const end = raw.lastIndexOf("}");
+        if (start >= 0 && end > start) parsed = JSON.parse(raw.slice(start, end + 1));
+      } catch {
+        parsed = {};
+      }
+      const title = String(parsed.title || scrapedOgTitle || "").replace(/<[^>]+>/g, "").trim();
+      const summary = String(parsed.summary || "").replace(/<[^>]+>/g, "").trim();
+      const slug = String(parsed.slug || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .split("-")
+        .filter(Boolean)
+        .slice(0, 6)
+        .join("-");
+      if (!title && !summary) {
+        return NextResponse.json(
+          { error: "Couldn't read that source well enough to write a breaking entry. Try the article's direct URL, or type the headline in the Title and use తెలుగులో రాయండి." },
+          { status: 422 },
+        );
+      }
+      return NextResponse.json({ title, summary, slug, ogImage: scrapedOgImage });
     }
 
     // Choose prompt based on action

@@ -390,13 +390,14 @@ export default function ContentEditorPage() {
     setTimeout(() => setSuccess(""), 5000);
   };
 
-  // Breaking news has no body - it's a one-line ticker headline. This rewrites
-  // whatever rough line the editor typed in the Title into a crisp Telugu
-  // flash-news headline (Eenadu/Sakshi style) and puts it back in the Title.
+  // Breaking-news rewrite. Takes the editor's current Title + Summary and
+  // rewrites BOTH into crisp, professional broadcast-grade Telugu (Eenadu /
+  // Sakshi / TV9 style), then puts the polished versions back in their fields.
   const runBreakingAI = async () => {
-    const src = title.trim();
-    if (!src) {
-      setError("Type the breaking-news line in the Title first - the AI will rewrite it in clean Telugu.");
+    const t = title.trim();
+    const s = summary.trim();
+    if (!t && !s) {
+      setError("Type the breaking-news line in the Title (and optionally a Summary) first - the AI will rewrite them in professional Telugu.");
       return;
     }
     setAiLoading("breaking");
@@ -406,21 +407,16 @@ export default function ContentEditorPage() {
       const res = await fetch("/api/ai/rewrite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: src, action: "breaking" }),
+        body: JSON.stringify({ text: `Title: ${t}\n\nSummary: ${s}`, action: "breaking-rewrite" }),
       });
       const data = await res.json();
       if (data.error) {
         setError(data.error);
-      } else if (data.result) {
-        const line = String(data.result)
-          .replace(/<[^>]+>/g, "")
-          .split(/\r?\n/)[0]
-          .replace(/^\s*["'“”]+|["'“”]+\s*$/g, "")
-          .trim();
-        if (line) {
-          setTitle(line);
-          clearFieldError("title");
-          setSuccess("Breaking headline rewritten in Telugu.");
+      } else {
+        if (data.title) { setTitle(data.title); clearFieldError("title"); }
+        if (data.summary) { setSummary(data.summary); clearFieldError("summary"); }
+        if (data.title || data.summary) {
+          setSuccess("Rewritten in professional Telugu news style.");
         }
       }
     } catch (e: any) {
@@ -469,6 +465,44 @@ export default function ContentEditorPage() {
       setSuccess(`${note}Fetched + translated.${kw} Review + Save Draft when ready.`);
     } catch (e: any) {
       setError(e.message || "Fetch failed");
+    }
+    setAiLoading(null);
+    setTimeout(() => setSuccess(""), 8000);
+  };
+
+  // Breaking-news URL import. Paste a news article URL and the AI scrapes it +
+  // writes the three ticker fields (title, slug, summary) in one light call -
+  // no body, no heavy article pipeline. Mirrors fetchFromUrl but for breaking.
+  const importBreakingFromUrl = async () => {
+    if (!pasteUrl.trim()) return;
+    setAiLoading("breaking-import");
+    setError("");
+    setSuccess("");
+    try {
+      const res = await fetch("/api/ai/rewrite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceUrl: pasteUrl.trim(), action: "breaking-import" }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        setError(data.error || `Import failed (${res.status})`);
+        setAiLoading(null);
+        return;
+      }
+      if (data.title) { setTitle(data.title); clearFieldError("title"); }
+      if (data.summary) { setSummary(data.summary); clearFieldError("summary"); }
+      if (data.slug) {
+        userTouchedSlug.current = true;
+        setSlug(data.slug);
+        clearFieldError("slug");
+      }
+      if (data.ogImage) setFeaturedImage(data.ogImage);
+      setSourceUrl(pasteUrl.trim());
+      setPasteUrl("");
+      setSuccess("Imported from URL - title, slug & summary filled. Review before publishing.");
+    } catch (e: any) {
+      setError(e.message || "Import failed");
     }
     setAiLoading(null);
     setTimeout(() => setSuccess(""), 8000);
@@ -1051,7 +1085,7 @@ export default function ContentEditorPage() {
                       className="h-7 gap-1 px-2 text-xs text-slate-600 hover:text-slate-900"
                     >
                       <Sparkles className="h-3.5 w-3.5 text-red-600" />
-                      {aiLoading === "breaking" ? "Writing…" : "తెలుగులో రాయండి"}
+                      {aiLoading === "breaking" ? "రాస్తోంది…" : "ప్రొఫెషనల్‌గా రాయండి"}
                     </Button>
                   )}
                 </div>
@@ -1131,6 +1165,37 @@ export default function ContentEditorPage() {
                 />
                 {fieldErrors.summary && <p className="mt-1 text-xs font-medium text-red-500">{fieldErrors.summary}</p>}
               </div>
+
+            {/* Breaking-news URL import - paste a news article URL and the AI
+                writes the title, slug & summary in one shot (no body). */}
+            {type === "BREAKING_NEWS" && (
+              <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
+                  <Sparkles className="h-3.5 w-3.5 text-blue-600" />
+                  Import from news URL
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Input
+                    value={pasteUrl}
+                    onChange={(e) => setPasteUrl(e.target.value)}
+                    placeholder="Paste a news article URL - auto-writes title, slug & summary"
+                    className="min-w-[220px] flex-1 bg-white"
+                  />
+                  <Button
+                    size="sm"
+                    type="button"
+                    onClick={importBreakingFromUrl}
+                    disabled={aiLoading !== null || !pasteUrl.trim()}
+                    className="bg-blue-600 text-white hover:bg-blue-700"
+                  >
+                    {aiLoading === "breaking-import" ? "Importing…" : "Import + రాయండి"}
+                  </Button>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Reads the article and writes a crisp Telugu breaking headline, a short summary, and an English slug. Review before publishing.
+                </p>
+              </div>
+            )}
 
             {/* AI Article Import - minimal section header makes it
                 identifiable; the తెలుగులో రాయండి button is dual-mode

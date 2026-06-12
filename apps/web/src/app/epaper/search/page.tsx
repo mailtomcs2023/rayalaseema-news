@@ -56,7 +56,7 @@ function SearchInner() {
           placeholder="ఉదా: చంద్రబాబు నాయుడు, IPL, RTC..."
           style={{ flex: 1, padding: "10px 14px", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 15, fontFamily: "var(--font-telugu-body), sans-serif" }}
         />
-        <button type="submit" style={{ padding: "10px 20px", background: "var(--brand, #E01B1B)", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+        <button type="submit" style={{ padding: "10px 20px", background: "var(--brand)", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
           వెతుకు
         </button>
       </form>
@@ -79,7 +79,7 @@ function SearchInner() {
           <li key={i} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: 14 }}>
             <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6, flexWrap: "wrap" }}>
               <Link href={`/epaper?date=${h.editionDate}&edition=${h.edition}`}
-                style={{ fontSize: 11, fontWeight: 700, color: "var(--brand, #E01B1B)", textDecoration: "none", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                style={{ fontSize: 11, fontWeight: 700, color: "var(--brand)", textDecoration: "none", textTransform: "uppercase", letterSpacing: 0.5 }}>
                 {h.editionDate} · {h.edition === "main" ? "ప్రధాన" : h.edition} · Page {h.pageNumber}
               </Link>
               <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 3, background: h.kind === "ocr" ? "#fef3c7" : "#dbeafe", color: h.kind === "ocr" ? "#92400e" : "#1e40af", fontWeight: 700, textTransform: "uppercase" }}>

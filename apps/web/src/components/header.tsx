@@ -6,6 +6,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { SearchBar } from "./search-bar";
 import { categoryHref, normalizeSectionHref } from "@/lib/category-href";
+import { EPAPER_URL } from "@/lib/epaper-url";
 import { Button } from "@/components/ui/button";
 
 // Nav items are admin-managed via the Menu Builder (HEADER location) - there is
@@ -394,7 +395,7 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
                 <span className="masthead-tile-label">Breaking</span>
               </Link>
             </div>
-            <Link href="/epaper" className="masthead-tile masthead-tile-epaper" aria-label="E-Paper">
+            <Link href={EPAPER_URL} className="masthead-tile masthead-tile-epaper" aria-label="E-Paper">
               <svg className="size-4" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2"/></svg>
               <span className="text-[11px] font-bold tracking-[0.08em]">E-PAPER</span>
             </Link>
@@ -574,7 +575,7 @@ export function Header({ config: initialConfig = {}, breakingNews: initialBreaki
                 <svg className="w-5 h-5" style={{ color: "var(--color-brand)" }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
                 <span className="text-[10px] font-bold" style={{ color: "var(--color-brand)" }}>వెతకండి</span>
               </Link>
-              <Link href="/epaper" onClick={() => setMobileMenuOpen(false)} className="flex flex-col items-center gap-1 p-2 rounded-lg" style={{ background: "var(--color-brand-bg)" }}>
+              <Link href={EPAPER_URL} onClick={() => setMobileMenuOpen(false)} className="flex flex-col items-center gap-1 p-2 rounded-lg" style={{ background: "var(--color-brand-bg)" }}>
                 <svg className="w-5 h-5" style={{ color: "var(--color-brand)" }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2"/></svg>
                 <span className="text-[10px] font-bold" style={{ color: "var(--color-brand)" }}>ePaper</span>
               </Link>

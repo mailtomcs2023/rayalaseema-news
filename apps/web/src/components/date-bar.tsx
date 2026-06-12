@@ -1,3 +1,5 @@
+import { EPAPER_URL } from "@/lib/epaper-url";
+
 export function DateBar() {
   const now = new Date();
   const teluguDate = now.toLocaleDateString("te-IN", {
@@ -22,7 +24,7 @@ export function DateBar() {
           <span>{englishDate}</span>
         </div>
         <div className="hidden sm:flex items-center gap-4">
-          <a href="/epaper" className="hover:text-primary-300 transition-colors">ePaper</a>
+          <a href={EPAPER_URL} className="hover:text-primary-300 transition-colors">ePaper</a>
           <span className="text-gray-600">|</span>
           <a href="#" className="hover:text-primary-300 transition-colors">App Download</a>
           <span className="text-gray-600">|</span>

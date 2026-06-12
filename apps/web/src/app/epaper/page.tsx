@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { prisma } from "@rayalaseema/db";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { EpaperViewer } from "@/components/epaper-viewer";
+import { EpaperSearchInline } from "@/components/epaper-search-inline";
 import { getSiteConfig } from "@/lib/db-queries";
 
 export const metadata: Metadata = {
@@ -33,6 +35,16 @@ export default async function EpaperPage({
   const config = await getSiteConfig();
   const editionKey = edition || "main";
 
+  // On the epaper.* subdomain the /epaper subtree is served at the root, so
+  // emit root-relative links ("/", "/search") instead of "/epaper..." to keep
+  // URLs clean and avoid a normalising redirect hop on every pill click.
+  const host = ((await headers()).get("host") || "").toLowerCase();
+  const onSub = host.startsWith("epaper.");
+  const epHref = (path: string, qs?: string) => {
+    const p = onSub ? path.replace(/^\/epaper/, "") || "/" : path;
+    return qs ? `${p}?${qs}` : p;
+  };
+
   // Ready editions, newest first. Explicitly exclude KILLED workflow state
   // even though killed editions have active=false too - defense in depth.
   const editions = await prisma.epaperEdition.findMany({
@@ -61,23 +73,21 @@ export default async function EpaperPage({
     fontFamily: "var(--font-telugu-body), sans-serif",
     fontSize: 12, fontWeight: 700, padding: "5px 12px", borderRadius: 999,
     textDecoration: "none",
-    background: active ? "var(--brand, #E01B1B)" : "#f3f4f6",
+    background: active ? "var(--brand)" : "#f3f4f6",
     color: active ? "#fff" : "#374151",
-    border: "1px solid " + (active ? "var(--brand, #E01B1B)" : "#e5e7eb"),
+    border: "1px solid " + (active ? "var(--brand)" : "#e5e7eb"),
   });
 
   return (
     <div className="min-h-screen" style={{ background: "#fff" }}>
       <SiteHeader config={config} breakingNews={[]} />
 
-      <div style={{ background: "var(--brand, #E01B1B)" }}>
+      <div style={{ background: "var(--brand)", position: "relative", zIndex: 40 }}>
         <div style={{ maxWidth: 1280, margin: "0 auto", padding: "12px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
           <span style={{ fontFamily: "var(--font-telugu-heading), serif", fontSize: 26, fontWeight: 800, color: "#fff" }}>
             ఈ-పేపర్
           </span>
-          <Link href="/epaper/search" style={{ background: "#fff", color: "var(--brand, #E01B1B)", padding: "6px 14px", borderRadius: 999, fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
-            🔍 పాత ఎడిషన్‌లలో వెతుకు
-          </Link>
+          <EpaperSearchInline />
         </div>
       </div>
 
@@ -86,7 +96,7 @@ export default async function EpaperPage({
         {dates.length > 0 && (
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
             {dates.map((ds) => (
-              <Link key={ds} href={`/epaper?date=${ds}&edition=${editionKey}`} style={pill(ds === selDate)}>
+              <Link key={ds} href={epHref("/epaper", `date=${ds}&edition=${editionKey}`)} style={pill(ds === selDate)}>
                 {teluguDate(new Date(ds))}
               </Link>
             ))}
@@ -97,7 +107,7 @@ export default async function EpaperPage({
         {editionsForDate.length > 0 && (
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
             {editionsForDate.map((ek) => (
-              <Link key={ek} href={`/epaper?date=${selDate}&edition=${ek}`} style={pill(ek === editionKey)}>
+              <Link key={ek} href={epHref("/epaper", `date=${selDate}&edition=${ek}`)} style={pill(ek === editionKey)}>
                 {EDITION_NAMES[ek] || ek}
               </Link>
             ))}
