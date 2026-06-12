@@ -2,8 +2,16 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { CloudSun, Lightbulb, LayoutGrid } from "lucide-react";
+import {
+  Sun1, CloudSunny, Cloud, CloudFog, CloudDrizzle, CloudLightning,
+  Tree, Health, Car, Cup, Teacher, Star1, Global,
+} from "iconsax-reactjs";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { SectionHeading } from "@/components/section-heading";
+
+type IconType = typeof Sun1;
 
 const allDistricts = [
   { name: "కర్నూలు", nameEn: "Kurnool", lat: 15.83, lon: 78.04, slug: "kurnool" },
@@ -16,25 +24,25 @@ const allDistricts = [
   { name: "చిత్తూరు", nameEn: "Chittoor", lat: 13.22, lon: 79.10, slug: "chittoor" },
 ];
 
-const weatherCodes: Record<number, { label: string; icon: string }> = {
-  0: { label: "Clear sky", icon: "\u2600\uFE0F" },
-  1: { label: "Mainly clear", icon: "\u{1F324}\uFE0F" },
-  2: { label: "Partly cloudy", icon: "\u26C5" },
-  3: { label: "Overcast", icon: "\u2601\uFE0F" },
-  45: { label: "Foggy", icon: "\u{1F32B}\uFE0F" },
-  48: { label: "Depositing fog", icon: "\u{1F32B}\uFE0F" },
-  51: { label: "Light drizzle", icon: "\u{1F326}\uFE0F" },
-  53: { label: "Moderate drizzle", icon: "\u{1F326}\uFE0F" },
-  55: { label: "Dense drizzle", icon: "\u{1F327}\uFE0F" },
-  61: { label: "Slight rain", icon: "\u{1F327}\uFE0F" },
-  63: { label: "Moderate rain", icon: "\u{1F327}\uFE0F" },
-  65: { label: "Heavy rain", icon: "\u{1F327}\uFE0F" },
-  80: { label: "Slight showers", icon: "\u{1F326}\uFE0F" },
-  81: { label: "Moderate showers", icon: "\u{1F327}\uFE0F" },
-  82: { label: "Heavy showers", icon: "\u{1F327}\uFE0F" },
-  95: { label: "Thunderstorm", icon: "\u26C8\uFE0F" },
-  96: { label: "Thunderstorm + hail", icon: "\u26C8\uFE0F" },
-  99: { label: "Severe thunderstorm", icon: "\u26C8\uFE0F" },
+const weatherCodes: Record<number, { label: string; Icon: IconType; color: string }> = {
+  0: { label: "Clear sky", Icon: Sun1, color: "#f59e0b" },
+  1: { label: "Mainly clear", Icon: Sun1, color: "#f59e0b" },
+  2: { label: "Partly cloudy", Icon: CloudSunny, color: "#f59e0b" },
+  3: { label: "Overcast", Icon: Cloud, color: "#64748b" },
+  45: { label: "Foggy", Icon: CloudFog, color: "#64748b" },
+  48: { label: "Depositing fog", Icon: CloudFog, color: "#64748b" },
+  51: { label: "Light drizzle", Icon: CloudDrizzle, color: "#3b82f6" },
+  53: { label: "Moderate drizzle", Icon: CloudDrizzle, color: "#3b82f6" },
+  55: { label: "Dense drizzle", Icon: CloudDrizzle, color: "#2563eb" },
+  61: { label: "Slight rain", Icon: CloudDrizzle, color: "#2563eb" },
+  63: { label: "Moderate rain", Icon: CloudDrizzle, color: "#2563eb" },
+  65: { label: "Heavy rain", Icon: CloudDrizzle, color: "#1d4ed8" },
+  80: { label: "Slight showers", Icon: CloudDrizzle, color: "#2563eb" },
+  81: { label: "Moderate showers", Icon: CloudDrizzle, color: "#2563eb" },
+  82: { label: "Heavy showers", Icon: CloudDrizzle, color: "#1d4ed8" },
+  95: { label: "Thunderstorm", Icon: CloudLightning, color: "#7c3aed" },
+  96: { label: "Thunderstorm + hail", Icon: CloudLightning, color: "#7c3aed" },
+  99: { label: "Severe thunderstorm", Icon: CloudLightning, color: "#6d28d9" },
 };
 
 interface DistrictWeather {
@@ -51,11 +59,11 @@ interface DistrictWeather {
   precipitation: number;
 }
 
-const tips = [
+const tips: { title: string; titleEn: string; Icon: IconType; color: string; items: { condition: string; text: string }[] }[] = [
   {
     title: "వ్యవసాయ సూచనలు",
     titleEn: "Agriculture Tips",
-    icon: "\u{1F33E}",
+    Icon: Tree,
     color: "#16a34a",
     items: [
       { condition: "temp > 40", text: "అధిక ఉష్ణోగ్రతలు - పంటలకు నీటి సరఫరా పెంచండి. ఉదయం/సాయంత్రం పనులు చేయండి." },
@@ -66,7 +74,7 @@ const tips = [
   {
     title: "ఆరోగ్య సూచనలు",
     titleEn: "Health Advisory",
-    icon: "\u{1F3E5}",
+    Icon: Health,
     color: "#dc2626",
     items: [
       { condition: "uv > 8", text: "UV సూచిక చాలా ఎక్కువగా ఉంది. బయటకు వెళ్ళేటప్పుడు సన్‌స్క్రీన్ వాడండి, టోపీ ధరించండి." },
@@ -78,7 +86,7 @@ const tips = [
   {
     title: "ప్రయాణ సూచనలు",
     titleEn: "Travel Advisory",
-    icon: "\u{1F697}",
+    Icon: Car,
     color: "#2563eb",
     items: [
       { condition: "rain", text: "వర్షపు వాతావరణం - రహదారులపై నీరు నిలిచే ప్రాంతాలను గమనించండి. నెమ్మదిగా డ్రైవ్ చేయండి." },
@@ -89,7 +97,7 @@ const tips = [
   {
     title: "UV సూచిక",
     titleEn: "UV Index Guide",
-    icon: "\u2600\uFE0F",
+    Icon: Sun1,
     color: "#ea580c",
     items: [
       { condition: "always", text: "0-2: తక్కువ | 3-5: మితం | 6-7: ఎక్కువ | 8-10: చాలా ఎక్కువ | 11+: తీవ్రం" },
@@ -98,13 +106,13 @@ const tips = [
   },
 ];
 
-const relatedPages = [
-  { name: "వ్యవసాయం", nameEn: "Agriculture", slug: "/agriculture", icon: "\u{1F33E}", desc: "పంటలు, ధరలు, మార్కెట్ సమాచారం" },
-  { name: "ఆరోగ్యం", nameEn: "Health", slug: "/health", icon: "\u{1F3E5}", desc: "వైద్య సలహాలు, ఆసుపత్రి వార్తలు" },
-  { name: "క్రీడలు", nameEn: "Sports", slug: "/sports", icon: "\u26BD", desc: "క్రీడా వార్తలు, ఫలితాలు" },
-  { name: "విద్య", nameEn: "Education", slug: "/education", icon: "\u{1F393}", desc: "పరీక్షలు, ఫలితాలు, స్కాలర్‌షిప్‌లు" },
-  { name: "రాశి ఫలాలు", nameEn: "Horoscope", slug: "/rasi-phalalu", icon: "\u2B50", desc: "నేటి రాశి ఫలాలు" },
-  { name: "NRI వార్తలు", nameEn: "NRI News", slug: "/nri", icon: "\u{1F30D}", desc: "ప్రవాస భారతీయుల వార్తలు" },
+const relatedPages: { name: string; nameEn: string; slug: string; Icon: IconType; desc: string }[] = [
+  { name: "వ్యవసాయం", nameEn: "Agriculture", slug: "/agriculture", Icon: Tree, desc: "పంటలు, ధరలు, మార్కెట్ సమాచారం" },
+  { name: "ఆరోగ్యం", nameEn: "Health", slug: "/health", Icon: Health, desc: "వైద్య సలహాలు, ఆసుపత్రి వార్తలు" },
+  { name: "క్రీడలు", nameEn: "Sports", slug: "/sports", Icon: Cup, desc: "క్రీడా వార్తలు, ఫలితాలు" },
+  { name: "విద్య", nameEn: "Education", slug: "/education", Icon: Teacher, desc: "పరీక్షలు, ఫలితాలు, స్కాలర్‌షిప్‌లు" },
+  { name: "రాశి ఫలాలు", nameEn: "Horoscope", slug: "/horoscope", Icon: Star1, desc: "నేటి రాశి ఫలాలు" },
+  { name: "NRI వార్తలు", nameEn: "NRI News", slug: "/nri", Icon: Global, desc: "ప్రవాస భారతీయుల వార్తలు" },
 ];
 
 export default function WeatherPage() {
@@ -142,53 +150,50 @@ export default function WeatherPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      <main style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 12px" }}>
-        {/* Page Header */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
-          <div style={{ width: 48, height: 48, borderRadius: 12, background: "linear-gradient(135deg, #3b82f6, #06b6d4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>
-            {"\u{1F324}\uFE0F"}
-          </div>
-          <div>
-            <h1 style={{ fontSize: 24, fontWeight: 900, color: "#111" }}>రాయలసీమ వాతావరణం</h1>
-            <p style={{ fontSize: 13, color: "#888" }}>Rayalaseema Weather - All 8 Districts Live</p>
-          </div>
+      <main style={{ maxWidth: 1100, margin: "0 auto", padding: "20px 12px 44px" }}>
+        {/* Page title */}
+        <div style={{ marginBottom: 18 }}>
+          <h1 style={{ fontSize: 26, fontWeight: 900, color: "var(--n-900)", lineHeight: 1.2 }}>రాయలసీమ వాతావరణం</h1>
+          <p style={{ fontSize: 13, color: "var(--n-500)", marginTop: 2 }}>8 జిల్లాల ప్రత్యక్ష వాతావరణ సమాచారం · Rayalaseema Weather Live</p>
         </div>
 
-        {/* Weather Cards Grid */}
+        {/* District weather cards */}
+        <div style={{ marginBottom: 12 }}>
+          <SectionHeading title="జిల్లాల వాతావరణం" icon={CloudSun} />
+        </div>
         {loading ? (
-          <p style={{ textAlign: "center", padding: 40, color: "#aaa" }}>Loading weather data...</p>
+          <p style={{ textAlign: "center", padding: 40, color: "var(--n-500)" }}>వాతావరణ సమాచారం లోడ్ అవుతోంది…</p>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 12, marginBottom: 32 }}>
             {weatherData.map((w) => {
               const info = weatherCodes[w.weatherCode] || weatherCodes[0];
+              const WIcon = info.Icon;
               return (
-                <Link key={w.nameEn} href={`/${w.slug}`} style={{ textDecoration: "none" }}>
-                  <div style={{ background: "#fff", borderRadius: 12, padding: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", transition: "box-shadow 0.15s, transform 0.15s" }} className="hover:shadow-lg hover:-translate-y-0.5">
-                    {/* District name + icon */}
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                      <div>
-                        <h3 style={{ fontSize: 16, fontWeight: 800, color: "#111" }}>{w.name}</h3>
-                        <p style={{ fontSize: 11, color: "#888" }}>{w.nameEn}</p>
-                      </div>
-                      <span style={{ fontSize: 36 }}>{info.icon}</span>
+                <Link key={w.nameEn} href={`/${w.slug}`} className="wx-card" style={{ textDecoration: "none" }}>
+                  {/* District name + icon */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div>
+                      <h3 style={{ fontSize: 16, fontWeight: 800, color: "var(--n-900)" }}>{w.name}</h3>
+                      <p style={{ fontSize: 11, color: "var(--n-500)" }}>{w.nameEn}</p>
                     </div>
-                    {/* Temperature */}
-                    <div style={{ marginTop: 8 }}>
-                      <span style={{ fontSize: 36, fontWeight: 900, color: "#111" }}>{w.temp}°C</span>
-                      <span style={{ fontSize: 12, color: "#888", marginLeft: 8 }}>{w.tempMin}° / {w.tempMax}°</span>
+                    <WIcon size={38} color={info.color} variant="Bulk" />
+                  </div>
+                  {/* Temperature */}
+                  <div style={{ marginTop: 10, display: "flex", alignItems: "baseline", gap: 8 }}>
+                    <span style={{ fontSize: 34, fontWeight: 900, color: "var(--n-900)" }}>{w.temp}°C</span>
+                    <span style={{ fontSize: 12, color: "var(--n-500)" }}>{w.tempMin}° / {w.tempMax}°</span>
+                  </div>
+                  <p style={{ fontSize: 12, color: "var(--n-700)", marginTop: 2 }}>{info.label}</p>
+                  {/* Details row */}
+                  <div style={{ display: "flex", gap: 12, marginTop: 12, paddingTop: 10, borderTop: "1px solid #eef0f2" }}>
+                    <div style={{ fontSize: 11, color: "var(--n-500)" }}>
+                      <span style={{ fontWeight: 700, color: "var(--n-900)" }}>{w.humidity}%</span> తేమ
                     </div>
-                    <p style={{ fontSize: 12, color: "#666", marginTop: 4 }}>{info.label}</p>
-                    {/* Details row */}
-                    <div style={{ display: "flex", gap: 12, marginTop: 10, paddingTop: 10, borderTop: "1px solid #f3f4f6" }}>
-                      <div style={{ fontSize: 11, color: "#888" }}>
-                        <span style={{ fontWeight: 700 }}>{w.humidity}%</span> Humidity
-                      </div>
-                      <div style={{ fontSize: 11, color: "#888" }}>
-                        <span style={{ fontWeight: 700 }}>{w.windSpeed}</span> km/h Wind
-                      </div>
-                      <div style={{ fontSize: 11, color: w.uvIndex >= 8 ? "#dc2626" : w.uvIndex >= 6 ? "#ea580c" : "#888" }}>
-                        UV <span style={{ fontWeight: 700 }}>{w.uvIndex}</span>
-                      </div>
+                    <div style={{ fontSize: 11, color: "var(--n-500)" }}>
+                      <span style={{ fontWeight: 700, color: "var(--n-900)" }}>{w.windSpeed}</span> km/h గాలి
+                    </div>
+                    <div style={{ fontSize: 11, color: w.uvIndex >= 8 ? "#dc2626" : w.uvIndex >= 6 ? "#ea580c" : "var(--n-500)" }}>
+                      UV <span style={{ fontWeight: 700 }}>{w.uvIndex}</span>
                     </div>
                   </div>
                 </Link>
@@ -197,55 +202,89 @@ export default function WeatherPage() {
           </div>
         )}
 
-        {/* Advisory Cards */}
-        <h2 style={{ fontSize: 20, fontWeight: 900, color: "#111", marginBottom: 16 }}>సూచనలు & సలహాలు</h2>
+        {/* Advisory cards */}
+        <div style={{ marginBottom: 12 }}>
+          <SectionHeading title="సూచనలు & సలహాలు" icon={Lightbulb} />
+        </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12, marginBottom: 32 }}>
-          {tips.map((tip) => (
-            <div key={tip.titleEn} style={{ background: "#fff", borderRadius: 12, padding: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", borderLeft: `4px solid ${tip.color}` }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                <span style={{ fontSize: 20 }}>{tip.icon}</span>
-                <h3 style={{ fontSize: 15, fontWeight: 800, color: tip.color }}>{tip.title}</h3>
-              </div>
-              {tip.items.map((item, i) => {
-                // Simple condition matching
-                const show =
-                  item.condition === "always" ||
-                  item.condition === "default" ||
-                  (item.condition === "rain" && hasRain) ||
-                  (item.condition === "temp > 40" && avgTemp > 40) ||
-                  (item.condition === "temp > 38" && avgTemp > 38) ||
-                  (item.condition === "uv > 8" && maxUV > 8) ||
-                  (item.condition === "humidity > 80" && weatherData.some((w) => w.humidity > 80)) ||
-                  (item.condition === "fog" && weatherData.some((w) => [45, 48].includes(w.weatherCode)));
+          {tips.map((tip) => {
+            const TIcon = tip.Icon;
+            return (
+              <div key={tip.titleEn} style={{ background: "#fff", borderRadius: 8, padding: 16, border: "1px solid #e5e7eb" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <span style={{ width: 32, height: 32, borderRadius: 8, background: `${tip.color}14`, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <TIcon size={19} color={tip.color} variant="Bulk" />
+                  </span>
+                  <h3 style={{ fontSize: 15, fontWeight: 800, color: tip.color }}>{tip.title}</h3>
+                </div>
+                {tip.items.map((item, i) => {
+                  const show =
+                    item.condition === "always" ||
+                    item.condition === "default" ||
+                    (item.condition === "rain" && hasRain) ||
+                    (item.condition === "temp > 40" && avgTemp > 40) ||
+                    (item.condition === "temp > 38" && avgTemp > 38) ||
+                    (item.condition === "uv > 8" && maxUV > 8) ||
+                    (item.condition === "humidity > 80" && weatherData.some((w) => w.humidity > 80)) ||
+                    (item.condition === "fog" && weatherData.some((w) => [45, 48].includes(w.weatherCode)));
 
-                if (!show && item.condition !== "default") return null;
-                return (
-                  <p key={i} style={{ fontSize: 13, color: "#444", lineHeight: 1.8, marginBottom: 6 }}>
-                    {item.text}
-                  </p>
-                );
-              })}
-            </div>
-          ))}
+                  if (!show && item.condition !== "default") return null;
+                  return (
+                    <p key={i} style={{ fontSize: 13, color: "var(--n-700)", lineHeight: 1.8, marginBottom: 6 }}>
+                      {item.text}
+                    </p>
+                  );
+                })}
+              </div>
+            );
+          })}
         </div>
 
-        {/* Related Pages */}
-        <h2 style={{ fontSize: 20, fontWeight: 900, color: "#111", marginBottom: 16 }}>సంబంధిత పేజీలు</h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10, marginBottom: 32 }}>
-          {relatedPages.map((p) => (
-            <Link key={p.slug} href={p.slug} style={{ textDecoration: "none" }}>
-              <div style={{ background: "#fff", borderRadius: 10, padding: 14, boxShadow: "0 1px 2px rgba(0,0,0,0.04)", display: "flex", alignItems: "center", gap: 12, transition: "box-shadow 0.15s" }} className="hover:shadow-md">
-                <span style={{ fontSize: 28 }}>{p.icon}</span>
+        {/* Related pages */}
+        <div style={{ marginBottom: 12 }}>
+          <SectionHeading title="సంబంధిత పేజీలు" icon={LayoutGrid} />
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10 }}>
+          {relatedPages.map((p) => {
+            const PIcon = p.Icon;
+            return (
+              <Link key={p.slug} href={p.slug} className="wx-link" style={{ textDecoration: "none" }}>
+                <span style={{ width: 40, height: 40, borderRadius: 8, background: "var(--brand-soft)", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <PIcon size={22} color="#E01B1B" variant="Bulk" />
+                </span>
                 <div>
-                  <h4 style={{ fontSize: 14, fontWeight: 800, color: "#111" }}>{p.name}</h4>
-                  <p style={{ fontSize: 11, color: "#888" }}>{p.desc}</p>
+                  <h4 style={{ fontSize: 14, fontWeight: 800, color: "var(--n-900)" }}>{p.name}</h4>
+                  <p style={{ fontSize: 11, color: "var(--n-500)" }}>{p.desc}</p>
                 </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       </main>
       <Footer />
+
+      <style>{`
+        .wx-card {
+          display: block;
+          background: #fff;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          padding: 16px;
+          transition: border-color 0.15s;
+        }
+        .wx-card:hover { border-color: var(--brand); }
+        .wx-link {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          background: #fff;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          padding: 12px;
+          transition: border-color 0.15s;
+        }
+        .wx-link:hover { border-color: var(--brand); }
+      `}</style>
     </div>
   );
 }

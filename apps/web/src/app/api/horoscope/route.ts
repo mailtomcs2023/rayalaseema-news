@@ -33,11 +33,9 @@ export async function GET(req: NextRequest) {
 
   const daily = new Map<string, string>();
   const weekly = new Map<string, string>();
-  let latestDate: Date | null = null;
   for (const r of rows) {
     if (r.period === "DAILY" && !daily.has(r.rashi)) {
       daily.set(r.rashi, r.predictionTe);
-      if (!latestDate) latestDate = r.date;
     } else if (r.period === "WEEKLY" && !weekly.has(r.rashi)) {
       weekly.set(r.rashi, r.predictionTe);
     }
@@ -53,10 +51,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(results.find((r) => r.id === rashiParam) || null);
   }
 
-  const dateLabel = (latestDate ?? new Date()).toLocaleDateString("te-IN", {
+  // Always label with TODAY's date (IST) - this is "నేటి రాశి ఫలాలు", so the
+  // header must track the calendar day, not the date the rows were generated.
+  const dateLabel = new Date().toLocaleDateString("te-IN", {
     day: "numeric",
     month: "long",
     year: "numeric",
+    timeZone: "Asia/Kolkata",
   });
 
   return NextResponse.json(

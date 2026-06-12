@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
+import { Star } from "lucide-react";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { SectionHeading } from "@/components/section-heading";
+import { Button } from "@/components/ui/button";
 
 interface Rashi {
   id: string; name: string; nameEn: string; symbol: string; icon: string; dates: string;
@@ -23,13 +25,23 @@ const rashiColors = [
 ];
 
 // Real zodiac artwork (self-hosted OpenMoji color SVGs in /public/rashis),
-// in the same order as data.rashis (mesha \u2026 meena). Swap these files to use
+// in the same order as data.rashis (mesha … meena). Swap these files to use
 // custom rashi art without touching the component.
 const rashiImages = [
   "/rashis/mesha.svg", "/rashis/vrushabha.svg", "/rashis/mithuna.svg", "/rashis/karkataka.svg",
   "/rashis/simha.svg", "/rashis/kanya.svg", "/rashis/tula.svg", "/rashis/vrushchika.svg",
   "/rashis/dhanu.svg", "/rashis/makara.svg", "/rashis/kumbha.svg", "/rashis/meena.svg",
 ];
+
+// Reusable on-brand card header (replaces the old per-card gradient bars).
+function CardHeader({ title, sub }: { title: string; sub?: string }) {
+  return (
+    <div style={{ background: "var(--brand)", padding: "9px 14px", color: "#fff" }}>
+      <h3 style={{ fontSize: 15, fontWeight: 900 }}>{title}</h3>
+      {sub ? <p style={{ fontSize: 11, opacity: 0.85 }}>{sub}</p> : null}
+    </div>
+  );
+}
 
 export default function HoroscopePage() {
   const [data, setData] = useState<{ rashis: Rashi[]; date: string } | null>(null);
@@ -55,11 +67,11 @@ export default function HoroscopePage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "20px 12px" }}>
-        {/* Page Title */}
-        <div style={{ textAlign: "center", marginBottom: 20 }}>
-          <h1 style={{ fontSize: 26, fontWeight: 900, color: "#111" }}>నేటి రాశి ఫలాలు & పంచాంగం</h1>
-          <p style={{ fontSize: 13, color: "#888" }}>{data?.date || ""} | Daily Horoscope & Panchangam</p>
+      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "20px 12px 44px" }}>
+        {/* Page title */}
+        <div style={{ marginBottom: 18 }}>
+          <h1 style={{ fontSize: 26, fontWeight: 900, color: "var(--n-900)", lineHeight: 1.2 }}>నేటి రాశి ఫలాలు & పంచాంగం</h1>
+          <p style={{ fontSize: 13, color: "var(--n-500)", marginTop: 2 }}>{data?.date || ""} · Daily Horoscope &amp; Panchangam</p>
         </div>
 
         {/* Two column layout: Main (rashis) + Sidebar (panchangam) */}
@@ -68,67 +80,81 @@ export default function HoroscopePage() {
           <div style={{ flex: 1, minWidth: 0 }}>
             {/* Rashi selector grid */}
             {!loading && data?.rashis && (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 6, marginBottom: 16 }}>
-                {data.rashis.map((r, i) => (
-                  <button key={r.id} onClick={() => saveRashi(r.id)} style={{
-                    padding: "10px 4px", borderRadius: 8, border: selected === r.id ? `2px solid ${rashiColors[i]}` : "2px solid transparent",
-                    background: selected === r.id ? `${rashiColors[i]}10` : "#fff", cursor: "pointer",
-                    display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-                  }}>
-                    <img src={rashiImages[i]} alt={r.name} width={34} height={34} loading="lazy" style={{ display: "block" }} />
-                    <span style={{ fontSize: 12, fontWeight: 800, color: selected === r.id ? rashiColors[i] : "#333" }}>{r.name}</span>
-                    <span style={{ fontSize: 9, color: "#999" }}>{r.nameEn}</span>
-                  </button>
-                ))}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 6, marginBottom: 16 }} className="rashi-pick">
+                {data.rashis.map((r, i) => {
+                  const active = selected === r.id;
+                  return (
+                    <Button
+                      key={r.id}
+                      variant="ghost"
+                      onClick={() => saveRashi(r.id)}
+                      className="h-auto w-full flex-col gap-0.5 rounded-lg border p-2.5 hover:bg-transparent"
+                      style={{
+                        borderColor: active ? rashiColors[i] : "#e5e7eb",
+                        background: active ? `${rashiColors[i]}10` : "#fff",
+                      }}
+                    >
+                      <img src={rashiImages[i]} alt={r.name} width={34} height={34} loading="lazy" style={{ display: "block" }} />
+                      <span style={{ fontSize: 12, fontWeight: 800, color: active ? rashiColors[i] : "var(--n-700)" }}>{r.name}</span>
+                      <span style={{ fontSize: 9, color: "var(--n-500)" }}>{r.nameEn}</span>
+                    </Button>
+                  );
+                })}
               </div>
             )}
 
             {/* Selected rashi - big prediction */}
             {selectedRashi && (
-              <div style={{ background: "#fff", borderRadius: 10, padding: 20, marginBottom: 16, borderLeft: `4px solid ${rashiColors[selectedIdx]}`, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+              <div style={{ background: "#fff", borderRadius: 8, padding: 20, marginBottom: 16, border: "1px solid #e5e7eb" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
                   <img src={rashiImages[selectedIdx]} alt={selectedRashi.name} width={46} height={46} style={{ display: "block" }} />
                   <div style={{ flex: 1 }}>
                     <h2 style={{ fontSize: 20, fontWeight: 900, color: rashiColors[selectedIdx] }}>{selectedRashi.name}</h2>
-                    <p style={{ fontSize: 11, color: "#888" }}>{selectedRashi.nameEn} | {selectedRashi.dates}</p>
+                    <p style={{ fontSize: 11, color: "var(--n-500)" }}>{selectedRashi.nameEn} | {selectedRashi.dates}</p>
                   </div>
-                  <button onClick={() => { setSelected(null); localStorage.removeItem("my-rashi"); }}
-                    style={{ fontSize: 10, color: "#888", background: "#f3f4f6", border: "none", padding: "4px 10px", borderRadius: 4, cursor: "pointer" }}>
+                  <Button
+                    variant="secondary"
+                    size="xs"
+                    onClick={() => { setSelected(null); localStorage.removeItem("my-rashi"); }}
+                  >
                     మార్చు
-                  </button>
+                  </Button>
                 </div>
-                <h3 style={{ fontSize: 13, fontWeight: 800, color: "#888", margin: "0 0 4px" }}>ఈ రోజు</h3>
-                <p style={{ fontSize: 16, lineHeight: 2, color: "#222" }}>{selectedRashi.prediction || "త్వరలో…"}</p>
+                <h3 style={{ fontSize: 13, fontWeight: 800, color: "var(--n-500)", margin: "0 0 4px" }}>ఈ రోజు</h3>
+                <p style={{ fontSize: 16, lineHeight: 2, color: "var(--n-900)" }}>{selectedRashi.prediction || "త్వరలో…"}</p>
                 {selectedRashi.weeklyPrediction && (
                   <>
-                    <h3 style={{ fontSize: 13, fontWeight: 800, color: "#888", margin: "16px 0 4px" }}>ఈ వారం</h3>
-                    <p style={{ fontSize: 15, lineHeight: 1.9, color: "#333" }}>{selectedRashi.weeklyPrediction}</p>
+                    <h3 style={{ fontSize: 13, fontWeight: 800, color: "var(--n-500)", margin: "16px 0 4px" }}>ఈ వారం</h3>
+                    <p style={{ fontSize: 15, lineHeight: 1.9, color: "var(--n-700)" }}>{selectedRashi.weeklyPrediction}</p>
                   </>
                 )}
               </div>
             )}
 
             {/* All 12 rashis */}
-            <h2 style={{ fontSize: 18, fontWeight: 900, marginBottom: 10, color: "#111" }}>అన్ని రాశులు</h2>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div style={{ marginBottom: 12 }}>
+              <SectionHeading title="అన్ని రాశులు" icon={Star} />
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }} className="rashi-all">
               {data?.rashis.map((r, i) => (
-                <div key={r.id} onClick={() => saveRashi(r.id)} style={{
-                  background: "#fff", borderRadius: 8, padding: 14, cursor: "pointer",
-                  borderTop: `3px solid ${rashiColors[i]}`, boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-                  transition: "box-shadow 0.15s",
-                }} className="hover:shadow-md">
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <Button
+                  key={r.id}
+                  variant="ghost"
+                  onClick={() => saveRashi(r.id)}
+                  className="rashi-tile h-auto w-full flex-col items-stretch gap-1.5 rounded-lg border bg-white p-3.5 text-left hover:bg-white"
+                  style={{ borderColor: "#e5e7eb" }}
+                >
+                  <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <img src={rashiImages[i]} alt={r.name} width={30} height={30} loading="lazy" style={{ display: "block" }} />
-                    <div>
-                      <h3 style={{ fontSize: 14, fontWeight: 800, color: rashiColors[i] }}>{r.name}</h3>
-                      <p style={{ fontSize: 10, color: "#888" }}>{r.nameEn}</p>
-                    </div>
-                  </div>
-                  <p style={{ fontSize: 13, lineHeight: 1.7, color: "#444", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" as const, overflow: "hidden" }}>
+                    <span>
+                      <span style={{ display: "block", fontSize: 14, fontWeight: 800, color: rashiColors[i] }}>{r.name}</span>
+                      <span style={{ display: "block", fontSize: 10, color: "var(--n-500)" }}>{r.nameEn}</span>
+                    </span>
+                  </span>
+                  <span style={{ fontSize: 13, lineHeight: 1.7, color: "var(--n-700)", fontWeight: 400, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" as const, overflow: "hidden", whiteSpace: "normal" }}>
                     {r.prediction || "..."}
-                  </p>
-                </div>
+                  </span>
+                </Button>
               ))}
             </div>
           </div>
@@ -139,11 +165,8 @@ export default function HoroscopePage() {
               <>
                 {/* Today's Panchangam */}
                 {(panchangam.today?.tithi || panchangam.today?.teluguMonth || panchangam.today?.nakshatra) && (
-                <div style={{ background: "#fff", borderRadius: 10, overflow: "hidden", marginBottom: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
-                  <div style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", padding: "10px 14px", color: "#fff" }}>
-                    <h3 style={{ fontSize: 15, fontWeight: 900 }}>నేటి పంచాంగం</h3>
-                    <p style={{ fontSize: 11, opacity: 0.85 }}>{panchangam.today.date}</p>
-                  </div>
+                <div style={{ background: "#fff", borderRadius: 8, overflow: "hidden", marginBottom: 12, border: "1px solid #e5e7eb" }}>
+                  <CardHeader title="నేటి పంచాంగం" sub={panchangam.today.date} />
                   <div style={{ padding: 12 }}>
                     {[
                       { l: "తెలుగు మాసం", v: panchangam.today.teluguMonth },
@@ -154,9 +177,9 @@ export default function HoroscopePage() {
                       { l: "సూర్యోదయం / అస్తమయం", v: (panchangam.today.sunrise || panchangam.today.sunset) ? `${panchangam.today.sunrise ?? "-"} / ${panchangam.today.sunset ?? "-"}` : "" },
                       { l: "రాహు కాలం", v: panchangam.today.rahuKalam },
                     ].map((item, i) => (
-                      <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: i < 6 ? "1px solid #f5f5f5" : "none" }}>
-                        <span style={{ fontSize: 12, color: "#888" }}>{item.l}</span>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "#222", textAlign: "right", maxWidth: "55%" }}>{item.v || "-"}</span>
+                      <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: i < 6 ? "1px solid #f3f4f6" : "none" }}>
+                        <span style={{ fontSize: 12, color: "var(--n-500)" }}>{item.l}</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--n-900)", textAlign: "right", maxWidth: "55%" }}>{item.v || "-"}</span>
                       </div>
                     ))}
                   </div>
@@ -164,14 +187,11 @@ export default function HoroscopePage() {
                 )}
 
                 {/* Festivals */}
-                <div style={{ background: "#fff", borderRadius: 10, overflow: "hidden", marginBottom: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
-                  <div style={{ background: "linear-gradient(135deg, #3b82f6, #2563eb)", padding: "10px 14px", color: "#fff" }}>
-                    <h3 style={{ fontSize: 15, fontWeight: 900 }}>పండుగలు & సెలవులు</h3>
-                    <p style={{ fontSize: 11, opacity: 0.85 }}>{panchangam.monthName}</p>
-                  </div>
+                <div style={{ background: "#fff", borderRadius: 8, overflow: "hidden", marginBottom: 12, border: "1px solid #e5e7eb" }}>
+                  <CardHeader title="పండుగలు & సెలవులు" sub={panchangam.monthName} />
                   <div style={{ padding: 10 }}>
                     {(panchangam.festivals?.thisMonth?.length ?? 0) > 0 ? (panchangam.festivals?.thisMonth ?? []).map((f, i) => (
-                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: i < (panchangam.festivals?.thisMonth?.length ?? 0) - 1 ? "1px solid #f5f5f5" : "none" }}>
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: i < (panchangam.festivals?.thisMonth?.length ?? 0) - 1 ? "1px solid #f3f4f6" : "none" }}>
                         <span style={{
                           width: 30, height: 30, borderRadius: 6, flexShrink: 0,
                           background: f.type === "festival" ? "#fef3c7" : "#dbeafe",
@@ -179,24 +199,22 @@ export default function HoroscopePage() {
                           fontSize: 12, fontWeight: 900, color: f.type === "festival" ? "#b45309" : "#1d4ed8",
                         }}>{f.day}</span>
                         <div>
-                          <p style={{ fontSize: 13, fontWeight: 700, color: "#111" }}>{f.name}</p>
-                          <p style={{ fontSize: 10, color: "#888" }}>{f.nameEn}</p>
+                          <p style={{ fontSize: 13, fontWeight: 700, color: "var(--n-900)" }}>{f.name}</p>
+                          <p style={{ fontSize: 10, color: "var(--n-500)" }}>{f.nameEn}</p>
                         </div>
                       </div>
-                    )) : <p style={{ fontSize: 12, color: "#aaa", textAlign: "center", padding: 10 }}>ఈ నెల పండుగలు లేవు</p>}
+                    )) : <p style={{ fontSize: 12, color: "var(--n-500)", textAlign: "center", padding: 10 }}>ఈ నెల పండుగలు లేవు</p>}
                   </div>
                 </div>
 
                 {/* Muhurthams */}
-                <div style={{ background: "#fff", borderRadius: 10, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
-                  <div style={{ background: "linear-gradient(135deg, #16a34a, #15803d)", padding: "10px 14px", color: "#fff" }}>
-                    <h3 style={{ fontSize: 15, fontWeight: 900 }}>శుభ ముహూర్తాలు</h3>
-                    <p style={{ fontSize: 11, opacity: 0.85 }}>{panchangam.monthName}</p>
-                  </div>
+                {(panchangam.muhurthams?.length ?? 0) > 0 && (
+                <div style={{ background: "#fff", borderRadius: 8, overflow: "hidden", border: "1px solid #e5e7eb" }}>
+                  <CardHeader title="శుభ ముహూర్తాలు" sub={panchangam.monthName} />
                   <div style={{ padding: 10 }}>
                     {(panchangam.muhurthams || []).slice(0, 4).map((m, i) => (
                       <div key={i} style={{ marginBottom: 10 }}>
-                        <p style={{ fontSize: 12, fontWeight: 800, color: "#111", marginBottom: 4 }}>{m.icon} {m.name}</p>
+                        <p style={{ fontSize: 12, fontWeight: 800, color: "var(--n-900)", marginBottom: 4 }}>{m.name}</p>
                         <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                           {m.dates.map((d: any, j: number) => (
                             <span key={j} style={{
@@ -211,6 +229,7 @@ export default function HoroscopePage() {
                     ))}
                   </div>
                 </div>
+                )}
               </>
             )}
           </div>
@@ -219,9 +238,13 @@ export default function HoroscopePage() {
       <Footer />
 
       <style>{`
+        .rashi-tile { transition: border-color 0.15s, box-shadow 0.15s; }
+        .rashi-tile:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
         @media (max-width: 768px) {
           .horoscope-layout { flex-direction: column !important; }
           .horoscope-sidebar { width: 100% !important; }
+          .rashi-pick { grid-template-columns: repeat(4, 1fr) !important; }
+          .rashi-all { grid-template-columns: 1fr !important; }
         }
       `}</style>
     </div>
