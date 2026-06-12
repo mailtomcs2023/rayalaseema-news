@@ -59,7 +59,7 @@ function Slide({ article, priority }: { article: FeaturedArticle; priority?: boo
             fetchPriority={priority ? "high" : "auto"}
           />
         ) : (
-          <div className="af-noimg">RE</div>
+          <div className="af-noimg"><img src="/logo-icon.png" alt="రాయలసీమ న్యూస్" loading="lazy" /></div>
         )}
       </Link>
       <div className="af-lead-text">

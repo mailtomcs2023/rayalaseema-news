@@ -55,7 +55,7 @@ export default async function LatestNewsListPage() {
                   {a.featuredImage ? (
                     <img src={a.featuredImage} alt="" loading="lazy" />
                   ) : (
-                    <span className="lnl-noimg">RE</span>
+                    <span className="lnl-noimg"><img src="/logo-icon.png" alt="రాయలసీమ న్యూస్" loading="lazy" /></span>
                   )}
                 </span>
                 <span className="lnl-body">
@@ -84,11 +84,12 @@ export default async function LatestNewsListPage() {
           flex: 0 0 116px; width: 116px; height: 80px; border-radius: 8px;
           overflow: hidden; background: #f3f4f6; display: block;
         }
-        .lnl-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .lnl-thumb > img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .lnl-noimg {
           width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
-          font-family: var(--font-telugu-heading), serif; font-weight: 800; font-size: 18px; color: #cbd5e1;
+          background: #f8fafc;
         }
+        .lnl-noimg img { width: 52px; height: auto; object-fit: contain; opacity: 0.6; }
         .lnl-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
         .lnl-meta { display: flex; align-items: center; gap: 8px; }
         .lnl-cat {

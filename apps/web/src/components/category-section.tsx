@@ -62,7 +62,7 @@ function ArticleCardLarge({ article, color }: { article: Article; color: string 
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-            <span className="text-gray-300 text-4xl font-bold">RE</span>
+            <img src="/logo-icon.png" alt="రాయలసీమ న్యూస్" className="h-12 w-auto object-contain opacity-50" loading="lazy" />
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -99,7 +99,7 @@ function ArticleCardSmall({ article, color }: { article: Article; color: string 
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-            <span className="text-gray-300 text-2xl font-bold">RE</span>
+            <img src="/logo-icon.png" alt="రాయలసీమ న్యూస్" className="h-9 w-auto object-contain opacity-50" loading="lazy" />
           </div>
         )}
       </div>
@@ -132,7 +132,7 @@ function ArticleCardList({ article, color }: { article: Article; color: string }
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center rounded-lg">
-            <span className="text-gray-300 text-xl font-bold">RE</span>
+            <img src="/logo-icon.png" alt="రాయలసీమ న్యూస్" className="h-8 w-auto object-contain opacity-50" loading="lazy" />
           </div>
         )}
       </div>

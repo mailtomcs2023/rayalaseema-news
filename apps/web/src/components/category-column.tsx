@@ -63,7 +63,7 @@ export function CategoryColumn({
         {lead.featuredImage ? (
           <img src={lead.featuredImage} alt={lead.title} loading="lazy" />
         ) : (
-          <div className="cc-noimg">RE</div>
+          <div className="cc-noimg"><img src="/logo-icon.png" alt="రాయలసీమ న్యూస్" loading="lazy" /></div>
         )}
       </Link>
       <Link href={articleHref(lead)} className="cc-lead-link">
@@ -165,12 +165,10 @@ export function CategoryColumn({
           width: 100%;
           height: 165px;
           display: flex; align-items: center; justify-content: center;
-          font-family: var(--font-telugu-heading), serif;
-          font-weight: 800; font-size: 24px;
-          color: var(--n-300, #d1d5db);
           background: var(--n-100, #f3f4f6);
           border-radius: 4px;
         }
+        .cc-noimg img { width: 64px; height: auto; object-fit: contain; opacity: 0.5; }
 
         .cc-lead-link { display: block; text-decoration: none; }
         .cc-lead-title {

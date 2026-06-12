@@ -231,11 +231,9 @@ export function AboveFold({
           display: flex;
           align-items: center;
           justify-content: center;
-          font-family: var(--font-telugu-heading), serif;
-          font-weight: 800;
-          font-size: 36px;
-          color: var(--n-300, #d1d5db);
+          background: var(--n-100, #f3f4f6);
         }
+        .af-noimg img { width: 22%; max-width: 96px; height: auto; object-fit: contain; opacity: 0.5; }
         .af-lead-text { flex: 1 1 44%; min-width: 0; padding-top: 4px; }
         .af-lead-link {
           /* Block link wrapping the H2: display:block makes the full

@@ -143,7 +143,7 @@ export function SectionBand({
               {viewLead.featuredImage ? (
                 <img src={viewLead.featuredImage} alt={viewLead.title} loading="lazy" />
               ) : (
-                <div className="sb-noimg">RE</div>
+                <div className="sb-noimg"><img src="/logo-icon.png" alt="రాయలసీమ న్యూస్" loading="lazy" /></div>
               )}
             </Link>
           </div>
@@ -159,7 +159,7 @@ export function SectionBand({
                   {a.featuredImage ? (
                     <img src={a.featuredImage} alt={a.title} loading="lazy" />
                   ) : (
-                    <div className="sb-noimg sb-noimg-sm">RE</div>
+                    <div className="sb-noimg sb-noimg-sm"><img src="/logo-icon.png" alt="రాయలసీమ న్యూస్" loading="lazy" /></div>
                   )}
                 </div>
               </Link>
@@ -356,11 +356,11 @@ export function SectionBand({
         .sb-noimg {
           width: 100%; aspect-ratio: 16/10;
           display: flex; align-items: center; justify-content: center;
-          font-family: var(--font-telugu-heading), serif;
-          font-weight: 800; font-size: 32px;
-          color: var(--n-300, #d1d5db);
+          background: var(--n-100, #f3f4f6);
         }
-        .sb-noimg-sm { font-size: 16px; aspect-ratio: 1/1; }
+        .sb-noimg img { width: 24%; max-width: 88px; height: auto; object-fit: contain; opacity: 0.5; }
+        .sb-noimg-sm { aspect-ratio: 1/1; }
+        .sb-noimg-sm img { width: 44px; }
 
         .sb-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
         .sb-grid-item {

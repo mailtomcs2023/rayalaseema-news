@@ -77,8 +77,11 @@ export function PhotoGallery({ photos }: { photos: Photo[] }) {
           margin: 0;
           display: -webkit-box;
           -webkit-line-clamp: 2;
+          line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
+          /* hard ceiling so long Telugu captions can never spill to a 3rd line */
+          max-height: calc(2 * 1.35em);
         }
 
         @media (max-width: 768px) { .pg-grid { grid-template-columns: repeat(2, 1fr); } }

@@ -67,7 +67,7 @@ export function NewsSlider({ items }: { items: SliderItem[] }) {
           />
         ) : (
           <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, #1a1a2e, #16213e)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ color: "var(--color-brand)", fontSize: 48, fontWeight: 900, opacity: 0.3 }}>RE</span>
+            <img src="/logo-inverse.png" alt="రాయలసీమ న్యూస్" style={{ width: 140, height: "auto", objectFit: "contain", opacity: 0.85 }} loading="lazy" />
           </div>
         )}
 

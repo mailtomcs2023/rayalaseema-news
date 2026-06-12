@@ -34,8 +34,8 @@ export function NewsGrid({ items }: { items: NewsGridItem[] }) {
                   loading="lazy"
                 />
               ) : (
-                <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                  <span className="text-gray-400 text-xs fw-extrabold">RE</span>
+                <div className="w-full h-full bg-gray-50 flex items-center justify-center">
+                  <img src="/logo-icon.png" alt="రాయలసీమ న్యూస్" className="h-8 w-auto object-contain opacity-50" loading="lazy" />
                 </div>
               )}
             </div>
