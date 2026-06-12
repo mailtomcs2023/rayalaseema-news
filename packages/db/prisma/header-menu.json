@@ -1,0 +1,908 @@
+[
+  {
+    "id": "itm_m06ouszr7",
+    "label": "కర్నూలు",
+    "target": {
+      "url": "/kurnool",
+      "type": "INTERNAL_URL"
+    },
+    "children": [
+      {
+        "id": "itm_5x13exl39",
+        "label": "పత్తికొండ",
+        "target": {
+          "url": "/pattikonda",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_46pi8lxvj",
+        "label": "కోడుమూరు",
+        "target": {
+          "url": "/kodumur",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_k2eu458ie",
+        "label": "ఎమ్మిగనూరు",
+        "target": {
+          "url": "/yemmiganur",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_efuovicfu",
+        "label": "మంత్రాలయం",
+        "target": {
+          "url": "/mantralayam",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_6ogm8ty7w",
+        "label": "ఆదోని",
+        "target": {
+          "url": "/adoni",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_cqcg6x4lr",
+        "label": "ఆలూరు",
+        "target": {
+          "url": "/alur",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      }
+    ],
+    "openInNewTab": false,
+    "mobileVariant": "show",
+    "secondaryHeader": {
+      "items": [],
+      "sticky": true,
+      "enabled": true
+    }
+  },
+  {
+    "id": "itm_qck836p03",
+    "label": "నంద్యాల",
+    "target": {
+      "url": "/nandyal",
+      "type": "INTERNAL_URL"
+    },
+    "children": [
+      {
+        "id": "itm_hcu0c3dtk",
+        "label": "ఆళ్లగడ్డ",
+        "target": {
+          "url": "/allagadda",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_i2kx79bjx",
+        "label": "శ్రీశైలం",
+        "target": {
+          "url": "/srisailam",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_l3cen3i98",
+        "label": "నందికోట్కూరు",
+        "target": {
+          "url": "/nandikotkur",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_ltqq947w0",
+        "label": "పాణ్యం",
+        "target": {
+          "url": "/panyam",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_gi54kkj3g",
+        "label": "బనగానపల్లె",
+        "target": {
+          "url": "/banaganapalle",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_ybrirtf84",
+        "label": "డోను",
+        "target": {
+          "url": "/dhone",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      }
+    ],
+    "openInNewTab": false,
+    "mobileVariant": "show",
+    "secondaryHeader": {
+      "items": [],
+      "sticky": false,
+      "enabled": true
+    }
+  },
+  {
+    "id": "itm_kqgyog1em",
+    "label": "అనంతపురం",
+    "target": {
+      "url": "/ananthapuramu",
+      "type": "INTERNAL_URL"
+    },
+    "children": [
+      {
+        "id": "itm_tb4eqzx1v",
+        "label": "రాయదుర్గం",
+        "target": {
+          "url": "/rayadurg",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_2qb79xlg0",
+        "label": "ఉరవకొండ",
+        "target": {
+          "url": "/uravakonda",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_cx5d8ogiw",
+        "label": "గుంతకల్",
+        "target": {
+          "url": "/guntakal",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_pxht3qnsx",
+        "label": "తాడిపత్రి",
+        "target": {
+          "url": "/tadpatri",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_3dcf5x6ef",
+        "label": "శింగనమల",
+        "target": {
+          "url": "/singanamala",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_fxxqbaxvr",
+        "label": "అనంతపురం అర్బన్",
+        "target": {
+          "url": "/anantapur-urban",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_fgkzs5u0f",
+        "label": "కళ్యాణదుర్గం",
+        "target": {
+          "url": "/kalyandurg",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_9d4g21cuu",
+        "label": "రాప్తాడు",
+        "target": {
+          "url": "/raptadu",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      }
+    ],
+    "openInNewTab": false,
+    "mobileVariant": "show",
+    "secondaryHeader": {
+      "items": [],
+      "sticky": false,
+      "enabled": true
+    }
+  },
+  {
+    "id": "itm_3e3qx57wp",
+    "label": "శ్రీ సత్యసాయి",
+    "target": {
+      "url": "/sri-sathya-sai",
+      "type": "INTERNAL_URL"
+    },
+    "children": [
+      {
+        "id": "itm_kdyojxggp",
+        "label": "మడకశిర",
+        "target": {
+          "url": "/madakasira",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_45egt6t2m",
+        "label": "హిందూపురం",
+        "target": {
+          "url": "/hindupur",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_ru1p6e4f5",
+        "label": "పెనుకొండ",
+        "target": {
+          "url": "/penukonda",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_af83laicu",
+        "label": "పుట్టపర్తి",
+        "target": {
+          "url": "/puttaparthi",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_m9c3ckpdt",
+        "label": "ధర్మవరం",
+        "target": {
+          "url": "/dharmavaram",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_wq8spy8jp",
+        "label": "కదిరి",
+        "target": {
+          "url": "/kadiri",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      }
+    ],
+    "openInNewTab": false,
+    "mobileVariant": "show",
+    "secondaryHeader": {
+      "items": [],
+      "sticky": false,
+      "enabled": true
+    }
+  },
+  {
+    "id": "itm_m3zq547ey",
+    "label": "వై.యస్.ఆర్",
+    "target": {
+      "url": "/ysr-kadapa",
+      "type": "INTERNAL_URL"
+    },
+    "children": [
+      {
+        "id": "itm_nrhf284um",
+        "label": "బద్వేలు",
+        "target": {
+          "url": "/badvel",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_vxvbkw5h9",
+        "label": "కడప",
+        "target": {
+          "url": "/kadapa",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_9w6316ngi",
+        "label": "పులివెందుల",
+        "target": {
+          "url": "/pulivendla",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_o6urcyo0j",
+        "label": "కమలాపురం",
+        "target": {
+          "url": "/kamalapuram",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_47mnu1p2x",
+        "label": "జమ్మలమడుగు",
+        "target": {
+          "url": "/jammalamadugu",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_l5xcrdjne",
+        "label": "ప్రొద్దుటూరు",
+        "target": {
+          "url": "/proddatur",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_j552qmhai",
+        "label": "మైదుకూరు",
+        "target": {
+          "url": "/mydukur",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      }
+    ],
+    "openInNewTab": false,
+    "mobileVariant": "show",
+    "secondaryHeader": {
+      "items": [],
+      "sticky": false,
+      "enabled": true
+    }
+  },
+  {
+    "id": "itm_2xsyyzbqf",
+    "label": "తిరుపతి",
+    "target": {
+      "url": "/tirupati",
+      "type": "INTERNAL_URL"
+    },
+    "children": [
+      {
+        "id": "itm_xkae45y3r",
+        "label": "గూడూరు",
+        "target": {
+          "url": "/gudur",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_11b4ddtzd",
+        "label": "సూళ్ళూరుపేట",
+        "target": {
+          "url": "/sullurpeta",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_gk5sy4d92",
+        "label": "వెంకటగిరి",
+        "target": {
+          "url": "/venkatagiri",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_1mo21uvxu",
+        "label": "చంద్రగిరి",
+        "target": {
+          "url": "/chandragiri",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_zrvb0kdtf",
+        "label": "శ్రీకాళహస్తి",
+        "target": {
+          "url": "/srikalahasti",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_otegkc4zi",
+        "label": "సత్యవేడు",
+        "target": {
+          "url": "/satyavedu",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      }
+    ],
+    "openInNewTab": false,
+    "mobileVariant": "show",
+    "secondaryHeader": {
+      "items": [],
+      "sticky": false,
+      "enabled": true
+    }
+  },
+  {
+    "id": "itm_gr35qznc5",
+    "label": "అన్నమయ్య",
+    "target": {
+      "url": "/annamayya",
+      "type": "INTERNAL_URL"
+    },
+    "children": [
+      {
+        "id": "itm_f09i3xw8e",
+        "label": "రాజంపేట",
+        "target": {
+          "url": "/rajampet",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_0qabh95ai",
+        "label": "కోడూరు",
+        "target": {
+          "url": "/kodur",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_a1vlsrt74",
+        "label": "రాయచోటి",
+        "target": {
+          "url": "/rayachoti",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_gz1mmm7jm",
+        "label": "తంబళ్ళపల్లి",
+        "target": {
+          "url": "/thamballapalle",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_rb1ljis8q",
+        "label": "పీలేరు",
+        "target": {
+          "url": "/pileru",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_r8m3hjicb",
+        "label": "మదనపల్లె",
+        "target": {
+          "url": "/madanapalle",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      }
+    ],
+    "openInNewTab": false,
+    "mobileVariant": "show",
+    "secondaryHeader": {
+      "items": [],
+      "sticky": false,
+      "enabled": true
+    }
+  },
+  {
+    "id": "itm_2oi4r0c9c",
+    "label": "చిత్తూరు",
+    "target": {
+      "url": "/chittoor",
+      "type": "INTERNAL_URL"
+    },
+    "children": [
+      {
+        "id": "itm_y0el1foon",
+        "label": "పుంగనూరు",
+        "target": {
+          "url": "/punganur",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_3hkch66pg",
+        "label": "నగరి",
+        "target": {
+          "url": "/nagari",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_9wg5kgkzx",
+        "label": "గంగాధరనెల్లూరు",
+        "target": {
+          "url": "/gangadhara-nellore",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_2fsjsii18",
+        "label": "పూతలపట్టు",
+        "target": {
+          "url": "/puthalapattu",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_ta9yz0baf",
+        "label": "పలమనేరు",
+        "target": {
+          "url": "/palamaner",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_yshqna8y6",
+        "label": "కుప్పం",
+        "target": {
+          "url": "/kuppam",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      }
+    ],
+    "openInNewTab": false,
+    "mobileVariant": "show",
+    "secondaryHeader": {
+      "items": [],
+      "sticky": false,
+      "enabled": true
+    }
+  },
+  {
+    "id": "itm_5cj5hbmco",
+    "label": "క్రీడలు",
+    "target": {
+      "type": "CATEGORY",
+      "categorySlug": "sports"
+    },
+    "children": [],
+    "openInNewTab": false,
+    "mobileVariant": "show",
+    "secondaryHeader": {
+      "items": [],
+      "sticky": false,
+      "enabled": true
+    }
+  },
+  {
+    "id": "itm_e90fqwe0s",
+    "label": "సినిమా",
+    "target": {
+      "type": "CATEGORY",
+      "categorySlug": "entertainment"
+    },
+    "children": [],
+    "openInNewTab": false,
+    "mobileVariant": "show",
+    "secondaryHeader": {
+      "items": [],
+      "sticky": false,
+      "enabled": true
+    }
+  },
+  {
+    "id": "itm_u8xk1eddx",
+    "label": "రాశి ఫలాలు",
+    "target": {
+      "url": "/horoscope",
+      "type": "INTERNAL_URL"
+    },
+    "children": [],
+    "openInNewTab": false,
+    "mobileVariant": "show",
+    "secondaryHeader": {
+      "items": [],
+      "sticky": false,
+      "enabled": true
+    }
+  },
+  {
+    "id": "itm_r2ugg6wq4",
+    "label": "మరిన్ని",
+    "target": {
+      "type": "NONE"
+    },
+    "children": [
+      {
+        "id": "itm_1n35lbfke",
+        "label": "ఆంధ్రప్రదేశ్",
+        "target": {
+          "type": "CATEGORY",
+          "categorySlug": "andhra-pradesh"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_y6czhw8b0",
+        "label": "తెలంగాణ",
+        "target": {
+          "type": "CATEGORY",
+          "categorySlug": "telangana"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_zhxfzlkfe",
+        "label": "జాతీయం",
+        "target": {
+          "type": "CATEGORY",
+          "categorySlug": "national"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_scugr6so9",
+        "label": "అంతర్జాతీయం",
+        "target": {
+          "type": "CATEGORY",
+          "categorySlug": "international"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_4ukke71wv",
+        "label": "బిజినెస్",
+        "target": {
+          "type": "CATEGORY",
+          "categorySlug": "business"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_loo8f5rxn",
+        "label": "టెక్నాలజీ",
+        "target": {
+          "type": "CATEGORY",
+          "categorySlug": "technology"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_ktbrqw9a9",
+        "label": "సినిమా రివ్యూలు",
+        "target": {
+          "type": "CATEGORY",
+          "categorySlug": "movie-reviews"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_7rjyvldgu",
+        "label": "పరీక్షా ఫలితాలు",
+        "target": {
+          "type": "CATEGORY",
+          "categorySlug": "exam-results"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_ho5wo8841",
+        "label": "ఉద్యోగాలు",
+        "target": {
+          "type": "CATEGORY",
+          "categorySlug": "jobs"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_d405k6i1q",
+        "label": "వ్యవసాయం",
+        "target": {
+          "type": "CATEGORY",
+          "categorySlug": "agriculture"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_5t5dq6o4j",
+        "label": "విద్య",
+        "target": {
+          "type": "CATEGORY",
+          "categorySlug": "education"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_trf521tyw",
+        "label": "ఆరోగ్యం",
+        "target": {
+          "type": "CATEGORY",
+          "categorySlug": "health"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_9nfn04gi9",
+        "label": "భక్తి",
+        "target": {
+          "type": "CATEGORY",
+          "categorySlug": "devotional"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_96zarrdyu",
+        "label": "నేరాలు",
+        "target": {
+          "type": "CATEGORY",
+          "categorySlug": "crime"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_2u5ek0nj7",
+        "label": "NRI వార్తలు",
+        "target": {
+          "type": "CATEGORY",
+          "categorySlug": "nri"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_on8lh438t",
+        "label": "వాతావరణం",
+        "target": {
+          "type": "CATEGORY",
+          "categorySlug": "weather"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_5bdauqytk",
+        "label": "రియల్ ఎస్టేట్",
+        "target": {
+          "type": "CATEGORY",
+          "categorySlug": "real-estate"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_oua31fydk",
+        "label": "సంపాదకీయం",
+        "target": {
+          "type": "CATEGORY",
+          "categorySlug": "editorial"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "itm_u52wcft5e",
+        "label": "ఎట్టెట",
+        "target": {
+          "type": "CATEGORY",
+          "categorySlug": "yetteta"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      },
+      {
+        "id": "84a85696-4ef2-40cf-b424-02e439e29f52",
+        "icon": null,
+        "label": "జిల్లా వార్తలు",
+        "target": {
+          "url": "/district-news",
+          "type": "INTERNAL_URL"
+        },
+        "openInNewTab": false,
+        "mobileVariant": "show"
+      }
+    ],
+    "openInNewTab": false,
+    "mobileVariant": "show"
+  }
+]
