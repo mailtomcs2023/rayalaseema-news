@@ -12,6 +12,8 @@ async function updateAd(req: NextRequest, params: Promise<{ id: string }>) {
     for (const key of ["name", "position", "imageUrl", "linkUrl", "htmlContent", "bgColor", "textColor", "active"] as const) {
       if (b[key] !== undefined) data[key] = b[key];
     }
+    // Page targeting - normalize "" to null (global).
+    if (b.targetPath !== undefined) data.targetPath = b.targetPath?.trim() || null;
     // Schedule columns - accept ISO date string or yyyy-mm-dd; nullable.
     for (const key of ["startDate", "endDate"] as const) {
       if (b[key] !== undefined) data[key] = b[key] ? new Date(b[key]) : null;

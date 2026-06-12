@@ -9,6 +9,7 @@ export default async function AdsPage() {
     id: a.id,
     name: a.name,
     position: a.position,
+    targetPath: a.targetPath,
     imageUrl: a.imageUrl,
     linkUrl: a.linkUrl,
     htmlContent: a.htmlContent,

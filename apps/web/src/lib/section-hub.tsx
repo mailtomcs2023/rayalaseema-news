@@ -7,6 +7,7 @@
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { RailAd } from "@/components/rail-ad";
 import { buildBreadcrumbListSchema, stringifyJsonLd } from "@rayalaseema/seo-schema";
 import { articleHref } from "@/lib/article-href";
 
@@ -180,18 +181,19 @@ export function SectionHub({
                 <h3 style={{ fontSize: 18, fontWeight: 800, color: "var(--color-brand)", marginBottom: 12, paddingBottom: 8, borderBottom: "2px solid var(--color-brand)" }}>
                   Trending
                 </h3>
-                {trending.map((t, i) => (
+                {trending.slice(0, 5).map((t, i) => (
                   <Link key={t.id} href={articleHref(t as any)} className="hub-rail-item">
                     <span className="hub-rail-num" style={{ color: i < 3 ? "var(--color-brand)" : "#ddd" }}>
                       {String(i + 1).padStart(2, "0")}
                     </span>
                     <div>
                       <p className="hub-rail-title">{t.title}</p>
-                      <p className="hub-rail-views">{t.viewCount.toLocaleString()} views</p>
                     </div>
                   </Link>
                 ))}
               </div>
+              {/* Ad below the trending list - page-targetable from Admin → Ads. */}
+              <RailAd position="SIDEBAR_SQUARE" />
             </aside>
           )}
         </div>
@@ -330,7 +332,6 @@ export function SectionHub({
           transition: color 0.15s ease;
         }
         .hub-rail-item:hover .hub-rail-title { color: var(--brand-dark, #B91414); }
-        .hub-rail-views { font-size: 11px; color: #888; margin: 2px 0 0; }
 
         /* 2-col card grid under the lead (section-band look): kicker + title on
            the left, thumbnail on the right, dividers between cells, pink hover. */

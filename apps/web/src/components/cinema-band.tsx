@@ -4,6 +4,7 @@ import { articleHref } from "@/lib/article-href";
 import Link from "next/link";
 import { useState } from "react";
 import { BandEmpty } from "@/components/band-empty";
+import { RailAd } from "@/components/rail-ad";
 
 interface CinemaArticle {
   id: string;
@@ -151,7 +152,7 @@ export function CinemaBand({
           <div className="cb-rail-head">
             మూవీ రివ్యూ <span aria-hidden="true">›</span>
           </div>
-          {reviews.map((rv) => (
+          {reviews.slice(0, 5).map((rv) => (
             <Link key={rv.id} href={articleHref(rv)} className="cb-rail-item">
               <h4 className="cb-rail-title">{rv.title}</h4>
               <div className="cb-rail-meta">
@@ -160,6 +161,9 @@ export function CinemaBand({
               </div>
             </Link>
           ))}
+
+          {/* Ad slot below the movie reviews - admin-configurable house ad */}
+          <RailAd position="SIDEBAR_SQUARE" tall />
         </aside>
       </div>
 
@@ -243,6 +247,10 @@ export function CinemaBand({
           flex: 0 0 250px;
           border-left: 1px solid var(--paper-edge, rgba(0,0,0,0.08));
           padding-left: 20px;
+          /* Flex column so the ad below the reviews grows to fill the rail
+             down to the main column's height. */
+          display: flex;
+          flex-direction: column;
         }
 
         .cb-kicker {

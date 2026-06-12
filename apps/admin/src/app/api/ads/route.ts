@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   if (isAuthError(session)) return session;
   try {
     const b = await req.json();
-    return NextResponse.json(await prisma.ad.create({ data: { name: b.name, position: b.position, imageUrl: b.imageUrl, linkUrl: b.linkUrl, htmlContent: b.htmlContent, bgColor: b.bgColor, textColor: b.textColor, active: b.active ?? true } }), { status: 201 });
+    return NextResponse.json(await prisma.ad.create({ data: { name: b.name, position: b.position, targetPath: b.targetPath?.trim() || null, imageUrl: b.imageUrl, linkUrl: b.linkUrl, htmlContent: b.htmlContent, bgColor: b.bgColor, textColor: b.textColor, active: b.active ?? true } }), { status: 201 });
   } catch (error) {
     return apiError(error);
   }

@@ -39,6 +39,7 @@ export type AdRow = {
   id: string;
   name: string;
   position: string;
+  targetPath: string | null;
   imageUrl: string | null;
   linkUrl: string | null;
   htmlContent: string | null;
@@ -222,6 +223,9 @@ export function AdsManager({ initialAds }: { initialAds: AdRow[] }) {
                   <span style={{ fontSize: 12, color: "#374151" }}>
                     {POSITION_BY_VALUE[ad.position]?.label || ad.position}
                   </span>
+                  <div style={{ fontSize: 11, color: ad.targetPath ? "#2563eb" : "#9ca3af", marginTop: 2 }}>
+                    {ad.targetPath ? ad.targetPath : "All pages"}
+                  </div>
                 </td>
                 <td style={{ padding: "10px 12px" }}>
                   <button
@@ -286,6 +290,7 @@ function AdEditor({
 }) {
   const [name, setName] = useState(ad?.name ?? "");
   const [position, setPosition] = useState(ad?.position ?? "LEADERBOARD");
+  const [targetPath, setTargetPath] = useState(ad?.targetPath ?? "");
   const [imageUrl, setImageUrl] = useState(ad?.imageUrl ?? "");
   const initialLinkMode = decodeLinkMode(ad?.linkUrl ?? null);
   const initialWa = parseWhatsapp(ad?.linkUrl ?? null);
@@ -378,6 +383,7 @@ function AdEditor({
     const body: Record<string, unknown> = {
       name: name.trim(),
       position,
+      targetPath: targetPath.trim() || null,
       imageUrl,
       linkUrl: resolvedLink,
       active,
@@ -431,6 +437,21 @@ function AdEditor({
           <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>{posMeta.description}</div>
         </Field>
       </div>
+
+      {/* Row 1b: page targeting */}
+      <Field label="Target page (optional)">
+        <input
+          value={targetPath}
+          onChange={(e) => setTargetPath(e.target.value)}
+          placeholder="Leave blank = all pages.  e.g. /  ·  /nandyal  ·  /category/sports"
+          style={inputStyle}
+        />
+        <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>
+          Restrict this ad to ONE page. Use the exact path: <code style={{ background: "#f3f4f6", padding: "1px 5px", borderRadius: 3 }}>/</code> (home),
+          <code style={{ background: "#f3f4f6", padding: "1px 5px", borderRadius: 3, marginLeft: 4 }}>/nandyal</code> (a district),
+          <code style={{ background: "#f3f4f6", padding: "1px 5px", borderRadius: 3, marginLeft: 4 }}>/category/sports</code>. A page-specific ad wins over a global one for the same slot. (Applies to sidebar/rail slots.)
+        </div>
+      </Field>
 
       {/* Row 2: image upload + crop */}
       <Field label={`Image (recommended ${posMeta.w}×${posMeta.h}, aspect ${posMeta.aspect.toFixed(2)}:1)`}>

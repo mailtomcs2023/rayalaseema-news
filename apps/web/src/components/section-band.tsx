@@ -5,6 +5,7 @@ import { SectionHeading, sectionIcon } from "@/components/section-heading";
 import Link from "next/link";
 import { useState } from "react";
 import { BandEmpty } from "@/components/band-empty";
+import { RailAd } from "@/components/rail-ad";
 
 interface BandArticle {
   id: string;
@@ -53,17 +54,6 @@ interface BandCartoon {
   caption: string;
   image: string;
   date: string;
-}
-
-function timeAgo(iso?: string | null): string {
-  if (!iso) return "";
-  const diff = Date.now() - new Date(iso).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "ఇప్పుడే";
-  if (m < 60) return `${m} నిమి.`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h} గం.`;
-  return `${Math.floor(h / 24)} రోజులు`;
 }
 
 /**
@@ -133,7 +123,6 @@ export function SectionBand({
           <>
           <div className="sb-lead">
             <div className="sb-lead-text">
-              {viewLead.label && <span className="sb-kicker">{viewLead.label}</span>}
               <Link href={articleHref(viewLead)} className="sb-lead-link">
                 <h3 className="sb-lead-title">{viewLead.title}</h3>
               </Link>
@@ -152,7 +141,6 @@ export function SectionBand({
             {viewGrid.map((a) => (
               <Link key={a.id} href={articleHref(a)} className="sb-grid-item">
                 <div className="sb-grid-text">
-                  {a.label && <span className="sb-kicker">{a.label}</span>}
                   <h4 className="sb-grid-title">{a.title}</h4>
                 </div>
                 <div className="sb-grid-thumb">
@@ -202,19 +190,19 @@ export function SectionBand({
             );
           })()}
 
-          {/* TRENDING */}
+          {/* TRENDING - top 5 */}
           <div className="sb-rail-head">
             {trendingLabel} <span aria-hidden="true">›</span>
           </div>
-          {viewTrending.map((a, i) => (
+          {viewTrending.slice(0, 5).map((a, i) => (
             <Link key={a.id} href={articleHref(a)} className="sb-rail-item">
               <span className="sb-rail-num">{String(i + 1).padStart(2, "0")}</span>
-              <div>
-                <h4 className="sb-rail-title">{a.title}</h4>
-                {timeAgo(a.publishedAt) && <span className="sb-rail-time">{timeAgo(a.publishedAt)}</span>}
-              </div>
+              <h4 className="sb-rail-title">{a.title}</h4>
             </Link>
           ))}
+
+          {/* AD - admin-configurable house ad under the trending list */}
+          <RailAd position="SIDEBAR_SQUARE" tall />
 
           {/* CARTOON (politics) */}
           {cartoon && (
@@ -308,6 +296,8 @@ export function SectionBand({
           flex: 0 0 260px;
           border-left: 1px solid var(--paper-edge, rgba(0,0,0,0.08));
           padding-left: 20px;
+          display: flex;
+          flex-direction: column;
         }
 
         .sb-kicker {
@@ -402,9 +392,9 @@ export function SectionBand({
         }
         .sb-rail-head span { color: var(--brand, #E01B1B); }
         .sb-rail-item {
-          display: flex; gap: 11px;
+          display: flex; gap: 11px; align-items: flex-start;
           text-decoration: none;
-          padding: 11px 6px;
+          padding: 9px 6px;
           margin: 0 -6px;
           border-bottom: 1px solid var(--paper-edge, rgba(0,0,0,0.07));
           border-radius: 6px;
@@ -427,12 +417,6 @@ export function SectionBand({
           margin: 0;
         }
         .sb-rail-item:hover .sb-rail-title { color: var(--brand-dark, #B91414); }
-        .sb-rail-time {
-          font-family: var(--font-telugu-body), sans-serif;
-          font-size: 10px; font-weight: 700;
-          color: var(--n-500, #6b7280);
-          text-transform: uppercase; letter-spacing: 0.04em;
-        }
 
         /* LIVE SCORES */
         .sb-scores { margin-bottom: 18px; }

@@ -860,6 +860,10 @@ model Ad {
   id          String     @id @default(cuid())
   name        String
   position    AdPosition
+  // Page targeting: null/empty = global (shows on every page in this slot).
+  // A path like "/nandyal" or "/category/sports" restricts the ad to that one
+  // page. A page-specific ad wins over a global ad for the same slot + page.
+  targetPath  String?
   imageUrl    String?
   linkUrl     String?
   htmlContent String?    @db.Text // custom HTML ad
@@ -874,6 +878,7 @@ model Ad {
   updatedAt   DateTime   @updatedAt
 
   @@index([position, active])
+  @@index([position, targetPath, active])
   @@map("ads")
 }
 

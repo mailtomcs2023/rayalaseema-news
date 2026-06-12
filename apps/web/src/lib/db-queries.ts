@@ -551,7 +551,7 @@ export async function getCartoons(limit = 5) {
 
 // ---------- Ads (unchanged - Ad is its own table, not unified) ----------
 
-export async function getAdsByPosition(position: string) {
+export async function getAdsByPosition(position: string, path?: string | null) {
   // Guard: a position not in the AdPosition enum (e.g. a slot component
   // referencing a value that was never added to the schema, like MOBILE_ANCHOR)
   // makes Prisma throw PrismaClientValidationError and crash the entire page.
@@ -560,15 +560,30 @@ export async function getAdsByPosition(position: string) {
   if (!VALID_AD_POSITIONS.has(position)) {
     return [];
   }
-  const rows = await prisma.ad.findMany({
+  // endDate null OR in the future = still live. Express as an AND'd OR so it
+  // composes with the targetPath OR below without key collisions.
+  const liveDate = { OR: [{ endDate: null }, { endDate: { gt: new Date() } }] };
+
+  // Page targeting: a page-specific ad (targetPath === path) wins over a global
+  // one (targetPath null/empty) for the same slot on that page. Try the
+  // page-specific ad first; fall back to a global ad.
+  if (path) {
+    const pageAd = await prisma.ad.findFirst({
+      where: { position: position as AdPosition, active: true, targetPath: path, ...liveDate },
+      orderBy: { createdAt: "desc" },
+    });
+    if (pageAd) return [sanitizeAdRow(pageAd)];
+  }
+
+  const globalAd = await prisma.ad.findFirst({
     where: {
       position: position as AdPosition,
       active: true,
-      OR: [{ endDate: null }, { endDate: { gt: new Date() } }],
+      AND: [liveDate, { OR: [{ targetPath: null }, { targetPath: "" }] }],
     },
-    take: 1,
+    orderBy: { createdAt: "desc" },
   });
-  return rows.map(sanitizeAdRow);
+  return globalAd ? [sanitizeAdRow(globalAd)] : [];
 }
 
 export async function getAllAds() {

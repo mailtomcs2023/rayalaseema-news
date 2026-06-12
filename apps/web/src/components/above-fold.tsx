@@ -3,6 +3,7 @@ import { MandiStrip } from "@/components/market-strips-server";
 import Link from "next/link";
 import Image from "next/image";
 import { FeaturedCarousel } from "@/components/featured-carousel";
+import { RailAd } from "@/components/rail-ad";
 
 interface AFArticle {
   id: string;
@@ -139,7 +140,7 @@ export function AboveFold({
             <div className="af-breaking">
               <div className="af-breaking-head">బ్రేకింగ్</div>
               {breaking.slice(0, 4).map((b) => (
-                <div key={b.id} className="af-breaking-item">{b.text}</div>
+                <Link key={b.id} href={`/breaking-news/${b.id}`} className="af-breaking-item">{b.text}</Link>
               ))}
             </div>
           )}
@@ -147,16 +148,18 @@ export function AboveFold({
           <div className="af-rail-head">
             తాజా వార్తలు <span aria-hidden="true">›</span>
           </div>
-          {latest.map((a) => (
+          {latest.slice(0, 5).map((a) => (
             <Link key={a.id} href={articleHref(a)} className="af-rail-item">
-              <div className="af-rail-meta">
-                {/* Newspaper front-page convention: no timestamps in the trending rail.
-                    Stale "40 రోజులు" labels on every item read as misleading. */}
-                <span className="af-rail-cat">{a.category.name}</span>
-              </div>
+              {/* Headline-only rail - category label intentionally omitted; the
+                  rail reads as a clean list of latest headlines. */}
               <h4 className="af-rail-title">{a.title}</h4>
             </Link>
           ))}
+
+          {/* Ad slots below the latest-5 headlines - admin-configurable house
+              ads (Admin → Ads), striped placeholder until one is set. */}
+          <RailAd position="SIDEBAR_SQUARE" />
+          <RailAd position="SIDEBAR_TALL" tall />
         </aside>
       </div>
 
@@ -173,6 +176,10 @@ export function AboveFold({
           flex: 0 0 290px;
           border-left: 1px solid var(--paper-edge, rgba(0,0,0,0.08));
           padding-left: 20px;
+          /* Flex column so the last ad can grow to fill the rail down to the
+             main column's height - no overshoot, no empty gap beside it. */
+          display: flex;
+          flex-direction: column;
         }
 
         /* category label */
@@ -507,6 +514,8 @@ export function AboveFold({
           margin-bottom: 6px;
         }
         .af-breaking-item {
+          display: block;
+          text-decoration: none;
           font-family: var(--font-telugu-heading), serif;
           font-size: 13px;
           font-weight: 700;
@@ -514,8 +523,10 @@ export function AboveFold({
           color: var(--n-900, #111827);
           padding: 5px 0;
           border-top: 1px solid rgba(224,27,27,0.2);
+          transition: color var(--dur-fast, 0.15s) var(--ease, ease);
         }
         .af-breaking-item:first-of-type { border-top: none; }
+        .af-breaking-item:hover { color: var(--brand-dark, #B91414); }
 
         /* RAIL - latest */
         .af-rail-head { border-bottom: 2px solid var(--n-900, #111827); }
@@ -526,27 +537,18 @@ export function AboveFold({
           border-bottom: 1px solid var(--paper-edge, rgba(0,0,0,0.08));
         }
         .af-rail-item:last-child { border-bottom: none; }
-        .af-rail-meta { display: flex; gap: 8px; align-items: baseline; margin-bottom: 4px; }
-        .af-rail-time {
-          font-family: var(--font-telugu-body), sans-serif;
-          font-size: 10px; font-weight: 700;
-          color: var(--n-500, #6b7280);
-          text-transform: uppercase; letter-spacing: 0.04em;
-        }
-        .af-rail-cat {
-          font-family: var(--font-telugu-body), sans-serif;
-          font-size: 10px; font-weight: 800;
-          color: var(--brand, #E01B1B);
-          text-transform: uppercase; letter-spacing: 0.05em;
-        }
         .af-rail-title {
           font-family: var(--font-telugu-heading), serif;
           font-size: 15px; font-weight: 700;
           line-height: 1.35;
           color: var(--n-900, #111827);
           margin: 0;
+          transition: color var(--dur-fast, 0.15s) var(--ease, ease);
         }
-        .af-rail-item:hover .af-rail-title { color: var(--brand-dark, #B91414); }
+        .af-rail-item:hover .af-rail-title,
+        .af-rail-item:focus-visible .af-rail-title {
+          color: var(--brand-dark, #B91414);
+        }
 
         @media (max-width: 1024px) {
           .af-rail { flex-basis: 250px; }

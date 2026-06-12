@@ -1073,6 +1073,40 @@ h2[style*="color:var(--color-brand)"] {
   .cartoon-sticky { position: static; }
 }
 
+/* ===== Shared rail/sidebar ad card (<RailAd>) - one look everywhere ===== */
+.rail-ad {
+  margin-top: 16px;
+  min-height: 96px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Fine, very-light diagonal hatch - clean "house ad" placeholder look. */
+  background: repeating-linear-gradient(45deg, #ffffff 0, #ffffff 8px, #f4f5f7 8px, #f4f5f7 16px);
+  border: 1px solid #e7e9ec;
+  border-radius: 6px;
+  font-family: var(--font-telugu-body), sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  color: #b3b8c0;
+  text-transform: uppercase;
+  overflow: hidden;
+}
+/* Grow to fill the leftover rail height so there's no empty gap and the rail
+   bottom lines up with the main column. */
+.rail-ad--tall { flex: 1 1 auto; }
+/* When a real house ad is configured, drop the striped chrome and keep it
+   top-aligned (overrides the placeholder's bottom-align in tall rails). */
+.rail-ad--filled {
+  background: #fff;
+  letter-spacing: normal;
+  margin-top: 16px;
+}
+.rail-ad--filled a,
+.rail-ad--filled > div { display: block; width: 100%; }
+.rail-ad--filled img { width: 100%; height: auto; display: block; border-radius: 5px; }
+
 /* ===== FINAL STANDARDIZATION - every panel/card-like element same chrome ===== */
 
 /* Video / Movies / Reels / WebStories / PhotoGallery / Cartoon wrappers */
