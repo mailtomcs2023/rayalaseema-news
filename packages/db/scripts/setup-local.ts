@@ -37,7 +37,7 @@ async function main() {
   // 1) Structural / reference data - idempotent upserts.
   step("seed-categories.ts");
   step("seed-subgenre-categories.ts");
-  step("rebuild-constituencies.ts");
+  step("seed-constituencies.ts"); // 55 ACs, clean slugs (canonical, idempotent)
   step("seed-desks.ts");
   step("backfill-desks.ts");
   step("seed-epaper-templates.ts");

@@ -1,5 +1,6 @@
 import { PrismaClient, Role } from "@prisma/client";
 import { hash } from "bcryptjs";
+import { seedConstituencies } from "../scripts/_constituency-data";
 
 const prisma = new PrismaClient();
 
@@ -154,10 +155,15 @@ async function main() {
       create: { name: d.name, nameEn: d.nameEn, slug: d.slug },
     });
 
-    // Constituencies are now managed by packages/db/scripts/rebuild-constituencies.ts
-    // (55 official ECI-numbered Rayalaseema ACs, delimitation 2024). Do NOT upsert here.
+    // Constituencies are seeded just below, idempotently, from the canonical
+    // 55-AC list (scripts/_constituency-data.ts) - so every deploy provisions
+    // them and the /[district]/[constituency] pages never 404 for lack of data.
   }
-  console.log(`  ${districts.length} districts upserted (constituencies handled by rebuild-constituencies.ts)`);
+  console.log(`  ${districts.length} districts upserted`);
+
+  // 55 official ECI-numbered Rayalaseema ACs (2024 delimitation), clean slugs.
+  // Idempotent + non-destructive. Mandals are seeded by scripts/seed-mandals.ts.
+  await seedConstituencies(prisma);
 
   // ========== BREAKING NEWS ==========
   await prisma.content.deleteMany({ where: { type: "BREAKING_NEWS" } });
