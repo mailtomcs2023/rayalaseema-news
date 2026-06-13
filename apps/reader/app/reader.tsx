@@ -105,16 +105,12 @@ export default function ReaderScreen() {
         onNearEnd={loadMore}
       />
 
-      {/* Floating close button + position counter. */}
+      {/* Floating close button. No position counter - the feed should feel
+          endless, not "1 / 20". */}
       <View style={[styles.topBar, { top: insets.top + spacing.sm }]} pointerEvents="box-none">
         <Pressable style={styles.closeBtn} onPress={() => router.back()} hitSlop={8}>
           <Ionicons name="close" size={24} color="#FFFFFF" />
         </Pressable>
-        <View style={styles.counter}>
-          <Text style={styles.counterText}>
-            {index + 1} / {articles.length}
-          </Text>
-        </View>
       </View>
 
       {/* Swipe hint, only on the very first story. */}
@@ -146,13 +142,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  counter: {
-    backgroundColor: colors.overlay,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: 999,
-  },
-  counterText: { color: "#FFFFFF", fontSize: 13, fontWeight: "700" },
   hint: {
     position: "absolute",
     alignSelf: "center",
