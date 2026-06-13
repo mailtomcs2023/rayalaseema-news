@@ -47,6 +47,12 @@ export interface Article {
   author: { id: string; name: string } | null;
 }
 
+// Full article incl. the HTML body - returned by GET /api/articles/:id and
+// rendered natively on the in-app article screen.
+export interface ArticleFull extends Article {
+  body: string | null;
+}
+
 interface ArticlesResponse {
   articles: Article[];
   total: number;
@@ -100,6 +106,11 @@ export async function fetchArticles(opts: { category?: string; offset?: number }
 
 export async function fetchCategories() {
   return get<Category[]>(`/api/categories`);
+}
+
+// Full article (with HTML body) by id or slug, for the native article screen.
+export async function fetchArticle(idOrSlug: string) {
+  return get<ArticleFull>(`/api/articles/${encodeURIComponent(idOrSlug)}`);
 }
 
 export { PAGE_SIZE };

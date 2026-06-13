@@ -16,9 +16,9 @@ interface Props {
   onToggleSave: () => void;
 }
 
-// Saved-page card laid out horizontally: thumbnail on the left, then the
-// heading with the description beneath it on the right, and a time + remove
-// row at the bottom.
+// Saved-page card laid out horizontally: image on the left, then the heading
+// with the description beneath it on the right, and a time + remove row at the
+// bottom.
 function SavedCard({ article, onPress, saved, onToggleSave }: Props) {
   const { lang } = useT();
   const summary = stripHtml(article.summary);
@@ -26,26 +26,29 @@ function SavedCard({ article, onPress, saved, onToggleSave }: Props) {
 
   return (
     <Pressable style={styles.card} onPress={onPress} android_ripple={{ color: colors.bgMuted }}>
-      <Image
-        source={hasImage ? { uri: article.featuredImage! } : LOGO_PLACEHOLDER}
-        style={hasImage ? styles.image : styles.placeholder}
-        contentFit={hasImage ? "cover" : "contain"}
-        transition={150}
-      />
+      <View style={styles.imageWrap}>
+        <Image
+          source={hasImage ? { uri: article.featuredImage! } : LOGO_PLACEHOLDER}
+          style={hasImage ? styles.image : styles.placeholder}
+          contentFit={hasImage ? "cover" : "contain"}
+          transition={150}
+        />
+        {article.category ? (
+          <View style={styles.catChip}>
+            <Text style={styles.catChipText} numberOfLines={1}>
+              {categoryLabel(article.category, lang)}
+            </Text>
+          </View>
+        ) : null}
+      </View>
 
       <View style={styles.body}>
-        {article.category ? (
-          <Text style={styles.category} numberOfLines={1}>
-            {categoryLabel(article.category, lang)}
-          </Text>
-        ) : null}
-
         <Text style={styles.title} numberOfLines={2}>
           {article.title}
         </Text>
 
         {summary ? (
-          <Text style={styles.summary} numberOfLines={2}>
+          <Text style={styles.summary} numberOfLines={3}>
             {summary}
           </Text>
         ) : null}
@@ -78,35 +81,46 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     overflow: "hidden",
   },
-  image: {
-    width: 116,
+  imageWrap: {
+    width: 124,
     alignSelf: "stretch",
     backgroundColor: colors.bgMuted,
+    // Image is absolutely filled (below) so it can't drive the card's height -
+    // the card sizes to its text, and the image just fills the left column.
+    position: "relative",
+  },
+  image: {
+    ...StyleSheet.absoluteFillObject,
   },
   placeholder: {
-    width: 116,
-    alignSelf: "stretch",
-    backgroundColor: colors.bgMuted,
+    ...StyleSheet.absoluteFillObject,
     padding: spacing.lg,
     opacity: 0.6,
+  },
+  catChip: {
+    position: "absolute",
+    left: spacing.sm,
+    top: spacing.sm,
+    backgroundColor: colors.brand,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.sm,
+    maxWidth: "90%",
+  },
+  catChipText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "700",
   },
   body: {
     flex: 1,
     padding: spacing.md,
   },
-  category: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: colors.brand,
-    textTransform: "uppercase",
-    letterSpacing: 0.3,
-    marginBottom: 2,
-  },
   title: {
     fontSize: 15,
     fontWeight: "700",
     color: colors.text,
-    lineHeight: 21,
+    lineHeight: 22.5,
   },
   summary: {
     marginTop: spacing.xs,

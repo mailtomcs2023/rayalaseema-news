@@ -6,14 +6,15 @@ import {
   ScrollView,
   StyleSheet,
   Share,
-  Linking,
 } from "react-native";
 import { Image } from "expo-image";
+import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import type { Article } from "../api/client";
 import { useT } from "../i18n";
 import { categoryLabel, stripHtml, timeAgo } from "../lib/format";
 import { articleUrl } from "../lib/article-url";
+import { setOpenArticle } from "../lib/article-store";
 import { colors, radius, spacing } from "../theme";
 
 const LOGO_PLACEHOLDER = require("../../assets/icon-512.png");
@@ -23,6 +24,7 @@ const LOGO_PLACEHOLDER = require("../../assets/icon-512.png");
 // story" CTA. The floating action rail (save/share) is overlaid by the parent.
 export default function ReaderCard({
   article,
+  width,
   height,
   topInset,
   bottomInset,
@@ -30,6 +32,7 @@ export default function ReaderCard({
   onToggleSave,
 }: {
   article: Article;
+  width: number;
   height: number;
   topInset: number;
   bottomInset: number;
@@ -37,6 +40,7 @@ export default function ReaderCard({
   onToggleSave: () => void;
 }) {
   const { t, lang } = useT();
+  const router = useRouter();
   const summary = stripHtml(article.summary);
   const hasImage = !!article.featuredImage;
   const url = articleUrl(article);
@@ -51,18 +55,25 @@ export default function ReaderCard({
     }
   };
 
+  // Open the full story natively inside the app. Hand over the known article so
+  // the article screen's header paints instantly while the body loads.
   const onReadFull = () => {
-    if (url) Linking.openURL(url).catch(() => {});
+    setOpenArticle(article);
+    router.push({ pathname: "/article/[id]", params: { id: article.id } });
   };
 
   return (
-    <View style={[styles.page, { height }]}>
+    <View style={[styles.page, { width, height }]}>
       <View style={[styles.imageWrap, { paddingTop: topInset }]}>
         <Image
           source={hasImage ? { uri: article.featuredImage! } : LOGO_PLACEHOLDER}
           style={hasImage ? styles.image : styles.placeholder}
           contentFit={hasImage ? "cover" : "contain"}
-          transition={150}
+          // No fade + memory/disk cache: when a flip promotes the next page into
+          // the current layer its source URI changes, and a fade transition there
+          // reads as a blink. 0ms + caching makes the swap instant.
+          transition={0}
+          cachePolicy="memory-disk"
         />
       </View>
 
@@ -90,14 +101,10 @@ export default function ReaderCard({
         </ScrollView>
 
         <View style={styles.actionRow}>
-          {url ? (
-            <Pressable style={styles.readBtn} onPress={onReadFull}>
-              <Ionicons name="open-outline" size={16} color="#FFFFFF" />
-              <Text style={styles.readBtnText}>{t("reader.readFull")}</Text>
-            </Pressable>
-          ) : (
-            <View style={{ flex: 1 }} />
-          )}
+          <Pressable style={styles.readBtn} onPress={onReadFull}>
+            <Ionicons name="book-outline" size={16} color="#FFFFFF" />
+            <Text style={styles.readBtnText}>{t("reader.readFull")}</Text>
+          </Pressable>
 
           <Pressable style={styles.iconBtn} onPress={onToggleSave} hitSlop={8}>
             <Ionicons
@@ -117,7 +124,7 @@ export default function ReaderCard({
 
 const styles = StyleSheet.create({
   page: {
-    width: "100%",
+    // width + height are set inline per device size (one screen per page).
     backgroundColor: colors.bg,
   },
   imageWrap: {
@@ -153,7 +160,7 @@ const styles = StyleSheet.create({
   time: { color: colors.textFaint, fontSize: 12 },
   title: {
     fontSize: 22,
-    lineHeight: 30,
+    lineHeight: 33,
     fontWeight: "800",
     color: colors.text,
   },

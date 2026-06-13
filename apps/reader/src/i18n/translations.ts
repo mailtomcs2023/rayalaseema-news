@@ -26,7 +26,7 @@ export const translations: Record<Lang, Record<string, any>> = {
     },
     reader: {
       readFull: "పూర్తి కథనం చదవండి",
-      swipeHint: "పైకి స్వైప్ చేయండి",
+      swipeHint: "తదుపరి వార్త కోసం స్వైప్ చేయండి",
     },
     saved: {
       empty: "మీరు ఇంకా ఏ కథనాన్ని సేవ్ చేయలేదు",
@@ -70,7 +70,7 @@ export const translations: Record<Lang, Record<string, any>> = {
     },
     reader: {
       readFull: "Read full story",
-      swipeHint: "Swipe up for next",
+      swipeHint: "Swipe for next",
     },
     saved: {
       empty: "You haven't saved any stories yet",

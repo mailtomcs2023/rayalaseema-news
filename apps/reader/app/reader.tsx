@@ -1,12 +1,10 @@
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   View,
   Text,
   Pressable,
-  FlatList,
   StyleSheet,
   useWindowDimensions,
-  ViewToken,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -16,16 +14,18 @@ import { takeReaderFeed } from "../src/lib/feed-store";
 import { useBookmarks } from "../src/lib/bookmarks";
 import { useT } from "../src/i18n";
 import ReaderCard from "../src/components/ReaderCard";
+import FlipPager from "../src/components/FlipPager";
 import { colors, spacing } from "../src/theme";
 
-// Full-screen, vertically-paged news reader (the way2news experience). Reads
-// the list + start index handed over by the feed via the module store, snaps
-// one story per screen, and lets the user swipe up/down through them.
+// Full-screen, horizontally-paged news reader. Reads the list + start index
+// handed over by the feed via the module store, snaps one story per screen, and
+// lets the user swipe left/right (right-to-left = next, left-to-right = previous)
+// through them like turning pages.
 export default function ReaderScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { t } = useT();
-  const { height } = useWindowDimensions();
+  const { height, width } = useWindowDimensions();
   const { isSaved, toggle } = useBookmarks();
 
   // Snapshot the handed-over feed once on mount. If it's empty (e.g. the route
@@ -35,19 +35,11 @@ export default function ReaderScreen() {
 
   const articles = initial?.articles ?? [];
 
-  const onViewableChanged = useRef(
-    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
-      const first = viewableItems[0];
-      if (first?.index != null) setIndex(first.index);
-    },
-  ).current;
-
-  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 60 }).current;
-
-  const renderItem = useCallback(
-    ({ item }: { item: Article }) => (
+  const renderPage = useCallback(
+    (item: Article) => (
       <ReaderCard
         article={item}
+        width={width}
         height={height}
         topInset={insets.top}
         bottomInset={insets.bottom}
@@ -55,12 +47,7 @@ export default function ReaderScreen() {
         onToggleSave={() => toggle(item)}
       />
     ),
-    [height, insets.top, insets.bottom, isSaved, toggle],
-  );
-
-  const getItemLayout = useCallback(
-    (_: unknown, i: number) => ({ length: height, offset: height * i, index: i }),
-    [height],
+    [width, height, insets.top, insets.bottom, isSaved, toggle],
   );
 
   if (articles.length === 0) {
@@ -76,25 +63,19 @@ export default function ReaderScreen() {
 
   return (
     <View style={styles.root}>
-      <FlatList
-        data={articles}
-        keyExtractor={(a) => a.id}
-        renderItem={renderItem}
-        getItemLayout={getItemLayout}
-        initialScrollIndex={initial?.startIndex ?? 0}
-        pagingEnabled
-        showsVerticalScrollIndicator={false}
-        decelerationRate="fast"
-        windowSize={3}
-        maxToRenderPerBatch={2}
-        onViewableItemsChanged={onViewableChanged}
-        viewabilityConfig={viewabilityConfig}
+      <FlipPager
+        articles={articles}
+        initialIndex={initial?.startIndex ?? 0}
+        width={width}
+        height={height}
+        renderPage={renderPage}
+        onIndexChange={setIndex}
       />
 
       {/* Floating close button + position counter. */}
       <View style={[styles.topBar, { top: insets.top + spacing.sm }]} pointerEvents="box-none">
         <Pressable style={styles.closeBtn} onPress={() => router.back()} hitSlop={8}>
-          <Ionicons name="chevron-down" size={26} color="#FFFFFF" />
+          <Ionicons name="close" size={24} color="#FFFFFF" />
         </Pressable>
         <View style={styles.counter}>
           <Text style={styles.counterText}>
@@ -103,11 +84,11 @@ export default function ReaderScreen() {
         </View>
       </View>
 
-      {/* Swipe-up hint, only on the very first story. */}
+      {/* Swipe hint, only on the very first story. */}
       {index === 0 ? (
         <View style={[styles.hint, { bottom: insets.bottom + 92 }]} pointerEvents="none">
-          <Ionicons name="chevron-up" size={18} color="#FFFFFF" />
           <Text style={styles.hintText}>{t("reader.swipeHint")}</Text>
+          <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
         </View>
       ) : null}
     </View>
