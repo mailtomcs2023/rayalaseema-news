@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "800",
     color: colors.text,
-    lineHeight: 24,
+    lineHeight: 25.5,
   },
   summary: {
     marginTop: spacing.sm,

@@ -93,10 +93,11 @@ export default function SavedScreen() {
         }
       />
 
-      {/* FAB - only useful once there's more than one section to filter by. */}
-      {sections.length > 1 ? (
+      {/* FAB - shown whenever saved stories have at least one section, so the
+          filter is discoverable on both iOS and Android. */}
+      {sections.length >= 1 ? (
         <Pressable
-          style={[styles.fab, { bottom: insets.bottom + 24 }, filterActive && styles.fabActive]}
+          style={[styles.fab, { bottom: insets.bottom + 96 }, filterActive && styles.fabActive]}
           onPress={() => setSheetOpen(true)}
         >
           <Ionicons name="funnel" size={20} color="#FFFFFF" />

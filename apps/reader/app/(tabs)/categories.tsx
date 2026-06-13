@@ -53,8 +53,6 @@ export default function CategoriesScreen() {
               }
               android_ripple={{ color: withAlpha(accent, 0.12) }}
             >
-              {/* Coloured accent strip down the left edge. */}
-              <View style={[styles.accentStrip, { backgroundColor: accent }]} />
               <View style={styles.tileTop}>
                 <View style={[styles.badge, { backgroundColor: withAlpha(accent, 0.14) }]}>
                   <Text style={[styles.badgeText, { color: accent }]}>
@@ -100,13 +98,6 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   tilePressed: { backgroundColor: colors.bgMuted },
-  accentStrip: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
-  },
   tileTop: {
     flexDirection: "row",
     alignItems: "center",
