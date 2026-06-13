@@ -32,7 +32,10 @@
       "expo-router"
     ],
     "extra": {
-      "router": {}
+      "router": {},
+      "eas": {
+        "projectId": "f960e49e-9e6d-45c4-a8f1-380e80678706"
+      }
     },
     "owner": "mailtomcs2023"
   }
