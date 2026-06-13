@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -9,8 +9,8 @@ import {
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import type { Article } from "../src/api/client";
-import { takeReaderFeed } from "../src/lib/feed-store";
+import { fetchArticles, type Article } from "../src/api/client";
+import { takeReaderFeed, type ReaderPagination } from "../src/lib/feed-store";
 import { useBookmarks } from "../src/lib/bookmarks";
 import { useT } from "../src/i18n";
 import ReaderCard from "../src/components/ReaderCard";
@@ -31,9 +31,41 @@ export default function ReaderScreen() {
   // Snapshot the handed-over feed once on mount. If it's empty (e.g. the route
   // was reached cold without going through the feed), bounce back.
   const initial = useMemo(() => takeReaderFeed(), []);
+  const [articles, setArticles] = useState<Article[]>(initial?.articles ?? []);
   const [index, setIndex] = useState(initial?.startIndex ?? 0);
 
-  const articles = initial?.articles ?? [];
+  // Live pagination cursor (feed/category sources only). Held in a ref so
+  // loadMore stays a stable, dependency-free callback and never refetches the
+  // same page. `loadingRef` guards against overlapping requests.
+  const pageRef = useRef<ReaderPagination | null>(initial?.pagination ?? null);
+  const loadingRef = useRef(false);
+
+  // Fetch + append the next page as the user swipes toward the end, mirroring
+  // the feed's infinite scroll so the reader never dead-ends at 20 stories.
+  const loadMore = useCallback(async () => {
+    const p = pageRef.current;
+    if (!p || !p.hasMore || loadingRef.current) return;
+    loadingRef.current = true;
+    try {
+      const { articles: more, hasMore } = await fetchArticles({
+        category: p.category ?? undefined,
+        offset: p.offset,
+      });
+      // Advance the cursor and stop if the server returned nothing new.
+      pageRef.current = { category: p.category, offset: p.offset + more.length, hasMore: hasMore && more.length > 0 };
+      if (more.length) {
+        setArticles((prev) => {
+          const seen = new Set(prev.map((a) => a.id));
+          const fresh = more.filter((a) => !seen.has(a.id));
+          return fresh.length ? [...prev, ...fresh] : prev;
+        });
+      }
+    } catch {
+      // transient - leave hasMore so a later swipe retries
+    } finally {
+      loadingRef.current = false;
+    }
+  }, []);
 
   const renderPage = useCallback(
     (item: Article) => (
@@ -70,6 +102,7 @@ export default function ReaderScreen() {
         height={height}
         renderPage={renderPage}
         onIndexChange={setIndex}
+        onNearEnd={loadMore}
       />
 
       {/* Floating close button + position counter. */}

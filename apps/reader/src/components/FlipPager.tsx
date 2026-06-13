@@ -19,6 +19,9 @@ interface Props {
   height: number;
   renderPage: (article: Article) => React.ReactNode;
   onIndexChange?: (index: number) => void;
+  // Fired when the current page nears the end of the list, so the parent can
+  // prefetch + append more stories. Must be stable (the parent guards repeats).
+  onNearEnd?: () => void;
 }
 
 // A book-style page-flip pager with NO blinking on commit.
@@ -42,6 +45,7 @@ export default function FlipPager({
   height,
   renderPage,
   onIndexChange,
+  onNearEnd,
 }: Props) {
   const [index, setIndex] = useState(initialIndex);
   const pos = useSharedValue(initialIndex);
@@ -51,6 +55,13 @@ export default function FlipPager({
   useEffect(() => {
     onIndexChange?.(index);
   }, [index, onIndexChange]);
+
+  // Prefetch the next page once the user is within 3 stories of the end. The
+  // parent's loadMore is idempotent/guarded, so firing on index or length
+  // changes is cheap and never double-fetches.
+  useEffect(() => {
+    if (onNearEnd && index >= total - 3) onNearEnd();
+  }, [index, total, onNearEnd]);
 
   const commit = useCallback((target: number) => {
     setIndex(target);

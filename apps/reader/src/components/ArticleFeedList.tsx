@@ -50,11 +50,16 @@ const ArticleFeedList = forwardRef<
   const openReader = useCallback(
     (index: number) => {
       // Hand the already-loaded list to the swipe reader so it opens instantly
-      // on the tapped story, then navigate.
-      setReaderFeed(feed.articles, index);
+      // on the tapped story, plus the cursor so it can keep paginating exactly
+      // like this feed does.
+      setReaderFeed(feed.articles, index, {
+        category,
+        offset: feed.articles.length,
+        hasMore: feed.hasMore,
+      });
       router.push("/reader");
     },
-    [feed.articles, router],
+    [feed.articles, feed.hasMore, category, router],
   );
 
   const renderItem = useCallback(
