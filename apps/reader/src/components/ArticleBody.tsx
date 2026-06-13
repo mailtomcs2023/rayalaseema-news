@@ -5,9 +5,29 @@ import { parseHtmlBlocks, type Block, type Span } from "../lib/html";
 import { colors, radius, spacing } from "../theme";
 
 // Renders a CMS article's HTML body as native views - no WebView. Parses the
-// HTML into blocks once, then maps each to Text/Image.
-export default function ArticleBody({ html }: { html: string | null | undefined }) {
-  const blocks = useMemo(() => parseHtmlBlocks(html), [html]);
+// HTML into blocks once, then maps each to Text/Image. `title` lets us drop a
+// leading heading/paragraph that just repeats the article title (the CMS body
+// often starts with the headline), so it doesn't show twice.
+export default function ArticleBody({
+  html,
+  title,
+}: {
+  html: string | null | undefined;
+  title?: string;
+}) {
+  const blocks = useMemo(() => {
+    let b = parseHtmlBlocks(html);
+    if (title && b.length) {
+      const norm = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase();
+      const first = b[0];
+      const firstText =
+        first.kind === "heading" || first.kind === "para" || first.kind === "quote"
+          ? first.spans.map((s) => s.text).join("")
+          : "";
+      if (firstText && norm(firstText) === norm(title)) b = b.slice(1);
+    }
+    return b;
+  }, [html, title]);
 
   return (
     <View>

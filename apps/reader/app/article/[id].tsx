@@ -8,7 +8,7 @@ import { fetchArticle, type Article, type ArticleFull } from "../../src/api/clie
 import { takeOpenArticle } from "../../src/lib/article-store";
 import ArticleBody from "../../src/components/ArticleBody";
 import { useT } from "../../src/i18n";
-import { categoryLabel, timeAgo } from "../../src/lib/format";
+import { categoryLabel } from "../../src/lib/format";
 import { articleUrl } from "../../src/lib/article-url";
 import { colors, radius, spacing } from "../../src/theme";
 
@@ -69,6 +69,9 @@ export default function ArticleScreen() {
       <ScrollView
         contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xl }}
         showsVerticalScrollIndicator={false}
+        // No pull-down overscroll/bounce on this page.
+        bounces={false}
+        overScrollMode="never"
       >
         <View style={[styles.imageWrap, { aspectRatio: hasImage ? aspect : 16 / 9 }]}>
           <Image
@@ -100,10 +103,6 @@ export default function ArticleScreen() {
         <View style={styles.body}>
           {head ? <Text style={styles.title}>{head.title}</Text> : null}
 
-          <View style={styles.metaRow}>
-            <Text style={styles.time}>{timeAgo(head?.publishedAt, lang)}</Text>
-          </View>
-
           {/* Body */}
           {loading && !full ? (
             <View style={styles.center}>
@@ -112,7 +111,7 @@ export default function ArticleScreen() {
           ) : error && !full ? (
             <Text style={styles.errorText}>{t("feed.error")}</Text>
           ) : full?.body ? (
-            <ArticleBody html={full.body} />
+            <ArticleBody html={full.body} title={head?.title} />
           ) : full ? (
             // Article with no HTML body - fall back to the summary.
             <Text style={styles.summary}>{full.summary}</Text>
@@ -154,17 +153,16 @@ const styles = StyleSheet.create({
   },
   catChipText: { color: "#FFFFFF", fontSize: 12, fontWeight: "700" },
   body: { padding: spacing.lg },
-  title: { fontSize: 24, lineHeight: 32, fontWeight: "800", color: colors.text },
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: spacing.sm,
+  title: {
+    fontSize: 24,
+    lineHeight: 36, // 1.5 × font size
+    fontWeight: "800",
+    color: colors.text,
     marginBottom: spacing.lg,
     paddingBottom: spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  time: { fontSize: 13, color: colors.textFaint },
   summary: { fontSize: 17, lineHeight: 27, color: colors.text },
   center: { paddingVertical: spacing.xl, alignItems: "center" },
   errorText: { fontSize: 15, color: colors.textMuted, paddingVertical: spacing.lg },
