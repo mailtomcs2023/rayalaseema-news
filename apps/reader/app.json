@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "RE News",
+    "slug": "re-news",
+    "scheme": "renews",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon-512.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/icon-512.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FF2C2C"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.rayalaseemanews.reader"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon-512.png",
+        "backgroundColor": "#FF2C2C"
+      },
+      "package": "com.rayalaseemanews.reader",
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "favicon": "./assets/icon-192.png"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "extra": {
+      "router": {}
+    },
+    "owner": "mailtomcs2023"
+  }
+}
