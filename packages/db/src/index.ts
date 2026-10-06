@@ -74,6 +74,7 @@ export {
   ContentType,
   MenuLocation,
   MenuItemTargetType,
+  PressCardStatus,
 } from "@prisma/client";
 
 export * from "./payload-schemas";
@@ -85,4 +86,5 @@ export * from "./page-builder-schemas";
 export * from "./page-builder-pattern";
 export * from "./youtube-description";
 export * from "./index-tier";
+export * from "./press-card";
 export default prisma;

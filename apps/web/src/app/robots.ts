@@ -25,6 +25,7 @@ const PUBLIC_DISALLOW = [
   "/admin/",
   "/_next/",
   "/*?preview=*",       // preview-mode URLs
+  "/verify/",           // press-card QR verification pages - noindex, not a ranking surface
 ];
 
 // Google-Extended is deliberately NOT in this list.

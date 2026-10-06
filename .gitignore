@@ -72,3 +72,9 @@ mcp-gsc/.cache/
 *.key.json
 gsc-key.json
 .env.gsc
+
+# Press ID cards: generator is versioned, rendered cards + staff photos are not
+# (public repo - personal photos stay in Azure blob / local only).
+docs/press-cards/*.pdf
+docs/press-cards/*.png
+docs/press-cards/photos/

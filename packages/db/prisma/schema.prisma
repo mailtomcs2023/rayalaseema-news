@@ -1880,3 +1880,39 @@ model AppCommentReport {
   @@index([commentId])
   @@map("app_comment_reports")
 }
+
+// ============ PRESS ID CARDS (QR verification) ============
+//
+// Physical press cards (docs/press-cards) carry a QR that opens
+// /verify/<token> on the public site. The page shows the holder's photo,
+// name, designation, card number, validity and a live status so anyone
+// (police, event security, sources) can confirm the card is genuine and
+// still valid. `token` is random and unguessable; `cardNo` is the printed
+// human-readable number. EXPIRED is derived from validTill at request
+// time - only REVOKED is stored (see packages/db/src/press-card.ts).
+// Rows are seeded from prisma/press-cards.json by scripts/seed-press-cards.ts.
+
+enum PressCardStatus {
+  ACTIVE
+  REVOKED
+}
+
+model PressCard {
+  id          String          @id @default(cuid())
+  cardNo      String          @unique // "RSN/2026/001" - printed on the card
+  token       String          @unique // 12-char random, the only thing the QR carries
+  name        String
+  designation String
+  photoUrl    String // Azure blob URL (not committed to the public repo)
+  validFrom   DateTime
+  validTill   DateTime // inclusive calendar day
+  status      PressCardStatus @default(ACTIVE)
+  revokedAt   DateTime?
+  revokeNote  String?
+  // Optional link to the login user once staff accounts exist for everyone.
+  userId      String?         @unique
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@map("press_cards")
+}

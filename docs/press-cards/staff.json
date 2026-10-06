@@ -1,0 +1,7 @@
+[
+  { "id": "RSN/2026/001", "token": "a3dmykc2k3q7", "name": "G. Srinivas Reddy",      "designation": "Chief Editor",               "phone": "", "blood_group": "", "valid_from": "06-10-2026", "valid_till": "05-10-2027", "photo": "photos/sreenivasa-reddy.jpg" },
+  { "id": "RSN/2026/002", "token": "u8c34aqk6aer", "name": "T. Vinay Kumar Reddy",   "designation": "Sr. Reporter / Copy Writer", "phone": "", "blood_group": "", "valid_from": "06-10-2026", "valid_till": "05-10-2027", "photo": "photos/t-vinay-kumar-reddy.jpg" },
+  { "id": "RSN/2026/003", "token": "nhu6c6h5g3y8", "name": "Vira Jayavardhan Reddy", "designation": "Reporter / Copy Writer",     "phone": "", "blood_group": "", "valid_from": "06-10-2026", "valid_till": "05-10-2027", "photo": "photos/vira-jayavardhan-reddy.jpg" },
+  { "id": "RSN/2026/004", "token": "af2w6xset4sx", "name": "Divya Lakshmi",          "designation": "Reporter / Copy Writer",     "phone": "", "blood_group": "", "valid_from": "06-10-2026", "valid_till": "05-10-2027", "photo": "photos/divya-lakshmi.jpg" },
+  { "id": "RSN/2026/005", "token": "xqa6fypq3s98", "name": "Yasdan Mulla",           "designation": "Reporter / Copy Writer",     "phone": "", "blood_group": "", "valid_from": "06-10-2026", "valid_till": "05-10-2027", "photo": "photos/yasdan-mulla.jpg" }
+]

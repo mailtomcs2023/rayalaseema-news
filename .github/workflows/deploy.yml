@@ -69,6 +69,11 @@ jobs:
 
             bunx prisma db push --skip-generate --accept-data-loss
 
+            echo "=== Seed / refresh press ID cards (idempotent upsert by cardNo) ==="
+            # Source of truth: packages/db/prisma/press-cards.json. Never
+            # touches status/revokedAt, so a revoke done in the DB survives.
+            bunx tsx scripts/seed-press-cards.ts
+
             echo "=== Backfill 6-digit userCode for any user without one ==="
             # Idempotent: skips users that already have a code. Generated codes
             # avoid weak/sequential patterns (000000, 123456, etc.). Required
