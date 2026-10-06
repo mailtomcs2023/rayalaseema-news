@@ -254,7 +254,15 @@ jobs:
             # Turbopack lock ("previous build didn't exit cleanly") that fails
             # every subsequent build. .next is gitignored so reset --hard won't
             # clear it; do it explicitly for a clean, reliable build.
-            rm -rf apps/web/.next
+            #
+            # 2026-10-06: a plain `rm -rf` raced with the LIVE web process, which
+            # keeps writing into .next/cache (fetch/ISR cache) while we delete -
+            # "rm: cannot remove 'apps/web/.next/cache': Directory not empty"
+            # aborted the whole deploy before the build. Rename first (atomic;
+            # the running server keeps its open handles on the renamed dir),
+            # then delete the renamed copies best-effort.
+            if [ -d apps/web/.next ]; then mv apps/web/.next "apps/web/.next.stale.$(date +%s)"; fi
+            rm -rf apps/web/.next.stale.* 2>/dev/null || true
             cd apps/web && bun run build && cd ../..
 
             echo "=== Restart web immediately after its build ==="
