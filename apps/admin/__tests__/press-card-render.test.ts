@@ -1,4 +1,5 @@
 import { describe, test, expect } from "bun:test";
+import { PDFDocument } from "pdf-lib";
 import { renderPressCardPdf, PressCardRenderError } from "../src/lib/press-card/render";
 
 const RUN = process.env.PRESS_CARD_RENDER_TEST === "1";
@@ -12,7 +13,7 @@ describe.skipIf(!RUN)("renderPressCardPdf (needs Chromium + network)", () => {
   test("produces a 2-page PDF", async () => {
     const pdf = await renderPressCardPdf(card);
     expect(pdf.subarray(0, 4).toString()).toBe("%PDF");
-    expect((pdf.toString("latin1").match(/\/Type\s*\/Page[^s]/g) || []).length).toBe(2);
+    expect((await PDFDocument.load(pdf)).getPageCount()).toBe(2);
   }, 60_000);
   test("unreachable photo -> PHOTO_UNREACHABLE", async () => {
     await expect(renderPressCardPdf({ ...card, photoUrl: "https://rayalaseemamedia.blob.core.windows.net/uploads/press-cards/does-not-exist.jpg" }))

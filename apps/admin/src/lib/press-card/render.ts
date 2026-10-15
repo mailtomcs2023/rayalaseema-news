@@ -7,6 +7,7 @@ import { chromium } from "playwright";
 import { PDFDocument } from "pdf-lib";
 import QRCode from "qrcode";
 import { readFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { renderCardHtml, verifyUrlFor, type CardData } from "./template";
 
@@ -14,10 +15,33 @@ export class PressCardRenderError extends Error {
   constructor(public code: "PHOTO_UNREACHABLE" | "RENDER_FAILED", message: string) { super(message); }
 }
 
-const PUB = path.join(process.cwd(), "public", "press-card");
+// We resolve the public dir from process.cwd(), not __dirname/import.meta.url:
+// Next.js serves `public/` relative to the process's cwd in production (the
+// admin app's own working directory), and __dirname-relative paths would
+// resolve into the compiled `.next` output instead of the source tree. The
+// one wrinkle is that scripts/tests are sometimes run from the repo root
+// instead of apps/admin, so we fall back to the monorepo-relative path and
+// cache whichever one actually exists.
+let publicDirCache: string | null = null;
+function resolvePublicDir(): string {
+  if (publicDirCache) return publicDirCache;
+  const candidates = [
+    path.join(process.cwd(), "public", "press-card"),
+    path.join(process.cwd(), "apps", "admin", "public", "press-card"),
+  ];
+  for (const dir of candidates) {
+    if (existsSync(path.join(dir, "lockup.png"))) {
+      publicDirCache = dir;
+      return dir;
+    }
+  }
+  throw new PressCardRenderError("RENDER_FAILED", `press-card assets not found under ${candidates.join(", ")}`);
+}
+
 let assetCache: { lockup: string; main: string } | null = null;
 async function logoAssets() {
   if (assetCache) return assetCache;
+  const PUB = resolvePublicDir();
   const [l, m] = await Promise.all([readFile(path.join(PUB, "lockup.png")), readFile(path.join(PUB, "main-logo.png"))]);
   assetCache = { lockup: `data:image/png;base64,${l.toString("base64")}`, main: `data:image/png;base64,${m.toString("base64")}` };
   return assetCache;
