@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError, zodErrorResponse } from "@/lib/api-utils";
-import { issuePressCard, getUserPressCard, issuableReason, PressCardIssueError } from "@/lib/press-card/service";
+import { issuePressCard, getUserPressCard, issuableReason, PressCardIssueError, issueErrorStatus } from "@/lib/press-card/service";
 
 const ISSUERS = ["ADMIN", "EDITOR"] as const;
 const dayRe = /^\d{4}-\d{2}-\d{2}$/;
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json(dto, { status: 201 });
   } catch (e) {
-    if (e instanceof PressCardIssueError) return NextResponse.json({ error: e.message, code: e.code }, { status: e.code === "NOT_FOUND" ? 404 : 409 });
+    if (e instanceof PressCardIssueError) return NextResponse.json({ error: e.message, code: e.code }, { status: issueErrorStatus(e.code) });
     return apiError(e);
   }
 }

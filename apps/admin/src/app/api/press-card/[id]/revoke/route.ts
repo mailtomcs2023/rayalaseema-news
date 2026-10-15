@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAuth, isAuthError, apiError, zodErrorResponse } from "@/lib/api-utils";
-import { revokePressCard, PressCardIssueError } from "@/lib/press-card/service";
+import { revokePressCard, PressCardIssueError, issueErrorStatus } from "@/lib/press-card/service";
 
 const schema = z.object({ note: z.string().trim().min(3).max(200) }).strict();
 
@@ -14,7 +14,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     return NextResponse.json(await revokePressCard(id, parsed.data.note));
   } catch (e) {
-    if (e instanceof PressCardIssueError) return NextResponse.json({ error: e.message, code: e.code }, { status: e.code === "NOT_FOUND" ? 404 : 409 });
+    if (e instanceof PressCardIssueError) return NextResponse.json({ error: e.message, code: e.code }, { status: issueErrorStatus(e.code) });
     return apiError(e);
   }
 }

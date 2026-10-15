@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { toDto, issuableReason } from "../src/lib/press-card/service";
+import { toDto, issuableReason, issueErrorStatus } from "../src/lib/press-card/service";
 
 const row = {
   id: "c1", cardNo: "RSN/2026/001", token: "a3dmykc2k3q7", name: "A", designation: "Reporter", photoUrl: "https://x/p.jpg",
@@ -37,5 +37,16 @@ describe("issuableReason", () => {
   });
   test("no profile row at all", () => {
     expect(issuableReason(null, null)).toBe("KYC_NOT_VERIFIED");
+  });
+});
+
+describe("issueErrorStatus", () => {
+  test("NOT_FOUND -> 404", () => {
+    expect(issueErrorStatus("NOT_FOUND")).toBe(404);
+  });
+  test("every other code -> 409", () => {
+    for (const code of ["KYC_NOT_VERIFIED", "NO_PHOTO", "ALREADY_ACTIVE", "NOT_ACTIVE", "CONFLICT"] as const) {
+      expect(issueErrorStatus(code)).toBe(409);
+    }
   });
 });

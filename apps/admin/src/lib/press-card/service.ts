@@ -3,11 +3,29 @@
 // derives the next card number inside the same transaction, so two admins
 // clicking Issue at once get one card + one 409, never two cards.
 import crypto from "node:crypto";
-import { prisma, computePressCardStatus, nextCardNo, mintPressCardToken, defaultValidTill, type PressCardLiveStatus } from "@rayalaseema/db";
+import { prisma, Prisma, computePressCardStatus, nextCardNo, mintPressCardToken, defaultValidTill, type PressCardLiveStatus } from "@rayalaseema/db";
 import { verifyUrlFor } from "./template";
 
+export type PressCardIssueErrorCode =
+  | "KYC_NOT_VERIFIED" | "NO_PHOTO" | "ALREADY_ACTIVE" | "NOT_FOUND" | "NOT_ACTIVE" | "CONFLICT";
+
 export class PressCardIssueError extends Error {
-  constructor(public code: "KYC_NOT_VERIFIED" | "NO_PHOTO" | "ALREADY_ACTIVE" | "NOT_FOUND" | "NOT_ACTIVE", message: string) { super(message); }
+  constructor(public code: PressCardIssueErrorCode, message: string) { super(message); }
+}
+
+/** HTTP status for a PressCardIssueError code - NOT_FOUND -> 404, everything else -> 409. */
+export function issueErrorStatus(code: PressCardIssueErrorCode): 404 | 409 {
+  return code === "NOT_FOUND" ? 404 : 409;
+}
+
+// Two concurrent issue/renew calls can both pass the in-transaction ACTIVE
+// check and both compute the same next card number under READ COMMITTED.
+// Running the transaction at Serializable turns the loser's commit into a
+// P2034 (serialization failure) or P2002 (duplicate cardNo/token) instead of
+// silently inserting a second card - this helper maps both into one clean
+// CONFLICT error so routes still return 409, not a raw 500.
+function isSerializationConflict(e: unknown): boolean {
+  return e instanceof Prisma.PrismaClientKnownRequestError && (e.code === "P2002" || e.code === "P2034");
 }
 
 export type PressCardDto = {
@@ -76,20 +94,33 @@ export async function issuePressCard(input: {
   const validTill = input.validTill ?? defaultValidTill(validFrom);
   const photoUrl = input.photoUrl || user.reporterProfile!.photoUrl!;
 
-  const row = await prisma.$transaction(async (tx) => {
-    const active = await tx.pressCard.findFirst({ where: { userId: user.id, status: "ACTIVE", validTill: { gte: new Date() } }, select: { id: true } });
-    if (active) throw new PressCardIssueError("ALREADY_ACTIVE", "User already has an active card");
-    const year = validFrom.getUTCFullYear();
-    const nos = await tx.pressCard.findMany({ where: { cardNo: { startsWith: `RSN/${year}/` } }, select: { cardNo: true } });
-    return tx.pressCard.create({
-      data: {
-        cardNo: nextCardNo(nos.map((n) => n.cardNo), year), token: mintPressCardToken(secureRandom),
-        name: user.name, designation: input.designation.trim(), photoUrl, validFrom, validTill,
-        userId: user.id, issuedById: input.issuedById,
-      },
-      select: SELECT,
-    });
-  });
+  let row;
+  try {
+    row = await prisma.$transaction(async (tx) => {
+      // Same rule as issuableReason: a row only blocks a new issue if its
+      // *derived* liveStatus is ACTIVE (REVOKED/SEPARATED/EXPIRED don't),
+      // not merely "status column says ACTIVE and validTill hasn't passed".
+      const rows = await tx.pressCard.findMany({ where: { userId: user.id, status: "ACTIVE" }, select: SELECT });
+      const now = new Date();
+      if (rows.some((r) => computePressCardStatus(r, now, r.user ?? undefined) === "ACTIVE")) {
+        throw new PressCardIssueError("ALREADY_ACTIVE", "User already has an active card");
+      }
+      const year = validFrom.getUTCFullYear();
+      const nos = await tx.pressCard.findMany({ where: { cardNo: { startsWith: `RSN/${year}/` } }, select: { cardNo: true } });
+      return tx.pressCard.create({
+        data: {
+          cardNo: nextCardNo(nos.map((n) => n.cardNo), year), token: mintPressCardToken(secureRandom),
+          name: user.name, designation: input.designation.trim(), photoUrl, validFrom, validTill,
+          userId: user.id, issuedById: input.issuedById,
+        },
+        select: SELECT,
+      });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  } catch (e) {
+    if (e instanceof PressCardIssueError) throw e;
+    if (isSerializationConflict(e)) throw new PressCardIssueError("CONFLICT", "Another issue/renew for this user is in progress; retry");
+    throw e;
+  }
   return toDto(row);
 }
 
@@ -106,20 +137,27 @@ export async function renewPressCard(cardId: string, issuedById: string): Promis
   if (!old || !old.userId) throw new PressCardIssueError("NOT_FOUND", "Card not found or not linked to a user");
   if (old.status === "REVOKED") throw new PressCardIssueError("NOT_ACTIVE", "Revoked cards cannot be renewed; issue a new card");
   const validFrom = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00.000Z");
-  const row = await prisma.$transaction(async (tx) => {
-    const fresh = await tx.pressCard.findUnique({ where: { id: cardId }, select: { status: true } });
-    if (!fresh || fresh.status !== "ACTIVE") throw new PressCardIssueError("NOT_ACTIVE", "Card already renewed");
-    await tx.pressCard.update({ where: { id: cardId }, data: { status: "REVOKED", revokedAt: new Date(), revokeNote: "renewed" } });
-    const year = validFrom.getUTCFullYear();
-    const nos = await tx.pressCard.findMany({ where: { cardNo: { startsWith: `RSN/${year}/` } }, select: { cardNo: true } });
-    return tx.pressCard.create({
-      data: {
-        cardNo: nextCardNo(nos.map((n) => n.cardNo), year), token: mintPressCardToken(secureRandom),
-        name: old.name, designation: old.designation, photoUrl: old.photoUrl, validFrom, validTill: defaultValidTill(validFrom),
-        userId: old.userId, issuedById, renewedFromId: old.id,
-      },
-      select: SELECT,
-    });
-  });
+  let row;
+  try {
+    row = await prisma.$transaction(async (tx) => {
+      const fresh = await tx.pressCard.findUnique({ where: { id: cardId }, select: { status: true } });
+      if (!fresh || fresh.status !== "ACTIVE") throw new PressCardIssueError("NOT_ACTIVE", "Card already renewed");
+      await tx.pressCard.update({ where: { id: cardId }, data: { status: "REVOKED", revokedAt: new Date(), revokeNote: "renewed" } });
+      const year = validFrom.getUTCFullYear();
+      const nos = await tx.pressCard.findMany({ where: { cardNo: { startsWith: `RSN/${year}/` } }, select: { cardNo: true } });
+      return tx.pressCard.create({
+        data: {
+          cardNo: nextCardNo(nos.map((n) => n.cardNo), year), token: mintPressCardToken(secureRandom),
+          name: old.name, designation: old.designation, photoUrl: old.photoUrl, validFrom, validTill: defaultValidTill(validFrom),
+          userId: old.userId, issuedById, renewedFromId: old.id,
+        },
+        select: SELECT,
+      });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  } catch (e) {
+    if (e instanceof PressCardIssueError) throw e;
+    if (isSerializationConflict(e)) throw new PressCardIssueError("CONFLICT", "Another issue/renew for this user is in progress; retry");
+    throw e;
+  }
   return toDto(row);
 }
