@@ -56,3 +56,69 @@ describe("isValidPressCardToken", () => {
     expect(isValidPressCardToken("")).toBe(false);
   });
 });
+
+import { nextCardNo, mintPressCardToken, defaultValidTill } from "../src/press-card";
+
+describe("computePressCardStatus - SEPARATED", () => {
+  test("lastWorkingDate in the past -> SEPARATED even inside validity", () => {
+    expect(
+      computePressCardStatus(base, new Date("2027-01-10T00:00:00Z"), { lastWorkingDate: new Date("2027-01-01T00:00:00Z") }),
+    ).toBe("SEPARATED");
+  });
+  test("lastWorkingDate today (same calendar day) -> still ACTIVE until the day ends", () => {
+    expect(
+      computePressCardStatus(base, new Date("2027-01-01T15:00:00Z"), { lastWorkingDate: new Date("2027-01-01T00:00:00Z") }),
+    ).toBe("ACTIVE");
+  });
+  test("lastWorkingDate in the future -> ACTIVE", () => {
+    expect(
+      computePressCardStatus(base, new Date("2027-01-01T00:00:00Z"), { lastWorkingDate: new Date("2027-06-30T00:00:00Z") }),
+    ).toBe("ACTIVE");
+  });
+  test("REVOKED beats SEPARATED", () => {
+    expect(
+      computePressCardStatus({ ...base, status: "REVOKED" }, new Date("2027-02-01T00:00:00Z"), { lastWorkingDate: new Date("2027-01-01T00:00:00Z") }),
+    ).toBe("REVOKED");
+  });
+  test("SEPARATED beats EXPIRED", () => {
+    expect(
+      computePressCardStatus(base, new Date("2028-02-01T00:00:00Z"), { lastWorkingDate: new Date("2027-01-01T00:00:00Z") }),
+    ).toBe("SEPARATED");
+  });
+});
+
+describe("nextCardNo", () => {
+  test("first card of a year is 001", () => {
+    expect(nextCardNo([], 2027)).toBe("RSN/2027/001");
+  });
+  test("continues from the highest number of that year only", () => {
+    expect(nextCardNo(["RSN/2026/001", "RSN/2026/005", "RSN/2026/003"], 2026)).toBe("RSN/2026/006");
+  });
+  test("year rollover ignores previous years", () => {
+    expect(nextCardNo(["RSN/2026/005"], 2027)).toBe("RSN/2027/001");
+  });
+  test("ignores malformed numbers", () => {
+    expect(nextCardNo(["junk", "RSN/2026/0X1", "RSN/2026/002"], 2026)).toBe("RSN/2026/003");
+  });
+});
+
+describe("mintPressCardToken", () => {
+  test("12 chars from the unambiguous alphabet and passes isValidPressCardToken", () => {
+    const t = mintPressCardToken();
+    expect(t).toHaveLength(12);
+    expect(/^[abcdefghjkmnpqrstuvwxyz23456789]{12}$/.test(t)).toBe(true);
+    expect(isValidPressCardToken(t)).toBe(true);
+  });
+  test("deterministic with injected random", () => {
+    expect(mintPressCardToken(() => 0)).toBe("aaaaaaaaaaaa");
+  });
+});
+
+describe("defaultValidTill", () => {
+  test("one year minus one day, UTC calendar", () => {
+    expect(defaultValidTill(new Date("2026-10-06T00:00:00Z")).toISOString()).toBe("2027-10-05T00:00:00.000Z");
+  });
+  test("leap-day issue date lands on 28 Feb next year", () => {
+    expect(defaultValidTill(new Date("2028-02-29T00:00:00Z")).toISOString()).toBe("2029-02-28T00:00:00.000Z");
+  });
+});

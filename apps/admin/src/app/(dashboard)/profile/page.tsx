@@ -5,6 +5,8 @@ import { prisma } from "@rayalaseema/db";
 import { decryptProfileFields } from "@/lib/crypto/kyc";
 import { formatUserCode } from "@/lib/user-code";
 import { UserCodeChip } from "@/components/user-code-chip";
+import { getUserPressCard } from "@/lib/press-card/service";
+import { PRESS_CARD_STATUS_LABEL } from "@/lib/press-card/labels";
 import {
   ShieldCheck,
   Mail,
@@ -21,6 +23,7 @@ import {
   MapPin,
   FileCheck,
   Landmark,
+  BadgeCheck,
 } from "lucide-react";
 
 // Profile page for ADMIN / EDITOR / SUB_EDITOR / USER.
@@ -170,6 +173,10 @@ export default async function ProfilePage() {
   })();
   const kycStatus = (rp?.kycStatus ?? "PENDING") as keyof typeof KYC_PILL;
   const kycPill = KYC_PILL[kycStatus];
+  const pc = await getUserPressCard(userId);
+  const pressCardSub = pc
+    ? `${pc.cardNo} · ${pc.liveStatus === "ACTIVE" ? `valid till ${pc.validTill}` : (PRESS_CARD_STATUS_LABEL[pc.liveStatus] || pc.liveStatus.toLowerCase())}`
+    : "Not issued yet";
   const editorialSub =
     [
       data.yearsExperience ? `${data.yearsExperience} years experience` : null,
@@ -354,6 +361,18 @@ export default async function ProfilePage() {
             icon={<FileCheck size={14} />}
             label="KYC documents"
             sub={kycSub}
+          />
+        </MenuGroup>
+
+        {/* Press ID card - self-service for every staff role */}
+        <MenuGroup>
+          <MenuRow
+            href="/profile/press-card"
+            iconBg="#d9770614"
+            iconColor="#d97706"
+            icon={<BadgeCheck size={14} />}
+            label="Press ID card"
+            sub={pressCardSub}
           />
         </MenuGroup>
 

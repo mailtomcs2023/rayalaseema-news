@@ -1,13 +1,15 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@rayalaseema/db";
 import { ReporterShell } from "@/components/reporter/reporter-shell";
 import { KycBanner } from "@/components/reporter/kyc-banner";
 import { SignOutButton } from "@/components/reporter/sign-out-button";
+import { MenuGroup, MenuRow, Divider } from "@/components/reporter/menu-rows";
 import { ShieldCheck } from "lucide-react";
 import { formatUserCode } from "@/lib/user-code";
 import { UserCodeChip } from "@/components/user-code-chip";
+import { getUserPressCard } from "@/lib/press-card/service";
+import { PRESS_CARD_STATUS_LABEL } from "@/lib/press-card/labels";
 
 // Reporter Profile - mirrors the Expo ProfileScreen.
 // Avatar hero • role + KYC pills • optional KYC rejection box •
@@ -76,6 +78,11 @@ export default async function ReporterProfilePage() {
   const kycStatus = (p?.kycStatus as keyof typeof KYC_PILL) ?? "PENDING";
   const kycPill = KYC_PILL[kycStatus];
   const photoUrl = p?.photoUrl || data.avatar;
+
+  const pc = await getUserPressCard(userId);
+  const pressCardSub = pc
+    ? `${pc.cardNo} · ${pc.liveStatus === "ACTIVE" ? `valid till ${pc.validTill}` : (PRESS_CARD_STATUS_LABEL[pc.liveStatus] || pc.liveStatus.toLowerCase())}`
+    : "Not issued yet";
   const initials = (data.name || "R")
     .split(" ")
     .map((s) => s[0])
@@ -238,6 +245,27 @@ export default async function ReporterProfilePage() {
           />
         </MenuGroup>
 
+        <MenuGroup>
+          <MenuRow
+            href="/reporter/earnings"
+            iconBg="#0ea5e914"
+            iconColor="#0ea5e9"
+            iconPath="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"
+            label="Payouts"
+            sub="Earnings and payment history"
+          />
+          <Divider />
+          <MenuRow
+            href="/reporter/profile/press-card"
+            iconBg="#D5000014"
+            iconColor="#D50000"
+            iconPath="M3 5h18v14H3zM7 9h4v6H7zm7 0h4M14 12h4M14 15h3"
+            label="Press ID card"
+            sub={pressCardSub}
+            last
+          />
+        </MenuGroup>
+
         {/* Pending requests - only when there's something to look at. */}
         {pendingCount > 0 ? (
           <MenuGroup>
@@ -286,143 +314,5 @@ export default async function ReporterProfilePage() {
         </p>
       </div>
     </ReporterShell>
-  );
-}
-
-function MenuGroup({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      style={{
-        background: "#fff",
-        borderRadius: 14,
-        marginBottom: 14,
-        overflow: "hidden",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-function Divider() {
-  return <div style={{ height: 1, background: "#eef0f3", marginLeft: 54 }} />;
-}
-
-function MenuRow({
-  href,
-  id,
-  iconBg,
-  iconColor,
-  iconPath,
-  label,
-  sub,
-  badge,
-  locked,
-  last,
-}: {
-  href?: string;
-  id?: string;
-  iconBg: string;
-  iconColor: string;
-  iconPath: string;
-  label: string;
-  sub?: string;
-  badge?: string;
-  locked?: boolean;
-  last?: boolean;
-}) {
-  const rowStyle: React.CSSProperties = {
-    display: "flex",
-    alignItems: "center",
-    gap: 14,
-    padding: "12px 16px",
-    minHeight: 56,
-    // Pad the scroll target so deep-link anchor jumps don't hide the
-    // row under the sticky red header.
-    scrollMarginTop: 80,
-    color: "inherit",
-    textDecoration: "none",
-  };
-
-  const Wrapper = ({ children }: { children: React.ReactNode }) =>
-    href ? (
-      <Link href={href} id={id} style={rowStyle}>
-        {children}
-      </Link>
-    ) : (
-      <div id={id} style={rowStyle}>
-        {children}
-      </div>
-    );
-
-  return (
-    <Wrapper>
-      <span
-        style={{
-          width: 24,
-          height: 24,
-          borderRadius: 6,
-          background: iconBg,
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          flexShrink: 0,
-        }}
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-          <path d={iconPath} />
-        </svg>
-      </span>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontSize: 15, fontWeight: 600, color: "#111" }}>{label}</p>
-        {sub ? (
-          <p
-            style={{
-              fontSize: 12,
-              color: "#999",
-              marginTop: 2,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {sub}
-          </p>
-        ) : null}
-      </div>
-      {badge ? (
-        <span
-          style={{
-            minWidth: 22,
-            height: 22,
-            padding: "0 6px",
-            borderRadius: 11,
-            background: "#FF2C2C",
-            color: "#fff",
-            fontSize: 11,
-            fontWeight: 800,
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          {badge}
-        </span>
-      ) : null}
-      {locked ? (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="11" width="18" height="11" rx="2" />
-          <path d="M7 11V7a5 5 0 0110 0v4" />
-        </svg>
-      ) : (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c4c4c4" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="9 18 15 12 9 6" />
-        </svg>
-      )}
-      {/* `last` prop kept for API symmetry with the Expo MenuRow but unused
-          here - dividers are sibling elements instead of an inset border. */}
-      {void last}
-    </Wrapper>
   );
 }

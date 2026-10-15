@@ -60,6 +60,10 @@ export const userUpdateSchema = z.object({
   active: z.boolean().optional(),
   mustChangePassword: z.boolean().optional(),
   categoryIds: z.array(cuid).max(CATEGORY_IDS_MAX).optional(),
+  // Employment dates, admin-editable. YYYY-MM-DD; null clears. lastWorkingDate
+  // drives the public press-card SEPARATED state once that day passes.
+  joinedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+  lastWorkingDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
   // Opt-in flag from the Edit User dialog: when set, mint a fresh login
   // code matching the (possibly new) role. Never auto-fires on role change
   // alone - admin must explicitly check the box.
