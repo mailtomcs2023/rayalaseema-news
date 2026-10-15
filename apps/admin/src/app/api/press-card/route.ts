@@ -21,10 +21,11 @@ export async function GET(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
   const [card, user] = await Promise.all([
     getUserPressCard(userId),
-    prisma.user.findUnique({ where: { id: userId }, select: { reporterProfile: { select: { kycStatus: true, photoUrl: true } } } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { name: true, reporterProfile: { select: { kycStatus: true, photoUrl: true } } } }),
   ]);
   const reason = user ? issuableReason(user.reporterProfile, card) : "KYC_NOT_VERIFIED";
-  return NextResponse.json({ card, issuable: { ok: !reason, reason: reason ?? undefined } });
+  const unlinked = user ? await prisma.pressCard.findMany({ where: { userId: null, name: user.name }, select: { id: true, cardNo: true } }) : [];
+  return NextResponse.json({ card, issuable: { ok: !reason, reason: reason ?? undefined }, unlinked });
 }
 
 export async function POST(req: NextRequest) {

@@ -14,7 +14,7 @@ type Dto = {
   id: string; cardNo: string; designation: string; photoUrl: string; validFrom: string; validTill: string;
   liveStatus: "ACTIVE" | "EXPIRED" | "REVOKED" | "SEPARATED"; revokeNote: string | null; verifyUrl: string;
 };
-type Payload = { card: Dto | null; issuable: { ok: boolean; reason?: string } };
+type Payload = { card: Dto | null; issuable: { ok: boolean; reason?: string }; unlinked: { id: string; cardNo: string }[] };
 
 const REASON: Record<string, string> = {
   KYC_NOT_VERIFIED: "KYC must be verified first (Review & documents).",
@@ -95,6 +95,16 @@ export function PressCardDialog({ user, onClose }: { user: { id: string; name: s
                 <Label htmlFor="revokeNote">Revoke (reason, required)</Label>
                 <Input id="revokeNote" value={revokeNote} onChange={(e) => setRevokeNote(e.target.value)} placeholder="Lost card / left organisation / misuse" />
                 <Button size="sm" variant="destructive" disabled={busy || revokeNote.trim().length < 3} onClick={() => void call(`/api/press-card/${card.id}/revoke`, { note: revokeNote }, "Card revoked")}>Revoke card</Button>
+              </div>
+            )}
+            {data.unlinked.length > 0 && (
+              <div className="space-y-2 rounded-md border border-amber-200 p-3">
+                <p className="text-sm font-medium">Printed v1 card(s) with this exact name are not linked yet</p>
+                {data.unlinked.map((u) => (
+                  <Button key={u.id} size="sm" variant="outline" disabled={busy} onClick={() => void call(`/api/press-card/${u.id}/link`, { userId: user!.id }, "Card linked")}>
+                    Link card {u.cardNo} to this user
+                  </Button>
+                ))}
               </div>
             )}
             {(!card || card.liveStatus !== "ACTIVE") && (
