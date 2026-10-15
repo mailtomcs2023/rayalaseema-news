@@ -79,8 +79,14 @@ export default async function ReporterProfilePage() {
   const photoUrl = p?.photoUrl || data.avatar;
 
   const pc = await getUserPressCard(userId);
+  const PRESS_CARD_STATUS_LABEL: Record<string, string> = {
+    ACTIVE: "",
+    EXPIRED: "expired",
+    REVOKED: "revoked",
+    SEPARATED: "former staff",
+  };
   const pressCardSub = pc
-    ? `${pc.cardNo} · ${pc.liveStatus === "ACTIVE" ? `valid till ${pc.validTill}` : pc.liveStatus.toLowerCase()}`
+    ? `${pc.cardNo} · ${pc.liveStatus === "ACTIVE" ? `valid till ${pc.validTill}` : (PRESS_CARD_STATUS_LABEL[pc.liveStatus] || pc.liveStatus.toLowerCase())}`
     : "Not issued yet";
   const initials = (data.name || "R")
     .split(" ")

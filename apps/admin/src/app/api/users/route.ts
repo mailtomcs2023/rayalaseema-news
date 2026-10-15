@@ -147,6 +147,7 @@ export async function POST(req: NextRequest) {
           // Force-change-on-first-login flag: admin-set when creating an
           // account with a temporary password the user should rotate.
           mustChangePassword: !!b.mustChangePassword,
+          joinedAt: new Date(),
         },
       });
 

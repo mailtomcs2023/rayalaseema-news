@@ -1920,7 +1920,9 @@ model PressCard {
   // deploy. Not unique: renewals keep the old (REVOKED) row for history;
   // "one ACTIVE card per user" is enforced in the issue/renew transaction.
   userId       String?
-  user         User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  // Restrict: a cardholder cannot be hard-deleted while a card references them;
+  // deactivate the user or set lastWorkingDate instead (users DELETE route maps P2003 to 409).
+  user         User?           @relation(fields: [userId], references: [id], onDelete: Restrict)
   issuedById   String?
   renewedFromId String?
   createdAt    DateTime        @default(now())

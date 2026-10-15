@@ -6,12 +6,29 @@ import { issuePressCard, getUserPressCard, issuableReason, PressCardIssueError, 
 
 const ISSUERS = ["ADMIN", "EDITOR"] as const;
 const dayRe = /^\d{4}-\d{2}-\d{2}$/;
+
+// Reject dates that don't round-trip through UTC-midnight parsing (e.g.
+// "2026-02-30") rather than silently storing whatever Date() coerces them to.
+function isValidDay(s: string): boolean {
+  const d = new Date(`${s}T00:00:00.000Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
+}
+
 const issueSchema = z.object({
   userId: z.string().min(1),
   designation: z.string().trim().min(2).max(60),
   validFrom: z.string().regex(dayRe).optional(),
   validTill: z.string().regex(dayRe).optional(),
-  photoUrl: z.string().url().max(500).optional(),
+  photoUrl: z.string().url().max(500)
+    .refine((u) => {
+      try {
+        const parsed = new URL(u);
+        return parsed.protocol === "https:" && parsed.hostname.endsWith(".blob.core.windows.net");
+      } catch {
+        return false;
+      }
+    }, { message: "photoUrl must be an https Azure blob URL" })
+    .optional(),
 }).strict();
 
 export async function GET(req: NextRequest) {
@@ -34,6 +51,11 @@ export async function POST(req: NextRequest) {
   const parsed = issueSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return zodErrorResponse(parsed.error);
   const b = parsed.data;
+  if (b.validFrom && !isValidDay(b.validFrom)) return NextResponse.json({ error: "invalid date" }, { status: 400 });
+  if (b.validTill && !isValidDay(b.validTill)) return NextResponse.json({ error: "invalid date" }, { status: 400 });
+  if (b.validFrom && b.validTill && b.validTill < b.validFrom) {
+    return NextResponse.json({ error: "validTill must be on or after validFrom" }, { status: 400 });
+  }
   try {
     const dto = await issuePressCard({
       userId: b.userId, designation: b.designation, photoUrl: b.photoUrl, issuedById: session.user.id,

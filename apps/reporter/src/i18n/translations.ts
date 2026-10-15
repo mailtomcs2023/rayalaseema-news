@@ -335,6 +335,13 @@ export const translations = {
       pressCardNotIssued: "Not issued yet",
       pressCardValidTill: "Valid till",
       pressCardDownloadFail: "Could not open the card. Try again.",
+      pressCardExpired: "Your card has expired. Ask the editor to renew it.",
+      pressCardRevoked: "This card was revoked. Ask the editor for a new one.",
+      pressCardSeparated: "Your employment has ended, so the card is no longer valid.",
+      statusActive: "Active",
+      statusExpired: "Expired",
+      statusRevoked: "Revoked",
+      statusSeparated: "Former staff",
 
       // Field labels
       name: "Name",
@@ -829,6 +836,13 @@ export const translations = {
       pressCardNotIssued: "ఇంకా జారీ కాలేదు",
       pressCardValidTill: "చెల్లుబాటు",
       pressCardDownloadFail: "కార్డు తెరవలేకపోయాం. మళ్లీ ప్రయత్నించండి.",
+      pressCardExpired: "మీ కార్డు గడువు ముగిసింది. సంపాదకుడిని సంప్రదించండి.",
+      pressCardRevoked: "ఈ కార్డు రద్దు చేయబడింది. కొత్త కార్డు కోసం సంపాదకుడిని సంప్రదించండి.",
+      pressCardSeparated: "మీ ఉద్యోగం ముగిసినందున ఈ కార్డు చెల్లదు.",
+      statusActive: "చెల్లుబాటులో ఉంది",
+      statusExpired: "గడువు ముగిసింది",
+      statusRevoked: "రద్దు చేయబడింది",
+      statusSeparated: "మాజీ సిబ్బంది",
 
       // Field labels
       name: "పేరు",

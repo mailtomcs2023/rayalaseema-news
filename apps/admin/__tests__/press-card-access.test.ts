@@ -30,6 +30,23 @@ describe("decideAccess", () => {
     expect(r.allowed).toBe(false);
   });
 
+  test("short-lived token for card A presented on card B, no holder/staff -> denied", () => {
+    const r = decideAccess({ ...base, tokenCardId: "cardA", cardId: "cardB", holderId: null, role: undefined });
+    expect(r.allowed).toBe(false);
+  });
+
+  test("cardUserId null with a non-null holderId -> denied (nothing to match against)", () => {
+    const r = decideAccess({ cardUserId: null, liveStatus: "ACTIVE", tokenCardId: null, cardId: "card1", holderId: "u1", role: undefined });
+    expect(r.allowed).toBe(false);
+  });
+
+  test("expired token (verifyDownloadToken already returned null) falls through to denied when nothing else grants", () => {
+    // tokenCardId is null here because the caller's token already expired
+    // and verifyDownloadToken() returned null before decideAccess was called.
+    const r = decideAccess({ ...base, tokenCardId: null, cardId: "card1", holderId: null, role: undefined });
+    expect(r.allowed).toBe(false);
+  });
+
   for (const liveStatus of ["SEPARATED", "REVOKED", "EXPIRED"] as const) {
     test(`holder with liveStatus ${liveStatus} -> denied with reason`, () => {
       const r = decideAccess({ cardUserId: "u1", liveStatus, tokenCardId: null, cardId: "card1", holderId: "u1", role: undefined });

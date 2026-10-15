@@ -9,10 +9,12 @@ import { decideAccess } from "@/lib/press-card/access";
 export const dynamic = "force-dynamic";
 
 // Who may download: (1) a valid short-lived ?t= token for THIS card,
-// (2) the holder (bearer token from the app or reporter web session),
-// (3) an ADMIN / EDITOR session. Holders are blocked once SEPARATED or
-// REVOKED; staff can still pull the PDF for records. See access.ts for the
-// unit-tested decision matrix this route just applies.
+// (2) an ADMIN / EDITOR session, (3) the holder (bearer token from the app
+// or reporter web session). Staff is checked before the holder because
+// staff can always pull the PDF for records (never gated by liveStatus),
+// while holders are blocked once their card is SEPARATED, REVOKED or
+// EXPIRED. See access.ts for the unit-tested decision matrix this route
+// just applies.
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const card = await getPressCardById(id);

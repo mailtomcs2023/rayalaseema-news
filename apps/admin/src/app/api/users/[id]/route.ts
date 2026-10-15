@@ -25,7 +25,16 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     // SEPARATED state on the public verify page.
     for (const key of ["joinedAt", "lastWorkingDate"] as const) {
       if (b[key] === undefined) continue;
-      data[key] = b[key] ? new Date(`${b[key]}T00:00:00.000Z`) : null;
+      if (b[key]) {
+        const s = b[key] as string;
+        const d = new Date(`${s}T00:00:00.000Z`);
+        if (Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== s) {
+          return NextResponse.json({ error: "invalid date" }, { status: 400 });
+        }
+        data[key] = d;
+      } else {
+        data[key] = null;
+      }
     }
     // Email = identity. Rules:
     //   - Only an ADMIN role can change another user's email (this PUT is

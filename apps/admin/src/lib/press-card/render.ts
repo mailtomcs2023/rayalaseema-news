@@ -62,7 +62,40 @@ async function fetchPhotoDataUri(url: string): Promise<string> {
   } finally { clearTimeout(t); }
 }
 
+// The VM running this app has 3.8 GB RAM and each render launches its own
+// Chromium instance; letting renders pile up unbounded under concurrent
+// requests risks OOM-killing the whole process. Cap concurrent renders at 2
+// with a simple promise-queue semaphore - extra callers wait their turn
+// instead of all launching Chromium at once.
+const MAX_CONCURRENT_RENDERS = 2;
+let active = 0;
+const waiters: Array<() => void> = [];
+
+async function acquireRenderSlot(): Promise<void> {
+  if (active < MAX_CONCURRENT_RENDERS) {
+    active++;
+    return;
+  }
+  await new Promise<void>((resolve) => waiters.push(resolve));
+  active++;
+}
+
+function releaseRenderSlot(): void {
+  active--;
+  const next = waiters.shift();
+  if (next) next();
+}
+
 export async function renderPressCardPdf(card: CardData): Promise<Buffer> {
+  await acquireRenderSlot();
+  try {
+    return await renderPressCardPdfInner(card);
+  } finally {
+    releaseRenderSlot();
+  }
+}
+
+async function renderPressCardPdfInner(card: CardData): Promise<Buffer> {
   const [{ lockup, main }, photo, qr] = await Promise.all([
     logoAssets(),
     fetchPhotoDataUri(card.photoUrl),

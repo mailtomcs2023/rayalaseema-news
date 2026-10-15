@@ -16,6 +16,15 @@ import {
   type ProfileResponse,
 } from "./profile/meta";
 
+// Maps a card's liveStatus to the profile.* i18n key for its status label
+// (used in the row subtitle in place of the raw enum value).
+const STATUS_LABEL_KEY: Record<string, string> = {
+  ACTIVE: "statusActive",
+  EXPIRED: "statusExpired",
+  REVOKED: "statusRevoked",
+  SEPARATED: "statusSeparated",
+};
+
 /**
  * WhatsApp Settings-style landing page for the reporter profile.
  *
@@ -183,13 +192,23 @@ export function ProfileScreen() {
           <MenuRow
             icon="card-outline"
             label={t("profile.pressCard")}
-            sub={pressCard?.card ? `${pressCard.card.cardNo} · ${pressCard.card.liveStatus === "ACTIVE" ? `${t("profile.pressCardValidTill")} ${pressCard.card.validTill}` : pressCard.card.liveStatus.toLowerCase()}` : t("profile.pressCardNotIssued")}
+            sub={pressCard?.card ? `${pressCard.card.cardNo} · ${pressCard.card.liveStatus === "ACTIVE" ? `${t("profile.pressCardValidTill")} ${pressCard.card.validTill}` : t(`profile.${STATUS_LABEL_KEY[pressCard.card.liveStatus] || "statusExpired"}`)}` : t("profile.pressCardNotIssued")}
             last
             onPress={async () => {
               Haptics.selectionAsync();
               try {
                 const fresh = await api("/api/press-card/mine"); // links expire in 10 min - always mint fresh
-                if (!fresh?.downloadUrl) { Alert.alert(t("profile.pressCard"), t("profile.pressCardNotIssued")); return; }
+                if (!fresh?.downloadUrl) {
+                  // No downloadUrl but a card record exists: status-specific
+                  // message instead of the generic "not issued" copy.
+                  const status: string | undefined = fresh?.card?.liveStatus;
+                  const msgKey = status === "EXPIRED" ? "pressCardExpired"
+                    : status === "REVOKED" ? "pressCardRevoked"
+                    : status === "SEPARATED" ? "pressCardSeparated"
+                    : "pressCardNotIssued";
+                  Alert.alert(t("profile.pressCard"), t(`profile.${msgKey}`));
+                  return;
+                }
                 await Linking.openURL(fresh.downloadUrl);
               } catch {
                 Alert.alert(t("profile.pressCard"), t("profile.pressCardDownloadFail"));
