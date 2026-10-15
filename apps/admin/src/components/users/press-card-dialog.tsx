@@ -14,7 +14,7 @@ type Dto = {
   id: string; cardNo: string; designation: string; photoUrl: string; validFrom: string; validTill: string;
   liveStatus: "ACTIVE" | "EXPIRED" | "REVOKED" | "SEPARATED"; revokeNote: string | null; verifyUrl: string;
 };
-type Payload = { card: Dto | null; issuable: { ok: boolean; reason?: string }; unlinked: { id: string; cardNo: string }[] };
+type Payload = { card: Dto | null; issuable: { ok: boolean; reason?: string }; unlinked: { id: string; cardNo: string; name: string }[] };
 
 const REASON: Record<string, string> = {
   KYC_NOT_VERIFIED: "KYC must be verified first (Review & documents).",
@@ -33,6 +33,7 @@ export function PressCardDialog({ user, onClose }: { user: { id: string; name: s
   const [busy, setBusy] = useState(false);
   const [designation, setDesignation] = useState("");
   const [revokeNote, setRevokeNote] = useState("");
+  const [linkCardId, setLinkCardId] = useState("");
   // Request-generation guard: prevents a slow GET for user A overwriting
   // `data` after the admin has already closed A and opened user B.
   const gen = useRef(0);
@@ -47,8 +48,9 @@ export function PressCardDialog({ user, onClose }: { user: { id: string; name: s
     if (my !== gen.current) return;
     setData(p);
     setDesignation(p.card?.designation ?? (user.role === "REPORTER" ? "Reporter / Copy Writer" : ""));
+    setLinkCardId(p.unlinked[0]?.id ?? "");
   };
-  useEffect(() => { gen.current++; setData(null); setRevokeNote(""); if (user) void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [user?.id]);
+  useEffect(() => { gen.current++; setData(null); setRevokeNote(""); setLinkCardId(""); if (user) void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [user?.id]);
 
   const call = async (url: string, body?: unknown, okMsg?: string) => {
     setBusy(true);
@@ -99,12 +101,20 @@ export function PressCardDialog({ user, onClose }: { user: { id: string; name: s
             )}
             {data.unlinked.length > 0 && (
               <div className="space-y-2 rounded-md border border-amber-200 p-3">
-                <p className="text-sm font-medium">Printed v1 card(s) with this exact name are not linked yet</p>
-                {data.unlinked.map((u) => (
-                  <Button key={u.id} size="sm" variant="outline" disabled={busy} onClick={() => void call(`/api/press-card/${u.id}/link`, { userId: user!.id }, "Card linked")}>
-                    Link card {u.cardNo} to this user
-                  </Button>
-                ))}
+                <Label htmlFor="linkCard">Link an unlinked printed card to this user</Label>
+                <select
+                  id="linkCard"
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                  value={linkCardId}
+                  onChange={(e) => setLinkCardId(e.target.value)}
+                >
+                  {data.unlinked.map((u) => (
+                    <option key={u.id} value={u.id}>{u.cardNo} — {u.name}</option>
+                  ))}
+                </select>
+                <Button size="sm" variant="outline" disabled={busy || !linkCardId} onClick={() => void call(`/api/press-card/${linkCardId}/link`, { userId: user!.id }, "Card linked")}>
+                  Link selected card to this user
+                </Button>
               </div>
             )}
             {(!card || card.liveStatus !== "ACTIVE") && (

@@ -41,7 +41,22 @@ export async function GET(req: NextRequest) {
     prisma.user.findUnique({ where: { id: userId }, select: { name: true, reporterProfile: { select: { kycStatus: true, photoUrl: true } } } }),
   ]);
   const reason = user ? issuableReason(user.reporterProfile, card) : "KYC_NOT_VERIFIED";
-  const unlinked = user ? await prisma.pressCard.findMany({ where: { userId: null, name: user.name }, select: { id: true, cardNo: true } }) : [];
+  // Any unlinked v1 card can be hand-picked and linked from the dialog -
+  // most don't match the user's current name (renames, nicknames, OCR'd v1
+  // seed data), so we no longer filter by exact name. Only offer linking
+  // when the user doesn't already have an ACTIVE card (link route also
+  // enforces this server-side). Exact-name matches are surfaced first so
+  // the common case still shows at the top of the <select>.
+  let unlinked: { id: string; cardNo: string; name: string }[] = [];
+  if (user && card?.liveStatus !== "ACTIVE") {
+    const rows = await prisma.pressCard.findMany({ where: { userId: null }, select: { id: true, cardNo: true, name: true } });
+    unlinked = rows.sort((a, b) => {
+      const aExact = a.name === user.name ? 0 : 1;
+      const bExact = b.name === user.name ? 0 : 1;
+      if (aExact !== bExact) return aExact - bExact;
+      return a.cardNo.localeCompare(b.cardNo);
+    });
+  }
   return NextResponse.json({ card, issuable: { ok: !reason, reason: reason ?? undefined }, unlinked });
 }
 

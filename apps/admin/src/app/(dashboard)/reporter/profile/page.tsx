@@ -9,6 +9,7 @@ import { ShieldCheck } from "lucide-react";
 import { formatUserCode } from "@/lib/user-code";
 import { UserCodeChip } from "@/components/user-code-chip";
 import { getUserPressCard } from "@/lib/press-card/service";
+import { PRESS_CARD_STATUS_LABEL } from "@/lib/press-card/labels";
 
 // Reporter Profile - mirrors the Expo ProfileScreen.
 // Avatar hero • role + KYC pills • optional KYC rejection box •
@@ -79,12 +80,6 @@ export default async function ReporterProfilePage() {
   const photoUrl = p?.photoUrl || data.avatar;
 
   const pc = await getUserPressCard(userId);
-  const PRESS_CARD_STATUS_LABEL: Record<string, string> = {
-    ACTIVE: "",
-    EXPIRED: "expired",
-    REVOKED: "revoked",
-    SEPARATED: "former staff",
-  };
   const pressCardSub = pc
     ? `${pc.cardNo} · ${pc.liveStatus === "ACTIVE" ? `valid till ${pc.validTill}` : (PRESS_CARD_STATUS_LABEL[pc.liveStatus] || pc.liveStatus.toLowerCase())}`
     : "Not issued yet";

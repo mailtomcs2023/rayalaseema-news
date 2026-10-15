@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { getReporterId } from "@/lib/reporter-auth";
+import { resolveHolderId } from "@/lib/press-card/holder";
 import { getPressCardById } from "@/lib/press-card/service";
 import { renderPressCardPdf, PressCardRenderError } from "@/lib/press-card/render";
 import { verifyDownloadToken } from "@/lib/press-card/download-token";
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const t = req.nextUrl.searchParams.get("t");
   const tokenCardId = t ? verifyDownloadToken(t) : null;
-  const holderId = await getReporterId(req);
+  const holderId = await resolveHolderId(req);
   const session = await auth();
   const role = (session?.user as any)?.role as string | undefined;
 

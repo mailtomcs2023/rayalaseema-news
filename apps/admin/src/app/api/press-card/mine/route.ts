@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
-import { getReporterId } from "@/lib/reporter-auth";
+import { resolveHolderId } from "@/lib/press-card/holder";
 import { getUserPressCard, issuableReason } from "@/lib/press-card/service";
 import { createDownloadToken } from "@/lib/press-card/download-token";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  const userId = await getReporterId(req);
+  const userId = await resolveHolderId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const [card, user] = await Promise.all([
     getUserPressCard(userId),
