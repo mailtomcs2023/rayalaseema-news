@@ -9,7 +9,14 @@ async function main() {
   let linked = 0;
   for (const c of cards) {
     const users = await prisma.user.findMany({ where: { name: c.name, active: true }, select: { id: true } });
-    if (users.length === 1) { await prisma.pressCard.update({ where: { id: c.id }, data: { userId: users[0].id } }); linked++; console.log(`linked ${c.cardNo} -> ${users[0].id}`); }
+    if (users.length === 1) {
+      const activeCard = await prisma.pressCard.findFirst({
+        where: { userId: users[0].id, status: "ACTIVE", validTill: { gte: new Date() } },
+        select: { id: true },
+      });
+      if (activeCard) { console.log(`SKIPPED ${c.cardNo} "${c.name}" user already has an ACTIVE card`); continue; }
+      await prisma.pressCard.update({ where: { id: c.id }, data: { userId: users[0].id } }); linked++; console.log(`linked ${c.cardNo} -> ${users[0].id}`);
+    }
     else console.log(`UNMATCHED ${c.cardNo} "${c.name}" (${users.length} candidates)`);
   }
   console.log(`press cards linked: ${linked}, still unlinked: ${cards.length - linked}`);
