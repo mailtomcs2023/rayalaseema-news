@@ -20,6 +20,13 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     for (const key of ["name", "role", "active", "bio", "phone"] as const) {
       if (b[key] !== undefined) data[key] = b[key];
     }
+    // Employment dates (ADMIN only, this route is ADMIN-gated). Stored as
+    // UTC midnight; null clears. lastWorkingDate drives the press-card
+    // SEPARATED state on the public verify page.
+    for (const key of ["joinedAt", "lastWorkingDate"] as const) {
+      if (b[key] === undefined) continue;
+      data[key] = b[key] ? new Date(`${b[key]}T00:00:00.000Z`) : null;
+    }
     // Email = identity. Rules:
     //   - Only an ADMIN role can change another user's email (this PUT is
     //     already ADMIN-gated above).

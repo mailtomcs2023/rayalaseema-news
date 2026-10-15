@@ -124,6 +124,8 @@ interface User {
   phone: string | null;
   userCode: string | null;
   createdAt: string;
+  joinedAt: string | null;
+  lastWorkingDate: string | null;
   _count: { contents: number };
   // Pre-fill in the edit dialog when role is SUB_EDITOR / EDITOR. The
   // /api/users GET already includes this; the row shape just needs to know
@@ -1274,6 +1276,11 @@ function UserFormDialog({
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<User["role"]>(user?.role ?? "REPORTER");
   const [active, setActive] = useState<boolean>(user?.active ?? true);
+  // Employment dates - admin-editable, stored as YYYY-MM-DD (or null to
+  // clear). lastWorkingDate later drives the public press-card "Former
+  // staff" state once that day passes.
+  const [joinedAt, setJoinedAt] = useState<string | null>(user?.joinedAt?.slice(0, 10) ?? null);
+  const [lastWorkingDate, setLastWorkingDate] = useState<string | null>(user?.lastWorkingDate?.slice(0, 10) ?? null);
   // Snapshot the role at dialog open time. Compared against `role` on every
   // render to decide whether to surface the "Regenerate login code" checkbox.
   // Only meaningful in edit mode - new users always get a fresh code anyway.
@@ -1369,6 +1376,12 @@ function UserFormDialog({
       };
       if (parsed.data.password) body.password = parsed.data.password;
       if (needsCategories) body.categoryIds = parsed.data.categoryIds;
+      // Employment dates - only meaningful in edit mode (create has no
+      // inputs for them yet); send as-is, null clears the field server-side.
+      if (mode === "edit") {
+        body.joinedAt = joinedAt;
+        body.lastWorkingDate = lastWorkingDate;
+      }
       // Only send the regen flag in edit mode AND only when the admin
       // actually toggled the checkbox. The create flow always mints a
       // fresh code server-side, so this field has no meaning there.
@@ -1450,6 +1463,32 @@ function UserFormDialog({
             />
             {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
           </div>
+
+          {mode === "edit" && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="u-joined-at">Date of joining</Label>
+                <Input
+                  id="u-joined-at"
+                  type="date"
+                  value={joinedAt ?? ""}
+                  onChange={(e) => setJoinedAt(e.target.value || null)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="u-last-working-date">Last working date</Label>
+                <Input
+                  id="u-last-working-date"
+                  type="date"
+                  value={lastWorkingDate ?? ""}
+                  onChange={(e) => setLastWorkingDate(e.target.value || null)}
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Once this day passes, the public press-card page shows "Former staff" and self-service download stops.
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <Label htmlFor="u-password">

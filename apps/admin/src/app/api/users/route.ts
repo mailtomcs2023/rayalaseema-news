@@ -54,6 +54,7 @@ export async function GET(req: NextRequest) {
     const select = {
       id: true, email: true, name: true, role: true, active: true, phone: true,
       userCode: true, createdAt: true, mustChangePassword: true,
+      joinedAt: true, lastWorkingDate: true,
       _count: { select: { contents: true } },
       assignedCategories: { include: { category: { select: { id: true, name: true, nameEn: true } } } },
       reporterProfile: {
