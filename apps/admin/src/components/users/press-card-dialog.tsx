@@ -2,7 +2,7 @@
 // Press ID card panel - opens from the /users row dropdown. Issues, renews,
 // revokes and downloads a user's card. Self-contained: fetches
 // /api/press-card?userId= on open.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,16 +33,22 @@ export function PressCardDialog({ user, onClose }: { user: { id: string; name: s
   const [busy, setBusy] = useState(false);
   const [designation, setDesignation] = useState("");
   const [revokeNote, setRevokeNote] = useState("");
+  // Request-generation guard: prevents a slow GET for user A overwriting
+  // `data` after the admin has already closed A and opened user B.
+  const gen = useRef(0);
 
   const load = async () => {
     if (!user) return;
+    const my = ++gen.current;
     const res = await fetch(`/api/press-card?userId=${user.id}`);
+    if (my !== gen.current) return;
     if (!res.ok) { toast.error("Could not load press card"); return; }
     const p = (await res.json()) as Payload;
+    if (my !== gen.current) return;
     setData(p);
     setDesignation(p.card?.designation ?? (user.role === "REPORTER" ? "Reporter / Copy Writer" : ""));
   };
-  useEffect(() => { setData(null); setRevokeNote(""); if (user) void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [user?.id]);
+  useEffect(() => { gen.current++; setData(null); setRevokeNote(""); if (user) void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [user?.id]);
 
   const call = async (url: string, body?: unknown, okMsg?: string) => {
     setBusy(true);
@@ -68,7 +74,7 @@ export function PressCardDialog({ user, onClose }: { user: { id: string; name: s
             {card && (
               <div className="flex gap-4 rounded-md border p-3">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={card.photoUrl} alt="" className="h-24 w-18 rounded object-cover border" />
+                <img src={card.photoUrl} alt="" className="h-24 w-[72px] rounded object-cover border" />
                 <div className="text-sm space-y-1">
                   <div className="flex items-center gap-2"><span className="font-semibold">{card.cardNo}</span><Badge className={CHIP[card.liveStatus]}>{card.liveStatus}</Badge></div>
                   <div>{card.designation}</div>
