@@ -124,8 +124,8 @@ One-off script `packages/db/scripts/link-press-cards-to-users.ts`: for each card
 - Reader app (public app) changes.
 - Admin revoke emails / WhatsApp notifications.
 
-## 11. Open decisions (owner)
+## 11. Decisions (owner, 2026-10-15)
 
-1. Default validity: one year from issue (proposed) or fixed to 31 March each year?
-2. Can EDITOR issue cards, or ADMIN only? (Spec assumes both; payouts already visible to EDITOR.)
-3. Should Renew keep the same QR token (simpler for the holder) or rotate it (safer if a card was lost)? Spec proposes rotate, since renewal means a reprint anyway.
+1. Validity: one year from the issue date (validTill = validFrom + 1 year − 1 day).
+2. ADMIN and EDITOR can both issue, renew and revoke.
+3. Renew rotates the token: new row, new QR, old row REVOKED with note "renewed". A renewed card must be reprinted.
