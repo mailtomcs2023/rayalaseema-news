@@ -21,7 +21,7 @@ export default async function ReporterPressCardPage() {
   const userId = (session?.user as any)?.id as string | undefined;
   const role = (session?.user as any)?.role as string | undefined;
   if (!userId) redirect("/login");
-  if (role && role !== "REPORTER") redirect("/");
+  if (role !== "REPORTER") redirect("/");
   const [card, user] = await Promise.all([
     getUserPressCard(userId),
     prisma.user.findUnique({ where: { id: userId }, select: { reporterProfile: { select: { kycStatus: true, photoUrl: true } } } }),
