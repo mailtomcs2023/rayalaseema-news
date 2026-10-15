@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, ActivityIn
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { clearAuthToken } from "../lib/secure-token";
 import * as Haptics from "expo-haptics";
+import * as Linking from "expo-linking";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
 import { useT } from "../i18n";
@@ -30,6 +31,7 @@ export function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [editPhoto, setEditPhoto] = useState(false);
+  const [pressCard, setPressCard] = useState<{ card: { cardNo: string; validTill: string; liveStatus: string } | null; downloadUrl: string | null } | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -38,6 +40,9 @@ export function ProfileScreen() {
     } catch (e: any) {
       Alert.alert(t("common.error"), e.message);
     }
+    // Press card is a secondary, best-effort fetch - never let it block the
+    // primary profile load.
+    api("/api/press-card/mine").then(setPressCard).catch(() => setPressCard(null));
   }, [t]);
 
   // Refetch on focus so values just-approved by admin show up immediately
@@ -156,6 +161,32 @@ export function ProfileScreen() {
               />
             );
           })}
+        </View>
+
+        {/* Payouts + Press ID card */}
+        <View style={styles.group}>
+          <MenuRow
+            icon="cash-outline"
+            label={t("profile.payouts")}
+            sub={t("profile.payoutsSub")}
+            onPress={() => router.push("/(tabs)/earnings")}
+          />
+          <MenuRow
+            icon="card-outline"
+            label={t("profile.pressCard")}
+            sub={pressCard?.card ? `${pressCard.card.cardNo} · ${pressCard.card.liveStatus === "ACTIVE" ? `${t("profile.pressCardValidTill")} ${pressCard.card.validTill}` : pressCard.card.liveStatus.toLowerCase()}` : t("profile.pressCardNotIssued")}
+            last
+            onPress={async () => {
+              Haptics.selectionAsync();
+              try {
+                const fresh = await api("/api/press-card/mine"); // links expire in 10 min - always mint fresh
+                if (!fresh?.downloadUrl) { Alert.alert(t("profile.pressCard"), t("profile.pressCardNotIssued")); return; }
+                await Linking.openURL(fresh.downloadUrl);
+              } catch {
+                Alert.alert(t("profile.pressCard"), t("profile.pressCardDownloadFail"));
+              }
+            }}
+          />
         </View>
 
         {/* Pending requests - only show the row when there's something to see */}

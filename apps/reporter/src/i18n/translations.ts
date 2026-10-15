@@ -329,6 +329,12 @@ export const translations = {
       bankDetails: "Bank & Payment",
       pendingRequests: "Pending Changes",
       experienceLabel: "Experience",
+      payouts: "Payouts",
+      payoutsSub: "Earnings and payment history",
+      pressCard: "Press ID card",
+      pressCardNotIssued: "Not issued yet",
+      pressCardValidTill: "Valid till",
+      pressCardDownloadFail: "Could not open the card. Try again.",
 
       // Field labels
       name: "Name",
@@ -817,6 +823,12 @@ export const translations = {
       bankDetails: "బ్యాంక్ & చెల్లింపు",
       pendingRequests: "పెండింగ్ మార్పులు",
       experienceLabel: "అనుభవం",
+      payouts: "చెల్లింపులు",
+      payoutsSub: "ఆదాయం మరియు చెల్లింపుల చరిత్ర",
+      pressCard: "ప్రెస్ ఐడీ కార్డ్",
+      pressCardNotIssued: "ఇంకా జారీ కాలేదు",
+      pressCardValidTill: "చెల్లుబాటు",
+      pressCardDownloadFail: "కార్డు తెరవలేకపోయాం. మళ్లీ ప్రయత్నించండి.",
 
       // Field labels
       name: "పేరు",
