@@ -53,6 +53,7 @@ import {
 } from "react";
 import { KycReviewDialog } from "@/components/users/kyc-review-dialog";
 import { PasswordResetDialog } from "@/components/users/password-reset-dialog";
+import { PressCardDialog } from "@/components/users/press-card-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -290,6 +291,7 @@ export default function UsersPage() {
   // that case). The dialog components fetch their own data.
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [resettingUser, setResettingUser] = useState<{ id: string; name: string; email: string; reporterProfileId: string | null } | null>(null);
+  const [pressCardUser, setPressCardUser] = useState<{ id: string; name: string; role: string } | null>(null);
   // Modal showing "this user is deactivated" details. Triggered from the
   // red Inactive button next to the name. Lets the admin see context + hit
   // Reactivate without digging into the row menu.
@@ -305,6 +307,11 @@ export default function UsersPage() {
     name: row.name,
     email: row.email,
     reporterProfileId: row.reporterProfileId,
+  }), []);
+  const openPressCard = useCallback((row: UserRow) => setPressCardUser({
+    id: row.id,
+    name: row.name,
+    role: row.role,
   }), []);
 
   // Quick-action: one-click verify a reporter's KYC from the row menu.
@@ -520,11 +527,12 @@ export default function UsersPage() {
             onVerifyKyc={verifyReporterKyc}
             onReview={openReview}
             onResetPassword={openResetPassword}
+            onPressCard={openPressCard}
           />
         ),
       },
     ],
-    [openEdit, openDelete, verifyReporterKyc, openReview, openResetPassword],
+    [openEdit, openDelete, verifyReporterKyc, openReview, openResetPassword, openPressCard],
   );
 
   const table = useReactTable({
@@ -984,6 +992,12 @@ export default function UsersPage() {
         onClose={() => setResettingUser(null)}
       />
 
+      {/* Press ID card */}
+      <PressCardDialog
+        user={pressCardUser}
+        onClose={() => setPressCardUser(null)}
+      />
+
       {/* Delete confirm */}
       <AlertDialog open={!!confirmDelete} onOpenChange={(v) => !v && setConfirmDelete(null)}>
         <AlertDialogContent>
@@ -1110,6 +1124,7 @@ function RowActions({
   onVerifyKyc,
   onReview,
   onResetPassword,
+  onPressCard,
 }: {
   row: UserRow;
   onEdit: (u: User) => void;
@@ -1118,6 +1133,7 @@ function RowActions({
   onVerifyKyc: (row: UserRow) => void;
   onReview: (row: UserRow) => void;
   onResetPassword: (row: UserRow) => void;
+  onPressCard: (row: UserRow) => void;
 }) {
   const isReporter = row.role === "REPORTER";
   // Seed accounts skip the KYC workflow entirely - they're built-in
@@ -1146,6 +1162,7 @@ function RowActions({
             (older accounts). */}
         <DropdownMenuItem onSelect={() => onReview(row)}>Review &amp; documents</DropdownMenuItem>
         <DropdownMenuItem onSelect={() => onResetPassword(row)}>Reset password</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => onPressCard(row)}>Press ID card</DropdownMenuItem>
 
         {/* Reporter-only quick actions stay reporter-only. */}
         {isReporter && (kycSubmitted || (hasUpdates && reporterPid)) && (
