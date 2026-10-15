@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, ActivityIndicator, Alert, RefreshControl } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { clearAuthToken } from "../lib/secure-token";
@@ -32,6 +32,12 @@ export function ProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [editPhoto, setEditPhoto] = useState(false);
   const [pressCard, setPressCard] = useState<{ card: { cardNo: string; validTill: string; liveStatus: string } | null; downloadUrl: string | null } | null>(null);
+  // Request-generation guard for the press-card fetch: rapid refocus/
+  // pull-to-refresh can fire load() multiple times before earlier calls
+  // resolve, and a slow older response must not clobber a newer one (or
+  // land after unmount).
+  const pcGen = useRef(0);
+  useEffect(() => () => { pcGen.current++; }, []);
 
   const load = useCallback(async () => {
     try {
@@ -42,7 +48,10 @@ export function ProfileScreen() {
     }
     // Press card is a secondary, best-effort fetch - never let it block the
     // primary profile load.
-    api("/api/press-card/mine").then(setPressCard).catch(() => setPressCard(null));
+    const my = ++pcGen.current;
+    api("/api/press-card/mine")
+      .then((res) => { if (my === pcGen.current) setPressCard(res); })
+      .catch(() => { if (my === pcGen.current) setPressCard(null); });
   }, [t]);
 
   // Refetch on focus so values just-approved by admin show up immediately
