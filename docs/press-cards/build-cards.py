@@ -18,6 +18,7 @@ def b64(p):
     return f"data:image/{ext};base64,{base64.b64encode(data).decode()}"
 
 LOCKUP = b64("lockup.png"); MAIN = b64("main-logo.png")
+SIGN = b64("signature.png")  # authorised signatory, transparent PNG (gitignored; also in blob uploads/press-cards/signature.png)
 VERIFY_BASE = "https://rayalaseemanews.com/verify/"
 
 def qr_for(token: str) -> str:
@@ -66,7 +67,8 @@ body {{ font-family: "Arial", sans-serif; color: #111; -webkit-print-color-adjus
 .back .qr img {{ width: 100%; height: 100%; display: block; }}
 .back .qrtxt {{ position: absolute; right: 5.5mm; top: 80.3mm; width: 16mm; text-align: center; font-size: 4.3pt; color: #666; }}
 .back .sign {{ position: absolute; left: 5.5mm; top: 70mm; width: 30mm; }}
-.back .sign .line {{ border-top: .25mm solid #333; margin-top: 7mm; padding-top: .7mm; font-size: 5.2pt; color: #333; }}
+.back .sign .sig {{ display: block; height: 7.5mm; width: auto; max-width: 28mm; margin: 0 0 -1.2mm 1mm; }}
+.back .sign .line {{ border-top: .25mm solid #333; margin-top: 0; padding-top: .7mm; font-size: 5.2pt; color: #333; }}
 .back .sign .line b {{ display: block; font-size: 5.6pt; color: #111; }}
 .back .foot {{ position: absolute; left: 0; bottom: 0; width: 60mm; height: 5.2mm; background: #111; color: #fff; display: flex; align-items: center; justify-content: center; gap: 2.5mm; font-size: 5.2pt; letter-spacing: .25mm; }}
 .back .foot b {{ color: #ff6b6b; }}
@@ -112,7 +114,7 @@ def back(s, guides=False):
   <div class="block addr"><h4>If found, please return to</h4>
     <p>Medha Publications Pvt Ltd<br>27, Adityaram Complex, Korrapadu Road, Proddatur,<br>YSR Kadapa District, Andhra Pradesh - 516360<br>Ph: {COMPANY_PHONE} · social@rayalaseemanews.com</p>
   </div>
-  <div class="sign"><div class="line"><b>Authorised Signatory</b>Medha Publications Pvt Ltd</div></div>
+  <div class="sign"><img class="sig" src="{SIGN}" alt=""><div class="line"><b>Authorised Signatory</b>Medha Publications Pvt Ltd</div></div>
   <div class="qr"><img src="{qr_for(s["token"])}" alt=""></div>
   <div class="qrtxt">Scan to verify</div>
   <div class="foot"><span>Emergency</span><b>+91 {COMPANY_PHONE}</b><span>·</span><span>{s['id']}</span></div>

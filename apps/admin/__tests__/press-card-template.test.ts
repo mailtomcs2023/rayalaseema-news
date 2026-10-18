@@ -5,7 +5,7 @@ const card = {
   cardNo: "RSN/2026/001", token: "a3dmykc2k3q7", name: "G. Srinivas Reddy", designation: "Chief Editor",
   photoUrl: "https://example.com/p.jpg", validFrom: new Date("2026-10-06T00:00:00Z"), validTill: new Date("2027-10-05T00:00:00Z"),
 };
-const assets = { lockupDataUri: "data:image/png;base64,AAA", mainLogoDataUri: "data:image/png;base64,BBB", qrDataUri: "data:image/png;base64,CCC" };
+const assets = { lockupDataUri: "data:image/png;base64,AAA", mainLogoDataUri: "data:image/png;base64,BBB", qrDataUri: "data:image/png;base64,CCC", signatureDataUri: "data:image/png;base64,DDD" };
 
 describe("press-card template", () => {
   test("verify url", () => {
@@ -21,7 +21,7 @@ describe("press-card template", () => {
   });
   test("back contains CIN, QR, card no, company phone, no personal phone", () => {
     const html = renderCardHtml("back", card, assets);
-    for (const s of ["U58130AP2026PTC127049", "data:image/png;base64,CCC", "RSN/2026/001", "9390375460", "Scan to verify"]) expect(html).toContain(s);
+    for (const s of ["U58130AP2026PTC127049", "data:image/png;base64,CCC", "RSN/2026/001", "9390375460", "Scan to verify", 'class="sig" src="data:image/png;base64,DDD"', "Authorised Signatory"]) expect(html).toContain(s);
     expect(html).not.toContain("8884575460");
   });
   test("escapes HTML in user-controlled fields", () => {
