@@ -47,6 +47,23 @@ async function logoAssets() {
   return assetCache;
 }
 
+// Authorised signatory's signature, printed over the signature line on the
+// back. Kept out of the public repo: it lives in blob storage next to the
+// staff photos and is fetched once per process, then cached.
+const SIGNATURE_URL =
+  process.env.PRESS_CARD_SIGNATURE_URL ||
+  "https://rayalaseemamedia.blob.core.windows.net/uploads/press-cards/signature.png";
+let signatureCache: string | null = null;
+async function fetchSignatureDataUri(): Promise<string> {
+  if (signatureCache) return signatureCache;
+  try {
+    signatureCache = await fetchPhotoDataUri(SIGNATURE_URL);
+    return signatureCache;
+  } catch (e) {
+    throw new PressCardRenderError("RENDER_FAILED", `signature image unavailable: ${e instanceof Error ? e.message : String(e)}`);
+  }
+}
+
 async function fetchPhotoDataUri(url: string): Promise<string> {
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), 10_000);
@@ -96,12 +113,13 @@ export async function renderPressCardPdf(card: CardData): Promise<Buffer> {
 }
 
 async function renderPressCardPdfInner(card: CardData): Promise<Buffer> {
-  const [{ lockup, main }, photo, qr] = await Promise.all([
+  const [{ lockup, main }, photo, qr, signature] = await Promise.all([
     logoAssets(),
     fetchPhotoDataUri(card.photoUrl),
     QRCode.toDataURL(verifyUrlFor(card.token), { errorCorrectionLevel: "M", margin: 1, scale: 12, color: { dark: "#111111", light: "#ffffff" } }),
+    fetchSignatureDataUri(),
   ]);
-  const assets = { lockupDataUri: lockup, mainLogoDataUri: main, qrDataUri: qr };
+  const assets = { lockupDataUri: lockup, mainLogoDataUri: main, qrDataUri: qr, signatureDataUri: signature };
   const browser = await chromium.launch();
   try {
     const out = await PDFDocument.create();
