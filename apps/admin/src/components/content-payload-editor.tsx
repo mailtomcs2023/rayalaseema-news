@@ -10,6 +10,7 @@
 
 import { useState } from "react";
 import { ImageUpload } from "@/components/image-upload";
+import { VideoIqPanel } from "@/components/video-iq/panel";
 import { VideoUpload } from "@/components/video-upload";
 import { DatePicker } from "@/components/ui/date-picker";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
@@ -32,9 +33,11 @@ export interface ContentPayloadEditorProps {
   type: string;
   payload: Payload;
   setPayload: (next: Payload) => void;
+  // Saved row id; undefined while creating. Video IQ needs a row to attach to.
+  contentId?: string;
 }
 
-export function ContentPayloadEditor({ type, payload, setPayload }: ContentPayloadEditorProps) {
+export function ContentPayloadEditor({ type, payload, setPayload, contentId }: ContentPayloadEditorProps) {
   const upd = (patch: Payload) => setPayload({ ...payload, ...patch });
 
   if (type === "VIDEO") {
@@ -65,6 +68,7 @@ export function ContentPayloadEditor({ type, payload, setPayload }: ContentPaylo
           <ImageUpload value={(payload.thumbnailUrl as string) || ""}
             onChange={(v) => upd({ thumbnailUrl: v })} />
         </Field>
+        <VideoIqPanel contentId={contentId} />
       </SectionBox>
     );
   }
@@ -84,6 +88,7 @@ export function ContentPayloadEditor({ type, payload, setPayload }: ContentPaylo
             onChange={(e) => upd({ duration: Number(e.target.value) })}
             style={inpStyle} />
         </Field>
+        <VideoIqPanel contentId={contentId} />
       </SectionBox>
     );
   }

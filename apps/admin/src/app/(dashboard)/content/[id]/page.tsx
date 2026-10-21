@@ -1338,7 +1338,7 @@ export default function ContentEditorPage() {
             )}
 
             {type !== "ARTICLE" && (
-              <ContentPayloadEditor type={type} payload={typedPayload} setPayload={setTypedPayload} />
+              <ContentPayloadEditor type={type} payload={typedPayload} setPayload={setTypedPayload} contentId={isNew ? undefined : contentId} />
             )}
             </CardContent>
           </Card>
