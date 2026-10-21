@@ -140,3 +140,13 @@ describe("validatePayload (throwing variant)", () => {
     expect(() => validatePayload(ContentType.ARTICLE, { rating: 99 })).toThrow();
   });
 });
+
+describe("transcript on video payloads (Video IQ)", () => {
+  test("VIDEO and REEL accept an optional transcript string", () => {
+    expect(safeValidatePayload(ContentType.VIDEO, { videoUrl: "https://youtu.be/abcdefghijk", transcript: "కడపలో దారుణం" }).success).toBe(true);
+    expect(safeValidatePayload(ContentType.REEL, { clipUrl: "https://x.blob.core.windows.net/u/a.mp4", transcript: "" }).success).toBe(true);
+  });
+  test("transcript must be a string", () => {
+    expect(safeValidatePayload(ContentType.VIDEO, { videoUrl: "https://youtu.be/abcdefghijk", transcript: 5 }).success).toBe(false);
+  });
+});

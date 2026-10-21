@@ -35,6 +35,10 @@ export const videoPayloadSchema = z.object({
   // find an existing row without parsing URLs, and so the player/schema
   // generators don't each re-derive it.
   videoId: z.string().regex(/^[A-Za-z0-9_-]{11}$/).optional(),
+  // Cleaned Telugu transcript written by Video IQ; rendered on the video page
+  // and emitted in VideoObject JSON-LD. Optional: videos published before
+  // Video IQ have none.
+  transcript: z.string().max(60000).optional(),
 }).strict();
 
 // REEL - short vertical clip, similar shape to VIDEO but the URL is typically
@@ -47,6 +51,8 @@ export const reelPayloadSchema = z.object({
   // Set for YouTube Shorts imported from the channel; empty for clips hosted
   // on our own Blob storage.
   videoId: z.string().regex(/^[A-Za-z0-9_-]{11}$/).optional(),
+  // Same as VIDEO: Video IQ transcript, optional.
+  transcript: z.string().max(60000).optional(),
 }).strict();
 
 // WEB_STORY - swipeable cards. At least one slide required.

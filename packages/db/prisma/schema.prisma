@@ -69,6 +69,9 @@ model User {
   // Audit log entries (actions performed by this user)
   auditLogs AuditLog[]
 
+  // Video IQ runs started by this user
+  videoOptimizations VideoOptimization[] @relation("VideoIqCreator")
+
   // Reporter profile (for REPORTER role). DB table name retained as
   // `journalist_profiles` via @@map on the model so this is a TS-only
   // rename - no migration required.
@@ -1338,6 +1341,8 @@ model Content {
   liveBlog             ContentLiveBlog?
   // SharePoint mirror records - one row per blob uploaded for this article.
   mediaMirrors         MediaMirror[]
+  // Video IQ optimisation runs for VIDEO / REEL rows.
+  videoOptimizations   VideoOptimization[]
 
   @@index([type, status, publishedAt])
   @@index([categoryId, status, publishedAt])
@@ -1915,4 +1920,105 @@ model PressCard {
   updatedAt   DateTime        @updatedAt
 
   @@map("press_cards")
+}
+
+// ============ VIDEO IQ (spec docs/superpowers/specs/2026-10-21-video-iq-design.md) ============
+
+enum VideoIqSource {
+  BLOB
+  YOUTUBE
+}
+
+enum VideoIqStatus {
+  QUEUED
+  EXTRACTING
+  TRANSCRIBING
+  ANALYZING
+  READY
+  APPROVED
+  PUBLISHING
+  APPLIED
+  FAILED
+}
+
+// One optimisation run per video. Stage machine lives in
+// apps/admin/src/lib/video-iq/worker.ts; each stage writes one Json column.
+model VideoOptimization {
+  id          String        @id @default(cuid())
+  contentId   String
+  content     Content       @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  source      VideoIqSource
+  blobUrl     String?
+  videoId     String?
+  status      VideoIqStatus @default(QUEUED)
+  transcript  Json?
+  suggestions Json?
+  scores      Json?
+  frames      Json?
+  thumbnails  Json?
+  chosen      Json?
+  applied     Json?
+  error       String?       @db.Text
+  attempts    Int           @default(0)
+  createdById String
+  createdBy   User          @relation("VideoIqCreator", fields: [createdById], references: [id])
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([status, createdAt])
+  @@index([contentId, createdAt(sort: Desc)])
+  @@map("video_optimizations")
+}
+
+// DataForSEO search-volume cache, 30-day freshness (spec 3.2a).
+model KeywordVolume {
+  term        String   @id
+  volume      Int?
+  competition String?
+  fetchedAt   DateTime @default(now())
+
+  @@map("keyword_volumes")
+}
+
+// YouTube Data API units spent per Pacific day; publish refuses past 9,000.
+model YoutubeQuotaDay {
+  date  String @id // YYYY-MM-DD in America/Los_Angeles
+  units Int    @default(0)
+
+  @@map("youtube_quota_days")
+}
+
+// Trending desk (spec 12.11): channels we watch and what they published.
+model CompetitorChannel {
+  id        String            @id @default(cuid())
+  channelId String            @unique
+  name      String
+  tier      Int               @default(2)
+  active    Boolean           @default(true)
+  videos    CompetitorVideo[]
+  createdAt DateTime          @default(now())
+
+  @@map("competitor_channels")
+}
+
+model CompetitorVideo {
+  videoId       String            @id
+  channelId     String
+  channel       CompetitorChannel @relation(fields: [channelId], references: [channelId], onDelete: Cascade)
+  title         String
+  publishedAt   DateTime
+  durationSec   Int?
+  isShort       Boolean           @default(false)
+  views         Int               @default(0)
+  viewSnapshots Json?
+  velocity      Float             @default(0)
+  outlier       Float             @default(0)
+  towns         String[]          @default([])
+  topicKey      String?
+  fetchedAt     DateTime          @default(now())
+
+  @@index([publishedAt(sort: Desc)])
+  @@index([velocity(sort: Desc)])
+  @@index([topicKey])
+  @@map("competitor_videos")
 }
