@@ -4,8 +4,7 @@ import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 import { logAudit } from "@/lib/audit";
 import { pingWebRevalidate } from "@/lib/revalidate-web";
 import { getYouTube, youtubeConfigured, youtubeDryRun } from "@/lib/video-iq/youtube";
-import { QuotaBudgetError } from "@/lib/video-iq/quota";
-import { publishOptimization } from "@/lib/video-iq/publish";
+import { classifyPublishError, publishOptimization } from "@/lib/video-iq/publish";
 import { SITE } from "@/lib/video-iq/chosen";
 
 // POST /api/video-iq/[id]/publish
@@ -50,8 +49,11 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     if (run?.content?.slug) pingWebRevalidate([`/videos/${run.content.slug}`]);
     return NextResponse.json({ videoId: result.videoId, url: `https://www.youtube.com/watch?v=${result.videoId}`, warnings: result.warnings, dryRun: youtubeDryRun() });
   } catch (e) {
-    if (e instanceof QuotaBudgetError) return NextResponse.json({ error: e.message }, { status: 429 });
-    await prisma.videoOptimization.update({ where: { id }, data: { status: "FAILED", error: String((e as Error).message).slice(0, 2000) } }).catch(() => {});
+    // publishOptimization owns the row status (APPROVED stays APPROVED on
+    // retryable failures, FAILED only after an upload whose bookkeeping
+    // failed); the route only maps the error to an HTTP status.
+    const { status } = classifyPublishError(e);
+    if (status !== 500) return NextResponse.json({ error: (e as Error).message }, { status });
     return apiError(e);
   }
 }

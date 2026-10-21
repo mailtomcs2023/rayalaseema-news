@@ -61,7 +61,8 @@ export function VideoIqPanel({ contentId }: { contentId?: string }) {
   }
   async function publish() {
     const units = quotaEstimate(row);
-    const ok = await confirm({ title: "Publish to YouTube?", description: `This writes "${chosen?.title}" to the channel and spends about ${units} quota units.`, confirmText: "Publish", destructive: true });
+    // The server publishes the SAVED choice, so the dialog quotes row.chosen.
+    const ok = await confirm({ title: "Publish to YouTube?", description: `This writes "${row?.chosen?.title}" to the channel and spends about ${units} quota units.`, confirmText: "Publish", destructive: true });
     if (!ok) return;
     try {
       const r = await opt.publish();
@@ -91,7 +92,7 @@ export function VideoIqPanel({ contentId }: { contentId?: string }) {
         </button>
         {ready && <button type="button" style={btn(false, opt.busy || !dirty)} disabled={opt.busy || !dirty} onClick={save}>Save</button>}
         {ready && <button type="button" style={btn(false, opt.busy || !canApprove({ ...row, chosen: chosen ?? row.chosen }, role).ok)} disabled={opt.busy || !canApprove({ ...row, chosen: chosen ?? row.chosen }, role).ok} onClick={approve} title={canApprove({ ...row, chosen: chosen ?? row.chosen }, role).reason}>Approve</button>}
-        {ready && <button type="button" style={btn(true, opt.busy || !canPublish(row, role).ok)} disabled={opt.busy || !canPublish(row, role).ok} onClick={publish} title={canPublish(row, role).reason}>Publish</button>}
+        {ready && <button type="button" style={btn(true, opt.busy || !canPublish(row, role, dirty).ok)} disabled={opt.busy || !canPublish(row, role, dirty).ok} onClick={publish} title={canPublish(row, role, dirty).reason}>Publish</button>}
       </div>
       {opt.err && <div style={{ color: "#991b1b", fontSize: 13, marginTop: 8 }}>{opt.err}</div>}
       {row?.error && row.status !== "APPLIED" && <div style={{ color: "#92400e", fontSize: 13, marginTop: 8 }}>{row.error}</div>}
@@ -119,7 +120,7 @@ export function VideoIqPanel({ contentId }: { contentId?: string }) {
 }
 
 function TitleTab({ s, chosen, edit, volumes }: { s: any; chosen: Chosen; edit: (p: Partial<Chosen>) => void; volumes: Map<string, number | null> }) {
-  const ctx = { entities: s.entities, breaking: false, volumes };
+  const ctx = { entities: s.entities, breaking: Boolean(s.breaking), volumes };
   return (
     <div>
       {s.titles.map((t: any, i: number) => {

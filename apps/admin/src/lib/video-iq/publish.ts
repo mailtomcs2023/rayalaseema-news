@@ -2,17 +2,22 @@
 //
 // BLOB source:    videos.insert (resumable) with the chosen snippet, then
 //                 thumbnail, playlists, English localisation, comment.
-// YOUTUBE source: videos.update on the existing id, then the same extras.
+// YOUTUBE source: videos.update on the existing id (snippet only unless the
+//                 content is PUBLISHED/SCHEDULED, so a live video is never
+//                 flipped private), then the same extras.
 //
 // The video id is saved the moment the insert returns, before any optional
 // step, so a quota error half-way through can never cause a re-upload. Each
-// extra step records a warning instead of failing the whole publish.
-import { YouTubeQuotaError, detectPlace, type VideoSnippet, type VideoStatus } from "@rayalaseema/youtube";
+// extra step records a warning instead of failing the whole publish. Status
+// ownership: this module alone moves the row between APPROVED, PUBLISHING,
+// APPLIED and FAILED; the route only maps errors to HTTP.
+import { YouTubeAuthError, YouTubeQuotaError, detectPlace, type VideoSnippet, type VideoStatus } from "@rayalaseema/youtube";
 import { chosenSchema, finalizeChosen, SITE } from "./chosen";
+import { QuotaBudgetError } from "./quota";
 
 type PublishYouTube = {
   uploadVideo: (a: { bytes: Uint8Array; sizeBytes: number; snippet: VideoSnippet; status: VideoStatus }) => Promise<string>;
-  updateSnippetStatus: (videoId: string, snippet: VideoSnippet, status: VideoStatus, recordingDetails?: { locationDescription?: string }) => Promise<void>;
+  updateSnippetStatus: (videoId: string, snippet: VideoSnippet, status?: VideoStatus, recordingDetails?: { locationDescription?: string }) => Promise<void>;
   setThumbnail: (videoId: string, jpeg: Uint8Array) => Promise<void>;
   listMyPlaylists: () => Promise<Array<{ id: string; title: string }>>;
   addToPlaylist: (playlistId: string, videoId: string) => Promise<void>;
@@ -30,16 +35,39 @@ export type PublishDeps = {
 
 export type PublishResult = { videoId: string; warnings: string[] };
 
+/** Thrown before any state is written (wrong status, missing rows, bad choice). */
+export class PublishPreconditionError extends Error {
+  constructor(m: string) {
+    super(m);
+    this.name = "PublishPreconditionError";
+  }
+}
+
+/**
+ * HTTP status for a publish failure and whether the run must stay APPROVED
+ * (retryable) rather than be marked FAILED. Used by the route.
+ */
+export function classifyPublishError(e: unknown): { status: number; keepApproved: boolean } {
+  if (e instanceof QuotaBudgetError || e instanceof YouTubeQuotaError) return { status: 429, keepApproved: true };
+  if (e instanceof YouTubeAuthError) return { status: 503, keepApproved: true };
+  if (e instanceof PublishPreconditionError || /not APPROVED|run not found|content row missing/.test(String((e as Error)?.message))) return { status: 409, keepApproved: true };
+  if (/^fetch \d{3} /.test(String((e as Error)?.message))) return { status: 502, keepApproved: true };
+  return { status: 500, keepApproved: false };
+}
+
+const TRANSCRIPT_MAX_CHARS = 60_000; // payload schema cap (packages/db/src/payload-schemas.ts)
 const watchUrl = (id: string) => `https://www.youtube.com/watch?v=${id}`;
 
 export async function publishOptimization(id: string, d: PublishDeps): Promise<PublishResult> {
   const row = await d.prisma.videoOptimization.findUnique({ where: { id } });
-  if (!row) throw new Error("run not found");
-  if (row.status !== "APPROVED") throw new Error(`run is ${row.status}, not APPROVED`);
+  if (!row) throw new PublishPreconditionError("run not found");
+  if (row.status !== "APPROVED") throw new PublishPreconditionError(`run is ${row.status}, not APPROVED`);
   const content = await d.prisma.content.findUnique({ where: { id: row.contentId } });
-  if (!content) throw new Error("content row missing");
+  if (!content) throw new PublishPreconditionError("content row missing");
+  const parsed = chosenSchema.safeParse(row.chosen);
+  if (!parsed.success) throw new PublishPreconditionError("choose a title, thumbnail and SEO first");
 
-  const chosen0 = chosenSchema.parse(row.chosen);
+  const chosen0 = parsed.data;
   const place = detectPlace(chosen0.title);
   const articleUrl = (await d.sitemapUrlFor(row.videoId, content.slug))
     ?? (content.slug && content.status === "PUBLISHED" ? `${SITE}/videos/${content.slug}` : null);
@@ -54,6 +82,7 @@ export async function publishOptimization(id: string, d: PublishDeps): Promise<P
     defaultAudioLanguage: "te",
   };
   const scheduled = content.status === "SCHEDULED" && content.scheduledAt;
+  const live = scheduled || content.status === "PUBLISHED";
   const status: VideoStatus = {
     privacyStatus: scheduled ? "private" : content.status === "PUBLISHED" ? "public" : "private",
     ...(scheduled ? { publishAt: new Date(content.scheduledAt).toISOString() } : {}),
@@ -77,7 +106,9 @@ export async function publishOptimization(id: string, d: PublishDeps): Promise<P
       applied.inserted = true;
     } else {
       videoId = row.videoId;
-      await d.youtube.updateSnippetStatus(videoId, snippet, status, place ? { locationDescription: place.en } : undefined);
+      // Only touch privacy when the content itself is live or scheduled;
+      // otherwise a metadata refresh of a public video would hide it.
+      await d.youtube.updateSnippetStatus(videoId, snippet, live ? status : undefined, place ? { locationDescription: place.en } : undefined);
       applied.updated = true;
     }
   } catch (e) {
@@ -116,26 +147,33 @@ export async function publishOptimization(id: string, d: PublishDeps): Promise<P
     if (chosen.comment.trim()) await d.youtube.insertComment(videoId, chosen.comment.trim());
   });
 
-  const prev = (content.payload ?? {}) as Record<string, unknown>;
-  const transcript: string | undefined = row.transcript?.segments?.length
-    ? row.transcript.segments.map((s: { text: string }) => s.text).join(" ").replace(/\s+/g, " ").trim()
-    : (prev.transcript as string | undefined);
-  const payload: Record<string, unknown> = {
-    ...prev,
-    videoId,
-    ...(row.source === "BLOB" ? { videoUrl: watchUrl(videoId) } : {}),
-    ...(chosen.thumbnailUrl ? { thumbnailUrl: chosen.thumbnailUrl } : {}),
-    ...(transcript ? { transcript } : {}),
-  };
-  await d.prisma.content.update({ where: { id: row.contentId }, data: { payload } });
-  await d.prisma.socialPost.upsert({
-    where: { contentId_platform: { contentId: row.contentId, platform: "YOUTUBE" } },
-    create: { contentId: row.contentId, platform: "YOUTUBE", status: "POSTED", postUrl: watchUrl(videoId), postedAt: now },
-    update: { status: "POSTED", postUrl: watchUrl(videoId), postedAt: now, error: null },
-  });
-  await d.prisma.videoOptimization.update({
-    where: { id },
-    data: { status: "APPLIED", videoId, applied: { ...applied, warnings }, error: warnings.length ? warnings.join(" | ") : null },
-  });
+  try {
+    const prev = (content.payload ?? {}) as Record<string, unknown>;
+    const spoken: string | undefined = row.transcript?.segments?.length
+      ? row.transcript.segments.map((s: { text: string }) => s.text).join(" ").replace(/\s+/g, " ").trim()
+      : (prev.transcript as string | undefined);
+    const transcript = spoken ? Array.from(spoken).slice(0, TRANSCRIPT_MAX_CHARS).join("") : undefined;
+    const payload: Record<string, unknown> = {
+      ...prev,
+      videoId,
+      ...(row.source === "BLOB" ? { videoUrl: watchUrl(videoId) } : {}),
+      ...(chosen.thumbnailUrl ? { thumbnailUrl: chosen.thumbnailUrl } : {}),
+      ...(transcript ? { transcript } : {}),
+    };
+    await d.prisma.content.update({ where: { id: row.contentId }, data: { payload } });
+    await d.prisma.socialPost.upsert({
+      where: { contentId_platform: { contentId: row.contentId, platform: "YOUTUBE" } },
+      create: { contentId: row.contentId, platform: "YOUTUBE", status: "POSTED", postUrl: watchUrl(videoId), postedAt: now },
+      update: { status: "POSTED", postUrl: watchUrl(videoId), postedAt: now, error: null },
+    });
+    await d.prisma.videoOptimization.update({
+      where: { id },
+      data: { status: "APPLIED", videoId, applied: { ...applied, warnings }, error: warnings.length ? warnings.join(" | ") : null },
+    });
+  } catch (e) {
+    // The video exists on YouTube; record that so nobody re-uploads it.
+    await d.prisma.videoOptimization.update({ where: { id }, data: { status: "FAILED", videoId, applied: { ...applied, warnings }, error: `after upload: ${(e as Error).message.slice(0, 1900)}` } }).catch(() => {});
+    throw e;
+  }
   return { videoId, warnings };
 }

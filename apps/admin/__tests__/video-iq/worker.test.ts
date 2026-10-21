@@ -9,8 +9,9 @@ function deps(over: Partial<any> = {}) {
   const updates: any[] = [];
   const prisma = {
     videoOptimization: {
-      update: async ({ data }: any) => { Object.assign(row, data); updates.push(data); return row; },
+      update: async ({ data }: any) => { Object.assign(row, data, { updatedAt: new Date() }); updates.push(data); return row; },
       findMany: async () => [row],
+      updateMany: async () => ({ count: 1 }),
     },
     content: {
       findUnique: async () => ({ id: "c1", title: "రాచమల్లు ప్రెస్ మీట్", summary: "", body: "", breaking: false, constituency: { district: { nameEn: "Kadapa" } } }),

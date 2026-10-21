@@ -33,8 +33,9 @@ export function canApprove(row: any, role: string): Gate {
   return { ok: true };
 }
 
-export function canPublish(row: any, role: string): Gate {
+export function canPublish(row: any, role: string, dirty = false): Gate {
   if (!EDITORS.includes(role as Role)) return { ok: false, reason: "editor or admin only" };
+  if (dirty) return { ok: false, reason: "save your changes first; the saved choice is what gets published" };
   if (row.status !== "APPROVED") return { ok: false, reason: "approve first" };
   if (row.suggestions?.fit?.verdict === "not_fit" && !row.chosen?.override) {
     return { ok: false, reason: "not a fit for this channel; admin override needed" };

@@ -55,18 +55,16 @@ if (import.meta.main) {
     process.exit(1);
   }
   const last: Record<string, number> = {};
-  let busy = false;
+  const inflight = new Set<string>();
   console.log("cron-runner started", BASE, Object.keys(INTERVAL).concat(DAILY_IST).join(","));
-  setInterval(async () => {
-    if (busy) return; // never overlap: a slow video-iq tick must not stack
-    busy = true;
-    try {
-      for (const job of dueJobs(new Date(), last)) {
-        last[job] = Date.now();
-        await run(job);
-      }
-    } finally {
-      busy = false;
+  setInterval(() => {
+    // Jobs run independently: a slow video-iq tick never delays
+    // publish-scheduled, and one job never stacks on itself.
+    for (const job of dueJobs(new Date(), last)) {
+      if (inflight.has(job)) continue;
+      inflight.add(job);
+      last[job] = Date.now();
+      void run(job).finally(() => inflight.delete(job));
     }
   }, TICK_MS);
 }

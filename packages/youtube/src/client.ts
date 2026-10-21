@@ -177,9 +177,10 @@ export function createYouTubeClient(o: ClientOpts) {
       await write("PUT", "videos?part=localizations", { id: videoId, localizations }, "videos.update");
     },
 
-    async updateSnippetStatus(videoId: string, snippet: VideoSnippet, status: VideoStatus, recordingDetails?: { locationDescription?: string }): Promise<void> {
-      const parts = recordingDetails ? "snippet,status,recordingDetails" : "snippet,status";
-      await write("PUT", `videos?part=${parts}`, { id: videoId, snippet, status, ...(recordingDetails ? { recordingDetails } : {}) }, "videos.update");
+    /** Update snippet, optionally status (omit to leave privacy untouched) and recordingDetails. */
+    async updateSnippetStatus(videoId: string, snippet: VideoSnippet, status?: VideoStatus, recordingDetails?: { locationDescription?: string }): Promise<void> {
+      const parts = ["snippet", ...(status ? ["status"] : []), ...(recordingDetails ? ["recordingDetails"] : [])].join(",");
+      await write("PUT", `videos?part=${parts}`, { id: videoId, snippet, ...(status ? { status } : {}), ...(recordingDetails ? { recordingDetails } : {}) }, "videos.update");
     },
 
     async insertComment(videoId: string, text: string): Promise<void> {
