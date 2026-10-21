@@ -129,6 +129,8 @@ export async function getVideoBySlug(slug: string) {
       (videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : ""),
     videoId,
     durationSeconds: typeof p.duration === "number" ? p.duration : null,
+    // Telugu transcript written by Video IQ (spec 12.5); null for older videos.
+    transcript: typeof p.transcript === "string" && p.transcript.trim() ? p.transcript.trim() : null,
     isShort: row.type === "REEL",
     publishedAt: row.publishedAt,
     viewCount: row.viewCount,

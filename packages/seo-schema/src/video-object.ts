@@ -20,6 +20,8 @@ export interface VideoObjectInput {
   thumbnailUrl?: string | null;
   /** Seconds. Omitted when unknown - a wrong duration is worse than none. */
   durationSeconds?: number | null;
+  /** Spoken Telugu (Video IQ, spec 12.5). Emitted whitespace-collapsed, 5,000 chars max. */
+  transcript?: string | null;
   publisher: {
     name: string;
     logoUrl: string;
@@ -59,6 +61,9 @@ export function buildVideoObjectSchema(input: VideoObjectInput): JsonLd {
     embedUrl: `https://www.youtube.com/embed/${input.videoId}`,
     contentUrl: `https://www.youtube.com/watch?v=${input.videoId}`,
     url: input.pageUrl,
+    ...(input.transcript?.trim()
+      ? { transcript: Array.from(input.transcript.replace(/\s+/g, " ").trim()).slice(0, 5000).join("") }
+      : {}),
     publisher: {
       "@type": "NewsMediaOrganization",
       name: input.publisher.name,

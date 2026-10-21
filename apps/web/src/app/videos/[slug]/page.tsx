@@ -78,6 +78,7 @@ export default async function VideoPage({ params }: { params: Promise<{ slug: st
         pageUrl: canonical,
         thumbnailUrl: video.thumbnail,
         durationSeconds: video.durationSeconds,
+        transcript: video.transcript,
         publisher: {
           name: config.publisher_brand_name || "Rayalaseema News",
           logoUrl: `${SITE_URL}/logo.png`,
@@ -151,6 +152,15 @@ export default async function VideoPage({ params }: { params: Promise<{ slug: st
               <p key={i}>{para}</p>
             ))}
           </div>
+        )}
+
+        {/* Spec 12.5: the spoken Telugu, collapsed by default. Search engines
+            read it as page text; viewers who want the words can open it. */}
+        {video.transcript && (
+          <details className="vp-section vp-transcript">
+            <summary className="vp-h2" style={{ cursor: "pointer" }}>వీడియో ట్రాన్స్‌క్రిప్ట్ (Transcript)</summary>
+            <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.8 }}>{video.transcript}</p>
+          </details>
         )}
 
         {relatedArticles.length > 0 && (
