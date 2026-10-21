@@ -87,6 +87,15 @@ describe("publishOptimization", () => {
     expect(status.publishAt).toBe("2026-10-25T13:30:00.000Z");
   });
 
+  test("a private upload (DRAFT content) skips the comment step instead of warning", async () => {
+    const w = world();
+    w.content.status = "DRAFT";
+    const r = await publishOptimization("r1", w as any);
+    expect(w.calls).not.toContain("comment");
+    expect(r.warnings).toEqual([]);
+    expect(w.row.applied.comment).toBe("skipped: private video");
+  });
+
   test("refuses a run that is not APPROVED", async () => {
     const w = world();
     w.row.status = "READY";

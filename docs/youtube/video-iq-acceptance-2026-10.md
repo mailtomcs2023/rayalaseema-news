@@ -64,9 +64,21 @@ Push `main` (or `gh workflow run deploy.yml`). Then on the VM: `pm2 list` shows 
 
 Required before this step: repo secrets `YOUTUBE_OAUTH_REFRESH_TOKEN`, `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` (set 2026-10-22), `AZURE_SPEECH_KEY` (existing), variable `VIDEO_IQ_YOUTUBE_DRY_RUN=1` (set). Optional: `DATAFORSEO_LOGIN` / `DATAFORSEO_PASSWORD` after the password rotation, plus the VM's public IP on the DataForSEO whitelist.
 
-## Step 3: first real publish (owner)
+## Step 3: first real publish (done 2026-10-22, private test video)
 
-`gh variable set VIDEO_IQ_YOUTUBE_DRY_RUN --body 0`, redeploy, run one press-meet video through the panel, review title and thumbnail before Publish. Verify on YouTube: title, thumbnail, chapters in the player, playlist membership, `hl=en` localisation, comment, category News, language Telugu. Record the units from `youtube_quota_days`. Confirm the website page shows the transcript (`curl -s <page> | grep -o '"transcript"'`).
+Run: `cd apps/admin && bunx tsx scripts/video-iq-local/live-publish-private.mts <blob-url> viq-live-private` with `VIDEO_IQ_YOUTUBE_DRY_RUN=0` on the 60 s re-encoded clip from blob (real HTTPS fetch), content DRAFT so the upload is **private**, playlists cleared so no public playlist shows a private entry.
+
+| Stage | Time |
+|---|---|
+| QUEUED → EXTRACTING (download + probe + 3 frames) | 3.6 s |
+| EXTRACTING → TRANSCRIBING (Azure Speech) | 7.4 s |
+| TRANSCRIBING → ANALYZING (model + keywords) | 29.5 s |
+| ANALYZING → READY (3 thumbnails) | 11.6 s |
+| publish (resumable insert 10.9 MB + thumbnail + localisation) | 18.9 s |
+
+Result read back from the API: video `8EKnCxpOqVM`, title "ప్రొద్దుటూరులో వైసీపీ అభ్యర్థి ఇంటిపై రాళ్ల దాడి | Proddatur YSRCP candidate house attack in Kadapa", privacy private, category 25, defaultLanguage/defaultAudioLanguage te, 25 tags, maxres thumbnail set, embeddable, not made for kids, localisations te + en. Quota ledger after the run: 5,459 units for the Pacific day (two dry runs plus this upload). The comment step returned 403 "insufficient permissions": YouTube does not allow comments on private videos; the same token posted comments on public videos on 2026-10-20, and the step now skips private uploads instead of warning. DataForSEO still reported "IP not whitelisted" from this machine.
+
+Owner follow-up on `8EKnCxpOqVM`: delete it in Studio, or set it public (the chapters/comment can then be added by publishing the row again as PUBLISHED content). For the first public publish through the panel, review title and thumbnail before Publish per the standing rule, then check the watch page, `hl=en`, playlist membership and the website transcript.
 
 ## Next
 

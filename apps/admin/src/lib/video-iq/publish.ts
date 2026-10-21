@@ -119,7 +119,7 @@ export async function publishOptimization(id: string, d: PublishDeps): Promise<P
   const step = async (label: string, fn: () => Promise<void>) => {
     try {
       await fn();
-      applied[label] = true;
+      if (applied[label] === undefined) applied[label] = true; // a step may record its own note (e.g. "skipped")
     } catch (e) {
       const why = e instanceof YouTubeQuotaError ? "quota exhausted, retry tomorrow" : (e as Error).message.slice(0, 200);
       warnings.push(`${label}: ${why}`);
@@ -144,7 +144,14 @@ export async function publishOptimization(id: string, d: PublishDeps): Promise<P
     await d.youtube.setLocalizations(videoId, { en: { title: chosen.title, description: en } });
   });
   await step("comment", async () => {
-    if (chosen.comment.trim()) await d.youtube.insertComment(videoId, chosen.comment.trim());
+    if (!chosen.comment.trim()) return;
+    // YouTube refuses comments on private videos (403); scheduled uploads
+    // are private until publishAt, so the comment is left for a re-publish.
+    if (status.privacyStatus === "private" && (row.source === "BLOB" || live)) {
+      applied.comment = "skipped: private video";
+      return;
+    }
+    await d.youtube.insertComment(videoId, chosen.comment.trim());
   });
 
   try {
