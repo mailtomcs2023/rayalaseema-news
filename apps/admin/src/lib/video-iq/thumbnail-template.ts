@@ -1,4 +1,6 @@
-<!doctype html>
+// Thumbnail HTML template, inlined so the renderer never reads from src/ at
+// runtime. Placeholders: {{FRAME}} {{LOGO}} {{FONT}} {{BADGE}} {{HEADLINE}}.
+export const THUMBNAIL_TEMPLATE = `<!doctype html>
 <html>
 <head>
 <meta charset="utf-8">
@@ -32,3 +34,4 @@
 </script>
 </body>
 </html>
+`;

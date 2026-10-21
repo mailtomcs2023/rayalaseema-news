@@ -2,16 +2,23 @@
 // icon, optional బ్రేకింగ్ badge and a 2-line Telugu headline, rendered by
 // the same Playwright Chromium the e-paper pipeline already installs.
 import { chromium } from "playwright";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { THUMBNAIL_TEMPLATE } from "./thumbnail-template";
 
-const HERE = join(process.cwd(), "src", "lib", "video-iq");
-const DEFAULT_LOGO = join(process.cwd(), "public", "brand", "rsn-icon-256.png");
-const DEFAULT_FONT = join(process.cwd(), "public", "anu-fonts", "Anek-Telugu-Bold.ttf");
 const YT_MAX_BYTES = 2_000_000;
 
-let template: string | null = null;
-const loadTemplate = () => (template ??= readFileSync(join(HERE, "thumbnail.html"), "utf8"));
+// `public/` lives under apps/admin; the app runs with that as cwd in
+// production, but tests may run from the repo root.
+function publicPath(...segments: string[]): string {
+  const direct = join(process.cwd(), "public", ...segments);
+  if (existsSync(direct)) return direct;
+  return join(process.cwd(), "apps", "admin", "public", ...segments);
+}
+
+const DEFAULT_LOGO = () => publicPath("brand", "rsn-icon-256.png");
+const DEFAULT_FONT = () => publicPath("anu-fonts", "Anek-Telugu-Bold.ttf");
+
 const dataUri = (bytes: Uint8Array, mime: string) => `data:${mime};base64,${Buffer.from(bytes).toString("base64")}`;
 const escapeHtml = (s: string) => s.replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[c] as string);
 
@@ -30,10 +37,10 @@ export type ThumbnailInput = {
 };
 
 export async function renderThumbnail(a: ThumbnailInput): Promise<{ jpeg: Uint8Array; width: 1280; height: 720 }> {
-  const logo = dataUri(readFileSync(a.logoPath ?? DEFAULT_LOGO), "image/png");
-  const font = dataUri(readFileSync(a.fontPath ?? DEFAULT_FONT), "font/ttf");
+  const logo = dataUri(readFileSync(a.logoPath ?? DEFAULT_LOGO()), "image/png");
+  const font = dataUri(readFileSync(a.fontPath ?? DEFAULT_FONT()), "font/ttf");
   const frame = typeof a.frame === "string" ? a.frame : dataUri(a.frame, a.frame[0] === 0x89 ? "image/png" : "image/jpeg");
-  const html = loadTemplate()
+  const html = THUMBNAIL_TEMPLATE
     .replace("{{FRAME}}", frame)
     .replace("{{LOGO}}", logo)
     .replace("{{FONT}}", font)
@@ -46,7 +53,7 @@ export async function renderThumbnail(a: ThumbnailInput): Promise<{ jpeg: Uint8A
   try {
     const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
     await page.setContent(html, { waitUntil: "load" });
-    await page.evaluate(() => document.fonts.ready);
+    await page.evaluate(() => document.fonts.ready.then(() => true));
     let quality = 90;
     let jpeg = new Uint8Array(await page.screenshot({ type: "jpeg", quality }));
     while (!jpegUnder2MB(jpeg) && quality > 50) {
