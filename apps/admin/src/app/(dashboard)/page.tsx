@@ -2,6 +2,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { RecentArticlesTable } from "@/components/dashboard/recent-articles-table";
+import { BreakoutBanner } from "@/components/dashboard/breakout-banner";
 import { KycGatedLink } from "@/components/kyc-gated-link";
 import { getDashboardStats } from "@/lib/admin-queries";
 import { auth } from "@/lib/auth";
@@ -85,6 +86,9 @@ export default async function DashboardPage() {
             + New Article
           </KycGatedLink>
         </div>
+
+        {/* Trending desk breakout alert (spec 12.11); renders nothing when quiet */}
+        <BreakoutBanner />
 
         {/* Stats Grid */}
         <div className="stat-grid">
