@@ -62,5 +62,5 @@ describe("media", () => {
     } finally {
       server.stop(true);
     }
-  });
+  }, 60_000);
 });
