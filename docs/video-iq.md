@@ -63,7 +63,10 @@ cd apps/admin && bun scripts/cron-runner.ts
 ```
 
 Playwright cannot launch Chromium under Bun on Windows (the remote-debugging pipe is not supported), so the thumbnail unit test skips there with an explicit log line. Verify the renderer with Node instead:
-`cd apps/admin && bunx tsx test-fixtures/render-sample.mts <out-dir>` (fixtures are git-ignored; see `apps/admin/__tests__/video-iq/media.test.ts` for how they are generated).
+`cd apps/admin && bunx tsx scripts/video-iq-local/render-sample.mts <out-dir> [frame.jpg]`.
+
+Full local acceptance (real Azure Speech, Azure OpenAI, blob, DataForSEO, YouTube client in dry-run mode) on a video file on disk:
+`cd apps/admin && bunx tsx scripts/video-iq-local/dry-run.mts <video.mp4> [result.txt]`. It reads keys from `apps/admin/.env`, `apps/web/.env` (speech), `.env.local` (YouTube token, DataForSEO) and `.oauth-client.local.json`, creates the content row `viq-dry-run`, runs all four stages, approves the default choice and publishes dry-run. Evidence from the first run: `docs/youtube/video-iq-acceptance-2026-10.md`.
 
 ## Quota
 

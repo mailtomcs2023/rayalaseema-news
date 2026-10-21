@@ -1,0 +1,10 @@
+import { chromium } from "playwright";
+const b = await chromium.launch({ timeout: 30000 });
+const p = await b.newPage({ viewport: { width: 1000, height: 1400 } });
+await p.goto("http://localhost:3000/videos/viq-test-video", { waitUntil: "networkidle", timeout: 120000 });
+await p.evaluate(() => { const d = document.querySelector("details.vp-transcript") as HTMLDetailsElement | null; if (d) { d.open = true; d.scrollIntoView(); } });
+await p.waitForTimeout(800);
+const el = await p.$("details.vp-transcript");
+await (el ?? p).screenshot({ path: process.argv[2], type: "png" });
+await b.close();
+console.log("shot ok");

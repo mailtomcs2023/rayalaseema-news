@@ -46,7 +46,9 @@ export async function analyzeVideo(i: AnalyzeInput, deps: { chatJson?: typeof ch
   const chatJson = deps.chatJson ?? chatJsonWithRetry;
   const raw = await chatJson<unknown>(
     { deployment: process.env.AZURE_OPENAI_COMPOSE_DEPLOYMENT || "gpt51", messages: buildMessages(i), temperature: 0.3 },
-    [1500, 3000],
+    // Telugu is token-heavy: a full contract (description, 20 tags, chapters,
+    // summaries) overran 1,500 tokens on the first live run.
+    [3000, 6000],
   );
   const parsed = suggestionsSchema.safeParse(raw);
   if (!parsed.success) {
