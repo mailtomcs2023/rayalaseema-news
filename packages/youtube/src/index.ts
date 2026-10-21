@@ -8,3 +8,5 @@ export * from "./srt";
 export * from "./contract";
 export * from "./hook";
 export * from "./dataforseo";
+export * from "./score";
+export * from "./description";
