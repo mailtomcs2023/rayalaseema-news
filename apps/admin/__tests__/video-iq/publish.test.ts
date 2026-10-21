@@ -96,6 +96,20 @@ describe("publishOptimization", () => {
     expect(w.row.applied.comment).toBe("skipped: private video");
   });
 
+  test("a standalone run (no content) publishes with its own visibility and no article link", async () => {
+    const w = world();
+    w.row.contentId = null; w.row.visibility = "scheduled"; w.row.publishAt = new Date("2026-10-25T13:30:00Z"); w.row.deskTitle = "డెస్క్";
+    w.prisma.content.findUnique = async () => { throw new Error("must not load content"); };
+    let status: any = null;
+    w.youtube.uploadVideo = async (a: any) => { status = a; w.calls.push("insert"); return "VID12345678"; };
+    const r = await publishOptimization("r1", w as any);
+    expect(status.status.privacyStatus).toBe("private");
+    expect(status.status.publishAt).toBe("2026-10-25T13:30:00.000Z");
+    expect(status.snippet.description).not.toContain("పూర్తి వార్త");
+    expect(r.videoId).toBe("VID12345678");
+    expect(w.calls).not.toContain("comment"); // scheduled = private until publishAt
+  });
+
   test("refuses a run that is not APPROVED", async () => {
     const w = world();
     w.row.status = "READY";

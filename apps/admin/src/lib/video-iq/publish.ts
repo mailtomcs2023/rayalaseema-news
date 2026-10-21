@@ -14,6 +14,7 @@
 import { YouTubeAuthError, YouTubeQuotaError, detectPlace, type VideoSnippet, type VideoStatus } from "@rayalaseema/youtube";
 import { chosenSchema, finalizeChosen, SITE } from "./chosen";
 import { QuotaBudgetError } from "./quota";
+import { visibilityToStatus } from "./studio";
 
 type PublishYouTube = {
   uploadVideo: (a: { bytes: Uint8Array; sizeBytes: number; snippet: VideoSnippet; status: VideoStatus }) => Promise<string>;
@@ -62,15 +63,18 @@ export async function publishOptimization(id: string, d: PublishDeps): Promise<P
   const row = await d.prisma.videoOptimization.findUnique({ where: { id } });
   if (!row) throw new PublishPreconditionError("run not found");
   if (row.status !== "APPROVED") throw new PublishPreconditionError(`run is ${row.status}, not APPROVED`);
-  const content = await d.prisma.content.findUnique({ where: { id: row.contentId } });
-  if (!content) throw new PublishPreconditionError("content row missing");
+  // Standalone runs (no Content) carry their own visibility; linked runs
+  // (old panel path) keep their Content for the article link only.
+  const content = row.contentId ? await d.prisma.content.findUnique({ where: { id: row.contentId } }) : null;
+  if (row.contentId && !content) throw new PublishPreconditionError("content row missing");
   const parsed = chosenSchema.safeParse(row.chosen);
   if (!parsed.success) throw new PublishPreconditionError("choose a title, thumbnail and SEO first");
 
   const chosen0 = parsed.data;
   const place = detectPlace(chosen0.title);
-  const articleUrl = (await d.sitemapUrlFor(row.videoId, content.slug))
-    ?? (content.slug && content.status === "PUBLISHED" ? `${SITE}/videos/${content.slug}` : null);
+  const articleUrl = content
+    ? (await d.sitemapUrlFor(row.videoId, content.slug)) ?? (content.slug && content.status === "PUBLISHED" ? `${SITE}/videos/${content.slug}` : null)
+    : null;
   const chosen = finalizeChosen(row, chosen0, { url: articleUrl, place, today: row.source === "BLOB" });
 
   const snippet: VideoSnippet = {
@@ -81,15 +85,21 @@ export async function publishOptimization(id: string, d: PublishDeps): Promise<P
     defaultLanguage: "te",
     defaultAudioLanguage: "te",
   };
-  const scheduled = content.status === "SCHEDULED" && content.scheduledAt;
-  const live = scheduled || content.status === "PUBLISHED";
-  const status: VideoStatus = {
-    privacyStatus: scheduled ? "private" : content.status === "PUBLISHED" ? "public" : "private",
-    ...(scheduled ? { publishAt: new Date(content.scheduledAt).toISOString() } : {}),
-    selfDeclaredMadeForKids: false,
-    embeddable: true,
-    license: "youtube",
-  };
+  // Visibility: a standalone run says it itself; a run made from the old
+  // Content panel follows the article's status (SCHEDULED → private + publishAt,
+  // PUBLISHED → public, anything else → private).
+  const visibility: string = row.visibility ?? "public";
+  const contentScheduled = Boolean(content && content.status === "SCHEDULED" && content.scheduledAt);
+  const status: VideoStatus = content && visibility === "public" && content.status !== "PUBLISHED"
+    ? {
+        privacyStatus: "private",
+        ...(contentScheduled ? { publishAt: new Date(content.scheduledAt).toISOString() } : {}),
+        selfDeclaredMadeForKids: false,
+        embeddable: true,
+        license: "youtube",
+      }
+    : visibilityToStatus({ visibility, publishAt: row.publishAt });
+  const live = status.privacyStatus === "public" || Boolean(status.publishAt);
 
   const now = (d.now ?? (() => new Date()))();
   const warnings: string[] = [];
@@ -155,24 +165,28 @@ export async function publishOptimization(id: string, d: PublishDeps): Promise<P
   });
 
   try {
-    const prev = (content.payload ?? {}) as Record<string, unknown>;
-    const spoken: string | undefined = row.transcript?.segments?.length
-      ? row.transcript.segments.map((s: { text: string }) => s.text).join(" ").replace(/\s+/g, " ").trim()
-      : (prev.transcript as string | undefined);
-    const transcript = spoken ? Array.from(spoken).slice(0, TRANSCRIPT_MAX_CHARS).join("") : undefined;
-    const payload: Record<string, unknown> = {
-      ...prev,
-      videoId,
-      ...(row.source === "BLOB" ? { videoUrl: watchUrl(videoId) } : {}),
-      ...(chosen.thumbnailUrl ? { thumbnailUrl: chosen.thumbnailUrl } : {}),
-      ...(transcript ? { transcript } : {}),
-    };
-    await d.prisma.content.update({ where: { id: row.contentId }, data: { payload } });
-    await d.prisma.socialPost.upsert({
-      where: { contentId_platform: { contentId: row.contentId, platform: "YOUTUBE" } },
-      create: { contentId: row.contentId, platform: "YOUTUBE", status: "POSTED", postUrl: watchUrl(videoId), postedAt: now },
-      update: { status: "POSTED", postUrl: watchUrl(videoId), postedAt: now, error: null },
-    });
+    // A linked website article gets the YouTube id, thumbnail and transcript;
+    // a standalone run has nothing to update until "Create website article".
+    if (content) {
+      const prev = (content.payload ?? {}) as Record<string, unknown>;
+      const spoken: string | undefined = row.transcript?.segments?.length
+        ? row.transcript.segments.map((s: { text: string }) => s.text).join(" ").replace(/\s+/g, " ").trim()
+        : (prev.transcript as string | undefined);
+      const transcript = spoken ? Array.from(spoken).slice(0, TRANSCRIPT_MAX_CHARS).join("") : undefined;
+      const payload: Record<string, unknown> = {
+        ...prev,
+        videoId,
+        ...(row.source === "BLOB" ? { videoUrl: watchUrl(videoId) } : {}),
+        ...(chosen.thumbnailUrl ? { thumbnailUrl: chosen.thumbnailUrl } : {}),
+        ...(transcript ? { transcript } : {}),
+      };
+      await d.prisma.content.update({ where: { id: row.contentId }, data: { payload } });
+      await d.prisma.socialPost.upsert({
+        where: { contentId_platform: { contentId: row.contentId, platform: "YOUTUBE" } },
+        create: { contentId: row.contentId, platform: "YOUTUBE", status: "POSTED", postUrl: watchUrl(videoId), postedAt: now },
+        update: { status: "POSTED", postUrl: watchUrl(videoId), postedAt: now, error: null },
+      });
+    }
     await d.prisma.videoOptimization.update({
       where: { id },
       data: { status: "APPLIED", videoId, applied: { ...applied, warnings }, error: warnings.length ? warnings.join(" | ") : null },

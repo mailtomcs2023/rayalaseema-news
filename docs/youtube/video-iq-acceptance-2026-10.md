@@ -68,7 +68,7 @@ Merged to `main` (after merging origin's press-card PRs; conflicts in deploy.yml
 - Tables: 14 competitor channels, 211 competitor videos, quota ledger started.
 - `https://admin.rayalaseemanews.com/trending` answers (login redirect when logged out); `https://rayalaseemanews.com/videos` 200.
 
-A second deploy (run 39671518603) then set `VIDEO_IQ_YOUTUBE_DRY_RUN=0` and shipped the private-comment fix; the VM env shows `"0"`. One production Optimize was queued on the blob-hosted "gandhi-jayanti-special-story" video to prove the Linux pipeline end to end (ffmpeg, Azure Speech, Azure OpenAI, Playwright on the VM); a second run had already been queued through the live panel by a staff user at the same time.
+A second deploy (run 39671518603) then set `VIDEO_IQ_YOUTUBE_DRY_RUN=0` and shipped the private-comment fix; the VM env shows `"0"`. One production Optimize was queued on the blob-hosted "gandhi-jayanti-special-story" video to prove the Linux pipeline end to end; the owner queued a 274 s upload through the live panel at the same time. Both reached **READY on the production server** (ffmpeg, Azure Speech, Azure OpenAI, Playwright thumbnails on the VM) between 20:41 and 20:47 UTC. A third deploy (run 39672997396) made the worker carry a run through all stages in one tick and refuse a duplicate Optimize while one is active (the owner had pressed Re-run during the first run).
 
 ## Step 3: first real publish (done 2026-10-22, private test video)
 

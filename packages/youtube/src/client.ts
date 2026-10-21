@@ -109,6 +109,11 @@ export function createYouTubeClient(o: ClientOpts) {
     get,
     write,
 
+    /** Authenticated GET of any Google API URL (e.g. YouTube Analytics v2); no quota accounting. */
+    async fetchJson<T = any>(url: string): Promise<T> {
+      return JSON.parse((await raw("GET", url)).text) as T;
+    },
+
     async getVideos(ids: string[]) {
       return get<{ items: any[] }>(`videos?part=snippet,contentDetails,status,statistics&id=${ids.join(",")}`, "videos.list");
     },
@@ -122,6 +127,22 @@ export function createYouTubeClient(o: ClientOpts) {
       const uploads = "UU" + channelId.slice(2);
       const r = await get<{ items: any[] }>(`playlistItems?part=contentDetails&playlistId=${uploads}&maxResults=${Math.min(max, 50)}`, "playlistItems.list");
       return (r.items ?? []).map((i) => i.contentDetails.videoId as string);
+    },
+
+    /** Every upload id, newest first, paging the uploads playlist (1 unit per 50; guards against a repeating page token). */
+    async listUploadsAll(channelId: string, max = 500): Promise<string[]> {
+      const uploads = "UU" + channelId.slice(2);
+      const ids: string[] = [];
+      let token = "";
+      const seen = new Set<string>();
+      while (ids.length < max) {
+        const r = await get<{ items: any[]; nextPageToken?: string }>(`playlistItems?part=contentDetails&playlistId=${uploads}&maxResults=50${token ? `&pageToken=${token}` : ""}`, "playlistItems.list");
+        for (const i of r.items ?? []) ids.push(i.contentDetails.videoId as string);
+        if (!r.nextPageToken || seen.has(r.nextPageToken) || !(r.items ?? []).length) break;
+        seen.add(r.nextPageToken);
+        token = r.nextPageToken;
+      }
+      return ids.slice(0, max);
     },
 
     async listCaptions(videoId: string): Promise<any[]> {

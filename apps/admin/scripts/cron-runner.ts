@@ -17,6 +17,7 @@ const INTERVAL: Record<string, number> = {
   "publish-scheduled": 60_000,
   "video-iq": 120_000,
   "trending-poll": 15 * 60_000,
+  "channel-sync": 30 * 60_000, // our own catalog for /youtube (~12 units per run)
 };
 const DAILY_IST = ["horoscope", "fetch-precious-metals"];
 

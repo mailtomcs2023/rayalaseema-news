@@ -6,6 +6,65 @@ import { useCallback, useEffect, useRef, useState } from "react";
 const TERMINAL = new Set(["READY", "APPROVED", "APPLIED", "FAILED"]);
 const POLL_MS = 10_000;
 
+/** Same hook, keyed by run id (the YouTube workspace page). */
+export function useRun(runId: string | undefined) {
+  const [row, setRow] = useState<any>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const rowRef = useRef<any>(null);
+  rowRef.current = row;
+
+  const load = useCallback(async () => {
+    if (!runId) return;
+    try {
+      const r = await fetch(`/api/video-iq/${runId}`);
+      if (r.ok) setRow(await r.json());
+    } finally {
+      setLoaded(true);
+    }
+  }, [runId]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      const cur = rowRef.current;
+      if (cur && !TERMINAL.has(cur.status)) void load();
+    }, 5_000);
+    return () => clearInterval(t);
+  }, [load]);
+
+  const call = useCallback(async (path: string, init?: RequestInit) => {
+    setBusy(true);
+    setErr("");
+    try {
+      const r = await fetch(path, { headers: { "content-type": "application/json" }, ...init });
+      const j = r.status === 204 ? null : await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j?.issues?.join("; ") || j?.error || r.statusText);
+      await load();
+      return j;
+    } catch (e) {
+      setErr((e as Error).message);
+      throw e;
+    } finally {
+      setBusy(false);
+    }
+  }, [load]);
+
+  return {
+    row, loaded, busy, err, reload: load,
+    save: (chosen: unknown, visibility?: { visibility: string; publishAt?: string | null }) =>
+      call(`/api/video-iq/${runId}`, { method: "PATCH", body: JSON.stringify({ chosen, ...(visibility ?? {}) }) }),
+    approve: () => call(`/api/video-iq/${runId}/approve`, { method: "POST" }),
+    override: (note: string) => call(`/api/video-iq/${runId}/override`, { method: "POST", body: JSON.stringify({ note }) }),
+    publish: () => call(`/api/video-iq/${runId}/publish`, { method: "POST" }),
+    createArticle: () => call(`/api/video-iq/${runId}/create-article`, { method: "POST" }),
+    articleLink: () => call(`/api/video-iq/${runId}/article-link`, { method: "POST" }),
+    rerun: (body: Record<string, unknown>) => call("/api/youtube/runs", { method: "POST", body: JSON.stringify(body) }),
+  };
+}
+
 export function useOptimization(contentId: string | undefined) {
   const [row, setRow] = useState<any>(null);
   const [loaded, setLoaded] = useState(false);

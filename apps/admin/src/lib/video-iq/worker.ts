@@ -78,7 +78,7 @@ async function stageQueued(row: any, d: Deps) {
   for (let i = 0; i < frames.length; i++) {
     urls.push({ t: times[i], url: await d.blob.uploadBuffer(Buffer.from(frames[i]), "jpg", "image/jpeg") });
   }
-  await set(d, row, { status: "EXTRACTING", frames: urls, suggestions: { probe }, error: null });
+  await set(d, row, { status: "EXTRACTING", frames: urls, suggestions: { probe }, durationSec: Math.round(probe.durationSec), error: null });
 }
 
 async function stageExtracting(row: any, d: Deps) {
@@ -106,20 +106,26 @@ async function stageTranscribing(row: any, d: Deps) {
   const now = (d.now ?? (() => new Date()))();
   if (!(await captionsReadyOrGivenUp(row, d, now))) return;
   const transcript: Transcript | null = row.transcript ?? null;
-  const content = await d.prisma.content.findUnique({ where: { id: row.contentId }, include: { constituency: { include: { district: true } } } });
-  if (!content) return fail(d, row, "content row missing");
+  // Desk context: the run's own fields (standalone upload); a linked Content
+  // row (old panel path) fills whatever the run left empty.
+  const content = row.contentId
+    ? await d.prisma.content.findUnique({ where: { id: row.contentId }, include: { constituency: { include: { district: true } } } })
+    : null;
+  if (row.contentId && !content) return fail(d, row, "content row missing");
+  const deskTitle: string = row.deskTitle || content?.title || "";
+  const deskDescription: string = row.deskNotes || content?.summary || content?.body || "";
   const probe = row.suggestions?.probe ?? { durationSec: transcript?.durationSec ?? 0 };
   const format = classifyFormat({ durationSec: probe.durationSec, width: probe.width, height: probe.height });
   const playlists = (await d.youtube.listMyPlaylists()).map((p) => p.title);
-  const place = detectPlace(content.title);
-  const district: string | undefined = content.constituency?.district?.nameEn ?? place?.district;
+  const place = detectPlace(deskTitle);
+  const district: string | undefined = row.district || content?.constituency?.district?.nameEn || place?.district;
   const keywordTerms = [place ? `${place.en.toLowerCase()} news` : "", district ? `${district.toLowerCase()} news today` : ""].filter(Boolean);
-  const breaking = Boolean(content.breaking);
+  const breaking = Boolean(row.breaking || content?.breaking);
   const suggestions = await d.analyze.analyzeVideo({
     format,
     transcript,
-    deskTitle: content.title,
-    deskDescription: content.summary || content.body || "",
+    deskTitle,
+    deskDescription,
     district,
     keywordTerms,
     playlists,

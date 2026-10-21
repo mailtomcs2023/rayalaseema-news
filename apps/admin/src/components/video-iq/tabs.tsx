@@ -1,126 +1,27 @@
 "use client";
-// Video IQ panel (spec 4.6): Title / Thumbnail / SEO / Review / Publish tabs
-// under the VIDEO and REEL editors. Suggestions come from the worker; the
-// editor picks, saves, approves, and (editor/admin) publishes.
-import { useEffect, useMemo, useState } from "react";
-import { useSession } from "next-auth/react";
+// The five Video IQ tabs (spec 4.6), shared by the YouTube workspace page.
+// Pure presentation over a run row + the editor's current choice.
+import { useState } from "react";
 import { joinTitle, scoreTitle, splitTitle, titleLength, TITLE_MAX } from "@rayalaseema/youtube";
 import type { Chosen } from "@/lib/video-iq/chosen";
-import { confirm } from "@/components/confirm-dialog";
-import { ToastViewport, useToasts } from "@/components/toast";
 import { ScorePill } from "./score-pill";
-import { useOptimization } from "./use-optimization";
-import { canApprove, canPublish, defaultChosen, mmss, quotaEstimate } from "./panel-logic";
+import { canPublish, mmss, quotaEstimate } from "./panel-logic";
 
-type Tab = "title" | "thumbnail" | "seo" | "review" | "publish";
-const TABS: Array<{ id: Tab; label: string }> = [
-  { id: "title", label: "Title" }, { id: "thumbnail", label: "Thumbnail" }, { id: "seo", label: "SEO" }, { id: "review", label: "Review" }, { id: "publish", label: "Publish" },
-];
+export const ui = {
+  btn: (primary = false, disabled = false): React.CSSProperties => ({
+    padding: "6px 14px", borderRadius: 6, border: "1px solid " + (primary ? "#b91c1c" : "#d1d5db"), background: primary ? "#dc2626" : "#fff",
+    color: primary ? "#fff" : "#111827", fontSize: 13, fontWeight: 600, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1,
+  }),
+  input: { width: "100%", padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 14 } as React.CSSProperties,
+  chip: { display: "inline-block", padding: "2px 8px", borderRadius: 999, background: "#f3f4f6", fontSize: 12, margin: 2 } as React.CSSProperties,
+  muted: { color: "#6b7280", fontSize: 12 } as React.CSSProperties,
+};
+const { btn, input, chip, muted } = ui;
 
-const box: React.CSSProperties = { border: "1px solid #e5e7eb", borderRadius: 10, padding: 16, marginTop: 16, background: "#fff" };
-const btn = (primary = false, disabled = false): React.CSSProperties => ({
-  padding: "6px 14px", borderRadius: 6, border: "1px solid " + (primary ? "#b91c1c" : "#d1d5db"), background: primary ? "#dc2626" : "#fff",
-  color: primary ? "#fff" : "#111827", fontSize: 13, fontWeight: 600, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1,
-});
-const input: React.CSSProperties = { width: "100%", padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 14 };
-const chip: React.CSSProperties = { display: "inline-block", padding: "2px 8px", borderRadius: 999, background: "#f3f4f6", fontSize: 12, margin: 2 };
-const muted: React.CSSProperties = { color: "#6b7280", fontSize: 12 };
+export type Edit = (p: Partial<Chosen>) => void;
 
-const STATUS_TONE: Record<string, string> = { QUEUED: "#e5e7eb", EXTRACTING: "#dbeafe", TRANSCRIBING: "#dbeafe", ANALYZING: "#dbeafe", READY: "#dcfce7", APPROVED: "#dcfce7", PUBLISHING: "#fef3c7", APPLIED: "#dcfce7", FAILED: "#fee2e2" };
-
-export function VideoIqPanel({ contentId }: { contentId?: string }) {
-  const { data: session } = useSession();
-  const role = String((session?.user as any)?.role ?? "");
-  const opt = useOptimization(contentId);
-  const { toasts, push, dismiss } = useToasts();
-  const [tab, setTab] = useState<Tab>("title");
-  const [chosen, setChosen] = useState<Chosen | null>(null);
-  const [dirty, setDirty] = useState(false);
-  const [note, setNote] = useState("");
-
-  const row = opt.row;
-  const s = row?.suggestions;
-  const ready = row && ["READY", "APPROVED", "APPLIED"].includes(row.status) && s?.titles;
-  const inFlight = Boolean(row && ["QUEUED", "EXTRACTING", "TRANSCRIBING", "ANALYZING", "PUBLISHING"].includes(row.status));
-
-  useEffect(() => {
-    if (ready && !dirty) setChosen(defaultChosen(row));
-  }, [row?.id, row?.status, ready, dirty]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const volumes = useMemo(() => new Map<string, number | null>((s?.keywords?.terms ?? []).map((k: any) => [k.term, k.volume])), [s]);
-  const edit = (patch: Partial<Chosen>) => { setChosen((c) => (c ? { ...c, ...patch } : c)); setDirty(true); };
-
-  async function save() {
-    if (!chosen) return;
-    const { override, ...rest } = chosen as Chosen & { override?: unknown };
-    void override;
-    try { await opt.save(rest); setDirty(false); push("success", "Choice saved"); } catch (e) { push("error", (e as Error).message); }
-  }
-  async function approve() {
-    if (dirty) await save();
-    try { await opt.approve(); push("success", "Approved for YouTube"); } catch (e) { push("error", (e as Error).message); }
-  }
-  async function publish() {
-    const units = quotaEstimate(row);
-    // The server publishes the SAVED choice, so the dialog quotes row.chosen.
-    const ok = await confirm({ title: "Publish to YouTube?", description: `This writes "${row?.chosen?.title}" to the channel and spends about ${units} quota units.`, confirmText: "Publish", destructive: true });
-    if (!ok) return;
-    try {
-      const r = await opt.publish();
-      push(r?.warnings?.length ? "warn" : "success", r?.dryRun ? `Dry run: ${r.videoId}` : `Published: ${r.url}`);
-      setTab("publish");
-    } catch (e) { push("error", (e as Error).message); }
-  }
-  async function override() {
-    try { await opt.override(note); setNote(""); push("success", "Override recorded"); } catch (e) { push("error", (e as Error).message); }
-  }
-
-  if (!contentId) return <div style={box}><strong>Video IQ</strong><div style={muted}>Save the item first, then run Video IQ.</div></div>;
-  if (!opt.loaded) return <div style={box}><strong>Video IQ</strong><div style={muted}>Loading…</div></div>;
-
-  return (
-    <div style={box}>
-      <ToastViewport toasts={toasts} onDismiss={dismiss} />
-      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-        <strong style={{ fontSize: 15 }}>Video IQ</strong>
-        {row && <span style={{ ...chip, background: STATUS_TONE[row.status] ?? "#e5e7eb", fontWeight: 600 }}>{row.status}</span>}
-        {row?.scores && <ScorePill label="overall" value={row.scores.overall} />}
-        {s?.format && <span style={chip}>{s.format}</span>}
-        {s?.low_confidence && <span style={{ ...chip, background: "#fef3c7" }}>low confidence</span>}
-        <span style={{ flex: 1 }} />
-        <button type="button" data-testid="viq-optimize" style={btn(false, opt.busy || inFlight)} disabled={opt.busy || inFlight} title={inFlight ? "a run is in progress; wait for READY" : undefined} onClick={() => opt.optimize().then(() => push("info", "Queued; analysis usually takes 1 to 3 minutes")).catch((e) => push("error", e.message))}>
-          {row ? "Re-run" : "Optimize"}
-        </button>
-        {ready && <button type="button" data-testid="viq-save" style={btn(false, opt.busy || !dirty)} disabled={opt.busy || !dirty} onClick={save}>Save</button>}
-        {ready && <button type="button" data-testid="viq-approve" style={btn(false, opt.busy || !canApprove({ ...row, chosen: chosen ?? row.chosen }, role).ok)} disabled={opt.busy || !canApprove({ ...row, chosen: chosen ?? row.chosen }, role).ok} onClick={approve} title={canApprove({ ...row, chosen: chosen ?? row.chosen }, role).reason}>Approve</button>}
-        {ready && <button type="button" data-testid="viq-publish" style={btn(true, opt.busy || !canPublish(row, role, dirty).ok)} disabled={opt.busy || !canPublish(row, role, dirty).ok} onClick={publish} title={canPublish(row, role, dirty).reason}>Publish</button>}
-      </div>
-      {opt.err && <div style={{ color: "#991b1b", fontSize: 13, marginTop: 8 }}>{opt.err}</div>}
-      {row?.error && row.status !== "APPLIED" && <div style={{ color: "#92400e", fontSize: 13, marginTop: 8 }}>{row.error}</div>}
-      {!row && <div style={{ ...muted, marginTop: 8 }}>Not optimised yet. Optimize extracts the audio, transcribes it (Telugu), proposes titles, SEO and thumbnails, and checks channel fit.</div>}
-      {row && !ready && row.status !== "FAILED" && <div style={{ ...muted, marginTop: 8 }}>Working: {row.status.toLowerCase()}… this panel refreshes every 10 seconds.</div>}
-
-      {ready && chosen && (
-        <>
-          <div style={{ display: "flex", gap: 4, marginTop: 14, borderBottom: "1px solid #e5e7eb" }}>
-            {TABS.map((t) => (
-              <button key={t.id} type="button" data-testid={`viq-tab-${t.id}`} onClick={() => setTab(t.id)} style={{ padding: "8px 12px", border: "none", background: "none", fontWeight: 600, fontSize: 13, color: tab === t.id ? "#dc2626" : "#374151", borderBottom: tab === t.id ? "2px solid #dc2626" : "2px solid transparent", cursor: "pointer" }}>{t.label}</button>
-            ))}
-          </div>
-          <div style={{ marginTop: 14 }}>
-            {tab === "title" && <TitleTab s={s} chosen={chosen} edit={edit} volumes={volumes} />}
-            {tab === "thumbnail" && <ThumbnailTab row={row} chosen={chosen} edit={edit} contentId={contentId} push={push} />}
-            {tab === "seo" && <SeoTab s={s} chosen={chosen} edit={edit} />}
-            {tab === "review" && <ReviewTab row={row} role={role} note={note} setNote={setNote} override={override} />}
-            {tab === "publish" && <PublishTab row={row} chosen={chosen} role={role} />}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-function TitleTab({ s, chosen, edit, volumes }: { s: any; chosen: Chosen; edit: (p: Partial<Chosen>) => void; volumes: Map<string, number | null> }) {
+export function TitleTab({ s, chosen, edit }: { s: any; chosen: Chosen; edit: Edit }) {
+  const volumes = new Map<string, number | null>((s?.keywords?.terms ?? []).map((k: any) => [k.term, k.volume]));
   const ctx = { entities: s.entities, breaking: Boolean(s.breaking), volumes };
   return (
     <div>
@@ -157,13 +58,13 @@ function TitleTab({ s, chosen, edit, volumes }: { s: any; chosen: Chosen; edit: 
   );
 }
 
-function ThumbnailTab({ row, chosen, edit, contentId, push }: { row: any; chosen: Chosen; edit: (p: Partial<Chosen>) => void; contentId: string; push: (t: any, m: string) => void }) {
+export function ThumbnailTab({ row, chosen, edit, push }: { row: any; chosen: Chosen; edit: Edit; push: (t: any, m: string) => void }) {
   const thumbs: any[] = row.thumbnails ?? [];
   const isShort = row.suggestions?.format === "SHORT";
   async function upload(file: File) {
     const fd = new FormData();
     fd.append("file", file);
-    fd.append("contentId", contentId);
+    if (row.contentId) fd.append("contentId", row.contentId);
     const r = await fetch("/api/upload", { method: "POST", body: fd });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) return push("error", j.error || "upload failed");
@@ -173,7 +74,7 @@ function ThumbnailTab({ row, chosen, edit, contentId, push }: { row: any; chosen
   return (
     <div>
       {isShort && <div style={{ ...muted, marginBottom: 8 }}>Shorts use the video itself as the cover; no thumbnail is uploaded.</div>}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 10 }}>
         {thumbs.map((t, i) => {
           const url = t.renderedUrl ?? t.frameUrl;
           const selected = chosen.thumbnailIndex === i;
@@ -181,7 +82,7 @@ function ThumbnailTab({ row, chosen, edit, contentId, push }: { row: any; chosen
             <div key={i} onClick={() => edit({ thumbnailIndex: i, thumbnailUrl: t.renderedUrl ?? t.frameUrl })} style={{ border: "2px solid " + (selected ? "#dc2626" : "#e5e7eb"), borderRadius: 8, overflow: "hidden", cursor: "pointer" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={url} alt="" style={{ width: "100%", display: "block", aspectRatio: "16/9", objectFit: "cover" }} />
-              <div style={{ ...muted, padding: 6 }}>{t.renderedUrl ? "branded" : "raw frame"} · {mmss(row.frames?.[i]?.t ?? 0)}</div>
+              <div style={{ ...muted, padding: 6 }}>{t.renderedUrl ? "branded" : "raw frame"} · {mmss(row.frames?.[i]?.t ?? 0)}{t.error ? ` · render failed: ${t.error}` : ""}</div>
             </div>
           );
         })}
@@ -204,7 +105,7 @@ function ThumbnailTab({ row, chosen, edit, contentId, push }: { row: any; chosen
   );
 }
 
-function SeoTab({ s, chosen, edit }: { s: any; chosen: Chosen; edit: (p: Partial<Chosen>) => void }) {
+export function SeoTab({ s, chosen, edit }: { s: any; chosen: Chosen; edit: Edit }) {
   const [tagInput, setTagInput] = useState("");
   const addTag = (t: string) => { const v = t.trim(); if (v && !chosen.tags.includes(v) && chosen.tags.length < 30) edit({ tags: [...chosen.tags, v] }); };
   const useInTitle = (term: string) => edit({ title: joinTitle(splitTitle(chosen.title).hook, term) });
@@ -217,7 +118,7 @@ function SeoTab({ s, chosen, edit }: { s: any; chosen: Chosen; edit: (p: Partial
   return (
     <div style={{ display: "grid", gap: 12 }}>
       <div>
-        <div style={muted}>Description (hook first; link, place line and footer are added at publish)</div>
+        <div style={muted}>Description (hook first; place line and footer are added at publish)</div>
         <textarea style={{ ...input, minHeight: 140, fontFamily: "inherit" }} value={chosen.description} onChange={(e) => edit({ description: e.target.value })} />
       </div>
       <div>
@@ -253,7 +154,7 @@ function SeoTab({ s, chosen, edit }: { s: any; chosen: Chosen; edit: (p: Partial
         ))}
       </div>
       <div>
-        <div style={muted}>Pinned comment (no links; pin it in Studio after publish)</div>
+        <div style={muted}>Pinned comment (no links; pin it in Studio after publish; skipped on private uploads)</div>
         <textarea style={{ ...input, minHeight: 60, fontFamily: "inherit" }} value={chosen.comment} onChange={(e) => edit({ comment: e.target.value })} />
       </div>
       <div>
@@ -287,7 +188,7 @@ function SeoTab({ s, chosen, edit }: { s: any; chosen: Chosen; edit: (p: Partial
   );
 }
 
-function ReviewTab({ row, role, note, setNote, override }: { row: any; role: string; note: string; setNote: (s: string) => void; override: () => void }) {
+export function ReviewTab({ row, role, note, setNote, override }: { row: any; role: string; note: string; setNote: (s: string) => void; override: () => void }) {
   const s = row.suggestions;
   const t = row.transcript;
   const fit = s.fit;
@@ -326,7 +227,7 @@ function ReviewTab({ row, role, note, setNote, override }: { row: any; role: str
       )}
       <div>
         <div style={muted}>Transcript ({t?.words ?? 0} words, {t?.locale ?? "–"})</div>
-        <div style={{ maxHeight: 280, overflow: "auto", fontSize: 13, lineHeight: 1.7, border: "1px solid #e5e7eb", borderRadius: 8, padding: 8 }}>
+        <div style={{ maxHeight: 320, overflow: "auto", fontSize: 13, lineHeight: 1.7, border: "1px solid #e5e7eb", borderRadius: 8, padding: 8 }}>
           {(t?.segments ?? []).map((seg: any, i: number) => <div key={i}><span style={{ ...muted, fontVariantNumeric: "tabular-nums" }}>{mmss(seg.start)}</span> {seg.text}</div>)}
           {!t?.segments?.length && <span style={muted}>No transcript (captions not ready or no speech).</span>}
         </div>
@@ -335,22 +236,41 @@ function ReviewTab({ row, role, note, setNote, override }: { row: any; role: str
   );
 }
 
-function PublishTab({ row, chosen, role }: { row: any; chosen: Chosen; role: string }) {
-  const gate = canPublish(row, role);
+export type Visibility = { visibility: "public" | "private" | "scheduled"; publishAt: string };
+
+export function PublishTab({ row, chosen, role, visibility, setVisibility, dirty }: { row: any; chosen: Chosen; role: string; visibility: Visibility; setVisibility: (v: Visibility) => void; dirty: boolean }) {
+  const gate = canPublish(row, role, dirty);
   const applied = row.applied;
+  const locked = ["APPLIED", "PUBLISHING"].includes(row.status);
   return (
     <div style={{ display: "grid", gap: 10, fontSize: 13 }}>
       <div><b>Title</b><div>{chosen.title}</div></div>
       <div><b>Thumbnail</b><div style={muted}>{row.suggestions?.format === "SHORT" ? "none (Short)" : chosen.thumbnailUrl ?? "none chosen"}</div></div>
-      <div><b>Description preview</b><pre style={{ whiteSpace: "pre-wrap", fontFamily: "inherit", background: "#f9fafb", padding: 8, borderRadius: 6 }}>{chosen.description}</pre><div style={muted}>Article link, place line and footer are appended automatically.</div></div>
+      <div>
+        <b>Visibility</b>
+        <div style={{ display: "flex", gap: 12, marginTop: 4, flexWrap: "wrap", alignItems: "center" }}>
+          {(["public", "private", "scheduled"] as const).map((v) => (
+            <label key={v} style={{ cursor: locked ? "default" : "pointer" }}>
+              <input type="radio" name="viq-visibility" disabled={locked} checked={visibility.visibility === v} onChange={() => setVisibility({ ...visibility, visibility: v })} style={{ marginRight: 4 }} />
+              {v === "public" ? "Public now" : v === "private" ? "Private" : "Schedule at"}
+            </label>
+          ))}
+          {visibility.visibility === "scheduled" && (
+            <input type="datetime-local" disabled={locked} value={visibility.publishAt} onChange={(e) => setVisibility({ ...visibility, publishAt: e.target.value })} style={{ ...input, width: 220 }} />
+          )}
+          {visibility.visibility === "scheduled" && <span style={muted}>IST, at least 5 minutes ahead; the video stays private until then</span>}
+        </div>
+      </div>
+      <div><b>Description preview</b><pre style={{ whiteSpace: "pre-wrap", fontFamily: "inherit", background: "#f9fafb", padding: 8, borderRadius: 6 }}>{chosen.description}</pre><div style={muted}>Place line and footer are appended automatically; the website link is added once the article is published.</div></div>
       <div><b>Tags</b> {chosen.tags.length} · <b>Playlists</b> {chosen.playlists.join(", ") || "none"} · <b>Comment</b> {chosen.comment ? "yes" : "no"} · <b>Chapters</b> {chosen.chapters.length}</div>
       <div><b>Quota</b> about {quotaEstimate(row)} units of the 10,000 daily budget ({row.source === "BLOB" ? "new upload" : "update of an existing video"})</div>
       <div><b>Fixed settings</b> category News &amp; Politics · language Telugu · not made for kids · embeddable</div>
-      {!gate.ok && <div style={{ color: "#92400e" }}>Publish blocked: {gate.reason}</div>}
+      {!gate.ok && row.status !== "APPLIED" && <div style={{ color: "#92400e" }}>Publish blocked: {gate.reason}</div>}
       {row.status === "APPLIED" && row.videoId && (
         <div style={{ background: "#dcfce7", padding: 10, borderRadius: 8 }}>
           Published: <a href={`https://www.youtube.com/watch?v=${row.videoId}`} target="_blank" rel="noreferrer">youtube.com/watch?v={row.videoId}</a>
           {applied?.at && <div style={muted}>at {new Date(applied.at).toLocaleString()}</div>}
+          {applied?.articleLink && <div style={muted}>website link added: {applied.articleLink}</div>}
           {applied?.warnings?.length > 0 && <ul style={{ margin: "6px 0 0 16px", color: "#92400e" }}>{applied.warnings.map((w: string) => <li key={w}>{w}</li>)}</ul>}
         </div>
       )}

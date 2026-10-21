@@ -1960,12 +1960,23 @@ enum VideoIqStatus {
 // apps/admin/src/lib/video-iq/worker.ts; each stage writes one Json column.
 model VideoOptimization {
   id          String        @id @default(cuid())
-  contentId   String
-  content     Content       @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  // Optional since 2026-10-22: a YouTube upload stands alone; the website
+  // article is created from the run afterwards and linked here.
+  contentId   String?
+  content     Content?      @relation(fields: [contentId], references: [id], onDelete: SetNull)
   source      VideoIqSource
   blobUrl     String?
   videoId     String?
   status      VideoIqStatus @default(QUEUED)
+  // Desk context typed at upload (used instead of a Content row).
+  deskTitle   String        @default("")
+  deskNotes   String?       @db.Text
+  breaking    Boolean       @default(false)
+  district    String?
+  // public | private | scheduled (publishAt required when scheduled)
+  visibility  String        @default("public")
+  publishAt   DateTime?
+  durationSec Int?
   transcript  Json?
   suggestions Json?
   scores      Json?
@@ -1983,6 +1994,34 @@ model VideoOptimization {
   @@index([status, createdAt])
   @@index([contentId, createdAt(sort: Desc)])
   @@map("video_optimizations")
+}
+
+// Our own channel's uploads, refreshed every 30 minutes by /api/cron/channel-sync
+// (spec 2026-10-22 §3.1). Scores are deterministic, computed at sync time from
+// the live title/description/tags.
+model ChannelVideo {
+  videoId       String    @id
+  title         String
+  description   String    @default("") @db.Text
+  tags          String[]  @default([])
+  publishedAt   DateTime
+  durationSec   Int       @default(0)
+  isShort       Boolean   @default(false)
+  privacy       String    @default("public")
+  views         Int       @default(0)
+  likes         Int       @default(0)
+  comments      Int       @default(0)
+  thumbnailUrl  String?
+  categoryId    String?
+  scores        Json?
+  rank          Int?
+  rankQuery     String?
+  rankCheckedAt DateTime?
+  syncedAt      DateTime  @default(now())
+
+  @@index([publishedAt(sort: Desc)])
+  @@index([isShort, publishedAt(sort: Desc)])
+  @@map("channel_videos")
 }
 
 // DataForSEO search-volume cache, 30-day freshness (spec 3.2a).

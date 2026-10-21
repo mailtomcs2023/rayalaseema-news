@@ -37,6 +37,9 @@ const navItems: { name: string; href: string; icon: string; roles: Role[] }[] = 
   // News Feed (restored after H1 #131 cleanup). External news sources
   // (NewsData.io + Google News RSS) - import-as-draft per article.
   { name: "News Feed", href: "/news-feed", roles: EDITORIAL, icon: "M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v12a2 2 0 01-2 2zM9 8h6M9 12h6M9 16h4" },
+  // YouTube studio (spec 2026-10-22): our channel catalog with scores,
+  // upload → Video IQ → publish, article created afterwards on demand.
+  { name: "YouTube", href: "/youtube", roles: ALL, icon: "M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" },
   // Trending desk (Video IQ spec 12.11): what the big Telugu channels are
   // publishing, with one-click story leads. Own footage only.
   { name: "Trending", href: "/trending", roles: ALL, icon: "M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" },

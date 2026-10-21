@@ -10,7 +10,7 @@
 
 import { useState } from "react";
 import { ImageUpload } from "@/components/image-upload";
-import { VideoIqPanel } from "@/components/video-iq/panel";
+import { YoutubeRunLink } from "@/components/youtube/run-link";
 import { VideoUpload } from "@/components/video-upload";
 import { DatePicker } from "@/components/ui/date-picker";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
@@ -68,7 +68,7 @@ export function ContentPayloadEditor({ type, payload, setPayload, contentId }: C
           <ImageUpload value={(payload.thumbnailUrl as string) || ""}
             onChange={(v) => upd({ thumbnailUrl: v })} />
         </Field>
-        <VideoIqPanel contentId={contentId} />
+        <YoutubeRunLink videoId={typeof payload.videoId === "string" ? payload.videoId : undefined} />
       </SectionBox>
     );
   }
@@ -88,7 +88,7 @@ export function ContentPayloadEditor({ type, payload, setPayload, contentId }: C
             onChange={(e) => upd({ duration: Number(e.target.value) })}
             style={inpStyle} />
         </Field>
-        <VideoIqPanel contentId={contentId} />
+        <YoutubeRunLink videoId={typeof payload.videoId === "string" ? payload.videoId : undefined} />
       </SectionBox>
     );
   }

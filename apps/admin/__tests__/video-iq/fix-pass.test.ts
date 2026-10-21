@@ -83,6 +83,21 @@ describe("smoke finding: an invalid model output is retried, not fatal on the fi
   });
 });
 
+describe("studio: desk context comes from the run when no Content is linked", () => {
+  test("deskTitle/deskNotes/district/breaking reach the analyzer and the stored suggestions", async () => {
+    const w = worldFor({ contentId: null, deskTitle: "ప్రొద్దుటూరులో దాడి", deskNotes: "desk notes", district: "Kadapa", breaking: true, status: "TRANSCRIBING", transcript: { locale: "te-IN", durationSec: 60, segments: [{ start: 0, end: 5, text: "రాచమల్లు ఫైర్ వరదరాజుల రెడ్డిపై" }], words: 30 }, suggestions: { probe: { durationSec: 60, width: 1280, height: 720 } } });
+    let seen: any = null;
+    (w as any).analyze = { analyzeVideo: async (i: any) => { seen = i; return SAMPLE; } };
+    (w as any).prisma.content.findUnique = async () => { throw new Error("must not load content"); };
+    await runStage(w.row, w as any);
+    expect(seen.deskTitle).toBe("ప్రొద్దుటూరులో దాడి");
+    expect(seen.deskDescription).toBe("desk notes");
+    expect(seen.district).toBe("Kadapa");
+    expect(seen.breaking).toBe(true);
+    expect(w.row.suggestions.breaking).toBe(true);
+  });
+});
+
 describe("I4: processQueue claims rows before running them", () => {
   test("two overlapping queue runs process the row once", async () => {
     const w = worldFor({ updatedAt: new Date(Date.now() - 10 * MIN) });
