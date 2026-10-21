@@ -74,6 +74,9 @@ jobs:
             # touches status/revokedAt, so a revoke done in the DB survives.
             bunx tsx scripts/seed-press-cards.ts
 
+            echo "=== Seed trending desk competitor channels (idempotent upsert by channelId) ==="
+            bunx tsx prisma/seed-competitors.ts || echo "competitor seed failed (non-fatal)"
+
             echo "=== Backfill 6-digit userCode for any user without one ==="
             # Idempotent: skips users that already have a code. Generated codes
             # avoid weak/sequential patterns (000000, 123456, etc.). Required
@@ -168,6 +171,12 @@ jobs:
             bunx playwright install --with-deps chromium || bunx playwright install chromium || true
             cd ../..
 
+            echo "=== Install ffmpeg (Video IQ audio/frame extraction) ==="
+            # Idempotent; apt skips when already current. Video IQ rows fail
+            # with "ffmpeg: not found" if this is missing, nothing else breaks.
+            command -v ffmpeg >/dev/null 2>&1 || sudo apt-get install -y -qq ffmpeg || true
+            ffmpeg -version 2>/dev/null | head -1 || echo "ffmpeg NOT installed"
+
             echo "=== Create production env files ==="
             cat > apps/web/.env << 'ENV'
             DATABASE_URL="postgresql://reapp:RayalaseemaExpress2026!@localhost:5432/rayalaseema_express"
@@ -233,6 +242,21 @@ jobs:
             # Bearer secret for the cron endpoints (/api/cron/horoscope,
             # /api/cron/fetch-precious-metals). Without it those routes 503.
             CRON_SECRET="${{ secrets.CRON_SECRET }}"
+            # Video IQ (docs/video-iq.md). YouTube writes go through the
+            # social@ channel account's refresh token; DRY_RUN=1 logs every
+            # write instead of sending it. Flip the repo variable to 0 after
+            # the first dry run looks right.
+            YOUTUBE_CHANNEL_ID="UCFZ-DcNTGQsTBpCmZk1MflA"
+            YOUTUBE_OAUTH_REFRESH_TOKEN="${{ secrets.YOUTUBE_OAUTH_REFRESH_TOKEN }}"
+            GOOGLE_OAUTH_CLIENT_ID="${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}"
+            GOOGLE_OAUTH_CLIENT_SECRET="${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}"
+            VIDEO_IQ_YOUTUBE_DRY_RUN="${{ vars.VIDEO_IQ_YOUTUBE_DRY_RUN || '1' }}"
+            # Telugu transcription (same key the web TTS uses).
+            AZURE_SPEECH_KEY="${{ secrets.AZURE_SPEECH_KEY }}"
+            AZURE_SPEECH_REGION="centralindia"
+            # Keyword volumes / SERP on the panel. Blank -> panel says "unavailable".
+            DATAFORSEO_LOGIN="${{ secrets.DATAFORSEO_LOGIN }}"
+            DATAFORSEO_PASSWORD="${{ secrets.DATAFORSEO_PASSWORD }}"
             # Optional Jina Reader key. AI Article Import falls back to
             # r.jina.ai when a source blocks our datacenter IP (eenadu etc.).
             # Works without a key (free tier); set this secret to raise the
@@ -284,6 +308,11 @@ jobs:
 
             echo "=== Restart admin ==="
             pm2 restart admin 2>/dev/null || pm2 start "bun run start" --name "admin" --cwd /home/azureuser/app/apps/admin -- -p 3001
+
+            echo "=== Restart cron runner (publish-scheduled, video-iq, trending-poll, dailies) ==="
+            # apps/admin/scripts/cron-runner.ts reads CRON_SECRET from apps/admin/.env
+            # (bun loads .env from cwd) and calls the admin cron routes on 127.0.0.1:3001.
+            pm2 restart cron 2>/dev/null || pm2 start "bun scripts/cron-runner.ts" --name "cron" --cwd /home/azureuser/app/apps/admin
 
             pm2 save
 

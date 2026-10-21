@@ -1,0 +1,93 @@
+# Video IQ
+
+AI optimisation and one-click YouTube publishing for VIDEO and REEL content,
+plus the trending desk. Spec: `docs/superpowers/specs/2026-10-21-video-iq-design.md`.
+Plan: `docs/superpowers/plans/2026-10-21-video-iq-phase-a.md`.
+
+## What it does
+
+1. Editor saves a VIDEO/REEL item (file on blob, or a YouTube URL for the back catalog) and clicks **Optimize** in the Video IQ panel under the video fields.
+2. The worker runs the row through stages, one per cron tick:
+   `QUEUED` (probe + 3 frames) → `EXTRACTING` (audio → Azure Speech te-IN) → `TRANSCRIBING` (Azure OpenAI suggestions, DataForSEO keywords, hook check) → `ANALYZING` (branded thumbnails, scores) → `READY`.
+3. Editor picks title / thumbnail / SEO in the panel, **Save**, **Approve** (editor or admin), **Publish**.
+4. Publish uploads (or updates) on YouTube with category 25, Telugu language, thumbnail, playlists, English localisation and a comment; writes `videoId`, `thumbnailUrl` and `transcript` back into the content payload; the website renders the transcript and emits it in VideoObject JSON-LD.
+5. The trending desk (`/trending`) polls 14 watched Telugu channels' RSS every 15 minutes; **Create story** opens a prefilled draft; the dashboard shows a breakout banner when 3+ channels carry one local story within an hour.
+
+## Pieces
+
+| Where | What |
+|---|---|
+| `packages/youtube` | Pure logic: places, people, Shorts rule (vertical and ≤180 s), YouTube client with quota accounting + dry run, DataForSEO client, model contract (zod), scoring, description template, SRT, RSS, trending math |
+| `apps/admin/src/lib/video-iq/*` | media (ffmpeg), transcribe, analyze (prompt), keywords (cache), thumbnail (Playwright), worker (stage machine), quota (ledger), publish, chosen, trending, story-draft |
+| `apps/admin/src/app/api/video-iq/*` | create / read / choose / approve / override / publish |
+| `apps/admin/src/app/api/cron/video-iq`, `.../trending-poll` | worker and poller entry points (Bearer `CRON_SECRET`) |
+| `apps/admin/src/components/video-iq/*` | the panel |
+| `apps/admin/src/app/(dashboard)/trending` | the desk |
+| `apps/admin/scripts/cron-runner.ts` | PM2 process `cron`: calls the cron routes on a schedule |
+| `packages/db/prisma/seed-competitors.ts` | watched channels (idempotent) |
+
+Tables: `video_optimizations`, `keyword_volumes`, `youtube_quota_days`, `competitor_channels`, `competitor_videos`.
+
+## Environment (admin app)
+
+| Var | Purpose |
+|---|---|
+| `YOUTUBE_OAUTH_REFRESH_TOKEN`, `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` | channel account OAuth (`bun scripts/google/oauth-consent.ts --profile=youtube` writes the token to `.env.local`) |
+| `YOUTUBE_CHANNEL_ID` | `UCFZ-DcNTGQsTBpCmZk1MflA` |
+| `VIDEO_IQ_YOUTUBE_DRY_RUN` | `1` logs every YouTube write (`[yt dry-run] …`) and returns video id `DRYRUN00000`; `0` sends them. Production reads the GitHub repo **variable** of the same name (default `1`). |
+| `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION` | Telugu fast transcription |
+| `AZURE_OPENAI_*`, `AZURE_OPENAI_COMPOSE_DEPLOYMENT` | suggestions model (already present) |
+| `DATAFORSEO_LOGIN`, `DATAFORSEO_PASSWORD` | keyword volumes, ideas, YouTube SERP. The VM's public IP must be whitelisted at https://app.dataforseo.com/api-access (get it with `curl -s https://api.ipify.org` on the VM via `az vm run-command`). |
+| `CRON_SECRET`, `CRON_BASE_URL` | cron runner auth and target |
+
+Binary dependencies on the VM: `ffmpeg` (apt, installed by deploy.yml) and Playwright Chromium (already installed for the e-paper renderer).
+
+## Running locally
+
+```bash
+# once
+winget install Gyan.FFmpeg            # Windows; apt-get install ffmpeg on Linux
+bun install && cd packages/db && bunx prisma db push && cd ../..
+bun run db:seed:competitors
+
+# tests
+cd packages/youtube && bun test __tests__/
+cd apps/admin && bun test __tests__/video-iq/
+
+# drive the worker by hand (admin dev server on :3001, CRON_SECRET in apps/admin/.env)
+curl -s -X POST -H "Authorization: Bearer $CRON_SECRET" http://localhost:3001/api/cron/video-iq
+curl -s -X POST -H "Authorization: Bearer $CRON_SECRET" http://localhost:3001/api/cron/trending-poll
+
+# or run the scheduler itself
+cd apps/admin && bun scripts/cron-runner.ts
+```
+
+Playwright cannot launch Chromium under Bun on Windows (the remote-debugging pipe is not supported), so the thumbnail unit test skips there with an explicit log line. Verify the renderer with Node instead:
+`cd apps/admin && bunx tsx test-fixtures/render-sample.mts <out-dir>` (fixtures are git-ignored; see `apps/admin/__tests__/video-iq/media.test.ts` for how they are generated).
+
+## Quota
+
+YouTube Data API: 10,000 units/day, reset 00:00 Pacific (12:30 IST). Every call is counted in `youtube_quota_days`; a write that would push the day past 9,000 is refused with HTTP 429 and the run stays `APPROVED` for retry tomorrow. A new upload costs ~1,850 units (insert 1,600 + thumbnail + 2 playlists + localisation + comment); a back-catalog update ~300. Quota extension form: https://support.google.com/youtube/contact/yt_api_form.
+
+## Going live
+
+1. First deploy ships with `VIDEO_IQ_YOUTUBE_DRY_RUN=1`. Optimise one video in production, approve, publish; `pm2 logs admin` shows `[yt dry-run]` lines and the row goes `APPLIED` with id `DRYRUN00000`.
+2. `gh variable set VIDEO_IQ_YOUTUBE_DRY_RUN --body 0` and redeploy (`gh workflow run deploy.yml`).
+3. Publish one real video; check title, thumbnail, chapters, playlist, `hl=en` localisation and the comment on YouTube; check the website page shows the transcript.
+
+## Failure modes
+
+| Symptom | Cause | What happens |
+|---|---|---|
+| `FAILED: no audio track in video` | screen recording / silent clip | permanent; re-upload with audio |
+| `FAILED: video longer than 60 minutes` | spec limit | permanent |
+| `FAILED: model output invalid …` | model broke the JSON contract | permanent for that run; Re-run |
+| `captions not ready; retrying …` | back-catalog row, YouTube has not produced the Telugu track yet | stays `TRANSCRIBING`, retried every tick |
+| `speech transcription failed: 4xx/5xx` | Azure Speech | retried up to 3 attempts, then `FAILED` |
+| publish 429 | quota budget | row stays `APPROVED`; retry after 12:30 IST |
+| publish warnings (thumbnail/playlists/localizations/comment) | optional step failed after the upload | row is `APPLIED` with warnings; the video exists; fix by hand in Studio or re-publish tomorrow |
+| panel says keywords unavailable | DataForSEO not configured or IP not whitelisted | everything else works |
+
+## Not in Phase A
+
+Back-catalog sweep (4.8), 48 h / 7 d performance loop (12.2), captions upload (12.4), winnable-query finder (12.6), duplicate detection (12.7), topic playlists (12.8), canonical-name sweep (12.9), publish slots (12.10), weekly report. See spec section 10 for phasing.
