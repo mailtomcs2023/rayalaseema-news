@@ -48,6 +48,21 @@ describe("analyzeVideo", () => {
     expect(s.format).toBe("VIDEO");
   });
 
+  test("over-long titles are trimmed to 100 chars keeping the English half; over-long lists are clamped", async () => {
+    const longHook = "అ".repeat(95);
+    const chatJson = (async () => ({
+      ...SAMPLE,
+      titles: [{ text: `${longHook} | Proddatur News Today Rachamallu`, why: "" }, SAMPLE.titles[1], SAMPLE.titles[2]],
+      tags: Array.from({ length: 40 }, (_, i) => `tag${i}`),
+      hashtags: ["#a", "#b", "#c", "#d", "#e", "#f", "#g"],
+    })) as any;
+    const s = await analyzeVideo(input, { chatJson });
+    expect([...s.titles[0].text].length).toBeLessThanOrEqual(100);
+    expect(s.titles[0].text.endsWith("| Proddatur News Today Rachamallu")).toBe(true);
+    expect(s.tags.length).toBe(30);
+    expect(s.hashtags.length).toBe(5);
+  });
+
   test("invalid model output throws a readable error", async () => {
     const chatJson = (async () => ({ nope: 1 })) as any;
     await expect(analyzeVideo(input, { chatJson })).rejects.toThrow(/model output invalid/);

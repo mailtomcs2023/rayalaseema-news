@@ -42,7 +42,9 @@ export type StoredSuggestions = Suggestions & {
 const MAX_ATTEMPTS = 3;
 const MAX_DURATION_SEC = 3600;
 const FRAME_POSITIONS = [0.1, 0.4, 0.7];
-const PERMANENT = /no audio|longer than|model output invalid/;
+// Permanent failures never retry. A contract violation by the model is NOT
+// permanent: the model is sampled, so the next attempt usually passes.
+const PERMANENT = /no audio|longer than|content row missing/;
 export const CAPTION_RETRY_MS = 30 * 60_000;
 export const CAPTION_MAX_ATTEMPTS = 48; // 24 hours at one poll per 30 minutes
 const PHRASES = [

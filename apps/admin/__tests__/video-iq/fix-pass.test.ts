@@ -70,6 +70,19 @@ describe("I2: the desk breaking flag reaches the thumbnail badge and the title s
   });
 });
 
+describe("smoke finding: an invalid model output is retried, not fatal on the first attempt", () => {
+  test("first invalid output keeps TRANSCRIBING with attempts 1; third marks FAILED", async () => {
+    const base = { status: "TRANSCRIBING", transcript: { locale: "te-IN", durationSec: 60, segments: [{ start: 0, end: 5, text: "రాచమల్లు ఫైర్ వరదరాజుల రెడ్డిపై" }], words: 30 }, suggestions: { probe: { durationSec: 60, width: 1280, height: 720 } } };
+    const w = worldFor(base, { analyze: { analyzeVideo: async () => { throw new Error("model output invalid: titles.0.text Too big"); } } });
+    await runStage(w.row, w as any);
+    expect(w.row.status).toBe("TRANSCRIBING");
+    expect(w.row.attempts).toBe(1);
+    await runStage(w.row, w as any);
+    await runStage(w.row, w as any);
+    expect(w.row.status).toBe("FAILED");
+  });
+});
+
 describe("I4: processQueue claims rows before running them", () => {
   test("two overlapping queue runs process the row once", async () => {
     const w = worldFor({ updatedAt: new Date(Date.now() - 10 * MIN) });
