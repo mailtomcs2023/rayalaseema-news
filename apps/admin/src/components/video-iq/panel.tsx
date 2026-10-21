@@ -41,6 +41,7 @@ export function VideoIqPanel({ contentId }: { contentId?: string }) {
   const row = opt.row;
   const s = row?.suggestions;
   const ready = row && ["READY", "APPROVED", "APPLIED"].includes(row.status) && s?.titles;
+  const inFlight = Boolean(row && ["QUEUED", "EXTRACTING", "TRANSCRIBING", "ANALYZING", "PUBLISHING"].includes(row.status));
 
   useEffect(() => {
     if (ready && !dirty) setChosen(defaultChosen(row));
@@ -87,7 +88,7 @@ export function VideoIqPanel({ contentId }: { contentId?: string }) {
         {s?.format && <span style={chip}>{s.format}</span>}
         {s?.low_confidence && <span style={{ ...chip, background: "#fef3c7" }}>low confidence</span>}
         <span style={{ flex: 1 }} />
-        <button type="button" data-testid="viq-optimize" style={btn(false, opt.busy)} disabled={opt.busy} onClick={() => opt.optimize().then(() => push("info", "Queued; analysis takes a few minutes")).catch((e) => push("error", e.message))}>
+        <button type="button" data-testid="viq-optimize" style={btn(false, opt.busy || inFlight)} disabled={opt.busy || inFlight} title={inFlight ? "a run is in progress; wait for READY" : undefined} onClick={() => opt.optimize().then(() => push("info", "Queued; analysis usually takes 1 to 3 minutes")).catch((e) => push("error", e.message))}>
           {row ? "Re-run" : "Optimize"}
         </button>
         {ready && <button type="button" data-testid="viq-save" style={btn(false, opt.busy || !dirty)} disabled={opt.busy || !dirty} onClick={save}>Save</button>}

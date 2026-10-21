@@ -178,26 +178,43 @@ export async function runStage(row: any, d: Deps): Promise<void> {
   }
 }
 
-const ACTIVE = ["QUEUED", "EXTRACTING", "TRANSCRIBING", "ANALYZING"];
+export const ACTIVE_STATUSES = ["QUEUED", "EXTRACTING", "TRANSCRIBING", "ANALYZING"] as const;
 const STALE_MS = 90_000;
+const RUN_BUDGET_MS = 240_000; // the cron route allows 300 s; leave headroom for the last stage
+const MAX_STAGES_PER_CALL = 5;
+
+/** The in-flight run for a content row, if any (used to refuse a duplicate Optimize). */
+export async function activeRunExists(prisma: any, contentId: string): Promise<{ id: string; status: string } | null> {
+  const row = await prisma.videoOptimization.findFirst({ where: { contentId, status: { in: [...ACTIVE_STATUSES] } }, select: { id: true, status: true } });
+  return row ?? null;
+}
 
 /**
- * Advance up to `limit` rows one stage each. A row is claimed by bumping its
- * updatedAt in a conditional update, so two runners (the PM2 scheduler and a
- * manual curl, or an overlapping tick) can never process the same row twice.
+ * Advance up to `limit` rows. A row is claimed by bumping its updatedAt in a
+ * conditional update, so two runners (the PM2 scheduler and a manual curl, or
+ * an overlapping tick) can never process the same row twice. A claimed row is
+ * then carried through consecutive stages in this same call (a whole run
+ * normally finishes in one tick) and released as soon as a stage makes no
+ * progress: waiting for captions, or a retryable error.
  */
 export async function processQueue(d: Deps, limit = 3): Promise<{ processed: string[] }> {
   const stale = new Date(Date.now() - STALE_MS);
   const candidates = await d.prisma.videoOptimization.findMany({
-    where: { status: { in: ACTIVE }, updatedAt: { lt: stale } },
+    where: { status: { in: [...ACTIVE_STATUSES] }, updatedAt: { lt: stale } },
     orderBy: { createdAt: "asc" },
     take: limit,
   });
   const processed: string[] = [];
+  const started = Date.now();
   for (const r of candidates) {
     const claim = await d.prisma.videoOptimization.updateMany({ where: { id: r.id, updatedAt: { lt: stale } }, data: { updatedAt: new Date() } });
     if (claim.count !== 1) continue; // someone else took it
-    await runStage(r, d);
+    for (let stages = 0; stages < MAX_STAGES_PER_CALL && (ACTIVE_STATUSES as readonly string[]).includes(r.status); stages++) {
+      if (stages > 0 && Date.now() - started > RUN_BUDGET_MS) break;
+      const before = r.status;
+      await runStage(r, d);
+      if (r.status === before) break; // no progress this stage: waiting or retrying later
+    }
     processed.push(r.id);
   }
   return { processed };

@@ -72,11 +72,9 @@ Full local acceptance (real Azure Speech, Azure OpenAI, blob, DataForSEO, YouTub
 
 YouTube Data API: 10,000 units/day, reset 00:00 Pacific (12:30 IST). Every call is counted in `youtube_quota_days`; a write that would push the day past 9,000 is refused with HTTP 429 and the run stays `APPROVED` for retry tomorrow. A new upload costs ~1,850 units (insert 1,600 + thumbnail + 2 playlists + localisation + comment); a back-catalog update ~300. Quota extension form: https://support.google.com/youtube/contact/yt_api_form.
 
-## Going live
+## Going live (done 2026-10-22)
 
-1. First deploy ships with `VIDEO_IQ_YOUTUBE_DRY_RUN=1`. Optimise one video in production, approve, publish; `pm2 logs admin` shows `[yt dry-run]` lines and the row goes `APPLIED` with id `DRYRUN00000`.
-2. `gh variable set VIDEO_IQ_YOUTUBE_DRY_RUN --body 0` and redeploy (`gh workflow run deploy.yml`).
-3. Publish one real video; check title, thumbnail, chapters, playlist, `hl=en` localisation and the comment on YouTube; check the website page shows the transcript.
+Deployed to production in two steps: first with `VIDEO_IQ_YOUTUBE_DRY_RUN=1` (verified ffmpeg, PM2 `cron`, env, cron routes, trending poll), then with the repo variable set to `0`, so Publish now writes to the channel. To pause YouTube writes again: `gh variable set VIDEO_IQ_YOUTUBE_DRY_RUN --body 1` and redeploy (`gh workflow run deploy.yml`); Optimize keeps working either way. Evidence and the first real upload: `docs/youtube/video-iq-acceptance-2026-10.md`.
 
 ## Failure modes
 

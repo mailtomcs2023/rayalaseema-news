@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 import { logAudit } from "@/lib/audit";
+import { activeRunExists } from "@/lib/video-iq/worker";
 
 // POST /api/video-iq { contentId }  → queue an optimisation run for a VIDEO/REEL
 // GET  /api/video-iq?contentId=     → latest run for that content (204 when none)
@@ -27,6 +28,11 @@ export async function POST(req: NextRequest) {
     const source = videoId ? "YOUTUBE" : "BLOB";
     if (source === "BLOB" && !BLOB_HOST.test(url)) {
       return NextResponse.json({ error: "video must be uploaded to blob storage or be a YouTube URL" }, { status: 400 });
+    }
+
+    const active = await activeRunExists(prisma, contentId);
+    if (active) {
+      return NextResponse.json({ error: `a run is already in progress (${active.status.toLowerCase()}); wait for it to finish`, id: active.id }, { status: 409 });
     }
 
     const row = await prisma.videoOptimization.create({

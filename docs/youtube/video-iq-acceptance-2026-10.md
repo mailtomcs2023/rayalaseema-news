@@ -58,11 +58,17 @@ Scripts: `apps/admin/scripts/video-iq-local/ui-smoke.mts`, `ui-smoke-trending.mt
 - Two more defects found and fixed on the way: the title repair cut a Telugu word in half (now trims at a word boundary), and the panel's header buttons needed stable test ids.
 - `/trending` renders the desk (100 videos in 24 h; 13 with Rayalaseema towns; clusters view) and **Create story** opens a prefilled DRAFT in the editor. Screenshots `ui-trending-*.png`. A trailing ": 🔴 LIVE" title slipped through the live filter and into the draft title; both fixed.
 
-## Step 2: deploy with dry run on (owner)
+## Step 2: deploy with dry run on (done 2026-10-22, deploy run 39670409296)
 
-Push `main` (or `gh workflow run deploy.yml`). Then on the VM: `pm2 list` shows `cron`; `pm2 logs cron` shows `video-iq 200` and `trending-poll 200` lines; `/trending` fills within 15 minutes; one Content row optimised in production reaches READY.
+Merged to `main` (after merging origin's press-card PRs; conflicts in deploy.yml and two .gitignore files resolved by keeping both sides) and pushed. Verified on the VM with `az vm run-command` right after the deploy:
 
-Required before this step: repo secrets `YOUTUBE_OAUTH_REFRESH_TOKEN`, `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` (set 2026-10-22), `AZURE_SPEECH_KEY` (existing), variable `VIDEO_IQ_YOUTUBE_DRY_RUN=1` (set). Optional: `DATAFORSEO_LOGIN` / `DATAFORSEO_PASSWORD` after the password rotation, plus the VM's public IP on the DataForSEO whitelist.
+- `ffmpeg version 6.1.1-3ubuntu5` installed; PM2 shows `web`, `admin` and the new `cron` process online.
+- `apps/admin/.env` carries all Video IQ keys (YouTube token and client, channel id, dry-run flag, Azure Speech, DataForSEO, CRON_SECRET).
+- `POST /api/cron/video-iq` → `{"processed":[]}`; `POST /api/cron/trending-poll` → 14 channels, 210 new videos on the first tick; `pm2 logs cron` shows publish-scheduled / video-iq / trending-poll returning 200.
+- Tables: 14 competitor channels, 211 competitor videos, quota ledger started.
+- `https://admin.rayalaseemanews.com/trending` answers (login redirect when logged out); `https://rayalaseemanews.com/videos` 200.
+
+A second deploy (run 39671518603) then set `VIDEO_IQ_YOUTUBE_DRY_RUN=0` and shipped the private-comment fix; the VM env shows `"0"`. One production Optimize was queued on the blob-hosted "gandhi-jayanti-special-story" video to prove the Linux pipeline end to end (ffmpeg, Azure Speech, Azure OpenAI, Playwright on the VM); a second run had already been queued through the live panel by a staff user at the same time.
 
 ## Step 3: first real publish (done 2026-10-22, private test video)
 

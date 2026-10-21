@@ -109,10 +109,28 @@ describe("worker stages", () => {
     expect(d.row.error).toMatch(/captions not ready/);
   });
 
-  test("processQueue runs one stage per queued row and reports ids", async () => {
+  test("processQueue carries a claimed row through every stage in one call", async () => {
     const d = deps();
     const r = await processQueue(d as any, 3);
     expect(r.processed).toEqual(["r1"]);
-    expect(d.row.status).toBe("EXTRACTING");
+    expect(d.row.status).toBe("READY");
+    expect(d.row.thumbnails.length).toBe(3);
+  });
+
+  test("processQueue stops at a stage that is waiting (captions not ready) instead of spinning", async () => {
+    const d = deps();
+    d.row.source = "YOUTUBE"; d.row.videoId = "abcdefghijk"; d.row.blobUrl = null;
+    let polls = 0;
+    d.transcribe.transcriptFromCaptions = async () => { polls++; return null; };
+    await processQueue(d as any, 3);
+    expect(d.row.status).toBe("TRANSCRIBING");
+    expect(polls).toBe(1);
+  });
+
+  test("activeRunExists reports an in-flight run for the content", async () => {
+    const { activeRunExists } = await import("../../src/lib/video-iq/worker");
+    const prisma = { videoOptimization: { findFirst: async ({ where }: any) => (where.contentId === "c1" ? { id: "r1", status: "EXTRACTING" } : null) } };
+    expect(await activeRunExists(prisma, "c1")).toEqual({ id: "r1", status: "EXTRACTING" });
+    expect(await activeRunExists(prisma, "c2")).toBeNull();
   });
 });
