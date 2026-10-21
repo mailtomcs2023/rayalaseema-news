@@ -14,13 +14,18 @@ export function titleLength(t: string): number {
   return [...t].length;
 }
 
+/** Join hook and English headline; when over 100 chars, shorten the hook at a word boundary. */
 export function joinTitle(hook: string, english: string): string {
-  let h = hook.trim();
+  const h = hook.trim();
   const e = english.trim();
-  let out = e ? `${h} | ${e}` : h;
-  while (titleLength(out) > TITLE_MAX && [...h].length > 10) {
-    h = [...h].slice(0, -1).join("").trim();
-    out = e ? `${h} | ${e}` : h;
-  }
-  return out;
+  const full = e ? `${h} | ${e}` : h;
+  if (titleLength(full) <= TITLE_MAX) return full;
+  const room = TITLE_MAX - (e ? titleLength(` | ${e}`) : 0);
+  if (room < 10) return full; // nothing sensible to cut; the caller's validation will catch it
+  const chars = [...h];
+  let cut = chars.slice(0, room).join("");
+  const lastSpace = cut.lastIndexOf(" ");
+  if (lastSpace >= 10) cut = cut.slice(0, lastSpace);
+  cut = cut.replace(/[\s,.:;|\-–—]+$/g, "").trim();
+  return e ? `${cut} | ${e}` : cut;
 }

@@ -87,12 +87,12 @@ export function VideoIqPanel({ contentId }: { contentId?: string }) {
         {s?.format && <span style={chip}>{s.format}</span>}
         {s?.low_confidence && <span style={{ ...chip, background: "#fef3c7" }}>low confidence</span>}
         <span style={{ flex: 1 }} />
-        <button type="button" style={btn(false, opt.busy)} disabled={opt.busy} onClick={() => opt.optimize().then(() => push("info", "Queued; analysis takes a few minutes")).catch((e) => push("error", e.message))}>
+        <button type="button" data-testid="viq-optimize" style={btn(false, opt.busy)} disabled={opt.busy} onClick={() => opt.optimize().then(() => push("info", "Queued; analysis takes a few minutes")).catch((e) => push("error", e.message))}>
           {row ? "Re-run" : "Optimize"}
         </button>
-        {ready && <button type="button" style={btn(false, opt.busy || !dirty)} disabled={opt.busy || !dirty} onClick={save}>Save</button>}
-        {ready && <button type="button" style={btn(false, opt.busy || !canApprove({ ...row, chosen: chosen ?? row.chosen }, role).ok)} disabled={opt.busy || !canApprove({ ...row, chosen: chosen ?? row.chosen }, role).ok} onClick={approve} title={canApprove({ ...row, chosen: chosen ?? row.chosen }, role).reason}>Approve</button>}
-        {ready && <button type="button" style={btn(true, opt.busy || !canPublish(row, role, dirty).ok)} disabled={opt.busy || !canPublish(row, role, dirty).ok} onClick={publish} title={canPublish(row, role, dirty).reason}>Publish</button>}
+        {ready && <button type="button" data-testid="viq-save" style={btn(false, opt.busy || !dirty)} disabled={opt.busy || !dirty} onClick={save}>Save</button>}
+        {ready && <button type="button" data-testid="viq-approve" style={btn(false, opt.busy || !canApprove({ ...row, chosen: chosen ?? row.chosen }, role).ok)} disabled={opt.busy || !canApprove({ ...row, chosen: chosen ?? row.chosen }, role).ok} onClick={approve} title={canApprove({ ...row, chosen: chosen ?? row.chosen }, role).reason}>Approve</button>}
+        {ready && <button type="button" data-testid="viq-publish" style={btn(true, opt.busy || !canPublish(row, role, dirty).ok)} disabled={opt.busy || !canPublish(row, role, dirty).ok} onClick={publish} title={canPublish(row, role, dirty).reason}>Publish</button>}
       </div>
       {opt.err && <div style={{ color: "#991b1b", fontSize: 13, marginTop: 8 }}>{opt.err}</div>}
       {row?.error && row.status !== "APPLIED" && <div style={{ color: "#92400e", fontSize: 13, marginTop: 8 }}>{row.error}</div>}
@@ -103,7 +103,7 @@ export function VideoIqPanel({ contentId }: { contentId?: string }) {
         <>
           <div style={{ display: "flex", gap: 4, marginTop: 14, borderBottom: "1px solid #e5e7eb" }}>
             {TABS.map((t) => (
-              <button key={t.id} type="button" onClick={() => setTab(t.id)} style={{ padding: "8px 12px", border: "none", background: "none", fontWeight: 600, fontSize: 13, color: tab === t.id ? "#dc2626" : "#374151", borderBottom: tab === t.id ? "2px solid #dc2626" : "2px solid transparent", cursor: "pointer" }}>{t.label}</button>
+              <button key={t.id} type="button" data-testid={`viq-tab-${t.id}`} onClick={() => setTab(t.id)} style={{ padding: "8px 12px", border: "none", background: "none", fontWeight: 600, fontSize: 13, color: tab === t.id ? "#dc2626" : "#374151", borderBottom: tab === t.id ? "2px solid #dc2626" : "2px solid transparent", cursor: "pointer" }}>{t.label}</button>
             ))}
           </div>
           <div style={{ marginTop: 14 }}>
