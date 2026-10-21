@@ -86,6 +86,16 @@ Result read back from the API: video `8EKnCxpOqVM`, title "ప్రొద్ద
 
 Owner follow-up on `8EKnCxpOqVM`: delete it in Studio, or set it public (the chapters/comment can then be added by publishing the row again as PUBLISHED content). For the first public publish through the panel, review title and thumbnail before Publish per the standing rule, then check the watch page, `hl=en`, playlist membership and the website transcript.
 
+## Studio screens (2026-10-22, spec `docs/superpowers/specs/2026-10-22-youtube-studio-design.md`)
+
+Browser smoke on the local admin dev server (`scripts/video-iq-local/ui-smoke-studio.mts`), after `POST /api/cron/channel-sync` pulled the catalog (243 videos, 243 updated):
+
+- `/youtube`: 243 catalog cards with thumbnail, title, views, age, views/hour, Title and Content score pills, "Score video" on un-run videos, "optimised" plus a Thumbnail pill on the private test upload, amber "opportunity" markers, Check rank links; Shorts tab; sort by opportunities; **Channel insights** tab from the Analytics API: 27.2K views / 90 h watch time / +35 −3 subscribers in 28 days, 232 subscribers, 236 videos, 179.2K lifetime views, traffic sources led by the Shorts feed at 91.3% and YouTube search at 3.4%. Screenshots `studio-1-catalog.png`, `studio-1b-opportunities.png`, `studio-1c-shorts.png`, `studio-1d-insights.png`.
+- `/youtube/new`: the 60 s clip uploaded straight to blob via SAS, desk title typed, Breaking ticked, **Start Video IQ** created a standalone run (no Content row, `breaking: true`, visibility public by default) and opened `/youtube/<id>` with the progress rail. Screenshots `studio-2-new.png`, `studio-3-progress.png`.
+- Worker: QUEUED → READY in one cron tick (~65 s) once the 90 s claim window passed.
+- `/youtube/<id>`: Save (title 2, visibility Private) → Approve → Publish behind the confirm dialog ("as a private video") → APPLIED with id `DRYRUN00000`; the server logged insert, thumbnail, two playlists and localisation, and skipped the comment for the private upload. **Create website article** created a DRAFT VIDEO article (YouTube watch URL, video id, thumbnail, transcript, duration, summary, editor note, breaking) linked to the run and opened the editor. Screenshots `studio-4-ready.png`, `studio-5-applied.png`, `studio-6-article.png`.
+- Defect found and fixed on the way: Approve returned 500 for a standalone run because it upserted a SocialPost keyed by the (null) content id; the upsert is now skipped when no article is linked.
+
 ## Next
 
-Phase B (back catalog via captions, 12.2, 12.4, 12.6, 12.7, 12.9) and Phase C (sweep, 12.8, 12.10, weekly report) each get their own plan once step 3 is signed off.
+Phase B (back catalog via captions, 12.2, 12.4, 12.6, 12.7, 12.9) and Phase C (sweep, 12.8, 12.10, weekly report) each get their own plan.

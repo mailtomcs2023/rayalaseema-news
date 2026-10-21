@@ -4,14 +4,17 @@ AI optimisation and one-click YouTube publishing for VIDEO and REEL content,
 plus the trending desk. Spec: `docs/superpowers/specs/2026-10-21-video-iq-design.md`.
 Plan: `docs/superpowers/plans/2026-10-21-video-iq-phase-a.md`.
 
-## What it does
+## What it does (studio screens, 2026-10-22)
 
-1. Editor saves a VIDEO/REEL item (file on blob, or a YouTube URL for the back catalog) and clicks **Optimize** in the Video IQ panel under the video fields.
-2. The worker runs the row through stages, one per cron tick:
-   `QUEUED` (probe + 3 frames) → `EXTRACTING` (audio → Azure Speech te-IN) → `TRANSCRIBING` (Azure OpenAI suggestions, DataForSEO keywords, hook check) → `ANALYZING` (branded thumbnails, scores) → `READY`.
-3. Editor picks title / thumbnail / SEO in the panel, **Save**, **Approve** (editor or admin), **Publish**.
-4. Publish uploads (or updates) on YouTube with category 25, Telugu language, thumbnail, playlists, English localisation and a comment; writes `videoId`, `thumbnailUrl` and `transcript` back into the content payload; the website renders the transcript and emits it in VideoObject JSON-LD.
-5. The trending desk (`/trending`) polls 14 watched Telugu channels' RSS every 15 minutes; **Create story** opens a prefilled draft; the dashboard shows a breakout banner when 3+ channels carry one local story within an hour.
+1. **YouTube → Upload** (`/youtube/new`): drop the file (goes straight to blob), type the Telugu desk title, optional notes, Breaking, district, visibility (Public now / Private / Schedule at). **Start Video IQ** creates a standalone run; no website article exists yet.
+2. The worker (PM2 `cron`, every 2 minutes) carries the run through all stages in one tick, usually 1 to 3 minutes:
+   `QUEUED` (download + probe + 3 frames) → `EXTRACTING` (audio → Azure Speech te-IN) → `TRANSCRIBING` (Azure OpenAI suggestions, DataForSEO keywords, hook check) → `ANALYZING` (branded thumbnails, scores) → `READY`.
+3. The workspace (`/youtube/[id]`) shows a progress rail, then Title / Thumbnail / SEO / Review / Publish. **Save**, **Approve** (editor or admin), **Publish** to the channel with category 25, Telugu, thumbnail, playlists, English localisation and (on public videos) a comment.
+4. After publish: **Create website article** makes a DRAFT VIDEO article with the YouTube link, thumbnail and transcript and opens the normal editor; once that article is published, **Add website link to YouTube** appends the page URL to the description.
+5. **YouTube** (`/youtube`): the channel catalog, synced every 30 minutes (`/api/cron/channel-sync`, ~12 units): every upload with views, age, views/hour, Title and Content scores computed from the live metadata, Thumbnail score when a run rendered one, **Score video** to start a back-catalog run, **Check rank** (DataForSEO) per video, Videos / Shorts / Channel insights tabs, All / Public / Drafts / Unlisted filters, search, sort by newest / views / fastest / opportunities (lowest score first; amber cards are under 70).
+6. The trending desk (`/trending`) polls 14 watched Telugu channels' RSS every 15 minutes; **Create story** opens a prefilled draft; the dashboard shows a breakout banner when 3+ channels carry one local story within an hour.
+
+The Video IQ panel no longer lives in the Content editor; a video article created from a run shows a "YouTube run" link there instead.
 
 ## Pieces
 

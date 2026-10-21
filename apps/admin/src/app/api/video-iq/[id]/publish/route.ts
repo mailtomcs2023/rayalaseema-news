@@ -45,7 +45,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   try {
     const result = await publishOptimization(id, { prisma, youtube: getYouTube(prisma), fetchBlob, sitemapUrlFor });
     const run = await prisma.videoOptimization.findUnique({ where: { id }, select: { contentId: true, content: { select: { slug: true } } } });
-    await logAudit({ action: "video_iq.publish", resource: "content", resourceId: run?.contentId, meta: { runId: id, videoId: result.videoId, warnings: result.warnings, dryRun: youtubeDryRun() }, actor: auth.user, req });
+    await logAudit({ action: "video_iq.publish", resource: run?.contentId ? "content" : "video_optimization", resourceId: run?.contentId ?? id, meta: { runId: id, videoId: result.videoId, warnings: result.warnings, dryRun: youtubeDryRun() }, actor: auth.user, req });
     if (run?.content?.slug) pingWebRevalidate([`/videos/${run.content.slug}`]);
     return NextResponse.json({ videoId: result.videoId, url: `https://www.youtube.com/watch?v=${result.videoId}`, warnings: result.warnings, dryRun: youtubeDryRun() });
   } catch (e) {

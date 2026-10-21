@@ -25,7 +25,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
     const override = { note, by: auth.user.id, at: new Date().toISOString() };
     const updated = await prisma.videoOptimization.update({ where: { id }, data: { chosen: { ...chosen.data, override } } });
-    await logAudit({ action: "video_iq.override", resource: "content", resourceId: row.contentId, meta: { runId: id, note }, actor: auth.user, req });
+    await logAudit({ action: "video_iq.override", resource: row.contentId ? "content" : "video_optimization", resourceId: row.contentId ?? id, meta: { runId: id, note }, actor: auth.user, req });
     return NextResponse.json(updated);
   } catch (e) {
     return apiError(e);

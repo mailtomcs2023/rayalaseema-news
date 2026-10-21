@@ -51,7 +51,7 @@ try {
     await page.getByRole("checkbox").first().check(); // breaking
     await page.screenshot({ path: join(outDir, "studio-2-new.png") });
     await page.getByTestId("yt-start").click();
-    await page.waitForURL(/\/youtube\/[a-z0-9]+$/, { timeout: 60_000 });
+    await page.waitForURL(/\/youtube\/(?!new$)[a-z0-9]+$/, { timeout: 60_000 });
     const runId = page.url().split("/").pop()!;
     writeFileSync(runFile, JSON.stringify({ runId }));
     log(`run created → ${page.url()}`);

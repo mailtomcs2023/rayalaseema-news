@@ -28,12 +28,16 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     }
 
     const updated = await prisma.videoOptimization.update({ where: { id }, data: { status: "APPROVED", error: null } });
-    await prisma.socialPost.upsert({
-      where: { contentId_platform: { contentId: row.contentId, platform: "YOUTUBE" } },
-      create: { contentId: row.contentId, platform: "YOUTUBE", status: "QUEUED" },
-      update: { status: "QUEUED", error: null },
-    });
-    await logAudit({ action: "video_iq.approve", resource: "content", resourceId: row.contentId, meta: { runId: id, title: chosen.data.title }, actor: auth.user, req });
+    // A SocialPost row only makes sense for a run linked to a website article;
+    // standalone studio runs have no content yet.
+    if (row.contentId) {
+      await prisma.socialPost.upsert({
+        where: { contentId_platform: { contentId: row.contentId, platform: "YOUTUBE" } },
+        create: { contentId: row.contentId, platform: "YOUTUBE", status: "QUEUED" },
+        update: { status: "QUEUED", error: null },
+      });
+    }
+    await logAudit({ action: "video_iq.approve", resource: row.contentId ? "content" : "video_optimization", resourceId: row.contentId ?? id, meta: { runId: id, title: chosen.data.title }, actor: auth.user, req });
     return NextResponse.json(updated);
   } catch (e) {
     return apiError(e);

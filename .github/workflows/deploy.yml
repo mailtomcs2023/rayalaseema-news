@@ -69,6 +69,9 @@ jobs:
 
             bunx prisma db push --skip-generate --accept-data-loss
 
+            echo "=== Backfill Video IQ desk titles for runs made from the old Content panel (idempotent) ==="
+            bunx prisma db execute --schema prisma/schema.prisma --stdin <<< 'UPDATE video_optimizations v SET "deskTitle" = c.title FROM contents c WHERE c.id = v."contentId" AND v."deskTitle" = '"''"';' || echo "desk title backfill skipped"
+
             echo "=== Seed / refresh press ID cards (idempotent upsert by cardNo) ==="
             # Source of truth: packages/db/prisma/press-cards.json. Never
             # touches status/revokedAt, so a revoke done in the DB survives.
