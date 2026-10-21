@@ -35,9 +35,14 @@ describe("storyDraftFrom", () => {
 });
 
 describe("isLiveTitle", () => {
-  test("LIVE prefixes and 🔴 live markers are live streams", () => {
+  test("LIVE prefixes, suffixes and 🔴 live markers are live streams", () => {
     expect(isLiveTitle("LIVE: వైసీపీకి బిగ్ రిలీఫ్")).toBe(true);
     expect(isLiveTitle("🔴LIVE | TV9 Telugu")).toBe(true);
+    expect(isLiveTitle("నామినేషన్ల వేళ పుంగనూరులో రణరంగం : 🔴 LIVE")).toBe(true);
     expect(isLiveTitle("Rachamallu live reaction video")).toBe(false);
+  });
+  test("story draft strips the live marker from the lead", () => {
+    const d = storyDraftFrom({ title: "నామినేషన్ల వేళ పుంగనూరులో రణరంగం : 🔴 LIVE", towns: ["Punganur"], topicKey: null }, null);
+    expect(d.title).toBe("Punganur: నామినేషన్ల వేళ పుంగనూరులో రణరంగం");
   });
 });

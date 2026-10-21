@@ -24,15 +24,19 @@ export function titlePatterns(titles: string[]): string[] {
     .slice(0, 10);
 }
 
+/** Live streams: "LIVE:" / "🔴LIVE" prefixes, a trailing ": 🔴 LIVE", or the red-dot marker next to LIVE anywhere. */
 export function isLiveTitle(title: string): boolean {
-  return /^\s*(🔴\s*)?live\b/i.test(title) || /\blive\s*[:|]/i.test(title.slice(0, 12));
+  return /^\s*(🔴\s*)?live\b/i.test(title) || /\blive\s*[:|]/i.test(title.slice(0, 12)) || /[:|]\s*🔴?\s*live\s*$/i.test(title) || /🔴\s*live\b/i.test(title);
 }
+
+/** Drop live markers and trailing channel tags from a competitor title before it becomes a working title. */
+const cleanLead = (title: string) => title.split("|")[0].replace(/[:\s]*🔴?\s*live\s*$/i, "").replace(/^\s*(🔴\s*)?live\s*[:\-]?\s*/i, "").trim();
 
 export type StoryDraft = { title: string; summary: string; editorNote: string };
 
 export function storyDraftFrom(video: { title: string; towns: string[]; topicKey: string | null }, cluster: { titles: string[] } | null): StoryDraft {
   const town = video.towns[0] ?? "Rayalaseema";
-  const lead = video.title.split("|")[0].trim();
+  const lead = cleanLead(video.title);
   const patterns = cluster ? titlePatterns(cluster.titles) : [];
   const note = [
     `Trending desk lead. Topic: ${video.topicKey ?? "n/a"}. Town: ${town}.`,
