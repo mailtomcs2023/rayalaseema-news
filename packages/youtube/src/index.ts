@@ -10,3 +10,5 @@ export * from "./hook";
 export * from "./dataforseo";
 export * from "./score";
 export * from "./description";
+export * from "./rss";
+export * from "./trending";
