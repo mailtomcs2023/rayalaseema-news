@@ -30,6 +30,7 @@ async function fetchCard(token: string) {
     select: {
       cardNo: true, name: true, designation: true, photoUrl: true,
       validFrom: true, validTill: true, status: true, revokedAt: true,
+      user: { select: { joinedAt: true, lastWorkingDate: true } },
     },
   });
 }
@@ -44,9 +45,10 @@ export async function generateMetadata({ params }: { params: Promise<{ token: st
 }
 
 const STATUS_UI: Record<PressCardLiveStatus, { label: string; sub: string; bg: string; fg: string }> = {
-  ACTIVE:  { label: "VERIFIED · ACTIVE", sub: "This press card is genuine and currently valid.", bg: "#0f9d58", fg: "#fff" },
-  EXPIRED: { label: "EXPIRED",           sub: "This card's validity period has ended. Treat as not valid.", bg: "#c62828", fg: "#fff" },
-  REVOKED: { label: "REVOKED",           sub: "This card has been cancelled by the publisher. Not valid.", bg: "#b71c1c", fg: "#fff" },
+  ACTIVE:    { label: "VERIFIED · ACTIVE", sub: "This press card is genuine and currently valid.", bg: "#0f9d58", fg: "#fff" },
+  EXPIRED:   { label: "EXPIRED",           sub: "This card's validity period has ended. Treat as not valid.", bg: "#c62828", fg: "#fff" },
+  REVOKED:   { label: "REVOKED",           sub: "This card has been cancelled by the publisher. Not valid.", bg: "#b71c1c", fg: "#fff" },
+  SEPARATED: { label: "FORMER STAFF",      sub: "The holder is no longer with Rayalaseema News. This card is not valid.", bg: "#546e7a", fg: "#fff" },
 };
 
 function fmt(d: Date) {
@@ -58,7 +60,7 @@ export default async function VerifyPressCardPage({ params }: { params: Promise<
   const card = await fetchCard(token);
   if (!card) notFound();
 
-  const live = computePressCardStatus(card);
+  const live = computePressCardStatus(card, new Date(), card.user ?? undefined);
   const ui = STATUS_UI[live];
   const dim = live !== "ACTIVE";
 
@@ -75,6 +77,11 @@ export default async function VerifyPressCardPage({ params }: { params: Promise<
           <div style={{ fontSize: 14, opacity: 0.95, marginTop: 4 }}>{ui.sub}</div>
           {card.revokedAt && (
             <div style={{ fontSize: 12, opacity: 0.9, marginTop: 6 }}>Revoked on {fmt(card.revokedAt)}</div>
+          )}
+          {live === "SEPARATED" && card.user?.lastWorkingDate && (
+            <div style={{ fontSize: 12, opacity: 0.9, marginTop: 6 }}>
+              Worked with Rayalaseema News {card.user.joinedAt ? `from ${fmt(card.user.joinedAt)} ` : ""}until {fmt(card.user.lastWorkingDate)}.
+            </div>
           )}
         </div>
 

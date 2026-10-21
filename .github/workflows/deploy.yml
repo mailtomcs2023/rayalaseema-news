@@ -74,6 +74,12 @@ jobs:
             # touches status/revokedAt, so a revoke done in the DB survives.
             bunx tsx scripts/seed-press-cards.ts
 
+            echo "=== Link v1 press cards to user accounts by exact name (idempotent) ==="
+            bunx tsx scripts/link-press-cards-to-users.ts
+
+            echo "=== Backfill User.joinedAt from createdAt (idempotent) ==="
+            bunx tsx scripts/backfill-user-joined-at.ts
+
             echo "=== Seed trending desk competitor channels (idempotent upsert by channelId) ==="
             bunx tsx prisma/seed-competitors.ts || echo "competitor seed failed (non-fatal)"
 

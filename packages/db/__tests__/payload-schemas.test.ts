@@ -6,6 +6,7 @@
 import { describe, test, expect } from "bun:test";
 import { ContentType } from "@prisma/client";
 import { safeValidatePayload, validatePayload } from "../src/payload-schemas";
+import { userUpdateSchema } from "../src/user-input-schemas";
 
 describe("ARTICLE payload", () => {
   test("accepts empty payload", () => {
@@ -128,6 +129,15 @@ describe("BREAKING_NEWS payload", () => {
       priority: 5,
       expiresAt: "soon",
     }).success).toBe(false);
+  });
+});
+
+describe("userUpdateSchema employment dates", () => {
+  test("accepts ISO dates and null", () => {
+    expect(userUpdateSchema.safeParse({ joinedAt: "2026-07-20", lastWorkingDate: null }).success).toBe(true);
+  });
+  test("rejects non-date strings", () => {
+    expect(userUpdateSchema.safeParse({ lastWorkingDate: "next week" }).success).toBe(false);
   });
 });
 

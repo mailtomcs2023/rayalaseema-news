@@ -53,6 +53,7 @@ import {
 } from "react";
 import { KycReviewDialog } from "@/components/users/kyc-review-dialog";
 import { PasswordResetDialog } from "@/components/users/password-reset-dialog";
+import { PressCardDialog } from "@/components/users/press-card-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -124,6 +125,8 @@ interface User {
   phone: string | null;
   userCode: string | null;
   createdAt: string;
+  joinedAt: string | null;
+  lastWorkingDate: string | null;
   _count: { contents: number };
   // Pre-fill in the edit dialog when role is SUB_EDITOR / EDITOR. The
   // /api/users GET already includes this; the row shape just needs to know
@@ -288,6 +291,7 @@ export default function UsersPage() {
   // that case). The dialog components fetch their own data.
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [resettingUser, setResettingUser] = useState<{ id: string; name: string; email: string; reporterProfileId: string | null } | null>(null);
+  const [pressCardUser, setPressCardUser] = useState<{ id: string; name: string; role: string } | null>(null);
   // Modal showing "this user is deactivated" details. Triggered from the
   // red Inactive button next to the name. Lets the admin see context + hit
   // Reactivate without digging into the row menu.
@@ -303,6 +307,11 @@ export default function UsersPage() {
     name: row.name,
     email: row.email,
     reporterProfileId: row.reporterProfileId,
+  }), []);
+  const openPressCard = useCallback((row: UserRow) => setPressCardUser({
+    id: row.id,
+    name: row.name,
+    role: row.role,
   }), []);
 
   // Quick-action: one-click verify a reporter's KYC from the row menu.
@@ -518,11 +527,12 @@ export default function UsersPage() {
             onVerifyKyc={verifyReporterKyc}
             onReview={openReview}
             onResetPassword={openResetPassword}
+            onPressCard={openPressCard}
           />
         ),
       },
     ],
-    [openEdit, openDelete, verifyReporterKyc, openReview, openResetPassword],
+    [openEdit, openDelete, verifyReporterKyc, openReview, openResetPassword, openPressCard],
   );
 
   const table = useReactTable({
@@ -982,6 +992,12 @@ export default function UsersPage() {
         onClose={() => setResettingUser(null)}
       />
 
+      {/* Press ID card */}
+      <PressCardDialog
+        user={pressCardUser}
+        onClose={() => setPressCardUser(null)}
+      />
+
       {/* Delete confirm */}
       <AlertDialog open={!!confirmDelete} onOpenChange={(v) => !v && setConfirmDelete(null)}>
         <AlertDialogContent>
@@ -1108,6 +1124,7 @@ function RowActions({
   onVerifyKyc,
   onReview,
   onResetPassword,
+  onPressCard,
 }: {
   row: UserRow;
   onEdit: (u: User) => void;
@@ -1116,6 +1133,7 @@ function RowActions({
   onVerifyKyc: (row: UserRow) => void;
   onReview: (row: UserRow) => void;
   onResetPassword: (row: UserRow) => void;
+  onPressCard: (row: UserRow) => void;
 }) {
   const isReporter = row.role === "REPORTER";
   // Seed accounts skip the KYC workflow entirely - they're built-in
@@ -1144,6 +1162,7 @@ function RowActions({
             (older accounts). */}
         <DropdownMenuItem onSelect={() => onReview(row)}>Review &amp; documents</DropdownMenuItem>
         <DropdownMenuItem onSelect={() => onResetPassword(row)}>Reset password</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => onPressCard(row)}>Press ID card</DropdownMenuItem>
 
         {/* Reporter-only quick actions stay reporter-only. */}
         {isReporter && (kycSubmitted || (hasUpdates && reporterPid)) && (
@@ -1274,6 +1293,11 @@ function UserFormDialog({
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<User["role"]>(user?.role ?? "REPORTER");
   const [active, setActive] = useState<boolean>(user?.active ?? true);
+  // Employment dates - admin-editable, stored as YYYY-MM-DD (or null to
+  // clear). lastWorkingDate later drives the public press-card "Former
+  // staff" state once that day passes.
+  const [joinedAt, setJoinedAt] = useState<string | null>(user?.joinedAt?.slice(0, 10) ?? null);
+  const [lastWorkingDate, setLastWorkingDate] = useState<string | null>(user?.lastWorkingDate?.slice(0, 10) ?? null);
   // Snapshot the role at dialog open time. Compared against `role` on every
   // render to decide whether to surface the "Regenerate login code" checkbox.
   // Only meaningful in edit mode - new users always get a fresh code anyway.
@@ -1369,6 +1393,12 @@ function UserFormDialog({
       };
       if (parsed.data.password) body.password = parsed.data.password;
       if (needsCategories) body.categoryIds = parsed.data.categoryIds;
+      // Employment dates - only meaningful in edit mode (create has no
+      // inputs for them yet); send as-is, null clears the field server-side.
+      if (mode === "edit") {
+        body.joinedAt = joinedAt;
+        body.lastWorkingDate = lastWorkingDate;
+      }
       // Only send the regen flag in edit mode AND only when the admin
       // actually toggled the checkbox. The create flow always mints a
       // fresh code server-side, so this field has no meaning there.
@@ -1450,6 +1480,32 @@ function UserFormDialog({
             />
             {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
           </div>
+
+          {mode === "edit" && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="u-joined-at">Date of joining</Label>
+                <Input
+                  id="u-joined-at"
+                  type="date"
+                  value={joinedAt ?? ""}
+                  onChange={(e) => setJoinedAt(e.target.value || null)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="u-last-working-date">Last working date</Label>
+                <Input
+                  id="u-last-working-date"
+                  type="date"
+                  value={lastWorkingDate ?? ""}
+                  onChange={(e) => setLastWorkingDate(e.target.value || null)}
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Once this day passes, the public press-card page shows "Former staff" and self-service download stops.
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <Label htmlFor="u-password">

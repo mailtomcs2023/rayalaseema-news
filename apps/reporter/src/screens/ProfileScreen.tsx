@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, ActivityIndicator, Alert, RefreshControl } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { clearAuthToken } from "../lib/secure-token";
 import * as Haptics from "expo-haptics";
+import * as Linking from "expo-linking";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
 import { useT } from "../i18n";
@@ -14,6 +15,15 @@ import {
   initialsOf, titleCase,
   type ProfileResponse,
 } from "./profile/meta";
+
+// Maps a card's liveStatus to the profile.* i18n key for its status label
+// (used in the row subtitle in place of the raw enum value).
+const STATUS_LABEL_KEY: Record<string, string> = {
+  ACTIVE: "statusActive",
+  EXPIRED: "statusExpired",
+  REVOKED: "statusRevoked",
+  SEPARATED: "statusSeparated",
+};
 
 /**
  * WhatsApp Settings-style landing page for the reporter profile.
@@ -30,6 +40,13 @@ export function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [editPhoto, setEditPhoto] = useState(false);
+  const [pressCard, setPressCard] = useState<{ card: { cardNo: string; validTill: string; liveStatus: string } | null; downloadUrl: string | null } | null>(null);
+  // Request-generation guard for the press-card fetch: rapid refocus/
+  // pull-to-refresh can fire load() multiple times before earlier calls
+  // resolve, and a slow older response must not clobber a newer one (or
+  // land after unmount).
+  const pcGen = useRef(0);
+  useEffect(() => () => { pcGen.current++; }, []);
 
   const load = useCallback(async () => {
     try {
@@ -38,6 +55,12 @@ export function ProfileScreen() {
     } catch (e: any) {
       Alert.alert(t("common.error"), e.message);
     }
+    // Press card is a secondary, best-effort fetch - never let it block the
+    // primary profile load.
+    const my = ++pcGen.current;
+    api("/api/press-card/mine")
+      .then((res) => { if (my === pcGen.current) setPressCard(res); })
+      .catch(() => { if (my === pcGen.current) setPressCard(null); });
   }, [t]);
 
   // Refetch on focus so values just-approved by admin show up immediately
@@ -156,6 +179,42 @@ export function ProfileScreen() {
               />
             );
           })}
+        </View>
+
+        {/* Payouts + Press ID card */}
+        <View style={styles.group}>
+          <MenuRow
+            icon="cash-outline"
+            label={t("profile.payouts")}
+            sub={t("profile.payoutsSub")}
+            onPress={() => router.push("/(tabs)/earnings")}
+          />
+          <MenuRow
+            icon="card-outline"
+            label={t("profile.pressCard")}
+            sub={pressCard?.card ? `${pressCard.card.cardNo} · ${pressCard.card.liveStatus === "ACTIVE" ? `${t("profile.pressCardValidTill")} ${pressCard.card.validTill}` : t(`profile.${STATUS_LABEL_KEY[pressCard.card.liveStatus] || "statusExpired"}`)}` : t("profile.pressCardNotIssued")}
+            last
+            onPress={async () => {
+              Haptics.selectionAsync();
+              try {
+                const fresh = await api("/api/press-card/mine"); // links expire in 10 min - always mint fresh
+                if (!fresh?.downloadUrl) {
+                  // No downloadUrl but a card record exists: status-specific
+                  // message instead of the generic "not issued" copy.
+                  const status: string | undefined = fresh?.card?.liveStatus;
+                  const msgKey = status === "EXPIRED" ? "pressCardExpired"
+                    : status === "REVOKED" ? "pressCardRevoked"
+                    : status === "SEPARATED" ? "pressCardSeparated"
+                    : "pressCardNotIssued";
+                  Alert.alert(t("profile.pressCard"), t(`profile.${msgKey}`));
+                  return;
+                }
+                await Linking.openURL(fresh.downloadUrl);
+              } catch {
+                Alert.alert(t("profile.pressCard"), t("profile.pressCardDownloadFail"));
+              }
+            }}
+          />
         </View>
 
         {/* Pending requests - only show the row when there's something to see */}
