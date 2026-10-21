@@ -26,6 +26,7 @@ export type ThumbnailInput = {
   breaking: boolean;
   logoPath?: string;
   fontPath?: string;
+  launchTimeoutMs?: number;
 };
 
 export async function renderThumbnail(a: ThumbnailInput): Promise<{ jpeg: Uint8Array; width: 1280; height: 720 }> {
@@ -39,7 +40,9 @@ export async function renderThumbnail(a: ThumbnailInput): Promise<{ jpeg: Uint8A
     .replace("{{BADGE}}", a.breaking ? "block" : "none")
     .replace("{{HEADLINE}}", escapeHtml(a.headline));
 
-  const browser = await chromium.launch();
+  // Bounded launch so a broken browser install fails fast instead of hanging
+  // the worker; the VM launches in under a second.
+  const browser = await chromium.launch({ timeout: a.launchTimeoutMs ?? 30_000 });
   try {
     const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
     await page.setContent(html, { waitUntil: "load" });
