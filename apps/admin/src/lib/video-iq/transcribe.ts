@@ -22,7 +22,8 @@ export async function transcribeAudio(mp3: Uint8Array, opts: { phrases: string[]
   if (!key) throw new Error("AZURE_SPEECH_KEY not configured");
 
   const fd = new FormData();
-  fd.append("audio", new Blob([mp3], { type: "audio/mpeg" }), "audio.mp3");
+  const audio = new Uint8Array(mp3).buffer as ArrayBuffer;
+  fd.append("audio", new Blob([audio], { type: "audio/mpeg" }), "audio.mp3");
   fd.append("definition", JSON.stringify({
     locales: ["te-IN"],
     profanityFilterMode: "None",
