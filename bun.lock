@@ -290,6 +290,16 @@
         "react": "^19.0.0",
       },
     },
+    "packages/youtube": {
+      "name": "@rayalaseema/youtube",
+      "version": "0.0.1",
+      "dependencies": {
+        "zod": "^4.4.3",
+      },
+      "devDependencies": {
+        "typescript": "^5.7.0",
+      },
+    },
   },
   "overrides": {
     "react": "19.1.0",
@@ -971,6 +981,8 @@
     "@rayalaseema/ui": ["@rayalaseema/ui@workspace:packages/ui"],
 
     "@rayalaseema/web": ["@rayalaseema/web@workspace:apps/web"],
+
+    "@rayalaseema/youtube": ["@rayalaseema/youtube@workspace:packages/youtube"],
 
     "@react-native-async-storage/async-storage": ["@react-native-async-storage/async-storage@2.2.0", "", { "dependencies": { "merge-options": "^3.0.4" }, "peerDependencies": { "react-native": "^0.0.0-0 || >=0.65 <1.0" } }, "sha512-gvRvjR5JAaUZF8tv2Kcq/Gbt3JHwbKFYfmb445rhOj6NUMx3qPLixmDx5pZAyb9at1bYvJ4/eTUipU5aki45xw=="],
 
