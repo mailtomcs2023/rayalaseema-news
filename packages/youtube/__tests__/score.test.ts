@@ -26,8 +26,10 @@ describe("scoreTitle", () => {
 });
 
 describe("other scores", () => {
-  test("description: hook first, place line present, no social links", () => {
-    expect(scoreDescription("hook line\nProddatur News | ప్రొద్దుటూరు న్యూస్\nbody")).toBe(100);
+  test("description: hook first, a real story body, no social links", () => {
+    const good = "కడప జిల్లా ప్రొద్దుటూరులో వైసీపీ అభ్యర్థి ఇంటిపై రాళ్ల దాడి కలకలం.\nఅర్ధరాత్రి జరిగిన ఈ దాడి వెనుక ఎమ్మెల్యే అనుచరులు ఉన్నారని ప్రత్యర్థులు ఆరోపిస్తున్నారు. పోలీసులు దర్యాప్తు చేపట్టారు.";
+    expect(scoreDescription(good)).toBe(100);
+    expect(scoreDescription("హుక్ మాత్రమే")).toBe(75); // a hook alone is not a description
     expect(scoreDescription("https://instagram.com/x\nnothing")).toBeLessThanOrEqual(50);
   });
   test("tags: 15 to 25 mixed-script tags under 450 chars", () => {

@@ -61,6 +61,22 @@ export function useRun(runId: string | undefined) {
     publish: () => call(`/api/video-iq/${runId}/publish`, { method: "POST" }),
     createArticle: () => call(`/api/video-iq/${runId}/create-article`, { method: "POST" }),
     skipCaptions: () => call(`/api/video-iq/${runId}/skip-captions`, { method: "POST" }),
+    /** Per-field AI rewrite; does not reload the row (nothing is saved until Save). */
+    regenerate: async (field: string, current: unknown, instruction?: string) => {
+      setBusy(true);
+      setErr("");
+      try {
+        const r = await fetch(`/api/video-iq/${runId}/regenerate`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ field, current, instruction }) });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(j?.error || r.statusText);
+        return j as { candidates: Array<{ value: any; score: number | null; reasons: string[]; why?: string }> };
+      } catch (e) {
+        setErr((e as Error).message);
+        throw e;
+      } finally {
+        setBusy(false);
+      }
+    },
     articleLink: () => call(`/api/video-iq/${runId}/article-link`, { method: "POST" }),
     rerun: (body: Record<string, unknown>) => call("/api/youtube/runs", { method: "POST", body: JSON.stringify(body) }),
   };

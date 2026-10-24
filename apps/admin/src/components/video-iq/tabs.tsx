@@ -2,10 +2,29 @@
 // The five Video IQ tabs (spec 4.6), shared by the YouTube workspace page.
 // Pure presentation over a run row + the editor's current choice.
 import { useState } from "react";
-import { joinTitle, scoreTitle, splitTitle, titleLength, TITLE_MAX } from "@rayalaseema/youtube";
+import { explainDescription, explainTags, explainTitle, joinTitle, scoreDescription, scoreTags, scoreTitle, splitTitle, titleLength, TITLE_MAX } from "@rayalaseema/youtube";
 import type { Chosen } from "@/lib/video-iq/chosen";
 import { ScorePill } from "./score-pill";
 import { canPublish, mmss, quotaEstimate } from "./panel-logic";
+
+/** Per-field AI rewrite (POST /api/video-iq/[id]/regenerate); returns scored candidates. */
+export type Regenerate = (field: string, current: unknown, instruction?: string) => Promise<{ candidates: Array<{ value: any; score: number | null; reasons: string[]; why?: string }> }>;
+
+function Reasons({ reasons }: { reasons: string[] }) {
+  if (!reasons.length) return <span style={{ fontSize: 12, color: "#166534" }}>✓ passes every check</span>;
+  return <span style={{ fontSize: 12, color: "#92400e" }}>{reasons.map((r) => `• ${r}`).join("  ")}</span>;
+}
+
+/** "✨ Regenerate" with an optional instruction, shared by every field. */
+function AiBar({ label, onRun, busy, placeholder = "Tell the AI what to change (optional)" }: { label: string; onRun: (instruction: string) => Promise<void>; busy: boolean; placeholder?: string }) {
+  const [instruction, setInstruction] = useState("");
+  return (
+    <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 8, flexWrap: "wrap" }}>
+      <input style={{ ...ui.input, flex: 1, minWidth: 220 }} placeholder={placeholder} value={instruction} onChange={(e) => setInstruction(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void onRun(instruction); } }} />
+      <button type="button" style={ui.btn(false, busy)} disabled={busy} onClick={() => void onRun(instruction)}>{busy ? "Thinking…" : `✨ ${label}`}</button>
+    </div>
+  );
+}
 
 export const ui = {
   btn: (primary = false, disabled = false): React.CSSProperties => ({
@@ -20,11 +39,38 @@ const { btn, input, chip, muted } = ui;
 
 export type Edit = (p: Partial<Chosen>) => void;
 
-export function TitleTab({ s, chosen, edit }: { s: any; chosen: Chosen; edit: Edit }) {
+export function TitleTab({ s, chosen, edit, regenerate }: { s: any; chosen: Chosen; edit: Edit; regenerate?: Regenerate }) {
   const volumes = new Map<string, number | null>((s?.keywords?.terms ?? []).map((k: any) => [k.term, k.volume]));
   const ctx = { entities: s.entities, breaking: Boolean(s.breaking), volumes };
+  const [ai, setAi] = useState<Array<{ value: string; score: number | null; reasons: string[]; why?: string }>>([]);
+  const [busy, setBusy] = useState(false);
+  async function rewrite(instruction: string) {
+    if (!regenerate) return;
+    setBusy(true);
+    try { const r = await regenerate("title", chosen.title, instruction || undefined); setAi((prev) => [...r.candidates.map((c) => ({ ...c, value: String(c.value) })), ...prev].slice(0, 9)); } catch { /* error shown by the hook */ } finally { setBusy(false); }
+  }
   return (
     <div>
+      {ai.length > 0 && (
+        <div style={{ marginBottom: 8 }}>
+          <div style={muted}>AI rewrites (newest first)</div>
+          {ai.map((t, i) => {
+            const selected = chosen.title === t.value;
+            return (
+              <label key={`ai-${i}`} style={{ display: "block", border: "1px solid " + (selected ? "#dc2626" : "#c7d2fe"), borderRadius: 8, padding: 10, marginBottom: 8, cursor: "pointer", background: selected ? "#fef2f2" : "#eef2ff" }}>
+                <input type="radio" name="viq-title" checked={selected} onChange={() => edit({ title: t.value })} style={{ marginRight: 8 }} />
+                <span style={{ fontSize: 15 }}>{t.value}</span>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 4, flexWrap: "wrap" }}>
+                  <ScorePill label="score" value={t.score} />
+                  <span style={muted}>{titleLength(t.value)}/{TITLE_MAX}</span>
+                  <Reasons reasons={t.reasons} />
+                  {t.why && <span style={muted}>{t.why}</span>}
+                </div>
+              </label>
+            );
+          })}
+        </div>
+      )}
       {s.titles.map((t: any, i: number) => {
         const selected = chosen.title === t.text;
         return (
@@ -42,11 +88,12 @@ export function TitleTab({ s, chosen, edit }: { s: any; chosen: Chosen; edit: Ed
       <div style={{ marginTop: 10 }}>
         <div style={muted}>Edit the chosen title (Telugu hook | English headline)</div>
         <input style={input} value={chosen.title} onChange={(e) => edit({ title: e.target.value })} />
-        <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 4 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 4, flexWrap: "wrap" }}>
           <ScorePill label="score" value={scoreTitle(chosen.title, ctx)} />
           <span style={{ ...muted, color: titleLength(chosen.title) > TITLE_MAX ? "#991b1b" : undefined }}>{titleLength(chosen.title)}/{TITLE_MAX}</span>
-          {!splitTitle(chosen.title).english && <span style={{ ...muted, color: "#991b1b" }}>needs an English headline after " | "</span>}
+          <Reasons reasons={explainTitle(chosen.title, ctx)} />
         </div>
+        {regenerate && <AiBar label="Regenerate titles" busy={busy} onRun={rewrite} placeholder="e.g. mention Varadarajulu Reddy, shorter hook, no question" />}
       </div>
       {s.keywords?.terms?.length > 0 && (
         <div style={{ marginTop: 10 }}>
@@ -105,8 +152,23 @@ export function ThumbnailTab({ row, chosen, edit, push }: { row: any; chosen: Ch
   );
 }
 
-export function SeoTab({ s, chosen, edit }: { s: any; chosen: Chosen; edit: Edit }) {
+export function SeoTab({ s, chosen, edit, regenerate }: { s: any; chosen: Chosen; edit: Edit; regenerate?: Regenerate }) {
   const [tagInput, setTagInput] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
+  const [undo, setUndo] = useState<Partial<Chosen> | null>(null);
+  async function rewrite(field: "description" | "tags" | "comment" | "chapters" | "hashtags", instruction: string) {
+    if (!regenerate) return;
+    setBusy(field);
+    try {
+      const current = field === "description" ? chosen.description : field === "tags" ? chosen.tags : field === "comment" ? chosen.comment : field === "chapters" ? chosen.chapters : chosen.hashtags;
+      const r = await regenerate(field, current, instruction || undefined);
+      const c = r.candidates[0];
+      if (!c) return;
+      setUndo({ [field]: current } as Partial<Chosen>);
+      edit({ [field]: c.value } as Partial<Chosen>);
+    } catch { /* error shown by the hook */ } finally { setBusy(null); }
+  }
+  const undoBar = undo ? <button type="button" style={{ ...btn(), marginTop: 6 }} onClick={() => { edit(undo); setUndo(null); }}>↶ Undo last AI change</button> : null;
   const addTag = (t: string) => { const v = t.trim(); if (v && !chosen.tags.includes(v) && chosen.tags.length < 30) edit({ tags: [...chosen.tags, v] }); };
   const useInTitle = (term: string) => edit({ title: joinTitle(splitTitle(chosen.title).hook, term) });
   const togglePlaylist = (name: string) => {
@@ -120,11 +182,23 @@ export function SeoTab({ s, chosen, edit }: { s: any; chosen: Chosen; edit: Edit
       <div>
         <div style={muted}>Description (hook first; place line and footer are added at publish)</div>
         <textarea style={{ ...input, minHeight: 140, fontFamily: "inherit" }} value={chosen.description} onChange={(e) => edit({ description: e.target.value })} />
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 4, flexWrap: "wrap" }}>
+          <ScorePill label="score" value={scoreDescription(chosen.description)} />
+          <span style={muted}>{chosen.description.length} chars</span>
+          <Reasons reasons={explainDescription(chosen.description)} />
+        </div>
+        {regenerate && <AiBar label="Rewrite description" busy={busy === "description"} onRun={(i) => rewrite("description", i)} placeholder="e.g. lead with the attack, name the candidate, 4 sentences" />}
+        {undoBar}
       </div>
       <div>
         <div style={muted}>Tags ({chosen.tags.length}/30, {chosen.tags.join(",").length}/450 chars)</div>
         <div>{chosen.tags.map((t) => <span key={t} style={chip}>{t} <button type="button" onClick={() => edit({ tags: chosen.tags.filter((x) => x !== t) })} style={{ border: "none", background: "none", cursor: "pointer", color: "#6b7280" }}>×</button></span>)}</div>
         <input style={{ ...input, marginTop: 4 }} placeholder="add tag, press Enter" value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(tagInput); setTagInput(""); } }} />
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 4, flexWrap: "wrap" }}>
+          <ScorePill label="score" value={scoreTags(chosen.tags)} />
+          <Reasons reasons={explainTags(chosen.tags)} />
+        </div>
+        {regenerate && <AiBar label="Suggest more tags" busy={busy === "tags"} onRun={(i) => rewrite("tags", i)} placeholder="e.g. add municipal election terms in Telugu" />}
       </div>
       {s.format !== "SHORT" && (
         <div>
@@ -137,12 +211,14 @@ export function SeoTab({ s, chosen, edit }: { s: any; chosen: Chosen; edit: Edit
             </div>
           ))}
           <button type="button" style={{ ...btn(), marginTop: 6 }} onClick={() => edit({ chapters: [...chosen.chapters, { start: chosen.chapters.length ? "" : "00:00", title_te: "" }] })}>+ chapter</button>
+          {regenerate && <AiBar label="Regenerate chapters" busy={busy === "chapters"} onRun={(i) => rewrite("chapters", i)} placeholder="e.g. 5 chapters, shorter titles" />}
         </div>
       )}
       {s.format === "SHORT" && (
         <div>
           <div style={muted}>Hashtags (3 to 5)</div>
           <input style={input} value={chosen.hashtags.join(" ")} onChange={(e) => edit({ hashtags: e.target.value.split(/\s+/).filter(Boolean).slice(0, 5) })} />
+          {regenerate && <AiBar label="Suggest hashtags" busy={busy === "hashtags"} onRun={(i) => rewrite("hashtags", i)} />}
         </div>
       )}
       <div>
@@ -156,6 +232,7 @@ export function SeoTab({ s, chosen, edit }: { s: any; chosen: Chosen; edit: Edit
       <div>
         <div style={muted}>Pinned comment (no links; pin it in Studio after publish; skipped on private uploads)</div>
         <textarea style={{ ...input, minHeight: 60, fontFamily: "inherit" }} value={chosen.comment} onChange={(e) => edit({ comment: e.target.value })} />
+        {regenerate && <AiBar label="Rewrite comment" busy={busy === "comment"} onRun={(i) => rewrite("comment", i)} placeholder="e.g. ask who is responsible, add subscribe line" />}
       </div>
       <div>
         <div style={muted}>Keyword ideas {kw?.unavailable ? `(unavailable: ${kw.unavailable})` : "(DataForSEO, India)"}</div>

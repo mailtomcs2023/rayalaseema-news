@@ -12,3 +12,4 @@ export * from "./score";
 export * from "./description";
 export * from "./rss";
 export * from "./trending";
+export * from "./explain";

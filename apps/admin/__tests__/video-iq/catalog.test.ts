@@ -3,7 +3,7 @@ import { catalogScores, syncChannel, rankCheck } from "../../src/lib/video-iq/ca
 
 describe("catalogScores", () => {
   test("a bilingual title with a name and a good description scores high; a bare Telugu title scores low", () => {
-    const good = catalogScores({ title: "వరదరాజుల రెడ్డిపై రాచమల్లు ఫైర్ | Rachamallu Siva Prasad Reddy vs Varadarajulu Reddy", description: "హుక్\nProddatur News | ప్రొద్దుటూరు న్యూస్ | Kadapa District News\nకథ", tags: Array.from({ length: 16 }, (_, i) => (i % 2 ? `tag${i}` : `ట్యాగ్${i}`)) });
+    const good = catalogScores({ title: "వరదరాజుల రెడ్డిపై రాచమల్లు ఫైర్ | Rachamallu Siva Prasad Reddy vs Varadarajulu Reddy", description: "కడప జిల్లా ప్రొద్దుటూరులో వైసీపీ అభ్యర్థి ఇంటిపై రాళ్ల దాడి కలకలం.\nProddatur News | ప్రొద్దుటూరు న్యూస్ | Kadapa District News\nఅర్ధరాత్రి జరిగిన ఈ దాడి వెనుక ఎమ్మెల్యే అనుచరులు ఉన్నారని ప్రత్యర్థులు ఆరోపిస్తున్నారు.", tags: Array.from({ length: 16 }, (_, i) => (i % 2 ? `tag${i}` : `ట్యాగ్${i}`)) });
     expect(good.title).toBeGreaterThanOrEqual(80);
     expect(good.content).toBe(100);
     const poor = catalogScores({ title: "హెడ్‌లైన్స్", description: "", tags: [] });

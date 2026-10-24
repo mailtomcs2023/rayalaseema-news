@@ -20,7 +20,8 @@ export interface ChatOpts {
   // compose) - pass the deployment name string directly.
   deployment: string;
   messages: ChatMessage[];
-  temperature?: number;
+  /** Sampling temperature; `null` omits the field (required for gpt-5.5, which only accepts its default). */
+  temperature?: number | null;
   maxTokens?: number;
   // When true, set response_format=json_object so the model is forced to
   // emit strict JSON. Used by extract + fact-check (always) and compose
@@ -125,7 +126,8 @@ export async function chat(opts: ChatOpts): Promise<ChatResult> {
       headers: { "Content-Type": "application/json", "api-key": k },
       body: JSON.stringify({
         messages: opts.messages,
-        temperature: opts.temperature ?? 0.4,
+        // gpt-5.5 rejects any temperature but its default: pass `null` to omit the field.
+        ...(opts.temperature === null ? {} : { temperature: opts.temperature ?? 0.4 }),
         max_completion_tokens: opts.maxTokens ?? 2000,
         ...(opts.responseFormatJson ? { response_format: { type: "json_object" } } : {}),
       }),

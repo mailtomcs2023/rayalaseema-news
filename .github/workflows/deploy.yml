@@ -255,6 +255,8 @@ jobs:
             # social@ channel account's refresh token; DRY_RUN=1 logs every
             # write instead of sending it. Flip the repo variable to 0 after
             # the first dry run looks right.
+            # Video IQ model: gpt-5.5 deployment created 2026-10-24 (gpt51 stays for the rest of the CMS).
+            AZURE_OPENAI_VIDEOIQ_DEPLOYMENT="gpt55"
             YOUTUBE_CHANNEL_ID="UCFZ-DcNTGQsTBpCmZk1MflA"
             YOUTUBE_OAUTH_REFRESH_TOKEN="${{ secrets.YOUTUBE_OAUTH_REFRESH_TOKEN }}"
             GOOGLE_OAUTH_CLIENT_ID="${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}"

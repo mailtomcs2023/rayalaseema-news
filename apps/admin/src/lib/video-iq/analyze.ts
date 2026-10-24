@@ -75,7 +75,8 @@ export function repair(raw: unknown): unknown {
 export async function analyzeVideo(i: AnalyzeInput, deps: { chatJson?: typeof chatJsonWithRetry } = {}): Promise<Suggestions> {
   const chatJson = deps.chatJson ?? chatJsonWithRetry;
   const raw = await chatJson<unknown>(
-    { deployment: process.env.AZURE_OPENAI_COMPOSE_DEPLOYMENT || "gpt51", messages: buildMessages(i), temperature: 0.3 },
+    // temperature null: gpt-5.5 only accepts its default; the contract + repair keep output tight.
+    { deployment: process.env.AZURE_OPENAI_VIDEOIQ_DEPLOYMENT || process.env.AZURE_OPENAI_COMPOSE_DEPLOYMENT || "gpt51", messages: buildMessages(i), temperature: null },
     // Telugu is token-heavy: a full contract (description, 20 tags, chapters,
     // summaries) overran 1,500 tokens on the first live run.
     [3000, 6000],

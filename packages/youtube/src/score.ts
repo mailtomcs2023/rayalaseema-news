@@ -28,11 +28,14 @@ export function scoreTitle(title: string, a: TitleContext): number {
   return clamp(s + bonus);
 }
 
+// Scores the text the editor writes; the place line and footer are appended
+// by code at publish, so they are not part of the rubric.
 export function scoreDescription(d: string): number {
   let s = 100;
-  const first = d.split("\n")[0] ?? "";
-  if (!first.trim() || /https?:\/\//.test(first)) s -= 25;
-  if (!/ News(?: Today)? \| /.test(d)) s -= 25;
+  const lines = d.split("\n").map((l) => l.trim()).filter(Boolean);
+  const first = lines[0] ?? "";
+  if (!first || /https?:\/\//.test(first)) s -= 25;
+  if (lines.length < 2 || d.trim().length < 80) s -= 25; // a hook alone is not a description
   if (d.length > 5000) s -= 25;
   if (/instagram\.com|facebook\.com|twitter\.com|x\.com\//i.test(d)) s -= 25;
   return clamp(s);

@@ -248,7 +248,7 @@ export function RunWorkspace({ runId }: { runId: string }) {
 
           <div style={card}>
             <h2 style={h2}>Titles {s?.titles && <span style={muted}>· pick one or edit</span>}</h2>
-            {ready && chosen ? <TitleTab s={s} chosen={chosen} edit={edit} /> : <Skeleton lines={3} label="Three Telugu | English titles from the transcript" />}
+            {ready && chosen ? <TitleTab s={s} chosen={chosen} edit={edit} regenerate={run.regenerate} /> : <Skeleton lines={3} label="Three Telugu | English titles from the transcript" />}
           </div>
 
           <div style={card}>
@@ -263,7 +263,7 @@ export function RunWorkspace({ runId }: { runId: string }) {
 
           <div style={card}>
             <h2 style={h2}>SEO</h2>
-            {ready && chosen ? <SeoTab s={s} chosen={chosen} edit={edit} /> : <Skeleton lines={4} label="Description, tags, chapters, playlists, keyword demand" />}
+            {ready && chosen ? <SeoTab s={s} chosen={chosen} edit={edit} regenerate={run.regenerate} /> : <Skeleton lines={4} label="Description, tags, chapters, playlists, keyword demand" />}
           </div>
 
           <div style={card}>

@@ -34,6 +34,16 @@ describe("analyzeVideo", () => {
     expect(s.low_confidence).toBe(false);
   });
 
+  test("never sends a temperature (gpt-5.5 rejects anything but the default) and uses the Video IQ deployment", async () => {
+    process.env.AZURE_OPENAI_VIDEOIQ_DEPLOYMENT = "gpt55";
+    let seen: any = null;
+    const chatJson = (async (opts: any) => { seen = opts; return SAMPLE; }) as any;
+    await analyzeVideo(input, { chatJson });
+    expect(seen.deployment).toBe("gpt55");
+    expect(seen.temperature).toBeNull(); // the client omits the field for null
+    delete process.env.AZURE_OPENAI_VIDEOIQ_DEPLOYMENT;
+  });
+
   test("short transcript forces low_confidence and still yields titles", async () => {
     const chatJson = (async () => ({ ...SAMPLE, low_confidence: false })) as any;
     const thin = { locale: "te-IN", durationSec: 30, segments: [{ start: 0, end: 2, text: "సంగీతం" }], words: 1 };

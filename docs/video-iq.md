@@ -16,6 +16,10 @@ Plan: `docs/superpowers/plans/2026-10-21-video-iq-phase-a.md`.
 
 The Video IQ panel no longer lives in the Content editor; a video article created from a run shows a "YouTube run" link there instead.
 
+**Regenerate with AI (2026-10-24).** Every field in the workspace has a ✨ button with an optional instruction box: Regenerate titles (three new scored candidates appear above the originals), Rewrite description, Suggest more tags, Rewrite comment, Regenerate chapters, Suggest hashtags (Shorts). The prompt carries the transcript, the current value, the plain-words reasons behind its score (shown live next to each score) and the editor's instruction; the result is cleaned (no URLs), validated and scored before it appears. Nothing is saved until Save; the SEO section has "Undo last AI change". Route: `POST /api/video-iq/[id]/regenerate { field, current, instruction? }`.
+
+**Model.** Video IQ uses the deployment named by `AZURE_OPENAI_VIDEOIQ_DEPLOYMENT` (production: `gpt55` = gpt-5.5, created 2026-10-24 on `rayalaseema-ai`, southindia, GlobalStandard, pay per token), falling back to `AZURE_OPENAI_COMPOSE_DEPLOYMENT` and then `gpt51`. The rest of the CMS still uses gpt-5.1. To try another model, deploy it on the same resource (`az cognitiveservices account deployment create …`) and change the variable; no code change. Models available in the region as of 2026-10-24 go up to gpt-5.5 and the gpt-5.6 variants.
+
 ## Pieces
 
 | Where | What |

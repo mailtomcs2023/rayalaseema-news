@@ -71,6 +71,37 @@ try {
     log(`feed final: ${(await page.getByTestId("viq-feed").innerText().catch(() => "(collapsed)")).replace(/\s+/g, " ").slice(0, 600)}`);
   }
 
+  if (step === "regen") {
+    if (!existsSync(runFile)) throw new Error("run the upload step first");
+    const { runId } = JSON.parse(readFileSync(runFile, "utf8"));
+    await page.goto(`${BASE}/youtube/${runId}`, { waitUntil: "networkidle", timeout: 180_000 });
+    await page.locator("text=/^(Ready to review|Approved)$/").first().waitFor({ timeout: 300_000 });
+    const before = await page.locator("input[name=viq-title]").count();
+    await page.getByPlaceholder(/mention Varadarajulu Reddy/).fill("name the candidate and the town, keep it under 90 characters");
+    await page.getByRole("button", { name: /Regenerate titles/ }).click();
+    await page.locator("text=AI rewrites").waitFor({ timeout: 120_000 });
+    const after = await page.locator("input[name=viq-title]").count();
+    log(`titles: ${before} → ${after} (AI rewrites added)`);
+    const firstAi = await page.locator("label:has(input[name=viq-title])").first().innerText();
+    log(`first AI title card: ${firstAi.replace(/\s+/g, " ").slice(0, 220)}`);
+    await page.locator("label:has(input[name=viq-title])").first().locator("input").check();
+    const descBefore = await page.locator("textarea").first().inputValue();
+    await page.getByPlaceholder(/lead with the attack/).fill("4 sentences, name the candidate");
+    await page.getByRole("button", { name: /Rewrite description/ }).click();
+    await page.locator("text=Undo last AI change").waitFor({ timeout: 120_000 });
+    const descAfter = await page.locator("textarea").first().inputValue();
+    log(`description changed: ${descBefore !== descAfter} (${descAfter.length} chars)`);
+    await page.getByRole("button", { name: /Suggest more tags/ }).click();
+    await page.waitForTimeout(100);
+    await page.locator("button:has-text('Thinking…')").first().waitFor({ state: "detached", timeout: 120_000 }).catch(() => {});
+    const tagsLine = await page.locator("text=/Tags \\(\\d+\\/30/").first().innerText();
+    log(`tags line: ${tagsLine}`);
+    await page.screenshot({ path: join(outDir, "studio-7-regen.png"), fullPage: true });
+    await page.getByTestId("viq-save").click();
+    await page.locator("text=Choice saved").waitFor({ timeout: 20_000 });
+    log("saved the AI-rewritten choice");
+  }
+
   if (step === "publish") {
     if (!existsSync(runFile)) throw new Error("run the upload step first");
     const { runId } = JSON.parse(readFileSync(runFile, "utf8"));
