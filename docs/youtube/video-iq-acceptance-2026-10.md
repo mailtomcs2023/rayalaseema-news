@@ -123,6 +123,8 @@ Verified locally in the browser (`ui-smoke-studio.mts … regen`, screenshot `st
 
 Direct helper check against live gpt-5.5 (`test-fixtures/regen-live.mts`): 3 scored title candidates with reasons in 9.3 s. Tests: `apps/admin` 116/116, `packages/youtube` 59/59. The title length readout now says "69/100 chars" so it is not read as a second score.
 
+Deployed in run 40113391719 (commit `0120628`, green 16:52 UTC). Verified on the VM with `az vm run-command`: `apps/admin/.env` carries `AZURE_OPENAI_VIDEOIQ_DEPLOYMENT="gpt55"` and `VIDEO_IQ_YOUTUBE_DRY_RUN="0"`, PM2 web/admin/cron online, `POST /api/video-iq/<id>/regenerate` answers 401 unauthenticated on admin.rayalaseemanews.com, and a probe from the VM against the `gpt55` deployment returned model `gpt-5.5-2026-04-24` in 1.35 s with no temperature sent.
+
 ## Next
 
 Phase B (back catalog via captions, 12.2, 12.4, 12.6, 12.7, 12.9) and Phase C (sweep, 12.8, 12.10, weekly report) each get their own plan.
