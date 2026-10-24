@@ -62,7 +62,7 @@ export function TitleTab({ s, chosen, edit, regenerate }: { s: any; chosen: Chos
                 <span style={{ fontSize: 15 }}>{t.value}</span>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 4, flexWrap: "wrap" }}>
                   <ScorePill label="score" value={t.score} />
-                  <span style={muted}>{titleLength(t.value)}/{TITLE_MAX}</span>
+                  <span style={muted}>{titleLength(t.value)}/{TITLE_MAX} chars</span>
                   <Reasons reasons={t.reasons} />
                   {t.why && <span style={muted}>{t.why}</span>}
                 </div>
@@ -79,7 +79,7 @@ export function TitleTab({ s, chosen, edit, regenerate }: { s: any; chosen: Chos
             <span style={{ fontSize: 15 }}>{t.text}</span>
             <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 4 }}>
               <ScorePill label="score" value={scoreTitle(t.text, ctx)} />
-              <span style={muted}>{titleLength(t.text)}/{TITLE_MAX}</span>
+              <span style={muted}>{titleLength(t.text)}/{TITLE_MAX} chars</span>
               {t.why && <span style={muted}>{t.why}</span>}
             </div>
           </label>
@@ -90,7 +90,7 @@ export function TitleTab({ s, chosen, edit, regenerate }: { s: any; chosen: Chos
         <input style={input} value={chosen.title} onChange={(e) => edit({ title: e.target.value })} />
         <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 4, flexWrap: "wrap" }}>
           <ScorePill label="score" value={scoreTitle(chosen.title, ctx)} />
-          <span style={{ ...muted, color: titleLength(chosen.title) > TITLE_MAX ? "#991b1b" : undefined }}>{titleLength(chosen.title)}/{TITLE_MAX}</span>
+          <span style={{ ...muted, color: titleLength(chosen.title) > TITLE_MAX ? "#991b1b" : undefined }}>{titleLength(chosen.title)}/{TITLE_MAX} chars</span>
           <Reasons reasons={explainTitle(chosen.title, ctx)} />
         </div>
         {regenerate && <AiBar label="Regenerate titles" busy={busy} onRun={rewrite} placeholder="e.g. mention Varadarajulu Reddy, shorter hook, no question" />}
