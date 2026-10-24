@@ -106,6 +106,23 @@ Fixed and verified locally in the browser (`ui-smoke-studio.mts`):
 - Caption polling now records `lastPollAt` and waits 30 minutes from it; a waiting run shows the amber "Waiting for YouTube's Telugu captions" box with **Analyse now from the title**.
 - Save (private) → Approve → Publish (dry run) → Create website article all passed on the new screen; tests 108/108.
 
+## Per-field AI regenerate and gpt-5.5 (2026-10-24, owner: "where is to generate from AI to fit the score and regenerate if I don't like")
+
+Azure inventory on `rayalaseema-ai` (southindia): deployments `gpt51` (gpt-5.1), `gpt41-mini` and, created today, `gpt55` (gpt-5.5, GlobalStandard, capacity 10). gpt-5.6 variants are listed in the region catalog but not deployed. Video IQ (analysis and regenerate) now reads `AZURE_OPENAI_VIDEOIQ_DEPLOYMENT` (set to `gpt55` in deploy.yml and the local env); the compose pipeline stays on `gpt51`. gpt-5.5 rejects any `temperature` except its default, so the shared client omits the field when a caller passes `temperature: null`; the first gpt-5.5 run failed on that before the fix and then reached READY (title 85, thumbnail 100, description 100, tags 100, fit 40, overall 86).
+
+Every scored field in the workspace shows its score pill plus the rubric reasons ("no priced search term in the English half", "first line must be the Telugu hook, not a link", …) and a ✨ button with an instruction box: Regenerate titles, Rewrite description, Suggest more tags, Regenerate chapters, Rewrite comment, plus "Undo last AI change". The route `POST /api/video-iq/[id]/regenerate` sends the model the transcript, the current value, the reasons it scored what it scored and the editor's instruction; the result is cleaned (no URLs, length caps, dedupe) and scored before it reaches the UI.
+
+Verified locally in the browser (`ui-smoke-studio.mts … regen`, screenshot `studio-7-regen.png`) on the READY gpt-5.5 run:
+
+| step | result |
+| --- | --- |
+| ✨ Regenerate titles with "name the candidate and the town, keep it under 90 characters" | 3 AI titles added above the 3 originals, each with score, length and reasons, about 40 s after login including page load |
+| ✨ Rewrite description with "4 sentences, name the candidate" | 468-character hook-first description, score 100, "passes every check", 5 s |
+| ✨ Suggest more tags with "add municipal election terms in Telugu" | tags merged to 25/30 (397/450 chars), score 100, 9 s |
+| Save | the AI-rewritten title persisted as the chosen title |
+
+Direct helper check against live gpt-5.5 (`test-fixtures/regen-live.mts`): 3 scored title candidates with reasons in 9.3 s. Tests: `apps/admin` 116/116, `packages/youtube` 59/59. The title length readout now says "69/100 chars" so it is not read as a second score.
+
 ## Next
 
 Phase B (back catalog via captions, 12.2, 12.4, 12.6, 12.7, 12.9) and Phase C (sweep, 12.8, 12.10, weekly report) each get their own plan.
