@@ -57,7 +57,9 @@ export function useRun(runId: string | undefined) {
     save: (chosen: unknown, visibility?: { visibility: string; publishAt?: string | null }) =>
       call(`/api/video-iq/${runId}`, { method: "PATCH", body: JSON.stringify({ chosen, ...(visibility ?? {}) }) }),
     approve: () => call(`/api/video-iq/${runId}/approve`, { method: "POST" }),
-    override: (note: string) => call(`/api/video-iq/${runId}/override`, { method: "POST", body: JSON.stringify({ note }) }),
+    override: (note: string, originalFootage = false) => call(`/api/video-iq/${runId}/override`, { method: "POST", body: JSON.stringify({ note, originalFootage }) }),
+    /** Re-price keyword volumes with DataForSEO (runs analysed before the IP was whitelisted) and re-score. */
+    reprice: () => call(`/api/video-iq/${runId}/reprice`, { method: "POST" }) as Promise<{ keywords: any; scores: any }>,
     publish: () => call(`/api/video-iq/${runId}/publish`, { method: "POST" }),
     createArticle: () => call(`/api/video-iq/${runId}/create-article`, { method: "POST" }),
     skipCaptions: () => call(`/api/video-iq/${runId}/skip-captions`, { method: "POST" }),

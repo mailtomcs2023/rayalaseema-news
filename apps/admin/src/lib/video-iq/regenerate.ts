@@ -5,7 +5,7 @@
 import { z } from "zod";
 import { chatJsonWithRetry, type ChatMessage } from "@/lib/ai/client";
 import {
-  explainDescription, explainTags, explainTitle, joinTitle, scoreDescription, scoreTags, scoreTitle, splitTitle, titleLength, TITLE_MAX,
+  englishNameOf, explainDescription, explainTags, explainTitle, joinTitle, scoreDescription, scoreTags, scoreTitle, splitTitle, titleLength, TITLE_MAX,
 } from "@rayalaseema/youtube";
 import { ownerPrompt } from "./prompt";
 
@@ -19,7 +19,7 @@ const stripUrls = (s: string) => s.replace(/https?:\/\/\S+/gi, "").replace(/[ \t
 const mmss = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
 const FIELD_RULES: Record<RegenField, string> = {
-  title: 'Return {"titles":[{"text":"<Telugu hook> | <English headline>","why":"..."},{...},{...}]} with exactly 3 options. Each under 100 characters, Telugu hook first (standard Eenadu/Sakshi Telugu, no dialect), English headline after " | " carrying a person or place in canonical spelling and, where it fits, one of the priced search terms. No "బ్రేకింగ్" unless the item is breaking. No clock times.',
+  title: 'Return {"titles":[{"text":"<Telugu hook> | <English headline>","why":"..."},{...},{...}]} with exactly 3 options. Each under 100 characters, Telugu hook first (standard Eenadu/Sakshi Telugu, no dialect). The English headline after " | " MUST contain at least one CANONICAL NAME exactly as spelled below and, when PRICED SEARCH TERMS exist, the highest-volume term that fits the story. No "బ్రేకింగ్" unless the item is breaking. No clock times.',
   description: 'Return {"description":"..."}: line 1 = a 1-line Telugu hook with the main keywords; then 3 to 6 standard-Telugu sentences telling the story from the transcript. No URLs, no hashtags, no sign-off (code adds the link and footer). Under 1,500 characters.',
   tags: 'Return {"tags":["..."]}: 20 to 25 tags mixing Telugu script and English, places and people first (canonical spellings), then topics; no duplicates, each under 60 characters.',
   comment: 'Return {"comment":"..."}: one engaging Telugu question about the story (under 300 characters), ending with a subscribe call-to-action. No URLs.',
@@ -31,14 +31,16 @@ function context(run: any): string {
   const s = run.suggestions ?? {};
   const t = run.transcript;
   const lines = t?.segments?.length ? t.segments.map((x: any) => `[${mmss(x.start)}] ${x.text}`).join("\n").slice(0, 12_000) : "(no transcript)";
-  const terms = (s.keywords?.terms ?? []).filter((k: any) => k.volume != null).map((k: any) => `${k.term} (${k.volume}/mo)`).join(", ");
+  const terms = (s.keywords?.terms ?? []).filter((k: any) => k.volume != null).sort((a: any, b: any) => (b.volume ?? 0) - (a.volume ?? 0)).map((k: any) => `${k.term} (${k.volume}/mo)`).join(", ");
+  const canonical = [...new Set([...(s.entities?.people ?? []), ...(s.entities?.places ?? [])].map((e: string) => englishNameOf(e)).filter(Boolean))] as string[];
   return [
     `DESK TITLE: ${run.deskTitle ?? ""}`,
     run.deskNotes ? `DESK NOTES: ${run.deskNotes}` : "",
     `DISTRICT: ${run.district ?? s.fit?.district ?? "unknown"} · BREAKING: ${run.breaking ? "yes" : "no"} · FORMAT: ${s.format ?? "VIDEO"}`,
     s.summary_te ? `SUMMARY: ${s.summary_te}` : "",
     s.entities ? `PEOPLE: ${(s.entities.people ?? []).join(", ")} · PLACES: ${(s.entities.places ?? []).join(", ")} · PARTIES: ${(s.entities.parties ?? []).join(", ")}` : "",
-    terms ? `PRICED SEARCH TERMS: ${terms}` : "PRICED SEARCH TERMS: none available",
+    `CANONICAL NAMES (English spellings the scorer recognises): ${canonical.length ? canonical.join(", ") : "none known; transliterate the people and places above in their usual English spelling"}`,
+    terms ? `PRICED SEARCH TERMS (monthly India searches): ${terms}` : "PRICED SEARCH TERMS: none available",
     `TRANSCRIPT:\n${lines}`,
   ].filter(Boolean).join("\n");
 }

@@ -11,10 +11,14 @@ import { getYouTube, youtubeConfigured } from "./youtube";
 import { uploadBuffer } from "@/lib/blob";
 import type { Deps } from "./worker";
 
-export function buildDeps(): Deps {
-  const dfs = process.env.DATAFORSEO_LOGIN && process.env.DATAFORSEO_PASSWORD
+export function buildDfs() {
+  return process.env.DATAFORSEO_LOGIN && process.env.DATAFORSEO_PASSWORD
     ? createDataForSeo({ login: process.env.DATAFORSEO_LOGIN, password: process.env.DATAFORSEO_PASSWORD })
     : null;
+}
+
+export function buildDeps(): Deps {
+  const dfs = buildDfs();
   const youtube = youtubeConfigured()
     ? getYouTube(prisma)
     : { listMyPlaylists: async () => [], listCaptions: async () => [], downloadCaption: async () => "" };

@@ -3,6 +3,7 @@
 // the server.
 import { splitTitle, titleLength, TITLE_MAX } from "./title";
 import type { Suggestions } from "./contract";
+import { nameInTitle, searchTermBonus } from "./names";
 
 const hasTelugu = (s: string) => /[ఀ-౿]/.test(s);
 const hasEnglish = (s: string) => /[A-Za-z]{3,}/.test(s);
@@ -17,15 +18,10 @@ export function scoreTitle(title: string, a: TitleContext): number {
   if (titleLength(title) > TITLE_MAX) s -= 20;
   const { english } = splitTitle(title);
   if (!hasEnglish(english)) s -= 25;
-  const names = [...a.entities.people, ...a.entities.places].map((x) => x.toLowerCase());
-  if (!names.some((n) => title.toLowerCase().includes(n))) s -= 20;
+  if (!nameInTitle(title, a.entities)) s -= 20;
   if (/బ్రేకింగ్|breaking/i.test(title) && !a.breaking) s -= 15;
   if (/\b\d{1,2}\s?(am|pm)\b|గంటలకు/i.test(title)) s -= 10;
-  let bonus = 0;
-  for (const [term, v] of a.volumes) {
-    if (v && english.toLowerCase().includes(term)) bonus = Math.max(bonus, Math.min(15, Math.log10(v) * 5));
-  }
-  return clamp(s + bonus);
+  return clamp(s + searchTermBonus(english, a.volumes));
 }
 
 // Scores the text the editor writes; the place line and footer are appended
@@ -58,9 +54,13 @@ export function scoreThumbnail(a: { headline: string; hasFrame: boolean; bytes?:
   return clamp(s);
 }
 
-export function scoreFit(f: Suggestions["fit"]): number {
+export type FitOverride = { originalFootage?: boolean };
+
+// Reused footage caps fit at 40 unless an admin recorded that the footage is
+// the channel's own (the model only sees the transcript).
+export function scoreFit(f: Suggestions["fit"], o?: FitOverride): number {
   const base = f.local_relevance * 100;
-  return clamp(f.reused_content_risk === "high" ? Math.min(40, base) : base);
+  return clamp(f.reused_content_risk === "high" && !o?.originalFootage ? Math.min(40, base) : base);
 }
 
 export type Scores = { title: number; thumbnail: number; description: number; tags: number; fit: number; overall: number };

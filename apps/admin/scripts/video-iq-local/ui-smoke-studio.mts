@@ -8,7 +8,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const [credsPath, clip, step, outDir] = process.argv.slice(2);
-if (!credsPath || !clip || !step || !outDir) throw new Error("usage: ui-smoke-studio.mts <creds.json> <clip.mp4> catalog|upload|publish <out-dir>");
+if (!credsPath || !clip || !step || !outDir) throw new Error("usage: ui-smoke-studio.mts <creds.json> <clip.mp4> catalog|upload|regen|optimise|publish <out-dir>");
 const creds = JSON.parse(readFileSync(credsPath, "utf8")) as { email: string; password: string };
 const BASE = process.env.ADMIN_BASE_URL || "http://localhost:3001";
 const log = (m: string) => console.log(new Date().toISOString().slice(11, 19), m);
@@ -100,6 +100,44 @@ try {
     await page.getByTestId("viq-save").click();
     await page.locator("text=Choice saved").waitFor({ timeout: 20_000 });
     log("saved the AI-rewritten choice");
+  }
+
+  if (step === "optimise") {
+    if (!existsSync(runFile)) throw new Error("run the upload step first");
+    const { runId } = JSON.parse(readFileSync(runFile, "utf8"));
+    await page.goto(`${BASE}/youtube/${runId}`, { waitUntil: "networkidle", timeout: 180_000 });
+    await page.locator("text=/^(Ready to review|Approved)$/").first().waitFor({ timeout: 300_000 });
+    const card = page.getByTestId("viq-scorecard");
+    log(`scorecard before: ${(await card.innerText()).replace(/\s+/g, " ").slice(0, 160)}`);
+    log(`fit reasons: ${(await page.getByTestId("viq-fit-reasons").innerText()).replace(/\s+/g, " ").slice(0, 240)}`);
+    // Start from a weak title so the pass has something to lift (the live scorecard must drop first).
+    const titleInput = page.locator("input[value*=' | ']").first();
+    await titleInput.fill("ఘటన | Evening Update");
+    await page.waitForTimeout(300);
+    log(`scorecard with weak title: ${(await card.innerText()).replace(/\s+/g, " ").slice(0, 120)}`);
+    await page.getByTestId("viq-optimise-all").click();
+    const toast = page.locator("text=/Optimised:|Nothing left to optimise/").first();
+    await toast.waitFor({ timeout: 600_000 });
+    log(`toast: ${(await toast.innerText()).replace(/\s+/g, " ").slice(0, 300)}`);
+    log(`scorecard after: ${(await card.innerText()).replace(/\s+/g, " ").slice(0, 160)}`);
+    log(`chosen title now: ${await titleInput.inputValue()}`);
+    await page.screenshot({ path: join(outDir, "studio-8-optimise.png"), fullPage: true });
+    if (await page.getByTestId("viq-save").isEnabled()) {
+      await page.getByTestId("viq-save").click();
+      await page.locator("text=Choice saved").waitFor({ timeout: 20_000 });
+      log("saved the optimised choice");
+    }
+    log(`scorecard saved: ${(await card.innerText()).replace(/\s+/g, " ").slice(0, 160)}`);
+    // Admin override: our own footage lifts the reuse cap on fit.
+    if (await page.getByTestId("viq-override").count()) {
+      await page.locator("input[placeholder*='audit log']").fill("shot by our Proddatur reporter (smoke)");
+      await page.getByTestId("viq-override").click();
+      await page.locator("text=/Override recorded/").first().waitFor({ timeout: 30_000 });
+      await page.waitForTimeout(1500);
+      log(`after override: ${(await card.innerText()).replace(/\s+/g, " ").slice(0, 120)}`);
+      log(`fit box: ${(await page.getByTestId("viq-fit-reasons").innerText()).replace(/\s+/g, " ").slice(0, 160)}`);
+      await page.screenshot({ path: join(outDir, "studio-9-fit-override.png"), fullPage: true });
+    } else log("no override control (not admin, or already overridden)");
   }
 
   if (step === "publish") {

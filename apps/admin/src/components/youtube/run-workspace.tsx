@@ -13,7 +13,9 @@ import { confirm } from "@/components/confirm-dialog";
 import { ToastViewport, useToasts } from "@/components/toast";
 import { ScorePill } from "@/components/video-iq/score-pill";
 import { useRun } from "@/components/video-iq/use-optimization";
-import { canApprove, canPublish, defaultChosen, mmss, quotaEstimate } from "@/components/video-iq/panel-logic";
+import { canApprove, canPublish, defaultChosen, mmss, optimisePlan, pickBest, quotaEstimate } from "@/components/video-iq/panel-logic";
+import { scoresFor, thumbnailScoreOf } from "@/lib/video-iq/scores";
+import { explainFit } from "@rayalaseema/youtube";
 import { PublishTab, ReviewTab, SeoTab, ThumbnailTab, TitleTab, ui, type Visibility } from "@/components/video-iq/tabs";
 
 const { btn, chip, muted } = ui;
@@ -84,6 +86,7 @@ export function RunWorkspace({ runId }: { runId: string }) {
   const [dirty, setDirty] = useState(false);
   const [note, setNote] = useState("");
   const [feedOpen, setFeedOpen] = useState(true);
+  const [optimising, setOptimising] = useState<string | null>(null);
 
   const row = run.row;
   const s = row?.suggestions;
@@ -102,6 +105,58 @@ export function RunWorkspace({ runId }: { runId: string }) {
 
   const edit = (patch: Partial<Chosen>) => { setChosen((c) => (c ? { ...c, ...patch } : c)); setDirty(true); };
   const editVisibility = (v: Visibility) => { setVisibility(v); setDirty(true); };
+
+  // The scorecard follows what the editor has on screen; Save stores the same numbers.
+  const breaking = Boolean(row?.breaking ?? s?.breaking);
+  const scoreOf = (c: Chosen, sg: any) => scoresFor(sg, { ...c, override: row?.chosen?.override ?? null }, { thumbnail: thumbnailScoreOf(row), breaking });
+  const live = ready && chosen && s ? scoreOf(chosen, s) : (row?.scores ?? null);
+  const unsaved = Boolean(dirty && live && row?.scores && live.overall !== row.scores.overall);
+
+  // ✨ Optimise to 100: price keywords if they never were, then regenerate every
+  // field under 100 (title, description, tags) and fill an empty comment and
+  // chapters, keeping only candidates that score higher. Nothing is saved
+  // until the editor presses Save.
+  async function optimiseAll() {
+    if (!chosen || !s) return;
+    setOptimising("starting");
+    const log: string[] = [];
+    let cur: Chosen = chosen;
+    let sugg: any = s;
+    try {
+      const terms: any[] = sugg.keywords?.terms ?? [];
+      if (terms.length && terms.every((t) => t.volume == null)) {
+        setOptimising("pricing keywords with DataForSEO");
+        try {
+          const r = await run.reprice();
+          sugg = { ...sugg, keywords: r.keywords };
+          const priced = (r.keywords?.terms ?? []).filter((t: any) => t.volume != null).length;
+          log.push(priced ? `${priced} keywords priced` : "keywords still unpriced");
+        } catch (e) { log.push(`keyword pricing: ${(e as Error).message}`); }
+      }
+      const SCORED = new Set(["title", "description", "tags"]);
+      let plan = optimisePlan(scoreOf(cur, sugg), cur);
+      for (let pass = 0; pass < 2 && plan.length; pass++) {
+        for (const field of plan) {
+          setOptimising(`${pass ? "second pass: " : ""}${field}`);
+          const before = scoreOf(cur, sugg);
+          try {
+            const r = await run.regenerate(field, (cur as any)[field]);
+            const best = pickBest(r.candidates, SCORED.has(field) ? (before as any)[field] : null);
+            if (!best) { if (SCORED.has(field)) log.push(`${field} stays ${(before as any)[field]}`); continue; }
+            cur = { ...cur, [field]: best.value } as Chosen;
+            const after = scoreOf(cur, sugg);
+            log.push(SCORED.has(field) ? `${field} ${(before as any)[field]}→${(after as any)[field]}` : `${field} filled`);
+          } catch (e) { log.push(`${field} failed: ${(e as Error).message}`); }
+        }
+        plan = optimisePlan(scoreOf(cur, sugg), cur).filter((f) => SCORED.has(f));
+      }
+      if (cur !== chosen) { setChosen(cur); setDirty(true); }
+      const final = scoreOf(cur, sugg);
+      push(cur !== chosen ? "success" : "info", cur !== chosen
+        ? `Optimised: ${log.join(", ")} → overall ${final.overall}. Press Save to keep it.`
+        : `Nothing left to optimise in the metadata${log.length ? ` (${log.join(", ")})` : ""}; fit depends on the video itself.`);
+    } catch (e) { push("error", (e as Error).message); } finally { setOptimising(null); }
+  }
 
   async function save() {
     if (!chosen) return;
@@ -126,8 +181,8 @@ export function RunWorkspace({ runId }: { runId: string }) {
       push(r?.warnings?.length ? "warn" : "success", r?.dryRun ? `Dry run: ${r.videoId}` : `Published: ${r.url}`);
     } catch (e) { push("error", (e as Error).message); }
   }
-  async function override() {
-    try { await run.override(note); setNote(""); push("success", "Override recorded"); } catch (e) { push("error", (e as Error).message); }
+  async function override(originalFootage: boolean) {
+    try { await run.override(note, originalFootage); setNote(""); push("success", originalFootage ? "Override recorded: marked as our own footage" : "Override recorded"); } catch (e) { push("error", (e as Error).message); }
   }
   async function createArticle() {
     try { const r = await run.createArticle(); push("success", r?.existing ? "Opening the existing article" : "Article created as DRAFT"); router.push(`/content/${r.contentId}`); } catch (e) { push("error", (e as Error).message); }
@@ -163,7 +218,7 @@ export function RunWorkspace({ runId }: { runId: string }) {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", marginBottom: 14 }}>
         <Link href="/youtube" style={{ ...chip, textDecoration: "none", color: "#111827" }}>← YouTube</Link>
-        <ScoreRing value={row.scores?.overall} size={64} />
+        <ScoreRing value={live?.overall} size={64} />
         <div style={{ flex: 1, minWidth: 260 }}>
           <div style={{ fontSize: 17, fontWeight: 800, lineHeight: 1.3 }}>{row.chosen?.title ?? row.deskTitle ?? "Untitled run"}</div>
           <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", marginTop: 4 }}>
@@ -174,6 +229,8 @@ export function RunWorkspace({ runId }: { runId: string }) {
             {inFlight && <span style={{ ...muted }}>● live, refreshing every 5 s</span>}
           </div>
         </div>
+        {optimising && <span style={{ ...muted, fontWeight: 600 }}>✨ {optimising}…</span>}
+        {ready && <button type="button" data-testid="viq-optimise-all" style={btn(true, run.busy || Boolean(optimising))} disabled={run.busy || Boolean(optimising)} onClick={optimiseAll} title="Price keywords, regenerate every field under 100 and fill the empty ones; you still press Save">✨ Optimise to 100</button>}
         <button type="button" data-testid="viq-optimize" style={btn(false, run.busy || inFlight)} disabled={run.busy || inFlight} onClick={rerun}>Re-run</button>
         {ready && <button type="button" data-testid="viq-save" style={btn(false, run.busy || !dirty)} disabled={run.busy || !dirty} onClick={save}>Save</button>}
         {ready && <button type="button" data-testid="viq-approve" style={btn(false, run.busy || !canApprove({ ...row, chosen: chosen ?? row.chosen }, role).ok)} disabled={run.busy || !canApprove({ ...row, chosen: chosen ?? row.chosen }, role).ok} onClick={approve} title={canApprove({ ...row, chosen: chosen ?? row.chosen }, role).reason}>Approve</button>}
@@ -235,20 +292,26 @@ export function RunWorkspace({ runId }: { runId: string }) {
 
         {/* Right column */}
         <div style={{ display: "grid", gap: 16 }}>
-          <div style={card}>
-            <h2 style={h2}>Scorecard</h2>
+          <div style={card} data-testid="viq-scorecard">
+            <h2 style={h2}>Scorecard {unsaved && <span style={{ ...chip, background: "#fef3c7", fontWeight: 600 }}>live · unsaved</span>}</h2>
             <div style={{ display: "grid", gridTemplateColumns: "84px 1fr", gap: 16, alignItems: "center" }}>
-              <ScoreRing value={row.scores?.overall} />
+              <ScoreRing value={live?.overall} />
               <div style={{ display: "grid", gap: 6 }}>
-                {(["title", "thumbnail", "description", "tags", "fit"] as const).map((k) => <Bar key={k} label={k} value={row.scores?.[k]} />)}
+                {(["title", "thumbnail", "description", "tags", "fit"] as const).map((k) => <Bar key={k} label={k} value={live?.[k]} />)}
               </div>
             </div>
+            {ready && s?.fit && (
+              <div style={{ marginTop: 8, fontSize: 12 }}>
+                {explainFit(s.fit, row.chosen?.override).map((r) => <div key={r} style={{ color: "#92400e" }}>• fit: {r}</div>)}
+                {live && live.title < 100 && <div style={muted}>Title, description and tags can be lifted with ✨ Optimise to 100 or the per-field ✨ buttons; fit and thumbnail are about the video and the frame.</div>}
+              </div>
+            )}
             {!row.scores && <div style={{ ...muted, marginTop: 8 }}>Scores arrive with the thumbnails at the end of the run.</div>}
           </div>
 
           <div style={card}>
             <h2 style={h2}>Titles {s?.titles && <span style={muted}>· pick one or edit</span>}</h2>
-            {ready && chosen ? <TitleTab s={s} chosen={chosen} edit={edit} regenerate={run.regenerate} /> : <Skeleton lines={3} label="Three Telugu | English titles from the transcript" />}
+            {ready && chosen ? <TitleTab s={s} chosen={chosen} edit={edit} regenerate={run.regenerate} reprice={run.reprice} /> : <Skeleton lines={3} label="Three Telugu | English titles from the transcript" />}
           </div>
 
           <div style={card}>
@@ -263,7 +326,7 @@ export function RunWorkspace({ runId }: { runId: string }) {
 
           <div style={card}>
             <h2 style={h2}>SEO</h2>
-            {ready && chosen ? <SeoTab s={s} chosen={chosen} edit={edit} regenerate={run.regenerate} /> : <Skeleton lines={4} label="Description, tags, chapters, playlists, keyword demand" />}
+            {ready && chosen ? <SeoTab s={s} chosen={chosen} edit={edit} regenerate={run.regenerate} reprice={run.reprice} /> : <Skeleton lines={4} label="Description, tags, chapters, playlists, keyword demand" />}
           </div>
 
           <div style={card}>

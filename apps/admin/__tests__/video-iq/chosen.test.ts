@@ -18,6 +18,11 @@ describe("chosenSchema", () => {
   test("accepts a valid choice", () => {
     expect(chosenSchema.safeParse(base).success).toBe(true);
   });
+  test("an admin override may record that the footage is the channel's own", () => {
+    const r = chosenSchema.safeParse({ ...base, override: { note: "our own camera team shot it", by: "u1", at: "2026-10-24T00:00:00Z", originalFootage: true } });
+    expect(r.success).toBe(true);
+    expect(r.success && r.data.override?.originalFootage).toBe(true);
+  });
   test("rejects a URL in the comment", () => {
     expect(chosenSchema.safeParse({ ...base, comment: "see https://x.y" }).success).toBe(false);
   });

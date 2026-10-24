@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { defaultChosen, canPublish, canApprove, quotaEstimate } from "../../src/components/video-iq/panel-logic";
+import { defaultChosen, canPublish, canApprove, quotaEstimate, optimisePlan, pickBest } from "../../src/components/video-iq/panel-logic";
 import { SAMPLE } from "../../../../packages/youtube/__tests__/contract.test";
 
 const row: any = {
@@ -54,5 +54,23 @@ describe("gates", () => {
     expect(quotaEstimate({ ...approved, source: "YOUTUBE" })).toBe(300);
     expect(quotaEstimate({ ...approved, source: "BLOB", chosen: { ...approved.chosen, playlists: [], comment: "" } })).toBe(1700);
     expect(quotaEstimate({ ...approved, source: "BLOB", suggestions: { ...SAMPLE, format: "SHORT" } })).toBe(1800);
+  });
+});
+
+describe("optimisePlan / pickBest (the one-click Optimise button)", () => {
+  const chosenBase = defaultChosen(row);
+  test("lists every scored field under 100, title first, then an empty comment and empty chapters", () => {
+    const plan = optimisePlan({ title: 65, thumbnail: 100, description: 100, tags: 75, fit: 40, overall: 70 }, { ...chosenBase, comment: "", chapters: [] });
+    expect(plan).toEqual(["title", "tags", "comment", "chapters"]);
+  });
+  test("nothing to do when every field is 100 and filled (fit is about the video, not a field)", () => {
+    expect(optimisePlan({ title: 100, thumbnail: 100, description: 100, tags: 100, fit: 40, overall: 90 }, { ...chosenBase, comment: "మీ అభిప్రాయం?", chapters: [{ start: "00:00", title_te: "ప్రారంభం" }] })).toEqual([]);
+  });
+  test("pickBest returns the highest-scoring candidate only when it beats the current score", () => {
+    const cands = [{ value: "a", score: 85, reasons: [] }, { value: "b", score: 100, reasons: [] }, { value: "c", score: null, reasons: [] }];
+    expect(pickBest(cands, 85)?.value).toBe("b");
+    expect(pickBest([{ value: "a", score: 65, reasons: [] }], 85)).toBeNull();
+    expect(pickBest([{ value: "only", score: null, reasons: [] }], null)?.value).toBe("only"); // unscored fields (comment, chapters): take the first
+    expect(pickBest([], 85)).toBeNull();
   });
 });

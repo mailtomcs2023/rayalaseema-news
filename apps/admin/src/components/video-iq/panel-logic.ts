@@ -1,3 +1,4 @@
+import type { Scores } from "@rayalaseema/youtube";
 // Pure helpers behind the Video IQ panel, kept free of React so they can be
 // unit-tested and re-used server side.
 import type { Chosen } from "@/lib/video-iq/chosen";
@@ -55,3 +56,25 @@ export function quotaEstimate(row: any): number {
 }
 
 export const mmss = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+
+// ✨ Optimise: which fields the one-click pass should regenerate, in order.
+// Fit is about the video itself and the thumbnail is a frame choice, so
+// neither is on the list.
+export type OptimiseField = "title" | "description" | "tags" | "comment" | "chapters";
+export type Candidate = { value: any; score: number | null; reasons: string[]; why?: string };
+
+export function optimisePlan(scores: Partial<Scores> | null | undefined, chosen: Pick<Chosen, "comment" | "chapters">): OptimiseField[] {
+  const out: OptimiseField[] = [];
+  for (const f of ["title", "description", "tags"] as const) if ((scores?.[f] ?? 0) < 100) out.push(f);
+  if (!chosen.comment?.trim()) out.push("comment");
+  if (!chosen.chapters?.length) out.push("chapters");
+  return out;
+}
+
+/** The best candidate, only when it beats what the editor has; unscored fields take the first. */
+export function pickBest(candidates: Candidate[], current: number | null): Candidate | null {
+  if (!candidates.length) return null;
+  if (current == null) return candidates[0];
+  const scored = candidates.filter((c) => typeof c.score === "number").sort((a, b) => (b.score as number) - (a.score as number));
+  return scored.length && (scored[0].score as number) > current ? scored[0] : null;
+}

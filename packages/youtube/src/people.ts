@@ -17,6 +17,7 @@ export const PEOPLE: Person[] = [
   { en: "Bhumana Karunakar Reddy", te: "భూమన కరుణాకర్ రెడ్డి", aliases: ["Bhumana"] },
   { en: "Tulasi Reddy", te: "తులసిరెడ్డి", aliases: ["Tulasireddy", "తులసి రెడ్డి"] },
   { en: "Paka Suresh", te: "పాక సురేష్", aliases: [] },
+  { en: "Kethireddy Venkatarami Reddy", te: "కేతిరెడ్డి వెంకట్రామిరెడ్డి", aliases: ["Ketireddy Venkatarami Reddy", "Kethireddy Venkatrami Reddy", "Kethireddy Venkatarami", "Kethireddy", "కేతిరెడ్డి వెంకట్రామి రెడ్డి", "కేతిరెడ్డి"] },
 ];
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -25,9 +26,10 @@ const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 export function canonicalizeNames(text: string): string {
   let out = text;
   for (const p of PEOPLE) {
-    for (const a of p.aliases) {
-      if (/[A-Za-z]/.test(a)) out = out.replace(new RegExp(`\\b${escapeRe(a)}\\b`, "g"), p.en);
-    }
+    // Longest form first so the canonical name itself (or a long alias) is
+    // matched whole, never partly rewritten by a shorter alias inside it.
+    const forms = [p.en, ...p.aliases.filter((a) => /[A-Za-z]/.test(a))].sort((x, y) => y.length - x.length);
+    out = out.replace(new RegExp(`\\b(?:${forms.map(escapeRe).join("|")})\\b`, "g"), p.en);
   }
   return out;
 }

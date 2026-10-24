@@ -2,10 +2,26 @@
 // The five Video IQ tabs (spec 4.6), shared by the YouTube workspace page.
 // Pure presentation over a run row + the editor's current choice.
 import { useState } from "react";
-import { explainDescription, explainTags, explainTitle, joinTitle, scoreDescription, scoreTags, scoreTitle, splitTitle, titleLength, TITLE_MAX } from "@rayalaseema/youtube";
+import { explainDescription, explainFit, explainTags, explainTitle, joinTitle, scoreDescription, scoreTags, scoreTitle, splitTitle, titleLength, TITLE_MAX } from "@rayalaseema/youtube";
 import type { Chosen } from "@/lib/video-iq/chosen";
 import { ScorePill } from "./score-pill";
 import { canPublish, mmss, quotaEstimate } from "./panel-logic";
+
+/** Re-price keyword volumes (POST /api/video-iq/[id]/reprice). */
+export type Reprice = () => Promise<unknown>;
+
+/** "↻ Price keywords now" when every term still sits at volume null. */
+function PriceKeywords({ kw, reprice }: { kw: any; reprice?: Reprice }) {
+  const [busy, setBusy] = useState(false);
+  const terms: any[] = kw?.terms ?? [];
+  if (!reprice || !terms.length || terms.some((t) => t.volume != null)) return null;
+  return (
+    <div style={{ marginTop: 6, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+      <span style={{ fontSize: 12, color: "#92400e" }}>{kw?.unavailable ? `Volumes missing: ${kw.unavailable}` : "No search volumes yet."}</span>
+      <button type="button" data-testid="viq-reprice" style={ui.btn(false, busy)} disabled={busy} onClick={async () => { setBusy(true); try { await reprice(); } catch { /* shown by the hook */ } finally { setBusy(false); } }}>{busy ? "Pricing…" : "↻ Price keywords now"}</button>
+    </div>
+  );
+}
 
 /** Per-field AI rewrite (POST /api/video-iq/[id]/regenerate); returns scored candidates. */
 export type Regenerate = (field: string, current: unknown, instruction?: string) => Promise<{ candidates: Array<{ value: any; score: number | null; reasons: string[]; why?: string }> }>;
@@ -39,7 +55,7 @@ const { btn, input, chip, muted } = ui;
 
 export type Edit = (p: Partial<Chosen>) => void;
 
-export function TitleTab({ s, chosen, edit, regenerate }: { s: any; chosen: Chosen; edit: Edit; regenerate?: Regenerate }) {
+export function TitleTab({ s, chosen, edit, regenerate, reprice }: { s: any; chosen: Chosen; edit: Edit; regenerate?: Regenerate; reprice?: Reprice }) {
   const volumes = new Map<string, number | null>((s?.keywords?.terms ?? []).map((k: any) => [k.term, k.volume]));
   const ctx = { entities: s.entities, breaking: Boolean(s.breaking), volumes };
   const [ai, setAi] = useState<Array<{ value: string; score: number | null; reasons: string[]; why?: string }>>([]);
@@ -99,6 +115,7 @@ export function TitleTab({ s, chosen, edit, regenerate }: { s: any; chosen: Chos
         <div style={{ marginTop: 10 }}>
           <div style={muted}>Search demand (India, monthly)</div>
           {s.keywords.terms.map((k: any) => <span key={k.term} style={chip}>{k.term}: {k.volume ?? "–"}</span>)}
+          <PriceKeywords kw={s.keywords} reprice={reprice} />
         </div>
       )}
     </div>
@@ -152,7 +169,7 @@ export function ThumbnailTab({ row, chosen, edit, push }: { row: any; chosen: Ch
   );
 }
 
-export function SeoTab({ s, chosen, edit, regenerate }: { s: any; chosen: Chosen; edit: Edit; regenerate?: Regenerate }) {
+export function SeoTab({ s, chosen, edit, regenerate, reprice }: { s: any; chosen: Chosen; edit: Edit; regenerate?: Regenerate; reprice?: Reprice }) {
   const [tagInput, setTagInput] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [undo, setUndo] = useState<Partial<Chosen> | null>(null);
@@ -236,6 +253,7 @@ export function SeoTab({ s, chosen, edit, regenerate }: { s: any; chosen: Chosen
       </div>
       <div>
         <div style={muted}>Keyword ideas {kw?.unavailable ? `(unavailable: ${kw.unavailable})` : "(DataForSEO, India)"}</div>
+        <PriceKeywords kw={kw} reprice={reprice} />
         {(kw?.suggested ?? []).map((k: any) => (
           <span key={k.term} style={chip}>
             {k.term} {k.volume != null && <b>{k.volume}</b>}
@@ -265,10 +283,14 @@ export function SeoTab({ s, chosen, edit, regenerate }: { s: any; chosen: Chosen
   );
 }
 
-export function ReviewTab({ row, role, note, setNote, override, showTranscript = true }: { row: any; role: string; note: string; setNote: (s: string) => void; override: () => void; showTranscript?: boolean }) {
+export function ReviewTab({ row, role, note, setNote, override, showTranscript = true }: { row: any; role: string; note: string; setNote: (s: string) => void; override: (originalFootage: boolean) => void; showTranscript?: boolean }) {
   const s = row.suggestions;
   const t = row.transcript;
   const fit = s.fit;
+  const ov = row.chosen?.override;
+  const fitReasons = explainFit(fit, ov);
+  const [ownFootage, setOwnFootage] = useState(fit.reused_content_risk === "high");
+  const canOverride = role === "ADMIN" && ((fit.verdict === "not_fit" && !ov) || (fit.reused_content_risk === "high" && !ov?.originalFootage));
   const fitTone = fit.verdict === "fit" ? "#dcfce7" : fit.verdict === "borderline" ? "#fef3c7" : "#fee2e2";
   return (
     <div style={{ display: "grid", gap: 12 }}>
@@ -280,11 +302,23 @@ export function ReviewTab({ row, role, note, setNote, override, showTranscript =
       <div style={{ background: fitTone, padding: 10, borderRadius: 8, fontSize: 13 }}>
         <b>Channel fit: {fit.verdict}</b> · district {fit.district ?? "unknown"} · local relevance {Math.round(fit.local_relevance * 100)}% · reuse risk {fit.reused_content_risk}
         {fit.reason_te && <div style={{ marginTop: 4 }}>{fit.reason_te}</div>}
-        {row.chosen?.override && <div style={{ ...muted, marginTop: 4 }}>Admin override: {row.chosen.override.note}</div>}
-        {fit.verdict === "not_fit" && role === "ADMIN" && !row.chosen?.override && (
+        <div data-testid="viq-fit-reasons" style={{ marginTop: 6 }}>
+          {fitReasons.length === 0
+            ? <span style={{ fontSize: 12, color: "#166534" }}>✓ fit 100: a Rayalaseema story on the channel's own footage</span>
+            : fitReasons.map((r) => <div key={r} style={{ fontSize: 12, color: "#92400e" }}>• {r}</div>)}
+          <div style={{ ...muted, marginTop: 4 }}>Fit grades the video, not the metadata: 100 = fully about a Rayalaseema district (local relevance) with no reused clips. AI cannot rewrite the footage; trim before upload, or an admin records the override below.</div>
+        </div>
+        {ov && <div style={{ ...muted, marginTop: 4 }}>Admin override: {ov.note}{ov.originalFootage ? " · marked as the channel's own footage" : ""}</div>}
+        {canOverride && (
           <div style={{ marginTop: 8 }}>
-            <input style={input} placeholder="Why publish anyway? (recorded in the audit log)" value={note} onChange={(e) => setNote(e.target.value)} />
-            <button type="button" style={{ ...btn(), marginTop: 6 }} disabled={note.trim().length < 5} onClick={override}>Record override</button>
+            {fit.reused_content_risk === "high" && (
+              <label style={{ display: "block", fontSize: 13, marginBottom: 6 }}>
+                <input type="checkbox" checked={ownFootage} onChange={(e) => setOwnFootage(e.target.checked)} style={{ marginRight: 6 }} />
+                Our own footage: the reporter shot it; lift the reused-content cap (fit becomes {Math.round(fit.local_relevance * 100)})
+              </label>
+            )}
+            <input style={input} placeholder={fit.verdict === "not_fit" ? "Why publish anyway? (recorded in the audit log)" : "Note for the audit log, e.g. shot by our Dharmavaram reporter"} value={note} onChange={(e) => setNote(e.target.value)} />
+            <button type="button" data-testid="viq-override" style={{ ...btn(), marginTop: 6 }} disabled={note.trim().length < 5} onClick={() => override(ownFootage && fit.reused_content_risk === "high")}>Record override</button>
           </div>
         )}
       </div>

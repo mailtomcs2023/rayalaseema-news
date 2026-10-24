@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 import { chosenSchema } from "@/lib/video-iq/chosen";
+import { scoresForRow } from "@/lib/video-iq/scores";
 
 // GET   /api/video-iq/[id]            → the run
 // PATCH /api/video-iq/[id] { chosen } → store the editor's choice (validated)
@@ -22,7 +23,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   if (isAuthError(auth)) return auth;
   try {
     const { id } = await ctx.params;
-    const row = await prisma.videoOptimization.findUnique({ where: { id }, select: { id: true, status: true, chosen: true } });
+    const row = await prisma.videoOptimization.findUnique({ where: { id }, select: { id: true, status: true, chosen: true, suggestions: true, scores: true, breaking: true } });
     if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 });
     if (!["READY", "APPROVED", "FAILED"].includes(row.status)) {
       return NextResponse.json({ error: `cannot edit a run in status ${row.status}` }, { status: 409 });
@@ -48,7 +49,8 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     }
     const updated = await prisma.videoOptimization.update({
       where: { id },
-      data: { chosen: parsed.data, ...visData, ...(row.status === "APPROVED" ? { status: "READY" } : {}) },
+      // The scorecard follows the saved choice, not the model's best title.
+      data: { chosen: parsed.data, ...(row.suggestions ? { scores: scoresForRow({ ...row, chosen: parsed.data }) } : {}), ...visData, ...(row.status === "APPROVED" ? { status: "READY" } : {}) },
     });
     return NextResponse.json(updated);
   } catch (e) {

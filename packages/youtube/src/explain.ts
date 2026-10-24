@@ -2,7 +2,9 @@
 // shows them next to each score and the regenerate prompt feeds them back to
 // the model so the next attempt fixes exactly what cost points.
 import { splitTitle, titleLength, TITLE_MAX } from "./title";
-import type { TitleContext } from "./score";
+import type { FitOverride, TitleContext } from "./score";
+import type { Suggestions } from "./contract";
+import { nameInTitle, searchTermBonus } from "./names";
 
 const hasTelugu = (s: string) => /[ఀ-౿]/.test(s);
 const hasEnglish = (s: string) => /[A-Za-z]{3,}/.test(s);
@@ -12,13 +14,10 @@ export function explainTitle(title: string, a: TitleContext): string[] {
   if (titleLength(title) > TITLE_MAX) r.push("over 100 characters");
   const { english } = splitTitle(title);
   if (!hasEnglish(english)) r.push('no English headline after " | "');
-  const names = [...a.entities.people, ...a.entities.places].map((x) => x.toLowerCase());
-  if (!names.some((n) => title.toLowerCase().includes(n))) r.push("no person or place name from the story");
+  if (!nameInTitle(title, a.entities)) r.push("no person or place name from the story");
   if (/బ్రేకింగ్|breaking/i.test(title) && !a.breaking) r.push('"breaking" used on a non-breaking item');
   if (/\b\d{1,2}\s?(am|pm)\b|గంటలకు/i.test(title)) r.push("clock time in the title");
-  let priced = false;
-  for (const [term, v] of a.volumes) if (v && english.toLowerCase().includes(term)) priced = true;
-  if (!priced) r.push("no priced search term in the English half");
+  if (searchTermBonus(english, a.volumes) === 0) r.push("no search term in the English half: add a priced keyword or a known place or person");
   return r;
 }
 
@@ -40,5 +39,16 @@ export function explainTags(tags: string[]): string[] {
   if (!tags.some(hasTelugu)) r.push("no Telugu-script tags");
   if (!tags.some(hasEnglish)) r.push("no English tags");
   if (tags.join(",").length > 450) r.push("tags exceed 450 characters in total");
+  return r;
+}
+
+/** Why fit scored what it scored, and what changes it: fit grades the video, not the metadata. */
+export function explainFit(f: Suggestions["fit"], o?: FitOverride): string[] {
+  const r: string[] = [];
+  if (f.verdict === "not_fit") r.push("not a Rayalaseema story: the model found no district angle; an admin can record an override to publish anyway");
+  if (f.reused_content_risk === "high" && !o?.originalFootage) {
+    r.push("reuse risk high: the bulletin carries viral or national clips the channel did not shoot, so fit is capped at 40; keep only original reporting, or an admin can mark the footage as original");
+  }
+  if (f.local_relevance < 1) r.push(`local relevance ${Math.round(f.local_relevance * 100)}%: only part of the video is about a Rayalaseema district`);
   return r;
 }

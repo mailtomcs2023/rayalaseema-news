@@ -17,7 +17,7 @@ export const chosenSchema = z.object({
   hashtags: z.array(z.string()).max(5),
   playlists: z.array(z.string()).max(3),
   comment: z.string().max(500).refine((s) => !/https?:\/\//i.test(s), "no URLs in comments"),
-  override: z.object({ note: z.string().min(5), by: z.string(), at: z.string() }).optional(),
+  override: z.object({ note: z.string().min(5), by: z.string(), at: z.string(), originalFootage: z.boolean().optional() }).optional(),
 }).strict();
 
 export type Chosen = z.infer<typeof chosenSchema>;

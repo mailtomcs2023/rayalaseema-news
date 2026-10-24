@@ -65,3 +65,15 @@ describe("regenerateField", () => {
     await expect(regenerateField({ field: "title", run, current: "x" }, { chatJson })).rejects.toThrow(/model output invalid/);
   });
 });
+
+describe("buildRegenerateMessages canonical names", () => {
+  test("names the canonical English spellings for Telugu entities so the model's title matches the scorer", () => {
+    const te = { ...run, suggestions: { ...run.suggestions, entities: { people: ["కేతిరెడ్డి వెంకట్రామిరెడ్డి"], places: ["ధర్మవరం"], parties: [], topics: [] }, keywords: { terms: [{ term: "dharmavaram", volume: 110000, competition: "LOW" }], suggested: [], serp: [] } } };
+    const all = buildRegenerateMessages({ field: "title", run: te, current: "సవాల్ విసిరిన సీఐ | Ex MLA Row" }).map((m) => m.content).join("\n");
+    expect(all).toContain("CANONICAL NAMES");
+    expect(all).toContain("Dharmavaram");
+    expect(all).toContain("Kethireddy Venkatarami Reddy");
+    expect(all).toContain("no person or place name from the story");
+    expect(all).toContain("dharmavaram (110000/mo)");
+  });
+});

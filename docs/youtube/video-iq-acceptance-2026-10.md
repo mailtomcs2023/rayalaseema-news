@@ -125,6 +125,34 @@ Direct helper check against live gpt-5.5 (`test-fixtures/regen-live.mts`): 3 sco
 
 Deployed in run 40113391719 (commit `0120628`, green 16:52 UTC). Verified on the VM with `az vm run-command`: `apps/admin/.env` carries `AZURE_OPENAI_VIDEOIQ_DEPLOYMENT="gpt55"` and `VIDEO_IQ_YOUTUBE_DRY_RUN="0"`, PM2 web/admin/cron online, `POST /api/video-iq/<id>/regenerate` answers 401 unauthenticated on admin.rayalaseemanews.com, and a probe from the VM against the `gpt55` deployment returned model `gpt-5.5-2026-04-24` in 1.35 s with no temperature sent.
 
+## Scorer fix, fit reasons, Optimise to 100 (2026-10-25, owner report on a Dharmavaram bulletin)
+
+Owner pasted a workspace where every AI title carried "Dharmavaram", "Kethireddy" or "Prabhakar" yet scored 65 with "no person or place name from the story", and asked where fit comes from, how to reach 100, and for one button that does it.
+
+Found: `scoreTitle` matched the Telugu entity strings as plain substrings, so an inflected Telugu name (కేతిరెడ్డికి) or the English spelling of a Telugu place (Dharmavaram ← ధర్మవరం) never counted; the 15 search-term points needed a priced DataForSEO term, which no run had while the server IP was not whitelisted; fit had no explanation and no lever.
+
+Fixed and verified:
+
+- `packages/youtube/src/names.ts`: names count in either script, inflected, via the canonical place/person maps; generic words (జిల్లా, సీఐ, MLA, రెడ్డి, …) never count alone. Search-term points fall back to a known place or person in the English half when nothing is priced. `explainFit` spells out the reuse cap and partial relevance; `scoreFit` honours an admin "original footage" override. Kethireddy Venkatarami Reddy added to `people.ts`; `canonicalizeNames` now matches longest form first (it used to turn "Chandrababu Naidu" into "Chandrababu Naidu Naidu").
+- Regenerate prompt lists the canonical English spellings of the story's entities and the priced terms by volume, so the model's rewrite satisfies the scorer.
+- Live scorecard: `scoresFor` re-scores the current title/description/tags as the editor types ("live · unsaved"); `PATCH` and the override route store the same numbers. Fit reasons sit under the scorecard and in the fit box; admin ticks "Our own footage" to lift the cap (`override { note, originalFootage: true }`).
+- `POST /api/video-iq/[id]/reprice` + "↻ Price keywords now" (Search demand and Keyword ideas) for runs analysed before the whitelist; the VM probe at 22:45 IST showed DataForSEO now answers from 20.198.2.80 ("dharmavaram" 110,000/month).
+- "✨ Optimise to 100" in the workspace header: price keywords if unpriced, regenerate title/description/tags while under 100 (two passes), fill empty comment and chapters, keep only higher-scoring candidates, then Save.
+
+Browser smoke on the local dev server (`ui-smoke-studio.mts … optimise`, screenshot `studio-8-optimise.png`), on a fresh 60 s run:
+
+| step | result |
+| --- | --- |
+| scorecard at READY under the new scorer | title 100, thumbnail 100, description 100, tags 100, fit 40 (reuse risk high), overall 91 |
+| typed a weak title "ఘటన \| Evening Update" | live card dropped to title 65 / overall 79 with the "live · unsaved" chip |
+| ✨ Optimise to 100 | toast "title 65→100 → overall 91" in 13 s; chosen title became "బ్రేకింగ్: వైసీపీ అభ్యర్థి ఇంటిపై రాళ్ల దాడి \| Proddatur YSRCP Candidate House Attacked"; Save stored 91 |
+| admin override "Our own footage" | fit box "✓ fit 100: a Rayalaseema story on the channel's own footage"; after the fix below, scorecard fit 100 and overall 100 |
+| second Optimise after the override | overall 100 saved |
+
+Defect found on the way: after the override, the fit box said 100 but the scorecard bar still said 40, because the live score read the override from the local draft instead of the saved row. Fixed (`scoreOf` uses `row.chosen.override`); the rerun shows fit 100 on the card. Locally DataForSEO is not configured, so the Optimise toast reports "keyword pricing: DataForSEO is not configured on this server" and continues; on the VM the route prices for real.
+
+Tests: `packages/youtube` 79/79 (new: names, people, scoreFit override, explainFit), `apps/admin` 163/163 (new: scores, reprice, optimisePlan/pickBest, canonical names in the prompt, override schema), `packages/db` 102/102.
+
 ## Next
 
 Phase B (back catalog via captions, 12.2, 12.4, 12.6, 12.7, 12.9) and Phase C (sweep, 12.8, 12.10, weekly report) each get their own plan.
