@@ -153,6 +153,28 @@ Defect found on the way: after the override, the fit box said 100 but the scorec
 
 Tests: `packages/youtube` 79/79 (new: names, people, scoreFit override, explainFit), `apps/admin` 163/163 (new: scores, reprice, optimisePlan/pickBest, canonical names in the prompt, override schema), `packages/db` 102/102.
 
+## Website article carries the whole choice (2026-10-25, owner: "only the title is getting saved, not the description and tags and other things")
+
+Checked the Save path first on a fresh local run (`ui-smoke-studio.mts regen`, now with a reload check): ✨ Rewrite description → ✨ Suggest more tags → Save → reload → the description (442 chars, differs from the model's), 25 tags (differ from the model's), 4 chapters and the 68-char comment all came back from `GET /api/video-iq/<id>`. Production rows agreed: every APPLIED run had a full `chosen` and `publish` sends description and tags in the `videos.update` snippet. So the workspace was not the problem.
+
+Found: **Create website article** built the DRAFT with title (hook), summary and the video payload only; no body, no tags, no featured image. And the content editor sent `body: null` for VIDEO/REEL on Update (it only knew the rich editor for ARTICLE), so even a filled body would have been wiped on the next save.
+
+Fixed and verified:
+
+- `articlePayloadFrom` now returns body (the description as plain Telugu paragraphs, blank-line separated, the way `/videos/[slug]` renders them; URLs and the publish-time lines dropped), tags (deduped, up to 25), featuredImage (the chosen thumbnail), sourceUrl (the watch URL), summary falling back to the hook line.
+- `POST /api/video-iq/[id]/create-article` writes those and links the tags in one transaction (find-or-create by name or slug; Telugu names transliterated with the article slug helper, e.g. `పోరెడ్డి నర్సింహారెడ్డి → pooreddi-nrsimhaareddi`).
+- Content editor: new **Story** textarea for VIDEO and REEL bound to `body`; Update now sends the story for those types instead of null.
+
+Local browser proof (dry-run publish → Create website article → editor, screenshot `studio-6c-article-story.png`):
+
+| check | result |
+| --- | --- |
+| article row | body 445 chars / 4 paragraphs, no URL; featuredImage = thumbnail; sourceUrl = watch URL; 25 tags linked; payload videoUrl, videoId, thumbnailUrl, duration, transcript (888 chars) |
+| editor | title = hook, summary filled, Story box shows the 4 paragraphs, tags field "Proddatur, Kadapa, Varadarajulu Reddy, పోరెడ్డి నర్సింహారెడ్డి, …", featured image shown |
+| Update pressed unchanged | body still 445 chars in the database (used to be wiped) |
+
+Tests: `apps/admin` 165/165 (studio: body, tags, thumbnail, source url, summary fallback), `packages/youtube` 79/79.
+
 ## Next
 
 Phase B (back catalog via captions, 12.2, 12.4, 12.6, 12.7, 12.9) and Phase C (sweep, 12.8, 12.10, weekly report) each get their own plan.

@@ -57,7 +57,30 @@ describe("articlePayloadFrom", () => {
     expect(a.editorNote).toContain("r1");
   });
   test("falls back to the desk title when nothing was chosen", () => {
-    expect(articlePayloadFrom({ ...run, chosen: null, suggestions: null }).title).toBe("డెస్క్ టైటిల్");
+    const a = articlePayloadFrom({ ...run, chosen: null, suggestions: null });
+    expect(a.title).toBe("డెస్క్ టైటిల్");
+    expect(a.body).toBeNull();
+    expect(a.tags).toEqual([]);
+    expect(a.featuredImage).toBeNull();
+  });
+  // Owner 2026-10-25: "only the title is getting saved, not the description and
+  // tags and other things" - the article carried title + summary + video only.
+  test("carries the description as the body, the tags, the thumbnail and the source url", () => {
+    const chosen = {
+      ...run.chosen,
+      description: "హుక్ లైన్\nకథ మొదటి పేరా & వివరాలు.\n\nకథ రెండో పేరా https://x.y/z\nపూర్తి వార్త: https://rayalaseemanews.com/videos/x\n#tag1 #tag2\n00:00 ప్రారంభం\n🌐 rayalaseemanews.com",
+      tags: ["ధర్మవరం", "Dharmavaram", "ధర్మవరం", " "],
+    };
+    const a = articlePayloadFrom({ ...run, chosen });
+    expect(a.body).toBe("హుక్ లైన్\n\nకథ మొదటి పేరా & వివరాలు.\n\nకథ రెండో పేరా");
+    expect(a.tags).toEqual(["ధర్మవరం", "Dharmavaram"]);
+    expect(a.featuredImage).toBe("https://blob/t.jpg");
+    expect(a.sourceUrl).toBe("https://www.youtube.com/watch?v=abcdefghijk");
+    expect(a.summary).toBe(SAMPLE.summary_te);
+  });
+  test("summary falls back to the description's hook line when the model gave none", () => {
+    const a = articlePayloadFrom({ ...run, suggestions: { ...SAMPLE, summary_te: "" }, chosen: { ...run.chosen, description: "హుక్ లైన్\nకథ" } });
+    expect(a.summary).toBe("హుక్ లైన్");
   });
 });
 

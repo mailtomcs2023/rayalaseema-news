@@ -97,9 +97,20 @@ try {
     const tagsLine = await page.locator("text=/Tags \\(\\d+\\/30/").first().innerText();
     log(`tags line: ${tagsLine}`);
     await page.screenshot({ path: join(outDir, "studio-7-regen.png"), fullPage: true });
+    const savedDesc = await page.locator("textarea").first().inputValue();
+    const savedTags = await page.locator("text=/Tags \\(\\d+\\/30/").first().innerText();
     await page.getByTestId("viq-save").click();
     await page.locator("text=Choice saved").waitFor({ timeout: 20_000 });
     log("saved the AI-rewritten choice");
+    // Owner 2026-10-25: "only the title is getting saved". Reload and compare every field.
+    await page.reload({ waitUntil: "networkidle" });
+    await page.locator("text=/^(Ready to review|Approved)$/").first().waitFor({ timeout: 120_000 });
+    const afterDesc = await page.locator("textarea").first().inputValue();
+    const afterTags = await page.locator("text=/Tags \\(\\d+\\/30/").first().innerText();
+    log(`after reload: description persisted ${afterDesc === savedDesc} (${afterDesc.length} chars); tags "${afterTags}" (was "${savedTags}")`);
+    const api = await page.request.get(`${BASE}/api/video-iq/${runId}`);
+    const j: any = await api.json();
+    log(`api chosen: title ${j.chosen?.title?.length ?? 0} chars, description ${j.chosen?.description?.length ?? 0} chars (equals model: ${j.chosen?.description === j.suggestions?.description}), tags ${j.chosen?.tags?.length ?? 0} (equals model: ${JSON.stringify(j.chosen?.tags) === JSON.stringify(j.suggestions?.tags)}), chapters ${j.chosen?.chapters?.length ?? 0}, comment ${j.chosen?.comment?.length ?? 0} chars`);
   }
 
   if (step === "optimise") {

@@ -597,7 +597,7 @@ export default function ContentEditorPage() {
         title: row.title || "",
         slug: row.slug || "",
         summary: row.summary || "",
-        body: isArticle ? (row.body || "") : "",
+        body: isArticle || row.type === "VIDEO" || row.type === "REEL" ? (row.body || "") : "",
         featuredImage: row.featuredImage || "",
         categoryId: row.categoryId || "",
         additionalCategoryIds: [...(Array.isArray(row.additionalCategoryIds) ? row.additionalCategoryIds : [])].sort(),
@@ -741,7 +741,7 @@ export default function ContentEditorPage() {
       title,
       slug,
       summary: summary || null,
-      body: type === "ARTICLE" ? body : null,
+      body: type === "ARTICLE" || type === "VIDEO" || type === "REEL" ? body : null,
       featuredImage: featuredImage || null,
       categoryId: categoryId || null,
       additionalCategoryIds: additionalCategoryIds.filter((id) => id && id !== categoryId),
@@ -878,7 +878,7 @@ export default function ContentEditorPage() {
     title,
     slug,
     summary,
-    body: type === "ARTICLE" ? body : "",
+    body: type === "ARTICLE" || type === "VIDEO" || type === "REEL" ? body : "",
     featuredImage,
     categoryId,
     additionalCategoryIds: [...additionalCategoryIds].sort(),
@@ -1189,6 +1189,24 @@ export default function ContentEditorPage() {
                 />
                 {fieldErrors.summary && <p className="mt-1 text-xs font-medium text-red-500">{fieldErrors.summary}</p>}
               </div>
+
+            {/* Video / reel story: plain Telugu paragraphs shown under the player on
+                the site (the video page splits on blank lines). Video IQ fills it
+                from the YouTube description when it creates the article. */}
+            {(type === "VIDEO" || type === "REEL") && (
+              <div className="space-y-1.5">
+                <Label htmlFor="story-input">Story (Telugu paragraphs shown under the video on the site)</Label>
+                <Textarea
+                  id="story-input"
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  rows={8}
+                  placeholder="కథ పేరాగ్రాఫ్‌లు… (ఖాళీ లైన్‌తో వేరు చేయండి)"
+                  className="bg-white"
+                />
+                <p className="text-xs text-slate-500">{body.trim() ? `${body.trim().length} characters` : "Empty: the page shows only the player, summary and transcript."}</p>
+              </div>
+            )}
 
             {/* Breaking-news URL import - paste a news article URL and the AI
                 writes the title, slug & summary in one shot (no body). */}

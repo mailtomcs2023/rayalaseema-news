@@ -54,10 +54,27 @@ export function visibilityToStatus(v: { visibility: string; publishAt?: Date | s
 export type ArticleDraft = {
   title: string;
   summary: string | null;
+  /** The YouTube description as plain-text paragraphs (blank-line separated), without the lines publish adds. */
+  body: string | null;
+  tags: string[];
+  featuredImage: string | null;
+  sourceUrl: string;
   payload: { videoUrl: string; videoId: string; thumbnailUrl?: string; transcript?: string; duration?: number };
   editorNote: string;
   breaking: boolean;
 };
+
+// Lines the publish step appends to the YouTube description (article link,
+// place line, footer, hashtags, chapter timestamps): not story text.
+const NOT_STORY = /^(పూర్తి వార్త:.*|.* News(?: Today)? \| .* న్యూస్ \| .*|రాయలసీమ న్యూస్ \| Rayalaseema News|🌐 .*|సబ్‌స్క్రైబ్ చేయండి:.*|\d{2}:\d{2}(?::\d{2})? .*|#\S+(?: #\S+)*)$/;
+/** Description → plain paragraphs separated by a blank line (how /videos/[slug] renders body); URLs and the publish-time lines dropped. */
+export function descriptionToBody(description: string | null | undefined): string | null {
+  const paras = String(description ?? "")
+    .split("\n")
+    .map((l) => l.replace(/https?:\/\/\S+/gi, "").replace(/[ \t]{2,}/g, " ").trim())
+    .filter((l) => l && !NOT_STORY.test(l));
+  return paras.length ? paras.join("\n\n") : null;
+}
 
 /** The website article a published run turns into (DRAFT; the editor finishes it). */
 export function articlePayloadFrom(run: any): ArticleDraft {
@@ -66,9 +83,17 @@ export function articlePayloadFrom(run: any): ArticleDraft {
   const transcript = run.transcript?.segments?.length
     ? Array.from(run.transcript.segments.map((s: { text: string }) => s.text).join(" ").replace(/\s+/g, " ").trim()).slice(0, 60_000).join("")
     : undefined;
+  const description: string = run.chosen?.description ?? "";
+  const hookLine = description.split("\n").map((l: string) => l.trim()).find(Boolean) ?? "";
+  const seen = new Set<string>();
+  const tags = ((run.chosen?.tags ?? []) as string[]).map((t) => String(t).trim()).filter((t) => t && !seen.has(t.toLowerCase()) && (seen.add(t.toLowerCase()), true)).slice(0, 25);
   return {
     title: (hook || run.deskTitle || chosenTitle).slice(0, 200),
-    summary: run.suggestions?.summary_te ?? null,
+    summary: run.suggestions?.summary_te?.trim() || hookLine || null,
+    body: descriptionToBody(description),
+    tags,
+    featuredImage: run.chosen?.thumbnailUrl ?? null,
+    sourceUrl: `https://www.youtube.com/watch?v=${run.videoId}`,
     payload: {
       videoUrl: `https://www.youtube.com/watch?v=${run.videoId}`,
       videoId: run.videoId,
