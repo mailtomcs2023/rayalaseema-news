@@ -96,6 +96,16 @@ Browser smoke on the local admin dev server (`scripts/video-iq-local/ui-smoke-st
 - `/youtube/<id>`: Save (title 2, visibility Private) → Approve → Publish behind the confirm dialog ("as a private video") → APPLIED with id `DRYRUN00000`; the server logged insert, thumbnail, two playlists and localisation, and skipped the comment for the private upload. **Create website article** created a DRAFT VIDEO article (YouTube watch URL, video id, thumbnail, transcript, duration, summary, editor note, breaking) linked to the run and opened the editor. Screenshots `studio-4-ready.png`, `studio-5-applied.png`, `studio-6-article.png`.
 - Defect found and fixed on the way: Approve returned 500 for a standalone run because it upserted a SocialPost keyed by the (null) content id; the upsert is now skipped when no article is linked.
 
+## Live workspace (2026-10-24, owner feedback "stuck, blind, ugly stepper")
+
+Found on the server: a "Score video" run on `HtdbtB_XB84` sat 12 hours at "captions not ready, poll 1/48" because the 30-minute spacing was measured from `updatedAt`, which every worker claim bumps every 2 minutes, so it never polled again; and a fresh upload waited up to 3.5 minutes (2-minute tick plus 90 s claim window) before anything visible happened.
+
+Fixed and verified locally in the browser (`ui-smoke-studio.mts`):
+
+- Start → the create route kicks the worker right away; the activity feed showed "Downloading the video and reading it with ffmpeg" 3 s after Start and "Video is 01:00, 1280×720, with audio → a long-form video" 8 s later; READY at 80 s, no cron call involved. Screenshots `studio-3-progress.png` (live state: video, feed, skeletons) and `studio-4-ready.png` (score ring 91, scorecard, titles with scores, three branded thumbnails with the breaking badge, SEO, fit, publish).
+- Caption polling now records `lastPollAt` and waits 30 minutes from it; a waiting run shows the amber "Waiting for YouTube's Telugu captions" box with **Analyse now from the title**.
+- Save (private) → Approve → Publish (dry run) → Create website article all passed on the new screen; tests 108/108.
+
 ## Next
 
 Phase B (back catalog via captions, 12.2, 12.4, 12.6, 12.7, 12.9) and Phase C (sweep, 12.8, 12.10, weekly report) each get their own plan.
