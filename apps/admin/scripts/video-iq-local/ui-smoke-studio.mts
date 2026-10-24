@@ -55,33 +55,43 @@ try {
     const runId = page.url().split("/").pop()!;
     writeFileSync(runFile, JSON.stringify({ runId }));
     log(`run created → ${page.url()}`);
-    await page.waitForTimeout(1500);
+    // The create route kicks the worker at once: the activity feed should
+    // show real lines within seconds, no cron needed.
+    await page.locator("[data-testid=viq-feed] >> text=/Downloading|Existing channel video/").first().waitFor({ timeout: 60_000 });
+    log("feed started");
+    await page.waitForTimeout(12_000);
+    const feed = await page.getByTestId("viq-feed").innerText();
+    log(`feed after 12 s: ${feed.replace(/\s+/g, " ").slice(0, 300)}`);
     await page.screenshot({ path: join(outDir, "studio-3-progress.png") });
+    await page.locator("text=/^(Ready to review|Approved|On YouTube|Failed)$/").first().waitFor({ timeout: 300_000 });
+    const status = await page.locator("text=/^(Ready to review|Approved|On YouTube|Failed)$/").first().innerText();
+    log(`run finished: ${status}`);
+    await page.waitForTimeout(1500);
+    await page.screenshot({ path: join(outDir, "studio-4-ready.png"), fullPage: true });
+    log(`feed final: ${(await page.getByTestId("viq-feed").innerText().catch(() => "(collapsed)")).replace(/\s+/g, " ").slice(0, 600)}`);
   }
 
   if (step === "publish") {
     if (!existsSync(runFile)) throw new Error("run the upload step first");
     const { runId } = JSON.parse(readFileSync(runFile, "utf8"));
     await page.goto(`${BASE}/youtube/${runId}`, { waitUntil: "networkidle", timeout: 180_000 });
-    await page.locator("text=/^(READY|APPROVED)$/").first().waitFor({ timeout: 300_000 });
+    await page.locator("text=/^(Ready to review|Approved)$/").first().waitFor({ timeout: 300_000 });
     log("workspace READY");
     await page.screenshot({ path: join(outDir, "studio-4-ready.png") });
     const radios = page.locator("input[name=viq-title]");
     const pick = (await radios.nth(1).isChecked()) ? 0 : 1;
     await radios.nth(pick).check();
-    await page.getByTestId("viq-tab-publish").click();
-    await page.getByLabel("Private").check();
+    await page.getByTestId("viq-publish-section").getByLabel("Private").check();
     await page.getByTestId("viq-save").click();
     await page.locator("text=Choice saved").waitFor({ timeout: 20_000 });
     log(`saved title ${pick + 1}, visibility private`);
     await page.getByTestId("viq-approve").click();
-    await page.locator("text=Approved").first().waitFor({ timeout: 20_000 });
+    await page.locator("text=/^Approved$/").first().waitFor({ timeout: 20_000 });
     const publishBtn = page.getByTestId("viq-publish");
     await page.waitForTimeout(800);
     const gate = (await publishBtn.getAttribute("title")) ?? "";
     log(`publish gate: ${gate || "(open)"}`);
     if (/not a fit/i.test(gate)) {
-      await page.getByTestId("viq-tab-review").click();
       await page.getByPlaceholder(/Why publish anyway/).fill("studio smoke: owner accepts this clip");
       await page.getByRole("button", { name: "Record override" }).click();
       await page.locator("text=Override recorded").waitFor({ timeout: 20_000 });

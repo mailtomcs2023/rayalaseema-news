@@ -188,7 +188,7 @@ export function SeoTab({ s, chosen, edit }: { s: any; chosen: Chosen; edit: Edit
   );
 }
 
-export function ReviewTab({ row, role, note, setNote, override }: { row: any; role: string; note: string; setNote: (s: string) => void; override: () => void }) {
+export function ReviewTab({ row, role, note, setNote, override, showTranscript = true }: { row: any; role: string; note: string; setNote: (s: string) => void; override: () => void; showTranscript?: boolean }) {
   const s = row.suggestions;
   const t = row.transcript;
   const fit = s.fit;
@@ -225,13 +225,15 @@ export function ReviewTab({ row, role, note, setNote, override }: { row: any; ro
           {(["title", "thumbnail", "description", "tags", "fit", "overall"] as const).map((k) => <ScorePill key={k} label={k} value={row.scores[k]} />)}
         </div>
       )}
-      <div>
-        <div style={muted}>Transcript ({t?.words ?? 0} words, {t?.locale ?? "–"})</div>
-        <div style={{ maxHeight: 320, overflow: "auto", fontSize: 13, lineHeight: 1.7, border: "1px solid #e5e7eb", borderRadius: 8, padding: 8 }}>
-          {(t?.segments ?? []).map((seg: any, i: number) => <div key={i}><span style={{ ...muted, fontVariantNumeric: "tabular-nums" }}>{mmss(seg.start)}</span> {seg.text}</div>)}
-          {!t?.segments?.length && <span style={muted}>No transcript (captions not ready or no speech).</span>}
+      {showTranscript && (
+        <div>
+          <div style={muted}>Transcript ({t?.words ?? 0} words, {t?.locale ?? "–"})</div>
+          <div style={{ maxHeight: 320, overflow: "auto", fontSize: 13, lineHeight: 1.7, border: "1px solid #e5e7eb", borderRadius: 8, padding: 8 }}>
+            {(t?.segments ?? []).map((seg: any, i: number) => <div key={i}><span style={{ ...muted, fontVariantNumeric: "tabular-nums" }}>{mmss(seg.start)}</span> {seg.text}</div>)}
+            {!t?.segments?.length && <span style={muted}>No transcript (captions not ready or no speech).</span>}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

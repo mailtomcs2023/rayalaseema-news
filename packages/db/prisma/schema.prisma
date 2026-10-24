@@ -1977,6 +1977,10 @@ model VideoOptimization {
   visibility  String        @default("public")
   publishAt   DateTime?
   durationSec Int?
+  // Live activity feed shown in the workspace: [{ at, text }] appended by the worker.
+  events      Json?
+  // Last time the worker asked YouTube for captions (back-catalog runs).
+  lastPollAt  DateTime?
   transcript  Json?
   suggestions Json?
   scores      Json?

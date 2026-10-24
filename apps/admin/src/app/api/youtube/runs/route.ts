@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { after } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
 import { logAudit } from "@/lib/audit";
 import { runInputSchema, runSummary, youtubeIdFrom } from "@/lib/video-iq/studio";
-import { ACTIVE_STATUSES } from "@/lib/video-iq/worker";
+import { ACTIVE_STATUSES, processQueue } from "@/lib/video-iq/worker";
+import { buildDeps } from "@/lib/video-iq/deps";
 import { CHANNEL_ID, getYouTube, youtubeConfigured } from "@/lib/video-iq/youtube";
 
 // POST /api/youtube/runs            → create a standalone run (upload or back-catalog video)
@@ -53,6 +55,9 @@ export async function POST(req: NextRequest) {
       },
     });
     await logAudit({ action: "youtube.run.create", resource: "video_optimization", resourceId: row.id, meta: { source: row.source, videoId, visibility: input.visibility }, actor: auth.user, req });
+    // Start working right away (after the response is sent); the PM2 cron
+    // runner is the fallback if this request's process goes away.
+    after(async () => { try { await processQueue(buildDeps(), 1); } catch (e) { console.error("[video-iq] start kick", e); } });
     return NextResponse.json({ id: row.id, status: row.status }, { status: 201 });
   } catch (e) {
     return apiError(e);

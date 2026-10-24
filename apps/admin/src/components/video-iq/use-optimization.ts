@@ -60,6 +60,7 @@ export function useRun(runId: string | undefined) {
     override: (note: string) => call(`/api/video-iq/${runId}/override`, { method: "POST", body: JSON.stringify({ note }) }),
     publish: () => call(`/api/video-iq/${runId}/publish`, { method: "POST" }),
     createArticle: () => call(`/api/video-iq/${runId}/create-article`, { method: "POST" }),
+    skipCaptions: () => call(`/api/video-iq/${runId}/skip-captions`, { method: "POST" }),
     articleLink: () => call(`/api/video-iq/${runId}/article-link`, { method: "POST" }),
     rerun: (body: Record<string, unknown>) => call("/api/youtube/runs", { method: "POST", body: JSON.stringify(body) }),
   };

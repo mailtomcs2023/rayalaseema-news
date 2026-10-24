@@ -17,8 +17,20 @@ function worldFor(rowOver: Partial<any> = {}, over: Partial<any> = {}) {
   const prisma = {
     videoOptimization: {
       update: async ({ data }: any) => { Object.assign(row, data, { updatedAt: new Date() }); return row; },
-      findMany: async ({ where }: any) => (where?.updatedAt?.lt && row.updatedAt >= where.updatedAt.lt ? [] : [row]),
-      updateMany: async ({ where, data }: any) => { if (where.id === row.id && (!where.updatedAt?.lt || row.updatedAt < where.updatedAt.lt)) { Object.assign(row, data); return { count: 1 }; } return { count: 0 }; },
+      findMany: async ({ where }: any) => {
+        // Mirrors processQueue's candidate query: stale rows, or fresh QUEUED rows.
+        const stale = where?.OR?.find((c: any) => c.updatedAt)?.updatedAt?.lt ?? where?.updatedAt?.lt;
+        const freshQueued = Boolean(where?.OR?.some((c: any) => c.status === "QUEUED")) && row.status === "QUEUED" && (row.attempts ?? 0) === 0;
+        // Separate object per query, like Prisma: a racing runner must not see the other's claim through a shared reference.
+        if (!stale) return [{ ...row }];
+        return freshQueued || row.updatedAt < stale ? [{ ...row }] : [];
+      },
+      updateMany: async ({ where, data }: any) => {
+        const okStale = where.updatedAt?.lt ? row.updatedAt < where.updatedAt.lt : true;
+        const okExact = where.updatedAt instanceof Date ? row.updatedAt.getTime() === where.updatedAt.getTime() : true;
+        if (where.id === row.id && okStale && okExact) { Object.assign(row, data); return { count: 1 }; }
+        return { count: 0 };
+      },
     },
     content: { findUnique: async () => content },
     keywordVolume: { findMany: async () => [], upsert: async () => ({}) },
@@ -39,14 +51,14 @@ function worldFor(rowOver: Partial<any> = {}, over: Partial<any> = {}) {
 }
 
 describe("C1: YOUTUBE source caption polling is rate limited and capped", () => {
-  test("second tick within 30 minutes does not call captions again", async () => {
-    const w = worldFor({ source: "YOUTUBE", videoId: "abcdefghijk", blobUrl: null, status: "TRANSCRIBING", attempts: 1, updatedAt: new Date(Date.now() - 5 * MIN) });
+  test("second tick within 30 minutes of the last poll does not call captions again", async () => {
+    const w = worldFor({ source: "YOUTUBE", videoId: "abcdefghijk", blobUrl: null, status: "TRANSCRIBING", attempts: 1, lastPollAt: new Date(Date.now() - 5 * MIN), updatedAt: new Date() });
     await runStage(w.row, w as any);
     expect(w.calls).toEqual([]);
     expect(w.row.status).toBe("TRANSCRIBING");
   });
-  test("a tick after 30 minutes polls once", async () => {
-    const w = worldFor({ source: "YOUTUBE", videoId: "abcdefghijk", blobUrl: null, status: "TRANSCRIBING", attempts: 1, updatedAt: new Date(Date.now() - 31 * MIN) });
+  test("a tick 30 minutes after the last poll polls once", async () => {
+    const w = worldFor({ source: "YOUTUBE", videoId: "abcdefghijk", blobUrl: null, status: "TRANSCRIBING", attempts: 1, lastPollAt: new Date(Date.now() - 31 * MIN), updatedAt: new Date() });
     await runStage(w.row, w as any);
     expect(w.calls).toEqual(["captions"]);
     expect(w.row.attempts).toBe(2);
@@ -107,8 +119,8 @@ describe("I4: processQueue claims rows before running them", () => {
     expect(a.processed.length + b.processed.length).toBe(1);
     expect(probes).toBe(1);
   });
-  test("a row touched in the last 90 seconds is skipped", async () => {
-    const w = worldFor({ updatedAt: new Date() });
+  test("a row mid-flight touched in the last 90 seconds is skipped (fresh QUEUED rows are not)", async () => {
+    const w = worldFor({ status: "EXTRACTING", updatedAt: new Date() });
     const r = await processQueue(w as any);
     expect(r.processed).toEqual([]);
   });
