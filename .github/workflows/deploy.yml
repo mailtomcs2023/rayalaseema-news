@@ -26,6 +26,10 @@ jobs:
           script: |
             set -e
             export PATH="$HOME/.bun/bin:$PATH"
+            # Prisma + every packages/db script reads DATABASE_URL from env. The old
+            # Azure VM had it set by hand outside the repo; set it here so a fresh
+            # server deploys without manual setup.
+            export DATABASE_URL="${{ secrets.PROD_DATABASE_URL }}"
 
             echo "=== Pull latest code ==="
             cd /home/deploy/app
