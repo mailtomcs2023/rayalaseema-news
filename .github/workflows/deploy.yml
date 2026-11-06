@@ -12,11 +12,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy to Azure VM
+      - name: Deploy to prod server (rsn-prod-01)
         uses: appleboy/ssh-action@v1.2.1
         with:
-          host: 20.198.2.80
-          username: azureuser
+          host: 103.83.37.54
+          username: deploy
           key: ${{ secrets.VM_SSH_KEY }}
           script_stop: true
           # 30m (was 10m): the OSM mandal-geocoding backfill is rate-limited at
@@ -28,7 +28,7 @@ jobs:
             export PATH="$HOME/.bun/bin:$PATH"
 
             echo "=== Pull latest code ==="
-            cd /home/azureuser/app
+            cd /home/deploy/app
 
             # Clone or pull
             if [ ! -d ".git" ]; then
@@ -47,10 +47,10 @@ jobs:
             # Backup runs on every deploy to keep the muscle memory consistent;
             # only the last 14 are kept to bound disk usage.
             echo "=== Backup database (pg_dump) ==="
-            BACKUP_DIR=/home/azureuser/db-backups
+            BACKUP_DIR=/home/deploy/db-backups
             mkdir -p "$BACKUP_DIR"
             BACKUP_FILE="$BACKUP_DIR/pre-deploy-$(date +%Y%m%d-%H%M%S).sql.gz"
-            PGPASSWORD='RayalaseemaExpress2026!' pg_dump -h localhost -U reapp -d rayalaseema_express \
+            pg_dump "${{ secrets.PROD_DATABASE_URL }}" \
               --no-owner --no-privileges \
               | gzip > "$BACKUP_FILE"
             echo "Backup written to $BACKUP_FILE ($(du -h "$BACKUP_FILE" | cut -f1))"
@@ -188,14 +188,20 @@ jobs:
 
             echo "=== Create production env files ==="
             cat > apps/web/.env << 'ENV'
-            DATABASE_URL="postgresql://reapp:RayalaseemaExpress2026!@localhost:5432/rayalaseema_express"
+            DATABASE_URL="${{ secrets.PROD_DATABASE_URL }}"
             SITE_URL="https://rayalaseemanews.com"
             AZURE_OPENAI_ENDPOINT="https://rayalaseema-ai.openai.azure.com/"
             AZURE_OPENAI_KEY="${{ secrets.AZURE_OPENAI_KEY }}"
             AZURE_OPENAI_DEPLOYMENT="gpt51"
             AZURE_OPENAI_API_VERSION="2024-10-21"
             RAPIDAPI_CRICKET_KEY="${{ secrets.RAPIDAPI_CRICKET_KEY }}"
-            AZURE_STORAGE_CONNECTION_STRING="${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}"
+            # Media store: MinIO/Silo (S3 API) behind media.rayalaseemanews.com.
+            MEDIA_S3_ENDPOINT="https://media.rayalaseemanews.com"
+            MEDIA_S3_REGION="us-east-1"
+            MEDIA_S3_BUCKET="rsn-media"
+            MEDIA_S3_ACCESS_KEY_ID="${{ secrets.MEDIA_S3_ACCESS_KEY_ID }}"
+            MEDIA_S3_SECRET_ACCESS_KEY="${{ secrets.MEDIA_S3_SECRET_ACCESS_KEY }}"
+            MEDIA_PUBLIC_BASE_URL="https://media.rayalaseemanews.com/rsn-media"
             AZURE_SPEECH_KEY="${{ secrets.AZURE_SPEECH_KEY }}"
             AZURE_SPEECH_REGION="centralindia"
             AZURE_SPEECH_VOICE="te-IN-MohanNeural"
@@ -208,7 +214,7 @@ jobs:
             ENV
 
             cat > apps/admin/.env << 'ENV'
-            DATABASE_URL="postgresql://reapp:RayalaseemaExpress2026!@localhost:5432/rayalaseema_express"
+            DATABASE_URL="${{ secrets.PROD_DATABASE_URL }}"
             NEXTAUTH_SECRET="${{ secrets.NEXTAUTH_SECRET }}"
             NEXTAUTH_URL="https://admin.rayalaseemanews.com"
             # Public web host. The page-builder template editor iframes the
@@ -232,7 +238,13 @@ jobs:
             AZURE_IMAGES_KEY="${{ secrets.AZURE_IMAGES_KEY }}"
             AZURE_IMAGES_DEPLOYMENT="gpt-image"
             AZURE_IMAGES_API_VERSION="2025-04-01-preview"
-            AZURE_STORAGE_CONNECTION_STRING="${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}"
+            # Media store: MinIO/Silo (S3 API) behind media.rayalaseemanews.com.
+            MEDIA_S3_ENDPOINT="https://media.rayalaseemanews.com"
+            MEDIA_S3_REGION="us-east-1"
+            MEDIA_S3_BUCKET="rsn-media"
+            MEDIA_S3_ACCESS_KEY_ID="${{ secrets.MEDIA_S3_ACCESS_KEY_ID }}"
+            MEDIA_S3_SECRET_ACCESS_KEY="${{ secrets.MEDIA_S3_SECRET_ACCESS_KEY }}"
+            MEDIA_PUBLIC_BASE_URL="https://media.rayalaseemanews.com/rsn-media"
             # Field-level encryption key for KYC PII (Aadhaar/PAN/bank). The
             # /api/onboarding/kyc PATCH encrypts these on save; without this
             # key encrypt() throws and the save 500s. 32-byte base64 - rotate
@@ -305,7 +317,7 @@ jobs:
             # below hangs or the script times out. Never `pm2 delete all` here -
             # the delete-then-build-then-start window is exactly what left
             # production dead on 2026-07-04.
-            pm2 restart web 2>/dev/null || pm2 start "bun run start" --name "web" --cwd /home/azureuser/app/apps/web -- -p 3000
+            pm2 restart web 2>/dev/null || pm2 start "bun run start" --name "web" --cwd /home/deploy/app/apps/web -- -p 3000
             pm2 save
 
             echo "=== Build admin ==="
@@ -318,12 +330,12 @@ jobs:
             cd ../..
 
             echo "=== Restart admin ==="
-            pm2 restart admin 2>/dev/null || pm2 start "bun run start" --name "admin" --cwd /home/azureuser/app/apps/admin -- -p 3001
+            pm2 restart admin 2>/dev/null || pm2 start "bun run start" --name "admin" --cwd /home/deploy/app/apps/admin -- -p 3001
 
             echo "=== Restart cron runner (publish-scheduled, video-iq, trending-poll, dailies) ==="
             # apps/admin/scripts/cron-runner.ts reads CRON_SECRET from apps/admin/.env
             # (bun loads .env from cwd) and calls the admin cron routes on 127.0.0.1:3001.
-            pm2 restart cron 2>/dev/null || pm2 start "bun scripts/cron-runner.ts" --name "cron" --cwd /home/azureuser/app/apps/admin
+            pm2 restart cron 2>/dev/null || pm2 start "bun scripts/cron-runner.ts" --name "cron" --cwd /home/deploy/app/apps/admin
 
             pm2 save
 

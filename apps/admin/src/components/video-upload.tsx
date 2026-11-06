@@ -86,11 +86,12 @@ export function VideoUpload({ value, onChange, contentId }: Props) {
         setUploading(false);
         return;
       }
-      // 2) PUT the file straight to Azure Blob (XHR so we get upload progress).
+      // 2) PUT the file straight to the media store via the presigned URL
+      // (XHR so we get upload progress). Content-Type is part of the
+      // signature, so it must match what the server signed.
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open("PUT", sas.uploadUrl);
-        xhr.setRequestHeader("x-ms-blob-type", "BlockBlob");
         xhr.setRequestHeader("Content-Type", file.type);
         xhr.upload.onprogress = (e) => {
           if (e.lengthComputable) setProgress(Math.round((e.loaded / e.total) * 100));

@@ -1,14 +1,25 @@
-import {
-  BlobServiceClient,
-  StorageSharedKeyCredential,
-  generateBlobSASQueryParameters,
-  BlobSASPermissions,
-  SASProtocol,
-} from "@azure/storage-blob";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { processImageBuffer } from "./image-process";
 
-const CONN = process.env.AZURE_STORAGE_CONNECTION_STRING;
-const CONTAINER = "uploads";
+// Media storage: S3-compatible object store (MinIO/Silo behind
+// media.rayalaseemanews.com since the Nov-2026 move off Azure Blob).
+// All config comes from env; see deploy.yml.
+//   MEDIA_S3_ENDPOINT       https://media.rayalaseemanews.com
+//   MEDIA_S3_REGION         us-east-1
+//   MEDIA_S3_BUCKET         rsn-media
+//   MEDIA_S3_ACCESS_KEY_ID / MEDIA_S3_SECRET_ACCESS_KEY  (scoped app key)
+//   MEDIA_PUBLIC_BASE_URL   https://media.rayalaseemanews.com/rsn-media
+const ENDPOINT = process.env.MEDIA_S3_ENDPOINT;
+const REGION = process.env.MEDIA_S3_REGION || "us-east-1";
+const BUCKET = process.env.MEDIA_S3_BUCKET;
+const ACCESS_KEY = process.env.MEDIA_S3_ACCESS_KEY_ID;
+const SECRET_KEY = process.env.MEDIA_S3_SECRET_ACCESS_KEY;
+const PUBLIC_BASE = (process.env.MEDIA_PUBLIC_BASE_URL || "").replace(/\/+$/, "");
+
+// Legacy Azure Blob host. Old rows may still carry these URLs, so they
+// count as "already ours" and are never re-hosted.
+const LEGACY_HOST_MARKER = ".blob.core.windows.net/";
 
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"];
 const EXT_BY_TYPE: Record<string, string> = {
@@ -19,79 +30,87 @@ const EXT_BY_TYPE: Record<string, string> = {
   "image/avif": "avif",
 };
 
-export function blobConfigured(): boolean {
-  return !!CONN;
-}
-
-// Parse account name/key out of the connection string so we can mint a SAS.
-function parseConnString(conn: string): { accountName: string; accountKey: string; suffix: string } | null {
-  const map: Record<string, string> = {};
-  for (const part of conn.split(";")) {
-    const i = part.indexOf("=");
-    if (i > 0) map[part.slice(0, i).trim()] = part.slice(i + 1).trim();
+let client: S3Client | null = null;
+function s3(): S3Client {
+  if (!client) {
+    client = new S3Client({
+      endpoint: ENDPOINT,
+      region: REGION,
+      forcePathStyle: true, // MinIO/Silo: path-style only
+      credentials: { accessKeyId: ACCESS_KEY!, secretAccessKey: SECRET_KEY! },
+    });
   }
-  if (!map.AccountName || !map.AccountKey) return null;
-  return { accountName: map.AccountName, accountKey: map.AccountKey, suffix: map.EndpointSuffix || "core.windows.net" };
+  return client;
 }
 
-// Mint a short-lived, write-only SAS so the browser can upload a video file
-// DIRECTLY to Azure Blob, bypassing the Next server's body/memory limits.
-// Returns the upload URL (with SAS) + the final public blob URL, or null if
-// blob storage isn't configured / the connection string lacks an account key.
-export function videoUploadSas(
+export function blobConfigured(): boolean {
+  return !!(ENDPOINT && BUCKET && ACCESS_KEY && SECRET_KEY && PUBLIC_BASE);
+}
+
+/** True when `url` already points at our own media store (new or legacy). */
+export function isOwnMediaUrl(url: string | null | undefined): boolean {
+  if (!url || typeof url !== "string") return false;
+  if (url.includes(LEGACY_HOST_MARKER)) return true;
+  return !!PUBLIC_BASE && url.startsWith(PUBLIC_BASE + "/");
+}
+
+function publicUrl(key: string): string {
+  return `${PUBLIC_BASE}/${key}`;
+}
+
+function randomName(ext: string): string {
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
+}
+
+// Short-lived presigned PUT so the browser uploads a video DIRECTLY to the
+// object store, bypassing the Next server's body/memory limits. Returns
+// the upload URL + the final public URL, or null if storage isn't configured.
+// (Name kept from the Azure SAS era so callers don't change.)
+export async function videoUploadSas(
   ext: string,
   contentType: string,
-): { uploadUrl: string; blobUrl: string } | null {
-  if (!CONN) return null;
-  const parsed = parseConnString(CONN);
-  if (!parsed) return null;
-  const { accountName, accountKey, suffix } = parsed;
-  const cred = new StorageSharedKeyCredential(accountName, accountKey);
-  const blobName = `videos/${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext}`;
-  const now = Date.now();
-  const sas = generateBlobSASQueryParameters(
-    {
-      containerName: CONTAINER,
-      blobName,
-      permissions: BlobSASPermissions.parse("cw"), // create + write only
-      startsOn: new Date(now - 60_000),
-      expiresOn: new Date(now + 15 * 60_000),
-      protocol: SASProtocol.Https,
-      contentType,
-    },
-    cred,
-  ).toString();
-  const base = `https://${accountName}.blob.${suffix}/${CONTAINER}/${blobName}`;
-  return { uploadUrl: `${base}?${sas}`, blobUrl: base };
+): Promise<{ uploadUrl: string; blobUrl: string } | null> {
+  if (!blobConfigured()) return null;
+  const key = `videos/${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext}`;
+  const uploadUrl = await getSignedUrl(
+    s3(),
+    new PutObjectCommand({ Bucket: BUCKET, Key: key, ContentType: contentType, CacheControl: "public, max-age=31536000" }),
+    { expiresIn: 15 * 60 },
+  );
+  return { uploadUrl, blobUrl: publicUrl(key) };
 }
 
-/** Upload a raw buffer to Azure Blob, return its public URL. */
+/** Upload a raw buffer to the media store, return its public URL. */
 export async function uploadBuffer(buffer: Buffer, ext: string, contentType: string): Promise<string> {
-  if (!CONN) throw new Error("AZURE_STORAGE_CONNECTION_STRING not configured");
-  const filename = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
-  const container = BlobServiceClient.fromConnectionString(CONN).getContainerClient(CONTAINER);
-  const blob = container.getBlockBlobClient(filename);
-  await blob.uploadData(buffer, {
-    blobHTTPHeaders: { blobContentType: contentType, blobCacheControl: "public, max-age=31536000" },
-  });
-  return blob.url;
+  if (!blobConfigured()) throw new Error("Media storage (MEDIA_S3_*) not configured");
+  const key = randomName(ext);
+  await s3().send(
+    new PutObjectCommand({
+      Bucket: BUCKET,
+      Key: key,
+      Body: buffer,
+      ContentType: contentType,
+      CacheControl: "public, max-age=31536000",
+    }),
+  );
+  return publicUrl(key);
 }
 
 /**
- * Download an external image and re-host it on Azure Blob.
- * Returns the blob URL, or null if the source can't be fetched (403/hotlink-blocked/timeout).
+ * Download an external image and re-host it on our media store.
+ * Returns the new URL, or null if the source can't be fetched (403/hotlink-blocked/timeout).
  * Use this on every ingested news image so RE never hotlinks publisher images.
  */
 // Like uploadImageFromUrl but also returns the source image's original
 // dimensions, so callers can skip tiny thumbnails (which look blurry when
-// shown large). width/height are 0 when unknown (already-hosted blob, or a
+// shown large). width/height are 0 when unknown (already-hosted, or a
 // raw-format fallback sharp couldn't read) - callers treat 0 as "don't flag".
 export async function uploadImageFromUrlWithMeta(
   srcUrl: string | null | undefined,
 ): Promise<{ url: string; width: number; height: number } | null> {
-  if (!srcUrl || !CONN) return null;
-  // Already an RE blob - don't re-host
-  if (srcUrl.includes(".blob.core.windows.net/")) return { url: srcUrl, width: 0, height: 0 };
+  if (!srcUrl || !blobConfigured()) return null;
+  // Already ours - don't re-host
+  if (isOwnMediaUrl(srcUrl)) return { url: srcUrl, width: 0, height: 0 };
 
   try {
     const res = await fetch(srcUrl, {
@@ -133,10 +152,10 @@ export async function uploadImageFromUrl(srcUrl: string | null | undefined): Pro
 }
 
 /**
- * Idempotent guard: if `url` is already on our Azure Blob CDN, return
- * it unchanged. If it's an external http(s) URL, download + re-host
- * through processImageBuffer (EXIF strip + WebP + brand stamp) and
- * return the new blob URL. data:/relative/null inputs pass through.
+ * Idempotent guard: if `url` is already on our media store, return it
+ * unchanged. If it's an external http(s) URL, download + re-host through
+ * processImageBuffer (EXIF strip + WebP + brand stamp) and return the new
+ * URL. data:/relative/null inputs pass through.
  *
  * Used at every Content create/update endpoint so external thumbnails
  * (10tv.in, asianetnews.com, telugutimes.net, etc) never leak onto the
@@ -146,7 +165,7 @@ export async function uploadImageFromUrl(srcUrl: string | null | undefined): Pro
 export async function ensureBlobHosted(url: string | null | undefined): Promise<string | null> {
   if (!url) return null;
   if (typeof url !== "string") return null;
-  if (url.includes(".blob.core.windows.net/")) return url;
+  if (isOwnMediaUrl(url)) return url;
   if (!/^https?:\/\//i.test(url)) return url;
   try {
     const rehosted = await uploadImageFromUrl(url);

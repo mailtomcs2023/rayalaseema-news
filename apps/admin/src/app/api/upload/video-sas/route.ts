@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const sas = videoUploadSas(ext, contentType);
+  const sas = await videoUploadSas(ext, contentType);
   if (!sas) {
     return NextResponse.json({ error: "Couldn't create the upload link. Please try again." }, { status: 500 });
   }

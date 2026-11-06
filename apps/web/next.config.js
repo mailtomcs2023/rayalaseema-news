@@ -72,6 +72,8 @@ const nextConfig = {
       // under the `*.blob.core.windows.net` wildcard so deploys to a new
       // storage account don't need a config change.
       { protocol: "https", hostname: "**.blob.core.windows.net" },
+      // Own media store (MinIO/Silo via Cloudflare) since the Nov-2026 move off Azure.
+      { protocol: "https", hostname: "media.rayalaseemanews.com" },
       // Free-image-search picks (Pexels, Pixabay, iStock CDN). When the
       // editor inserts an image via the search modal it lands as one of
       // these direct URLs.

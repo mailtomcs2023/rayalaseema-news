@@ -1,0 +1,280 @@
+# DNS BEFORE any change — exported from GoDaddy API 2026-11-06 09:27 UTC
+# Source: GET https://api.godaddy.com/v1/domains/<domain>/records  (authoritative: GoDaddy domaincontrol.com)
+# Format: TYPE | NAME | DATA | TTL | PRIORITY
+
+## rayalaseemanews.com   (nameservers: ns47.domaincontrol.com, ns48.domaincontrol.com)  records: 15
+A      | @                            | 20.198.2.80 | 600 | 
+A      | admin                        | 20.198.2.80 | 600 | 
+CNAME  | _domainconnect               | _domainconnect.gd.domaincontrol.com | 3600 | 
+CNAME  | autodiscover                 | autodiscover.outlook.com | 3600 | 
+CNAME  | enterpriseenrollment         | enterpriseenrollment-s.manage.microsoft.com | 3600 | 
+CNAME  | enterpriseregistration       | enterpriseregistration.windows.net | 3600 | 
+CNAME  | www                          | @ | 600 | 
+MX     | @                            | rayalaseemanews-com.mail.protection.outlook.com | 3600 | 0
+NS     | @                            | ns47.domaincontrol.com | 3600 | 
+NS     | @                            | ns48.domaincontrol.com | 3600 | 
+TXT    | _acme-challenge              | -4vhjqv9DaTX-UbZkOMNeKu_lV2j_AakwGREe_-nIdY | 600 | 
+TXT    | _dmarc                       | v=DMARC1; p=quarantine; adkim=r; aspf=r; rua=mailto:dmarc_rua@onsecureserver.net; | 3600 | 
+TXT    | @                            | google-site-verification=Dcklr1L2D7EgP8f_IYAH5vk6QZDP6A3fPLrfpBuakQI | 3600 | 
+TXT    | @                            | google-site-verification=S716xSxmiwZUt0lBlmbOAcqFGa-AmUxEAq-0rwTnyDg | 600 | 
+TXT    | @                            | v=spf1 include:spf.protection.outlook.com -all | 600 | 
+
+## rayalaseemaexpress.com   (nameservers: ns15.domaincontrol.com, ns16.domaincontrol.com)  records: 16
+A      | @                            | 20.198.2.80 | 600 | 
+A      | admin                        | 20.198.2.80 | 600 | 
+CNAME  | _domainconnect               | _domainconnect.gd.domaincontrol.com | 3600 | 
+CNAME  | autodiscover                 | autodiscover.outlook.com | 3600 | 
+CNAME  | enterpriseenrollment         | enterpriseenrollment-s.manage.microsoft.com | 3600 | 
+CNAME  | enterpriseregistration       | enterpriseregistration.windows.net | 3600 | 
+CNAME  | selector1._domainkey         | selector1-rayalaseemaexpress-com._domainkey.repress.n-v1.dkim.mail.microsoft | 3600 | 
+CNAME  | selector2._domainkey         | selector2-rayalaseemaexpress-com._domainkey.repress.n-v1.dkim.mail.microsoft | 3600 | 
+CNAME  | www                          | @ | 600 | 
+MX     | @                            | rayalaseemaexpress-com.mail.protection.outlook.com | 3600 | 0
+NS     | @                            | ns15.domaincontrol.com | 3600 | 
+NS     | @                            | ns16.domaincontrol.com | 3600 | 
+TXT    | _dmarc                       | v=DMARC1; p=quarantine; adkim=r; aspf=r; rua=mailto:dmarc_rua@onsecureserver.net; | 3600 | 
+TXT    | @                            | google-site-verification=O6Lo-d3wV14mHX3ZHw7l9L1zrSVTyxiSGCWTFRxZh5Y | 3600 | 
+TXT    | @                            | v=spf1 include:spf.protection.outlook.com -all | 3600 | 
+TXT    | @                            | v=verifydomain MS=2698547 | 3600 | 
+
+## rayalaseemaexpress.in   (nameservers: ns29.domaincontrol.com, ns30.domaincontrol.com)  records: 6
+A      | @                            | 20.198.2.80 | 600 | 
+CNAME  | _domainconnect               | _domainconnect.gd.domaincontrol.com | 3600 | 
+CNAME  | www                          | @ | 3600 | 
+NS     | @                            | ns29.domaincontrol.com | 3600 | 
+NS     | @                            | ns30.domaincontrol.com | 3600 | 
+TXT    | _dmarc                       | v=DMARC1; p=quarantine; adkim=r; aspf=r; rua=mailto:dmarc_rua@onsecureserver.net; | 3600 | 
+
+# Raw JSON (for exact re-import):
+{
+  "rayalaseemaexpress.in": [
+    {
+      "data": "20.198.2.80",
+      "name": "@",
+      "ttl": 600,
+      "type": "A"
+    },
+    {
+      "data": "ns29.domaincontrol.com",
+      "name": "@",
+      "ttl": 3600,
+      "type": "NS"
+    },
+    {
+      "data": "ns30.domaincontrol.com",
+      "name": "@",
+      "ttl": 3600,
+      "type": "NS"
+    },
+    {
+      "data": "@",
+      "name": "www",
+      "ttl": 3600,
+      "type": "CNAME"
+    },
+    {
+      "data": "_domainconnect.gd.domaincontrol.com",
+      "name": "_domainconnect",
+      "ttl": 3600,
+      "type": "CNAME"
+    },
+    {
+      "data": "v=DMARC1; p=quarantine; adkim=r; aspf=r; rua=mailto:dmarc_rua@onsecureserver.net;",
+      "name": "_dmarc",
+      "ttl": 3600,
+      "type": "TXT"
+    }
+  ],
+  "rayalaseemanews.com": [
+    {
+      "data": "20.198.2.80",
+      "name": "@",
+      "ttl": 600,
+      "type": "A"
+    },
+    {
+      "data": "20.198.2.80",
+      "name": "admin",
+      "ttl": 600,
+      "type": "A"
+    },
+    {
+      "data": "ns47.domaincontrol.com",
+      "name": "@",
+      "ttl": 3600,
+      "type": "NS"
+    },
+    {
+      "data": "ns48.domaincontrol.com",
+      "name": "@",
+      "ttl": 3600,
+      "type": "NS"
+    },
+    {
+      "data": "autodiscover.outlook.com",
+      "name": "autodiscover",
+      "ttl": 3600,
+      "type": "CNAME"
+    },
+    {
+      "data": "enterpriseenrollment-s.manage.microsoft.com",
+      "name": "enterpriseenrollment",
+      "ttl": 3600,
+      "type": "CNAME"
+    },
+    {
+      "data": "enterpriseregistration.windows.net",
+      "name": "enterpriseregistration",
+      "ttl": 3600,
+      "type": "CNAME"
+    },
+    {
+      "data": "@",
+      "name": "www",
+      "ttl": 600,
+      "type": "CNAME"
+    },
+    {
+      "data": "_domainconnect.gd.domaincontrol.com",
+      "name": "_domainconnect",
+      "ttl": 3600,
+      "type": "CNAME"
+    },
+    {
+      "data": "rayalaseemanews-com.mail.protection.outlook.com",
+      "name": "@",
+      "priority": 0,
+      "ttl": 3600,
+      "type": "MX"
+    },
+    {
+      "data": "google-site-verification=Dcklr1L2D7EgP8f_IYAH5vk6QZDP6A3fPLrfpBuakQI",
+      "name": "@",
+      "ttl": 3600,
+      "type": "TXT"
+    },
+    {
+      "data": "google-site-verification=S716xSxmiwZUt0lBlmbOAcqFGa-AmUxEAq-0rwTnyDg",
+      "name": "@",
+      "ttl": 600,
+      "type": "TXT"
+    },
+    {
+      "data": "v=spf1 include:spf.protection.outlook.com -all",
+      "name": "@",
+      "ttl": 600,
+      "type": "TXT"
+    },
+    {
+      "data": "-4vhjqv9DaTX-UbZkOMNeKu_lV2j_AakwGREe_-nIdY",
+      "name": "_acme-challenge",
+      "ttl": 600,
+      "type": "TXT"
+    },
+    {
+      "data": "v=DMARC1; p=quarantine; adkim=r; aspf=r; rua=mailto:dmarc_rua@onsecureserver.net;",
+      "name": "_dmarc",
+      "ttl": 3600,
+      "type": "TXT"
+    }
+  ],
+  "rayalaseemaexpress.com": [
+    {
+      "data": "20.198.2.80",
+      "name": "@",
+      "ttl": 600,
+      "type": "A"
+    },
+    {
+      "data": "20.198.2.80",
+      "name": "admin",
+      "ttl": 600,
+      "type": "A"
+    },
+    {
+      "data": "ns15.domaincontrol.com",
+      "name": "@",
+      "ttl": 3600,
+      "type": "NS"
+    },
+    {
+      "data": "ns16.domaincontrol.com",
+      "name": "@",
+      "ttl": 3600,
+      "type": "NS"
+    },
+    {
+      "data": "autodiscover.outlook.com",
+      "name": "autodiscover",
+      "ttl": 3600,
+      "type": "CNAME"
+    },
+    {
+      "data": "enterpriseenrollment-s.manage.microsoft.com",
+      "name": "enterpriseenrollment",
+      "ttl": 3600,
+      "type": "CNAME"
+    },
+    {
+      "data": "enterpriseregistration.windows.net",
+      "name": "enterpriseregistration",
+      "ttl": 3600,
+      "type": "CNAME"
+    },
+    {
+      "data": "selector1-rayalaseemaexpress-com._domainkey.repress.n-v1.dkim.mail.microsoft",
+      "name": "selector1._domainkey",
+      "ttl": 3600,
+      "type": "CNAME"
+    },
+    {
+      "data": "selector2-rayalaseemaexpress-com._domainkey.repress.n-v1.dkim.mail.microsoft",
+      "name": "selector2._domainkey",
+      "ttl": 3600,
+      "type": "CNAME"
+    },
+    {
+      "data": "@",
+      "name": "www",
+      "ttl": 600,
+      "type": "CNAME"
+    },
+    {
+      "data": "_domainconnect.gd.domaincontrol.com",
+      "name": "_domainconnect",
+      "ttl": 3600,
+      "type": "CNAME"
+    },
+    {
+      "data": "rayalaseemaexpress-com.mail.protection.outlook.com",
+      "name": "@",
+      "priority": 0,
+      "ttl": 3600,
+      "type": "MX"
+    },
+    {
+      "data": "google-site-verification=O6Lo-d3wV14mHX3ZHw7l9L1zrSVTyxiSGCWTFRxZh5Y",
+      "name": "@",
+      "ttl": 3600,
+      "type": "TXT"
+    },
+    {
+      "data": "v=spf1 include:spf.protection.outlook.com -all",
+      "name": "@",
+      "ttl": 3600,
+      "type": "TXT"
+    },
+    {
+      "data": "v=verifydomain MS=2698547",
+      "name": "@",
+      "ttl": 3600,
+      "type": "TXT"
+    },
+    {
+      "data": "v=DMARC1; p=quarantine; adkim=r; aspf=r; rua=mailto:dmarc_rua@onsecureserver.net;",
+      "name": "_dmarc",
+      "ttl": 3600,
+      "type": "TXT"
+    }
+  ]
+}

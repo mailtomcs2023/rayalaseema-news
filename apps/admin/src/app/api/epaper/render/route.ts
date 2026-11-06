@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   const session = await requireAuth(["ADMIN", "EDITOR"]);
   if (isAuthError(session)) return session;
   if (!blobConfigured()) {
-    return NextResponse.json({ error: "AZURE_STORAGE_CONNECTION_STRING not configured" }, { status: 503 });
+    return NextResponse.json({ error: "Media storage (MEDIA_S3_*) not configured" }, { status: 503 });
   }
 
   const sp = new URL(req.url).searchParams;

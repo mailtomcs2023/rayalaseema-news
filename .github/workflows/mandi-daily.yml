@@ -14,15 +14,15 @@ jobs:
   fetch-mandi:
     runs-on: ubuntu-latest
     steps:
-      - name: Fetch mandi prices on Azure VM
+      - name: Fetch mandi prices on prod server
         uses: appleboy/ssh-action@v1.2.1
         with:
-          host: 20.198.2.80
-          username: azureuser
+          host: 103.83.37.54
+          username: deploy
           key: ${{ secrets.VM_SSH_KEY }}
           script: |
             export PATH="$HOME/.bun/bin:$PATH"
-            cd /home/azureuser/app
-            DATABASE_URL="postgresql://reapp:RayalaseemaExpress2026!@localhost:5432/rayalaseema_express" \
+            cd /home/deploy/app
+            DATABASE_URL="${{ secrets.PROD_DATABASE_URL }}" \
             DATA_GOV_IN_KEY="${{ secrets.DATA_GOV_IN_KEY }}" \
             bun packages/db/scripts/fetch-mandi-prices.ts

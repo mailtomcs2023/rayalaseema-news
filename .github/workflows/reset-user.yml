@@ -20,11 +20,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: SSH to Azure VM and run reset
+      - name: SSH to prod server and run reset
         uses: appleboy/ssh-action@v1.2.1
         with:
-          host: 20.198.2.80
-          username: azureuser
+          host: 103.83.37.54
+          username: deploy
           key: ${{ secrets.VM_SSH_KEY }}
           script_stop: true
           command_timeout: 3m
@@ -36,5 +36,5 @@ jobs:
             export PATH="$HOME/.bun/bin:$PATH"
             export EMAIL="${{ github.event.inputs.email }}"
             export PASSWORD="${{ github.event.inputs.password }}"
-            cd /home/azureuser/app/packages/db
+            cd /home/deploy/app/packages/db
             bunx tsx scripts/reset-user-password.ts

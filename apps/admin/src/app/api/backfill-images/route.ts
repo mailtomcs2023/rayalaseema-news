@@ -13,17 +13,24 @@ export async function POST(req: NextRequest) {
   if (isAuthError(session)) return session;
 
   if (!blobConfigured()) {
-    return NextResponse.json({ error: "AZURE_STORAGE_CONNECTION_STRING not configured" }, { status: 503 });
+    return NextResponse.json({ error: "Media storage (MEDIA_S3_*) not configured" }, { status: 503 });
   }
 
   const limit = Math.min(parseInt(new URL(req.url).searchParams.get("limit") || "20"), 40);
 
-  // Articles whose image is still an external URL (not yet on our blob)
+  // Rows already on our media store (new MinIO base) or the legacy Azure Blob host.
+  const mediaBase = (process.env.MEDIA_PUBLIC_BASE_URL || "").replace(/\/+$/, "");
+  const ownMedia = [
+    { featuredImage: { contains: ".blob.core.windows.net/" } },
+    ...(mediaBase ? [{ featuredImage: { startsWith: mediaBase + "/" } }] : []),
+  ];
+
+  // Articles whose image is still an external URL (not yet on our media store)
   const pending = await prisma.content.findMany({
     where: {
       type: "ARTICLE",
       featuredImage: { not: null },
-      NOT: { featuredImage: { contains: ".blob.core.windows.net/" } },
+      NOT: { OR: ownMedia },
     },
     select: { id: true, featuredImage: true },
     take: limit,
@@ -47,7 +54,7 @@ export async function POST(req: NextRequest) {
     where: {
       type: "ARTICLE",
       featuredImage: { not: null },
-      NOT: { featuredImage: { contains: ".blob.core.windows.net/" } },
+      NOT: { OR: ownMedia },
     },
   });
 

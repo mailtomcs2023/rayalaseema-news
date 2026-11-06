@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError, zodErrorResponse } from "@/lib/api-utils";
+import { isOwnMediaUrl } from "@/lib/blob";
 import { issuePressCard, getUserPressCard, issuableReason, PressCardIssueError, issueErrorStatus } from "@/lib/press-card/service";
 
 const ISSUERS = ["ADMIN", "EDITOR"] as const;
@@ -23,11 +24,11 @@ const issueSchema = z.object({
     .refine((u) => {
       try {
         const parsed = new URL(u);
-        return parsed.protocol === "https:" && parsed.hostname.endsWith(".blob.core.windows.net");
+        return parsed.protocol === "https:" && isOwnMediaUrl(u);
       } catch {
         return false;
       }
-    }, { message: "photoUrl must be an https Azure blob URL" })
+    }, { message: "photoUrl must be an https URL on our media store" })
     .optional(),
 }).strict();
 

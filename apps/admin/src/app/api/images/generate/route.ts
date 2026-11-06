@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     }, { status: 503 });
   }
   if (!blobConfigured()) {
-    return NextResponse.json({ error: "AZURE_STORAGE_CONNECTION_STRING not configured" }, { status: 503 });
+    return NextResponse.json({ error: "Media storage (MEDIA_S3_*) not configured" }, { status: 503 });
   }
   try {
     const { prompt, size } = await req.json();

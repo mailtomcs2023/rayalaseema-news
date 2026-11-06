@@ -13,15 +13,15 @@ jobs:
   health-check:
     runs-on: ubuntu-latest
     steps:
-      - name: Run SEO daily check on Azure VM
+      - name: Run SEO daily check on prod server
         uses: appleboy/ssh-action@v1.2.1
         with:
-          host: 20.198.2.80
-          username: azureuser
+          host: 103.83.37.54
+          username: deploy
           key: ${{ secrets.VM_SSH_KEY }}
           script: |
             export PATH="$HOME/.bun/bin:$PATH"
-            cd /home/azureuser/app
-            DATABASE_URL="postgresql://reapp:RayalaseemaExpress2026!@localhost:5432/rayalaseema_express" \
+            cd /home/deploy/app
+            DATABASE_URL="${{ secrets.PROD_DATABASE_URL }}" \
             SEO_HEALTH_WEBHOOK="${{ secrets.SEO_HEALTH_WEBHOOK }}" \
             bun packages/db/scripts/seo-daily-check.ts

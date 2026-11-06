@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   if (!blobConfigured()) {
-    return NextResponse.json({ error: "AZURE_STORAGE_CONNECTION_STRING not configured" }, { status: 503 });
+    return NextResponse.json({ error: "Media storage (MEDIA_S3_*) not configured" }, { status: 503 });
   }
   try {
     const formData = await req.formData();

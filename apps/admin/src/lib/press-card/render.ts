@@ -52,7 +52,7 @@ async function logoAssets() {
 // staff photos and is fetched once per process, then cached.
 const SIGNATURE_URL =
   process.env.PRESS_CARD_SIGNATURE_URL ||
-  "https://rayalaseemamedia.blob.core.windows.net/uploads/press-cards/signature.png";
+  `${(process.env.MEDIA_PUBLIC_BASE_URL || "https://media.rayalaseemanews.com/rsn-media").replace(/\/+$/, "")}/press-cards/signature.png`;
 let signatureCache: string | null = null;
 async function fetchSignatureDataUri(): Promise<string> {
   if (signatureCache) return signatureCache;
