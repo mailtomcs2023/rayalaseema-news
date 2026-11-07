@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { getReporterId } from "@/lib/reporter-auth";
 import { encrypt } from "@/lib/crypto/kyc";
+import { secureKycFields } from "@/lib/kyc-storage";
 import { isRegistrationComplete } from "@/lib/reporter-registration";
 
 // "Complete registration" submission for the Expo app.
@@ -61,6 +62,8 @@ export async function POST(req: NextRequest) {
     }
 
     const hasDocuments = !!(aadhaarFrontUrl || panCardUrl || photoUrl);
+    // Document images go to the private KYC bucket before saving.
+    const docs = await secureKycFields({ aadhaarFrontUrl, aadhaarBackUrl, panCardUrl }, reporterId);
 
     await prisma.$transaction(async (tx) => {
       await tx.user.update({
@@ -81,10 +84,10 @@ export async function POST(req: NextRequest) {
         // so the docs-skipped case still ends up with null in the DB
         // rather than a ciphertext-of-empty-string.
         aadhaarNumber: encrypt(aadhaarNumber || null),
-        aadhaarFrontUrl: aadhaarFrontUrl || null,
-        aadhaarBackUrl: aadhaarBackUrl || null,
+        aadhaarFrontUrl: docs.aadhaarFrontUrl || null,
+        aadhaarBackUrl: docs.aadhaarBackUrl || null,
         panNumber: encrypt(panNumber || null),
-        panCardUrl: panCardUrl || null,
+        panCardUrl: docs.panCardUrl || null,
         photoUrl: photoUrl || null,
         upiId: upiId || null,
         bankName: bankName || null,

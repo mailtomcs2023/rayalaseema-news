@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { getReporterId } from "@/lib/reporter-auth";
+import { secureKycFields } from "@/lib/kyc-storage";
 import { encrypt } from "@/lib/crypto/kyc";
 
 // In-app KYC submission for the reporter (Expo) app.
@@ -65,6 +66,9 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
+    // Move document images into the private KYC bucket before saving.
+    const docs = await secureKycFields({ aadhaarFrontUrl, aadhaarBackUrl, panCardUrl }, reporterId);
+
     await prisma.reporterProfile.update({
       where: { id: profile.id },
       data: {
@@ -72,10 +76,10 @@ export async function PATCH(req: NextRequest) {
         // from Aadhaar, uppercase PAN) happens BEFORE encrypt so the
         // ciphertext is canonical for the value the admin will see.
         aadhaarNumber: encrypt(aadhaarNumber!.replace(/\D/g, "")),
-        aadhaarFrontUrl,
-        aadhaarBackUrl,
+        aadhaarFrontUrl: docs.aadhaarFrontUrl,
+        aadhaarBackUrl: docs.aadhaarBackUrl,
         panNumber: encrypt(panNumber!.toUpperCase()),
-        panCardUrl,
+        panCardUrl: docs.panCardUrl,
         photoUrl,
         kycStatus: "SUBMITTED",
         // Wipe any prior rejection note - the reporter has answered the feedback.

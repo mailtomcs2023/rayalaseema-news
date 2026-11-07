@@ -19,6 +19,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@rayalaseema/db";
 import { requireAuth, isAuthError, apiError } from "@/lib/api-utils";
+import { secureKycFields } from "@/lib/kyc-storage";
 import { encrypt, decryptProfileFields } from "@/lib/crypto/kyc";
 
 export async function GET() {
@@ -79,6 +80,9 @@ export async function PATCH(req: NextRequest) {
       }
       data[field] = value;
     }
+
+    // Move any KYC document image into the private bucket before saving.
+    await secureKycFields(data, session.user.id);
 
     // Staff (admin / editor / sub-editor / user) self-edit policy: direct
     // save, no approval queue. The reporter approval flow (profile-update-

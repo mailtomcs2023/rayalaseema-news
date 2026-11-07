@@ -3,6 +3,7 @@ import { prisma } from "@rayalaseema/db";
 import { KycStatus } from "@rayalaseema/db";
 import { getReporterId } from "@/lib/reporter-auth";
 import { decryptProfileFields } from "@/lib/crypto/kyc";
+import { isKycField, secureKycUrl } from "@/lib/kyc-storage";
 import {
   PROFILE_FIELDS,
   LOCKED_FIELDS,
@@ -68,7 +69,11 @@ export async function POST(req: NextRequest) {
     // encrypted storage; we only decrypt for this transient request row.
     const decryptedProfile = decryptProfileFields(profile);
     const currentValue = getCurrentValue({ ...decryptedProfile, user }, def);
-    const newStored = serializeForStorage(def, value);
+    // KYC document images move to the private bucket before they're stored
+    // on the request (and later copied onto the profile when approved).
+    const securedValue =
+      isKycField(field) && typeof value === "string" ? await secureKycUrl(value, reporterId) : value;
+    const newStored = serializeForStorage(def, securedValue);
     const oldStored = valueToStorage(def, currentValue);
 
     if (newStored === oldStored) {

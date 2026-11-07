@@ -52,6 +52,11 @@ function makeClient(endpoint: string | undefined, withCa: boolean): S3Client {
 
 // Internal client: every request the server itself makes.
 let client: S3Client | null = null;
+export const MEDIA_BUCKET = BUCKET;
+export const MEDIA_PUBLIC_BASE = PUBLIC_BASE;
+export function internalS3(): S3Client {
+  return s3();
+}
 function s3(): S3Client {
   if (!client) client = makeClient(ENDPOINT, true);
   return client;

@@ -4,6 +4,7 @@ import { hash } from "bcryptjs";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { normalizeEmail } from "@/lib/email";
 import { encrypt } from "@/lib/crypto/kyc";
+import { secureKycFields } from "@/lib/kyc-storage";
 
 export async function POST(req: NextRequest) {
   // 5 registrations per IP per hour is plenty for a real user and tight
@@ -49,6 +50,8 @@ export async function POST(req: NextRequest) {
 
     // Create journalist profile with KYC
     const hasDocuments = aadhaarFrontUrl || panCardUrl || photoUrl;
+    // Document images go to the private KYC bucket, keyed by the new user id.
+    const docs = await secureKycFields({ aadhaarFrontUrl, aadhaarBackUrl, panCardUrl }, user.id);
 
     await prisma.reporterProfile.create({
       data: {
@@ -62,9 +65,9 @@ export async function POST(req: NextRequest) {
         // null for nullish input so PENDING accounts (no docs yet) stay
         // null in the DB rather than getting a ciphertext-of-empty-string.
         aadhaarNumber: encrypt(aadhaarNumber),
-        aadhaarFrontUrl, aadhaarBackUrl,
+        aadhaarFrontUrl: docs.aadhaarFrontUrl, aadhaarBackUrl: docs.aadhaarBackUrl,
         panNumber: encrypt(panNumber),
-        panCardUrl, photoUrl,
+        panCardUrl: docs.panCardUrl, photoUrl,
         experience,
         languages: ["Telugu"],
       },
