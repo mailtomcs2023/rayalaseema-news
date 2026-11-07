@@ -69,6 +69,37 @@ describe("youtube client", () => {
     expect(calls.some((x) => x.startsWith("PUT https://upload.example/session1"))).toBe(true);
   });
 
+  test("createUploadSession: init with Origin, no bytes sent, returns session url", async () => {
+    const units: number[] = [];
+    let headers: Record<string, string> = {};
+    const { f, calls } = fakeFetch({
+      "oauth2.googleapis.com/token": tokenOk,
+      "upload/youtube/v3/videos": (init) => {
+        headers = init?.headers as Record<string, string>;
+        return new Response("", { status: 200, headers: { Location: "https://upload.example/session2" } });
+      },
+    });
+    const c = createYouTubeClient({ ...creds, fetchImpl: f, onUnits: async (u) => { units.push(u); } });
+    const url = await c.createUploadSession({
+      sizeBytes: 100 * 1024 ** 3, contentType: "video/mp4", origin: "https://admin.example",
+      snippet: { title: "t", description: "", tags: [], categoryId: "25", defaultLanguage: "te", defaultAudioLanguage: "te" },
+      status: { privacyStatus: "private", selfDeclaredMadeForKids: false },
+    });
+    expect(url).toBe("https://upload.example/session2");
+    expect(headers.Origin).toBe("https://admin.example");
+    expect(headers["X-Upload-Content-Length"]).toBe(String(100 * 1024 ** 3));
+    expect(calls.some((x) => x.startsWith("PUT"))).toBe(false);
+    expect(units).toEqual([1600]);
+  });
+
+  test("createUploadSession refuses in dry run before spending quota", async () => {
+    const units: number[] = [];
+    const { f } = fakeFetch({ "oauth2.googleapis.com/token": tokenOk });
+    const c = createYouTubeClient({ ...creds, dryRun: true, fetchImpl: f, onUnits: async (u) => { units.push(u); } });
+    await expect(c.createUploadSession({ sizeBytes: 1, contentType: "video/mp4", origin: "https://a", snippet: {} as any, status: {} as any })).rejects.toThrow(/dry-run/);
+    expect(units).toEqual([]);
+  });
+
   test("insertComment refuses URLs before spending quota", async () => {
     const units: number[] = [];
     const { f } = fakeFetch({ "oauth2.googleapis.com/token": tokenOk });

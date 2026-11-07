@@ -104,6 +104,26 @@ Deployed to production in two steps: first with `VIDEO_IQ_YOUTUBE_DRY_RUN=1` (ve
 | publish warnings (thumbnail/playlists/localizations/comment) | optional step failed after the upload | row is `APPLIED` with warnings; the video exists; fix by hand in Studio or re-publish tomorrow |
 | panel says keywords unavailable | DataForSEO not configured or IP not whitelisted | everything else works |
 
+## Large videos: browser uploads straight to YouTube (2026-11-07)
+
+Desk videos are often 10-100 GB+. We do not host them: YouTube is the copy.
+
+- `/youtube/new` → "Upload to YouTube (any size)" (default). The admin server
+  only opens a resumable `videos.insert` session (`POST /api/youtube/upload-session`,
+  1600 quota units, video **private**, `Origin` = admin site so Google answers
+  CORS). The browser PUTs 64 MB chunks directly to that session
+  (`src/lib/youtube-direct-upload.ts`), retries with back-off, and resumes
+  after a dropped connection or a page reload (session URL kept per file in
+  localStorage for 6 days; choose the same file again).
+- When the upload finishes the run is created as a YOUTUBE-source run on the
+  new id: captions + YouTube frames, no download. Publish updates the existing
+  video and sets the chosen visibility (private videos are made public/scheduled
+  only at publish).
+- "Short clip under 95 MB" still goes to MinIO (Cloudflare caps a request at
+  100 MB) and gets our own Azure Speech transcript.
+- Raw footage is NOT kept anywhere else; keep originals locally if they matter.
+- `VIDEO_IQ_YOUTUBE_DRY_RUN=1` disables direct uploads (the route refuses).
+
 ## Not in Phase A
 
 Back-catalog sweep (4.8), 48 h / 7 d performance loop (12.2), captions upload (12.4), winnable-query finder (12.6), duplicate detection (12.7), topic playlists (12.8), canonical-name sweep (12.9), publish slots (12.10), weekly report. See spec section 10 for phasing.

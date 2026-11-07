@@ -181,6 +181,33 @@ export function createYouTubeClient(o: ClientOpts) {
       return (JSON.parse(text) as { id: string }).id;
     },
 
+    /**
+     * Open a videos.insert resumable session and return its URL WITHOUT
+     * sending any bytes, so a browser on `origin` can upload the file straight
+     * to YouTube (Google answers CORS for the origin named at init). The URL
+     * itself authorises the upload; treat it like a secret and hand it only to
+     * the signed-in editor. Valid for about a week; resumable via
+     * `Content-Range: bytes * /<size>` status queries.
+     */
+    async createUploadSession(a: { sizeBytes: number; contentType: string; origin: string; snippet: VideoSnippet; status: VideoStatus }): Promise<string> {
+      if (o.dryRun) throw new Error("YouTube dry-run is on (VIDEO_IQ_YOUTUBE_DRY_RUN=1); direct uploads are disabled");
+      await units("videos.insert");
+      const init = await raw(
+        "POST",
+        `${UPLOAD}/videos?uploadType=resumable&part=snippet,status`,
+        JSON.stringify({ snippet: a.snippet, status: a.status }),
+        {
+          "Content-Type": "application/json; charset=UTF-8",
+          "X-Upload-Content-Type": a.contentType,
+          "X-Upload-Content-Length": String(a.sizeBytes),
+          Origin: a.origin,
+        },
+      );
+      const session = init.headers.get("Location");
+      if (!session) throw new Error("resumable upload: no session URL in response");
+      return session;
+    },
+
     async setThumbnail(videoId: string, jpeg: Uint8Array): Promise<void> {
       await units("thumbnails.set");
       if (o.dryRun) {
