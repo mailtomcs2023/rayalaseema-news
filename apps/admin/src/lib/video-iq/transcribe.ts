@@ -31,7 +31,8 @@ export async function transcribeAudio(mp3: Uint8Array, opts: { phrases: string[]
   }));
 
   const res = await (opts.fetchImpl ?? fetch)(
-    `https://${region}.api.cognitive.microsoft.com/speechtotext/transcriptions:transcribe?api-version=2025-10-15`,
+    // Custom-domain endpoint when set (needed once the resource is IP-locked).
+    `${process.env.AZURE_SPEECH_ENDPOINT?.replace(/\/+$/, "") || `https://${region}.api.cognitive.microsoft.com`}/speechtotext/transcriptions:transcribe?api-version=2025-10-15`,
     { method: "POST", headers: { "Ocp-Apim-Subscription-Key": key }, body: fd, signal: AbortSignal.timeout(300_000) },
   );
   if (!res.ok) throw new Error(`speech transcription failed: ${res.status} ${(await res.text()).slice(0, 300)}`);

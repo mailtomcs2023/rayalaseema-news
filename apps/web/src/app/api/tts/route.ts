@@ -36,8 +36,11 @@ export async function POST(req: NextRequest) {
       <voice name="${VOICE}">${escapeXml(cleanText)}</voice>
     </speak>`;
 
+    // AZURE_SPEECH_ENDPOINT (custom domain) is required once the resource has
+    // network rules (IP-locked); regional hosts are refused then.
+    const speechBase = process.env.AZURE_SPEECH_ENDPOINT?.replace(/\/+$/, "");
     const res = await fetch(
-      `https://${SPEECH_REGION}.tts.speech.microsoft.com/cognitiveservices/v1`,
+      speechBase ? `${speechBase}/tts/cognitiveservices/v1` : `https://${SPEECH_REGION}.tts.speech.microsoft.com/cognitiveservices/v1`,
       {
         method: "POST",
         headers: {

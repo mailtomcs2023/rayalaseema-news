@@ -194,9 +194,14 @@ jobs:
             cat > apps/web/.env << 'ENV'
             DATABASE_URL="${{ secrets.PROD_DATABASE_URL }}"
             SITE_URL="https://rayalaseemanews.com"
-            AZURE_OPENAI_ENDPOINT="https://rayalaseema-ai.openai.azure.com/"
+            # Azure OpenAI on the Pay-As-You-Go sub (rsn-news-ai, South India,
+            # network-locked to this server's IP) since 2026-11-07. Deployment
+            # names come from repo variables so a model swap (e.g. back to
+            # gpt51 once quota is granted) is a variable change + redeploy.
+            AZURE_OPENAI_ENDPOINT="https://rsn-news-ai.openai.azure.com/"
             AZURE_OPENAI_KEY="${{ secrets.AZURE_OPENAI_KEY }}"
-            AZURE_OPENAI_DEPLOYMENT="gpt51"
+            AZURE_OPENAI_DEPLOYMENT="${{ vars.AOAI_CHAT_DEPLOYMENT || 'gpt54-mini' }}"
+            AZURE_OPENAI_COMPOSE_DEPLOYMENT="${{ vars.AOAI_COMPOSE_DEPLOYMENT || vars.AOAI_CHAT_DEPLOYMENT || 'gpt54-mini' }}"
             AZURE_OPENAI_API_VERSION="2024-10-21"
             RAPIDAPI_CRICKET_KEY="${{ secrets.RAPIDAPI_CRICKET_KEY }}"
             # Media store: MinIO/Silo (S3 API) behind media.rayalaseemanews.com.
@@ -213,6 +218,7 @@ jobs:
             MEDIA_PUBLIC_BASE_URL="https://media.rayalaseemanews.com/rsn-media"
             AZURE_SPEECH_KEY="${{ secrets.AZURE_SPEECH_KEY }}"
             AZURE_SPEECH_REGION="centralindia"
+            AZURE_SPEECH_ENDPOINT="https://rsn-news-speech.cognitiveservices.azure.com"
             AZURE_SPEECH_VOICE="te-IN-MohanNeural"
             # IndexNow host-ownership key. NOT a secret - the protocol requires
             # serving it publicly at /.well-known/<key>.txt to prove control of
@@ -231,9 +237,14 @@ jobs:
             # the admin code falls back to http://localhost:3000 and the
             # preview shows "localhost refused to connect" in production.
             SITE_URL="https://rayalaseemanews.com"
-            AZURE_OPENAI_ENDPOINT="https://rayalaseema-ai.openai.azure.com/"
+            # Azure OpenAI on the Pay-As-You-Go sub (rsn-news-ai, South India,
+            # network-locked to this server's IP) since 2026-11-07. Deployment
+            # names come from repo variables so a model swap (e.g. back to
+            # gpt51 once quota is granted) is a variable change + redeploy.
+            AZURE_OPENAI_ENDPOINT="https://rsn-news-ai.openai.azure.com/"
             AZURE_OPENAI_KEY="${{ secrets.AZURE_OPENAI_KEY }}"
-            AZURE_OPENAI_DEPLOYMENT="gpt51"
+            AZURE_OPENAI_DEPLOYMENT="${{ vars.AOAI_CHAT_DEPLOYMENT || 'gpt54-mini' }}"
+            AZURE_OPENAI_COMPOSE_DEPLOYMENT="${{ vars.AOAI_COMPOSE_DEPLOYMENT || vars.AOAI_CHAT_DEPLOYMENT || 'gpt54-mini' }}"
             AZURE_OPENAI_API_VERSION="2024-10-21"
             NEWSDATA_API_KEY="${{ secrets.NEWSDATA_API_KEY }}"
             PTI_CENTERCODE="${{ secrets.PTI_CENTERCODE }}"
@@ -281,8 +292,8 @@ jobs:
             # social@ channel account's refresh token; DRY_RUN=1 logs every
             # write instead of sending it. Flip the repo variable to 0 after
             # the first dry run looks right.
-            # Video IQ model: gpt-5.5 deployment created 2026-10-24 (gpt51 stays for the rest of the CMS).
-            AZURE_OPENAI_VIDEOIQ_DEPLOYMENT="gpt55"
+            # Video IQ model (was gpt55 on the old sub; gpt-5.4-mini until gpt-5.5 quota is granted on PAYG).
+            AZURE_OPENAI_VIDEOIQ_DEPLOYMENT="${{ vars.AOAI_VIDEOIQ_DEPLOYMENT || 'gpt54-mini' }}"
             YOUTUBE_CHANNEL_ID="UCFZ-DcNTGQsTBpCmZk1MflA"
             YOUTUBE_OAUTH_REFRESH_TOKEN="${{ secrets.YOUTUBE_OAUTH_REFRESH_TOKEN }}"
             GOOGLE_OAUTH_CLIENT_ID="${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}"
@@ -291,6 +302,7 @@ jobs:
             # Telugu transcription (same key the web TTS uses).
             AZURE_SPEECH_KEY="${{ secrets.AZURE_SPEECH_KEY }}"
             AZURE_SPEECH_REGION="centralindia"
+            AZURE_SPEECH_ENDPOINT="https://rsn-news-speech.cognitiveservices.azure.com"
             # Keyword volumes / SERP on the panel. Blank -> panel says "unavailable".
             DATAFORSEO_LOGIN="${{ secrets.DATAFORSEO_LOGIN }}"
             DATAFORSEO_PASSWORD="${{ secrets.DATAFORSEO_PASSWORD }}"
