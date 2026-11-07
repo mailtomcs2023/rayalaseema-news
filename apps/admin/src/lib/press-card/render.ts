@@ -9,7 +9,9 @@ import QRCode from "qrcode";
 import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { renderCardHtml, verifyUrlFor, type CardData } from "./template";
+import { internalS3, MEDIA_BUCKET, MEDIA_PUBLIC_BASE } from "../blob";
 
 export class PressCardRenderError extends Error {
   constructor(public code: "PHOTO_UNREACHABLE" | "RENDER_FAILED", message: string) { super(message); }
@@ -64,7 +66,28 @@ async function fetchSignatureDataUri(): Promise<string> {
   }
 }
 
+// Our own media is read straight from MinIO over the internal endpoint:
+// the public URL goes through Cloudflare, which can serve a cached 404 or
+// bot-challenge a burst of server-side requests.
+async function fetchOwnMediaDataUri(url: string): Promise<string | null> {
+  if (!MEDIA_PUBLIC_BASE || !url.startsWith(MEDIA_PUBLIC_BASE + "/")) return null;
+  const key = decodeURIComponent(url.slice(MEDIA_PUBLIC_BASE.length + 1).split("?")[0]);
+  try {
+    const obj = await internalS3().send(new GetObjectCommand({ Bucket: MEDIA_BUCKET, Key: key }));
+    const ct = obj.ContentType || "image/jpeg";
+    const bytes = await obj.Body!.transformToByteArray();
+    if (!ct.startsWith("image/") && !/\.(png|jpe?g|webp)$/i.test(key)) throw new PressCardRenderError("PHOTO_UNREACHABLE", `photo content-type ${ct}`);
+    return `data:${ct.startsWith("image/") ? ct : "image/jpeg"};base64,${Buffer.from(bytes).toString("base64")}`;
+  } catch (e) {
+    if (e instanceof PressCardRenderError) throw e;
+    const name = (e as { name?: string })?.name;
+    throw new PressCardRenderError("PHOTO_UNREACHABLE", `photo ${name === "NoSuchKey" ? 404 : name || String(e)} (${key})`);
+  }
+}
+
 async function fetchPhotoDataUri(url: string): Promise<string> {
+  const own = await fetchOwnMediaDataUri(url);
+  if (own) return own;
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), 10_000);
   try {
