@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type Dto = {
-  id: string; cardNo: string; designation: string; photoUrl: string; validFrom: string; validTill: string;
+  id: string; cardNo: string; name: string; designation: string; photoUrl: string; validFrom: string; validTill: string;
   liveStatus: "ACTIVE" | "EXPIRED" | "REVOKED" | "SEPARATED"; revokeNote: string | null; verifyUrl: string;
 };
 type Payload = { card: Dto | null; issuable: { ok: boolean; reason?: string }; unlinked: { id: string; cardNo: string; name: string }[] };
@@ -21,6 +21,15 @@ const REASON: Record<string, string> = {
   NO_PHOTO: "No passport photo on the profile yet.",
   ALREADY_ACTIVE: "User already has an active card.",
 };
+// Loose name match: printed cards carry initials ("T. Vinay Kumar Reddy")
+// while accounts may not. Same person when every 3+ letter word of the
+// shorter name appears in the other, ignoring common surnames.
+const COMMON = new Set(["reddy", "naidu", "rao", "kumar", "sri", "shri"]);
+const words = (s: string) => s.toLowerCase().split(/[^a-zఀ-౿]+/).filter((w) => w.length >= 3 && !COMMON.has(w));
+export function samePerson(a: string, b: string): boolean {
+  const [x, y] = [words(a), words(b)].sort((p, q) => p.length - q.length);
+  return x.length > 0 && x.every((w) => y.includes(w));
+}
 const CHIP: Record<Dto["liveStatus"], string> = {
   ACTIVE: "bg-green-100 text-green-700 border-green-200",
   EXPIRED: "bg-amber-100 text-amber-700 border-amber-200",
@@ -48,7 +57,8 @@ export function PressCardDialog({ user, onClose }: { user: { id: string; name: s
     if (my !== gen.current) return;
     setData(p);
     setDesignation(p.card?.designation ?? (user.role === "REPORTER" ? "Reporter / Copy Writer" : ""));
-    setLinkCardId(p.unlinked[0]?.id ?? "");
+    // Never preselect: a stray click must not link someone else's printed card.
+    setLinkCardId("");
   };
   useEffect(() => { gen.current++; setData(null); setRevokeNote(""); setLinkCardId(""); if (user) void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [user?.id]);
 
@@ -79,6 +89,10 @@ export function PressCardDialog({ user, onClose }: { user: { id: string; name: s
                 <img src={card.photoUrl} alt="" className="h-24 w-[72px] rounded object-cover border" />
                 <div className="text-sm space-y-1">
                   <div className="flex items-center gap-2"><span className="font-semibold">{card.cardNo}</span><Badge className={CHIP[card.liveStatus]}>{card.liveStatus}</Badge></div>
+                  <div className="font-medium">{card.name}</div>
+                  {user && !samePerson(card.name, user.name) && (
+                    <div className="text-amber-700">This card is printed for {card.name}, not {user.name}. Check it was linked to the right person.</div>
+                  )}
                   <div>{card.designation}</div>
                   <div className="text-muted-foreground">Valid {card.validFrom} → {card.validTill}</div>
                   {card.revokeNote && <div className="text-red-700">Note: {card.revokeNote}</div>}
@@ -108,11 +122,24 @@ export function PressCardDialog({ user, onClose }: { user: { id: string; name: s
                   value={linkCardId}
                   onChange={(e) => setLinkCardId(e.target.value)}
                 >
+                  <option value="">Choose the card printed for {user?.name}…</option>
                   {data.unlinked.map((u) => (
                     <option key={u.id} value={u.id}>{u.cardNo} — {u.name}</option>
                   ))}
                 </select>
-                <Button size="sm" variant="outline" disabled={busy || !linkCardId} onClick={() => void call(`/api/press-card/${linkCardId}/link`, { userId: user!.id }, "Card linked")}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={busy || !linkCardId}
+                  onClick={() => {
+                    const pick = data.unlinked.find((u) => u.id === linkCardId);
+                    if (!pick || !user) return;
+                    const msg = samePerson(pick.name, user.name)
+                      ? `Link ${pick.cardNo} (${pick.name}) to ${user.name}?`
+                      : `${pick.cardNo} is printed for "${pick.name}", but this user is "${user.name}". Link it anyway?`;
+                    if (confirm(msg)) void call(`/api/press-card/${linkCardId}/link`, { userId: user.id }, "Card linked");
+                  }}
+                >
                   Link selected card to this user
                 </Button>
               </div>
