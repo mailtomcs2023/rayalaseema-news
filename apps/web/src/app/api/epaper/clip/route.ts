@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { readFileSync } from "node:fs";
+import { Agent } from "node:https";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { NodeHttpHandler } from "@smithy/node-http-handler";
 
 // Media store (MinIO/Silo, S3 API). Same env as the admin app's lib/blob.ts.
+// MEDIA_S3_ENDPOINT is the INTERNAL endpoint (bypasses Cloudflare bot checks);
+// MEDIA_S3_CA_FILE is its CA cert.
 const ENDPOINT = process.env.MEDIA_S3_ENDPOINT;
+const CA_FILE = process.env.MEDIA_S3_CA_FILE;
 const BUCKET = process.env.MEDIA_S3_BUCKET;
 const ACCESS_KEY = process.env.MEDIA_S3_ACCESS_KEY_ID;
 const SECRET_KEY = process.env.MEDIA_S3_SECRET_ACCESS_KEY;
@@ -16,6 +22,9 @@ function s3(): S3Client {
       region: process.env.MEDIA_S3_REGION || "us-east-1",
       forcePathStyle: true,
       credentials: { accessKeyId: ACCESS_KEY!, secretAccessKey: SECRET_KEY! },
+      ...(CA_FILE
+        ? { requestHandler: new NodeHttpHandler({ httpsAgent: new Agent({ ca: readFileSync(CA_FILE), keepAlive: true }) }) }
+        : {}),
     });
   }
   return client;

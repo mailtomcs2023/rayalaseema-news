@@ -1,16 +1,24 @@
+import { readFileSync } from "node:fs";
+import { Agent } from "node:https";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { NodeHttpHandler } from "@smithy/node-http-handler";
 import { processImageBuffer } from "./image-process";
 
-// Media storage: S3-compatible object store (MinIO/Silo behind
-// media.rayalaseemanews.com since the Nov-2026 move off Azure Blob).
-// All config comes from env; see deploy.yml.
-//   MEDIA_S3_ENDPOINT       https://media.rayalaseemanews.com
-//   MEDIA_S3_REGION         us-east-1
-//   MEDIA_S3_BUCKET         rsn-media
+// Media storage: S3-compatible object store (MinIO/Silo since the Nov-2026
+// move off Azure Blob). All config comes from env; see deploy.yml.
+//   MEDIA_S3_ENDPOINT          https://103.83.37.52  (INTERNAL - all server-side calls)
+//   MEDIA_S3_CA_FILE           CA cert for the internal endpoint
+//   MEDIA_S3_PUBLIC_ENDPOINT   https://media.rayalaseemanews.com (presigned browser URLs only)
+//   MEDIA_S3_REGION            us-east-1
+//   MEDIA_S3_BUCKET            rsn-media
 //   MEDIA_S3_ACCESS_KEY_ID / MEDIA_S3_SECRET_ACCESS_KEY  (scoped app key)
-//   MEDIA_PUBLIC_BASE_URL   https://media.rayalaseemanews.com/rsn-media
+//   MEDIA_PUBLIC_BASE_URL      https://media.rayalaseemanews.com/rsn-media
+// Server-side traffic must NOT go through Cloudflare: its bot protection
+// blocks bursts of S3 calls from the server.
 const ENDPOINT = process.env.MEDIA_S3_ENDPOINT;
+const PUBLIC_ENDPOINT = process.env.MEDIA_S3_PUBLIC_ENDPOINT || ENDPOINT;
+const CA_FILE = process.env.MEDIA_S3_CA_FILE;
 const REGION = process.env.MEDIA_S3_REGION || "us-east-1";
 const BUCKET = process.env.MEDIA_S3_BUCKET;
 const ACCESS_KEY = process.env.MEDIA_S3_ACCESS_KEY_ID;
@@ -30,17 +38,31 @@ const EXT_BY_TYPE: Record<string, string> = {
   "image/avif": "avif",
 };
 
+function makeClient(endpoint: string | undefined, withCa: boolean): S3Client {
+  return new S3Client({
+    endpoint,
+    region: REGION,
+    forcePathStyle: true, // MinIO/Silo: path-style only
+    credentials: { accessKeyId: ACCESS_KEY!, secretAccessKey: SECRET_KEY! },
+    ...(withCa && CA_FILE
+      ? { requestHandler: new NodeHttpHandler({ httpsAgent: new Agent({ ca: readFileSync(CA_FILE), keepAlive: true }) }) }
+      : {}),
+  });
+}
+
+// Internal client: every request the server itself makes.
 let client: S3Client | null = null;
 function s3(): S3Client {
-  if (!client) {
-    client = new S3Client({
-      endpoint: ENDPOINT,
-      region: REGION,
-      forcePathStyle: true, // MinIO/Silo: path-style only
-      credentials: { accessKeyId: ACCESS_KEY!, secretAccessKey: SECRET_KEY! },
-    });
-  }
+  if (!client) client = makeClient(ENDPOINT, true);
   return client;
+}
+
+// Public client: only signs URLs the browser will call (never sends requests),
+// so the signature is bound to the public hostname.
+let presignClient: S3Client | null = null;
+function s3Presign(): S3Client {
+  if (!presignClient) presignClient = makeClient(PUBLIC_ENDPOINT, false);
+  return presignClient;
 }
 
 export function blobConfigured(): boolean {
@@ -73,7 +95,7 @@ export async function videoUploadSas(
   if (!blobConfigured()) return null;
   const key = `videos/${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext}`;
   const uploadUrl = await getSignedUrl(
-    s3(),
+    s3Presign(),
     new PutObjectCommand({ Bucket: BUCKET, Key: key, ContentType: contentType, CacheControl: "public, max-age=31536000" }),
     { expiresIn: 15 * 60 },
   );
