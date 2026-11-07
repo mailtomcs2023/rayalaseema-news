@@ -14,6 +14,9 @@ export function youtubeIdFrom(input: string): string | null {
   return m?.[1] ?? null;
 }
 
+// Our own media store (MinIO since Nov 2026) or the legacy Azure Blob host.
+const OWN_MEDIA_URL = /^https:\/\/(media\.rayalaseemanews\.com\/rsn-media\/|[a-z0-9]+\.blob\.core\.windows\.net\/)/i;
+
 export const runInputSchema = z
   .object({
     source: z.enum(["blob", "youtube"]),
@@ -28,7 +31,7 @@ export const runInputSchema = z
   })
   .superRefine((v, ctx) => {
     if (v.source === "blob") {
-      if (!v.blobUrl || !/\.blob\.core\.windows\.net\//.test(v.blobUrl)) ctx.addIssue({ code: "custom", path: ["blobUrl"], message: "upload the video first (blob storage url required)" });
+      if (!v.blobUrl || !OWN_MEDIA_URL.test(v.blobUrl)) ctx.addIssue({ code: "custom", path: ["blobUrl"], message: "upload the video first (our media storage url required)" });
       if (v.deskTitle.length < 3) ctx.addIssue({ code: "custom", path: ["deskTitle"], message: "desk title needed (3+ characters)" });
     } else if (!v.videoUrl || !youtubeIdFrom(v.videoUrl)) {
       ctx.addIssue({ code: "custom", path: ["videoUrl"], message: "paste a YouTube video url or id" });

@@ -15,6 +15,10 @@ describe("runInputSchema", () => {
   test("blob source needs a blob-storage url", () => {
     expect(runInputSchema.safeParse({ ...blob, blobUrl: "https://example.com/a.mp4" }).success).toBe(false);
   });
+  test("accepts our MinIO media url (post-Azure)", () => {
+    expect(runInputSchema.safeParse({ ...blob, blobUrl: "https://media.rayalaseemanews.com/rsn-media/videos/a.mp4" }).success).toBe(true);
+    expect(runInputSchema.safeParse({ ...blob, blobUrl: "https://media.rayalaseemanews.com/rsn-kyc/x.mp4" }).success).toBe(false);
+  });
   test("youtube source needs a parsable id and allows an empty desk title", () => {
     expect(runInputSchema.safeParse({ source: "youtube", videoUrl: "https://youtu.be/abcdefghijk", deskTitle: "" }).success).toBe(true);
     expect(runInputSchema.safeParse({ source: "youtube", videoUrl: "not a video", deskTitle: "x" }).success).toBe(false);
